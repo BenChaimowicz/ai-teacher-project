@@ -1,6 +1,6 @@
 # AI learning course platform
 
-A learner reports a subject, skill level, and preferred teaching method; the platform generates a course of lessons synthesized from web Sources.
+A Learner selects a subject and Learning Goal; the platform assesses their Starting Level and teaching fit, then generates a Course of Lessons synthesized from web Sources.
 
 ## Wayfinding
 
@@ -13,8 +13,32 @@ The person taking a Course. The prototype has exactly one (a single seeded row, 
 _Avoid_: User, account (when meaning the person learning)
 
 **Course**:
-The generated sequence of modules that takes a learner from their assessed level to 100.
+The generated sequence of Modules that takes a Learner from their Starting Level to their Learning Goal.
 _Avoid_: Curriculum, class, program
+
+**Course Request**:
+The Learner's selected subject and stated Learning Goal that initiate a goal-specific Assessment and Course generation.
+_Avoid_: Prompt, topic request
+
+**Course Blueprint**:
+The system-validated and Learner-approved design of a Course, fixing its Module and Lesson sequence, objectives, teaching methods, and quiz checkpoints before Lesson content is generated. Learner approval reviews titles and outcomes for relevance rather than editing the structure directly.
+_Avoid_: Course outline, curriculum plan
+
+**Course coherence**:
+The continuity of terminology, prerequisites, explanations, and progression across Lessons and Modules toward the Learning Goal.
+_Avoid_: Normalization, stylistic consistency
+
+**Learning Goal**:
+The terminal capability a Learner wants the Course to produce for a subject. It defines what success means; it is not the Learner's current proficiency or a preference for more content.
+_Avoid_: Desired depth, target score, difficulty
+
+**Starting Level**:
+The Learner's assessed current capability relative to a Learning Goal.
+_Avoid_: Skill level (when the relevant goal is unstated), entry point
+
+**Teaching Profile**:
+The Learner-level result describing teaching-method fit. It is assessed for the first Course and reused across later Courses until the Learner explicitly requests reassessment.
+_Avoid_: Teaching fit, learning style
 
 **Module**:
 A named grouping of lessons inside a Course.
