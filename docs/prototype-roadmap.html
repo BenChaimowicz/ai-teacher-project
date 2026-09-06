@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prototype roadmap — SEN-30</title>
+  <style>
+    :root {
+      --bg: #f6f5f2;
+      --fg: #1c1b18;
+      --muted: #5c5a54;
+      --line: #d8d4cb;
+      --card: #fff;
+      --start: #143d2c;
+      --start-fg: #f4fff8;
+      --start-line: #1f6b4a;
+      --chip: #eceae4;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #161615;
+        --fg: #eeeae3;
+        --muted: #b4afa6;
+        --line: #3a3834;
+        --card: #1f1e1c;
+        --start: #1a4a36;
+        --start-fg: #e8fff2;
+        --start-line: #3d9a6c;
+        --chip: #2a2926;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 28px 48px;
+      font: 15px/1.45 "Segoe UI", system-ui, sans-serif;
+      color: var(--fg);
+      background: var(--bg);
+    }
+    header { max-width: 1400px; margin: 0 auto 28px; }
+    h1 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; font-weight: 650; }
+    .lede, .source { color: var(--muted); margin: 0 0 8px; }
+    .source { font-size: 13px; }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin: 20px 0 0;
+    }
+    .stat strong { display: block; font-size: 28px; line-height: 1.1; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .banner {
+      max-width: 1400px;
+      margin: 0 auto 24px;
+      padding: 14px 16px;
+      border: 1px solid var(--start-line);
+      background: var(--start);
+      color: var(--start-fg);
+    }
+    .banner a { color: inherit; }
+    .banner p { margin: 6px 0 0; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      max-width: 1400px;
+      margin: 0 auto;
+      align-items: start;
+    }
+    section h2 {
+      font-size: 14px;
+      font-weight: 650;
+      margin: 0 0 10px;
+      letter-spacing: 0.02em;
+    }
+    article {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 12px 12px 14px;
+      margin-bottom: 10px;
+    }
+    article.start {
+      background: var(--start);
+      border-color: var(--start-line);
+      color: var(--start-fg);
+    }
+    article.start .meta, article.start .ships { color: var(--start-fg); }
+    .id {
+      display: inline-block;
+      font-weight: 650;
+      text-decoration: none;
+      color: inherit;
+      border-bottom: 1px solid currentColor;
+    }
+    h3 { font-size: 14px; margin: 6px 0 6px; font-weight: 650; }
+    .ships { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+    .meta { font-size: 12px; color: var(--muted); }
+    .who {
+      display: inline-block;
+      background: var(--chip);
+      padding: 1px 6px;
+      margin-right: 6px;
+    }
+    article.start .who { background: #0f2d21; }
+    @media (max-width: 1100px) {
+      .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      body { padding: 20px 16px 36px; }
+      .board { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Prototype roadmap</h1>
+    <p class="lede">Twenty remaining tickets under SEN-30, in the order they unlock.</p>
+    <p class="source">Source: Linear senoy · 6 Sep 2026 · Backlog only</p>
+    <div class="stats">
+      <div class="stat"><strong>20</strong><span>Remaining tickets</span></div>
+      <div class="stat"><strong>1</strong><span>Can start now</span></div>
+      <div class="stat"><strong>16</strong><span>Ready for agent</span></div>
+      <div class="stat"><strong>4</strong><span>Ready for human</span></div>
+    </div>
+  </header>
+
+  <div class="banner">
+    <strong>Start here</strong>
+    <p><a href="https://linear.app/senoy/issue/SEN-31/provision-provider-accounts">SEN-31 Provision provider accounts</a>. Every other ticket waits on this chain.</p>
+  </div>
+
+  <div class="board">
+    <section>
+      <h2>Setup (2)</h2>
+      <article class="start">
+        <a class="id" href="https://linear.app/senoy/issue/SEN-31/provision-provider-accounts">SEN-31</a>
+        <h3>Provision provider accounts</h3>
+        <p class="ships">Keys and vendor choices so the prototype can call real providers.</p>
+        <p class="meta"><span class="who">Human</span> Can start</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-32/runnable-workspace-seeded-learner-home-library">SEN-32</a>
+        <h3>Runnable workspace: seeded Learner, Home library</h3>
+        <p class="ships">A local workspace with one seeded Learner and an empty Home library.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-31</p>
+      </article>
+    </section>
+
+    <section>
+      <h2>Learner screens (4)</h2>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-33/teaching-profile-questionnaire">SEN-33</a>
+        <h3>Teaching Profile questionnaire</h3>
+        <p class="ships">The Learner saves a Teaching Profile before any Course Request.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-32</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-34/fixture-published-course-and-study-chrome">SEN-34</a>
+        <h3>Fixture published Course and Study chrome</h3>
+        <p class="ships">A seeded published Course so Study chrome can be built before generation.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-32</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-38/reading-lesson-play">SEN-38</a>
+        <h3>Reading Lesson play</h3>
+        <p class="ships">The Learner reads a reading Lesson and marks it complete for Progress.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-33, SEN-34</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-37/quiz-play-and-sequence-mode">SEN-37</a>
+        <h3>Quiz play and Sequence mode</h3>
+        <p class="ships">The Learner takes a Quiz. Sequence mode is linear or free jump.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-38</p>
+      </article>
+    </section>
+
+    <section>
+      <h2>Request (4)</h2>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-35/compose-course-request">SEN-35</a>
+        <h3>Compose Course Request</h3>
+        <p class="ships">The Learner starts a Course Request with a subject and Learning Goal.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-33</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-39/validity-gate">SEN-39</a>
+        <h3>Validity gate</h3>
+        <p class="ships">The Validity gate passes, clarifies, or rejects the Course Request.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-35</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-40/durable-job-waiting-cancel-and-resume">SEN-40</a>
+        <h3>Durable job, waiting, Cancel and Resume</h3>
+        <p class="ships">Generation runs as a durable job the Learner can Cancel or Resume.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-35</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-41/starting-level-diagnostic">SEN-41</a>
+        <h3>Starting Level diagnostic</h3>
+        <p class="ships">An eight-item diagnostic produces the remaining-gap Starting Level.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-39</p>
+      </article>
+    </section>
+
+    <section>
+      <h2>Generate (6)</h2>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-36/primary-and-secondary-research-source-packs">SEN-36</a>
+        <h3>Primary and Secondary research Source packs</h3>
+        <p class="ships">Two research calls return Source packs for a Lesson topic.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-32</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-42/course-blueprint-generate-review-approve">SEN-42</a>
+        <h3>Course Blueprint generate, review, Approve</h3>
+        <p class="ships">The remaining-gap Course Blueprint is generated, checked, and Approved.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-41, SEN-40</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-43/reading-lesson-generate-media-checkpoint">SEN-43</a>
+        <h3>Reading Lesson generate, media, checkpoint</h3>
+        <p class="ships">Each reading Lesson is generated, cited, given Demonstrative media, and checkpointed.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-36, SEN-42</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-44/quiz-lesson-generate">SEN-44</a>
+        <h3>Quiz Lesson generate</h3>
+        <p class="ships">Each Quiz is generated from the Lessons it assesses. Never reused.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-43</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-46/lesson-reuse">SEN-46</a>
+        <h3>Lesson reuse</h3>
+        <p class="ships">A fitting published Lesson can be copied or adapted into the new Course.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-34, SEN-43</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-45/atomic-publish-publish-gates-repair">SEN-45</a>
+        <h3>Atomic publish, Publish gates, repair</h3>
+        <p class="ships">The Course passes Publish gates and publishes as one snapshot, or it repairs.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-44, SEN-37</p>
+      </article>
+    </section>
+
+    <section>
+      <h2>Test courses (4)</h2>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-47/seeded-test-course-media-catalog">SEN-47</a>
+        <h3>Seeded Test-course media catalog</h3>
+        <p class="ships">A small library of Demonstrative media for the three Test courses.</p>
+        <p class="meta"><span class="who">Agent</span> Waiting on SEN-32</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-48/test-course-microbiology-lab-fundamentals">SEN-48</a>
+        <h3>Test course: microbiology lab fundamentals</h3>
+        <p class="ships">Generate and complete the microbiology Test course, then sign off.</p>
+        <p class="meta"><span class="who">Human</span> Waiting on SEN-45, SEN-47, SEN-37</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-49/test-course-norse-mythology">SEN-49</a>
+        <h3>Test course: Norse mythology</h3>
+        <p class="ships">Generate and complete the Norse mythology Test course, then sign off.</p>
+        <p class="meta"><span class="who">Human</span> Waiting on SEN-45, SEN-47, SEN-37</p>
+      </article>
+      <article>
+        <a class="id" href="https://linear.app/senoy/issue/SEN-50/test-course-drum-kit-fundamentals">SEN-50</a>
+        <h3>Test course: drum kit fundamentals</h3>
+        <p class="ships">Generate and complete the drum-kit Test course, then sign off.</p>
+        <p class="meta"><span class="who">Human</span> Waiting on SEN-45, SEN-47, SEN-37</p>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

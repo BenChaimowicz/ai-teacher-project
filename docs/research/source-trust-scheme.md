@@ -2,6 +2,8 @@
 
 **Date:** 2026-08-14
 
+**Amendment 2026-09-04 (human lock):** [Source trust scheme](https://linear.app/senoy/issue/SEN-6/source-trust-scheme) was reopened and locked by the human, not by a vendor bakeoff. Retrieval is two independent research calls on the same Lesson topic. **Primary research** is Parallel Pro or Exa Agent high and produces a structured Source pack with citations. **Secondary research** is You.com Research standard or Linkup M — same topic, different engine, different index. The Generator synthesizes from both packs; Citations must point at Sources in those packs. Which vendor runs in each slot is config. The August You.com Web Search + `boost_domains` recommendation below is superseded.
+
 Which web-search API and which source-ranking/whitelisting scheme best delivers “most trusted sources” for generated reading lessons in a prototype AI course platform, and how should the generator cite those sources? Content is web search plus LLM synthesis; the destination is a buildable spec, not production-at-scale.
 
 ---

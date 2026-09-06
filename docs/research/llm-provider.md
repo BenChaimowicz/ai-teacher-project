@@ -2,6 +2,10 @@
 
 **Date:** 2026-08-14
 
+**Amendment 2026-09-04 (bakeoff lock):** [Provider bakeoff: OpenAI vs DeepSeek](https://linear.app/senoy/issue/SEN-20/provider-bakeoff-openai-vs-deepseek) locked DeepSeek **`deepseek-v4-pro`** as the leading Generator (OpenAI-compatible Chat Completions at `https://api.deepseek.com`) and OpenAI **`gpt-5.6-terra`** as the fallback adapter (official `openai` SDK, Responses API). Claude is not a Generator fallback. OpenRouter is not a product Provider. Citation contract and two-step reading-then-quiz from this note still hold. Sol is not in the Generator pair.
+
+**Amendment 2026-09-04 (earlier, superseded):** Briefly treated OpenAI `gpt-5.6-sol` as leading with DeepSeek as fallback, pending the bakeoff. The August body below is the original Anthropic-first survey; do not treat either as current.
+
 Which LLM provider should power course generation for a prototype TypeScript AI learning platform, and how should the spec abstract the LLM behind an interface so it stays swappable? Content is You.com web search plus LLM synthesis; teaching methods shipping now are reading lessons and quizzes; the destination is a buildable spec, not production-at-scale. Citations must come from *our* retrieval set, not the model’s own web search.
 
 ---
