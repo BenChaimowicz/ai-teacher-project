@@ -1,0 +1,55 @@
+---
+description: Error handling, JSDoc, and console logging format for AI Teacher
+globs: "**/*.{ts,tsx,js,jsx}"
+alwaysApply: false
+---
+<!-- בס״ד -->
+
+# Code Style
+
+## Error Handling
+
+Always wrap operations in try/catch. Error messages must follow:
+
+```
+[filename: functionName] Description of what went wrong || relevantVariable=value || Original error message
+```
+
+```typescript
+try {
+  const user = await getUser(userId);
+} catch (error) {
+  throw new Error(
+    `[user.service: getUser] Failed to fetch user || userId=${userId} || ${error.message}`,
+  );
+}
+```
+
+## JSDoc
+
+Add JSDoc to every function, class, method, and type. Explain clearly and simply.
+
+```typescript
+/**
+ * Fetches a user by their ID from the database.
+ * @param userId - The unique identifier of the user
+ * @returns The user object if found
+ * @throws Error if the user does not exist
+ */
+```
+
+## Console Logging Format
+
+When asked to add `console.log` statements, use this format and pick a random animal emoji each time:
+
+```typescript
+console.log("[functionName | what we are checking | 🦊]", theThingToLog);
+```
+
+Examples:
+
+- `console.log('[getUser | fetched user data | 🐸]', user);`
+- `console.log('[syncCampaigns | campaign count | 🦉]', campaigns.length);`
+- `console.log('[validateToken | token expiry | 🐙]', token.exp);`
+
+The animal-emoji `console.log` format is for local debugging — strip it before committing. Committed backend code uses Pino only (`request.log.*` or `fastify.log.*`).

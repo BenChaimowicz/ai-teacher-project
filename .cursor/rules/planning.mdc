@@ -1,0 +1,11 @@
+---
+description: Planning
+alwaysApply: true
+---
+
+## Planning
+
+When planning anything, minimize risk surface and protect a single source of truth:
+
+- **Fewer risky steps wins.** Prefer the plan with the smallest number of moving parts that can fail (network calls, manual steps, multi-step migrations, parallel writes). If two plans reach the same outcome, pick the one with fewer ways to break.
+- **One source of truth, always.** Never let the same fact live in two places that can drift. If a value is derivable, derive it — don't cache a copy unless cache invalidation is explicitly designed. When you spot duplication of state, config, or schema, flag it before coding.
