@@ -14,6 +14,22 @@ Implementation is a **new effort**: [Prototype: AI learning course platform](htt
 The person taking a Course. The prototype has exactly one (a single seeded row, no auth); every learner-owned record carries their id so accounts can be added later without migration.
 _Avoid_: User, account (when meaning the person learning)
 
+**Workspace**:
+The Learner-facing chrome with the sidebar: Home, Teaching Profile, New Course Request, and Open items. Study hides it.
+_Avoid_: dashboard, app shell (when speaking to Learners)
+
+**Home**:
+The Workspace screen that shows the Library.
+_Avoid_: dashboard, landing
+
+**Library**:
+The Home collection of the Learner's published Courses and unpublished Course Requests, including rejected. Empty means a real empty list plus an empty-state message, not a missing screen.
+_Avoid_: dashboard, catalog (when meaning Home), media library
+
+**Open items**:
+The Workspace sidebar group of shortcuts into in-progress Course Requests and published Courses. Not a fourth screen. Empty when nothing is in flight.
+_Avoid_: Open (as a destination), inbox, fourth screen
+
 **Course**:
 The generated sequence of Modules that takes a Learner from their Starting Level to their Learning Goal. Once published, it is an immutable snapshot; a different Starting Level is a separate Course.
 _Avoid_: Curriculum, class, program, version (when meaning an in-place regenerate)

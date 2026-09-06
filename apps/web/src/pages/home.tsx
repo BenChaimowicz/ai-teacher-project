@@ -1,0 +1,71 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button.tsx";
+
+type LibraryItem = {
+  id: string;
+  kind: "course" | "course_request";
+  title: string;
+  status: string;
+};
+
+/**
+ * Home Library. An empty query shows the empty-state copy.
+ */
+export function HomePage() {
+  const [items, setItems] = useState<LibraryItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/library")
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not load the Library");
+        return response.json() as Promise<{ items: LibraryItem[] }>;
+      })
+      .then((body) => {
+        if (!cancelled) setItems(body.items);
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : "Could not load the Library");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <p className="text-sm text-muted-foreground">Home</p>
+      <h1 className="mt-1 text-3xl font-semibold tracking-tight">Library</h1>
+      <p className="mt-2 text-muted-foreground">Published Courses and unpublished Course Requests live here.</p>
+
+      {error ? <p className="mt-10 text-sm text-red-400">{error}</p> : null}
+
+      {!error && items === null ? <p className="mt-10 text-sm text-muted-foreground">Loading…</p> : null}
+
+      {items && items.length === 0 ? (
+        <div className="mt-10 rounded-xl border border-border bg-card p-8">
+          <h2 className="text-lg font-medium">No courses yet</h2>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            When you request a Course, it will show up here — including ones still in progress or rejected.
+          </p>
+          <Button asChild className="mt-6">
+            <Link to="/new-course-request">New Course Request</Link>
+          </Button>
+        </div>
+      ) : null}
+
+      {items && items.length > 0 ? (
+        <ul className="mt-8 grid gap-3">
+          {items.map((item) => (
+            <li key={item.id} className="rounded-xl border border-border bg-card p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.status}</p>
+              <p className="mt-1 font-medium">{item.title}</p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}

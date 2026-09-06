@@ -1,0 +1,15 @@
+{
+  "name": "ai-teacher",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "apps": "pnpm --parallel --filter @senoy/web --filter @senoy/api --filter @senoy/worker dev",
+    "db:generate": "pnpm --filter @senoy/db generate",
+    "db:migrate": "pnpm --filter @senoy/db migrate",
+    "db:seed": "pnpm --filter @senoy/db seed"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}

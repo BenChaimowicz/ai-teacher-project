@@ -1,0 +1,24 @@
+{
+  "name": "@senoy/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.44.5",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.1",
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

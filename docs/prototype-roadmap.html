@@ -102,6 +102,23 @@
       margin-right: 6px;
     }
     article.start .who { background: #0f2d21; }
+    article.done {
+      opacity: 0.62;
+    }
+    .env-keys {
+      max-width: 1400px;
+      margin: 0 auto 24px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      font-size: 13px;
+    }
+    .env-keys p { margin: 6px 0 0; color: var(--muted); }
+    .env-keys code {
+      font-size: 12px;
+      background: var(--chip);
+      padding: 1px 5px;
+    }
     @media (max-width: 1100px) {
       .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
@@ -114,51 +131,72 @@
 <body>
   <header>
     <h1>Prototype roadmap</h1>
-    <p class="lede">Twenty remaining tickets under SEN-30, in the order they unlock.</p>
-    <p class="source">Source: Linear senoy · 6 Sep 2026 · Backlog only</p>
+    <p class="lede">Eighteen remaining tickets under SEN-30, in the order they unlock.</p>
+    <p class="source">Source: Linear senoy · 6 Sep 2026 · SEN-31 and SEN-32 done</p>
     <div class="stats">
-      <div class="stat"><strong>20</strong><span>Remaining tickets</span></div>
-      <div class="stat"><strong>1</strong><span>Can start now</span></div>
-      <div class="stat"><strong>16</strong><span>Ready for agent</span></div>
-      <div class="stat"><strong>4</strong><span>Ready for human</span></div>
+      <div class="stat"><strong>18</strong><span>Remaining tickets</span></div>
+      <div class="stat"><strong>4</strong><span>Can start now</span></div>
+      <div class="stat"><strong>15</strong><span>Ready for agent</span></div>
+      <div class="stat"><strong>3</strong><span>Ready for human</span></div>
     </div>
   </header>
 
   <div class="banner">
     <strong>Start here</strong>
-    <p><a href="https://linear.app/senoy/issue/SEN-31/provision-provider-accounts">SEN-31 Provision provider accounts</a>. Every other ticket waits on this chain.</p>
+    <p>
+      Setup is done. Four tickets are unblocked:
+      <a href="https://linear.app/senoy/issue/SEN-33/teaching-profile-questionnaire">SEN-33 Teaching Profile</a>,
+      <a href="https://linear.app/senoy/issue/SEN-34/fixture-published-course-and-study-chrome">SEN-34 Fixture Course</a>,
+      <a href="https://linear.app/senoy/issue/SEN-36/primary-and-secondary-research-source-packs">SEN-36 Source packs</a>,
+      <a href="https://linear.app/senoy/issue/SEN-47/seeded-test-course-media-catalog">SEN-47 media catalog</a>.
+    </p>
+  </div>
+
+  <div class="env-keys">
+    <strong>Prepared env</strong>
+    <p>
+      <code>DATABASE_URL</code>
+      <code>MEDIA_BUCKET</code>
+      <code>ACCESS_KEY_ID</code>
+      <code>SECRET_ACCESS_KEY</code>
+      <code>OPENROUTER_API_KEY</code>
+      <code>PARALLEL_PRO_API_KEY</code>
+      <code>YOU_DOT_COM_API_KEY</code>
+      <code>APP_URL=http://localhost:3000</code>
+      — listed empty in <code>.env.example</code> except the local APP_URL default. Secrets stay in local <code>.env</code>, never committed.
+    </p>
   </div>
 
   <div class="board">
     <section>
       <h2>Setup (2)</h2>
-      <article class="start">
+      <article class="done">
         <a class="id" href="https://linear.app/senoy/issue/SEN-31/provision-provider-accounts">SEN-31</a>
         <h3>Provision provider accounts</h3>
         <p class="ships">Keys and vendor choices so the prototype can call real providers.</p>
-        <p class="meta"><span class="who">Human</span> Can start</p>
+        <p class="meta"><span class="who">Human</span> Done</p>
       </article>
-      <article>
+      <article class="done">
         <a class="id" href="https://linear.app/senoy/issue/SEN-32/runnable-workspace-seeded-learner-home-library">SEN-32</a>
         <h3>Runnable workspace: seeded Learner, Home library</h3>
         <p class="ships">A local workspace with one seeded Learner and an empty Home library.</p>
-        <p class="meta"><span class="who">Agent</span> Waiting on SEN-31</p>
+        <p class="meta"><span class="who">Agent</span> Done</p>
       </article>
     </section>
 
     <section>
       <h2>Learner screens (4)</h2>
-      <article>
+      <article class="start">
         <a class="id" href="https://linear.app/senoy/issue/SEN-33/teaching-profile-questionnaire">SEN-33</a>
         <h3>Teaching Profile questionnaire</h3>
         <p class="ships">The Learner saves a Teaching Profile before any Course Request.</p>
-        <p class="meta"><span class="who">Agent</span> Waiting on SEN-32</p>
+        <p class="meta"><span class="who">Agent</span> Can start</p>
       </article>
-      <article>
+      <article class="start">
         <a class="id" href="https://linear.app/senoy/issue/SEN-34/fixture-published-course-and-study-chrome">SEN-34</a>
         <h3>Fixture published Course and Study chrome</h3>
         <p class="ships">A seeded published Course so Study chrome can be built before generation.</p>
-        <p class="meta"><span class="who">Agent</span> Waiting on SEN-32</p>
+        <p class="meta"><span class="who">Agent</span> Can start</p>
       </article>
       <article>
         <a class="id" href="https://linear.app/senoy/issue/SEN-38/reading-lesson-play">SEN-38</a>
@@ -204,11 +242,11 @@
 
     <section>
       <h2>Generate (6)</h2>
-      <article>
+      <article class="start">
         <a class="id" href="https://linear.app/senoy/issue/SEN-36/primary-and-secondary-research-source-packs">SEN-36</a>
         <h3>Primary and Secondary research Source packs</h3>
         <p class="ships">Two research calls return Source packs for a Lesson topic.</p>
-        <p class="meta"><span class="who">Agent</span> Waiting on SEN-32</p>
+        <p class="meta"><span class="who">Agent</span> Can start</p>
       </article>
       <article>
         <a class="id" href="https://linear.app/senoy/issue/SEN-42/course-blueprint-generate-review-approve">SEN-42</a>
@@ -244,11 +282,11 @@
 
     <section>
       <h2>Test courses (4)</h2>
-      <article>
+      <article class="start">
         <a class="id" href="https://linear.app/senoy/issue/SEN-47/seeded-test-course-media-catalog">SEN-47</a>
         <h3>Seeded Test-course media catalog</h3>
         <p class="ships">A small library of Demonstrative media for the three Test courses.</p>
-        <p class="meta"><span class="who">Agent</span> Waiting on SEN-32</p>
+        <p class="meta"><span class="who">Agent</span> Can start</p>
       </article>
       <article>
         <a class="id" href="https://linear.app/senoy/issue/SEN-48/test-course-microbiology-lab-fundamentals">SEN-48</a>

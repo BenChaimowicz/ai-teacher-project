@@ -47,19 +47,18 @@ TypeScript full-stack web app. One seeded Learner; no authentication. Every Lear
 
 **Media catalog.** The Media descriptor is application data. Library lookup uses a Media category plus Topic tags. Which Lessons use a file is a join, not a tag. A library file exists before any Lesson. Published Lessons copy descriptor fields so later catalog edits do not change a shipped Course.
 
-**Secrets (server-only; web and worker share the same keys).** Empty `.env.example`; never commit secrets.
+**Secrets (server-only; web and worker share the same keys).** `.env.example` names every key; never commit secrets. Local `APP_URL` default is `http://localhost:3000`.
 
 | Key | Used for |
 | --- | --- |
 | `DATABASE_URL` | Postgres |
-| `SUPABASE_URL` | Supabase project |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server Storage and admin access |
 | `MEDIA_BUCKET` | Private media bucket name |
+| `ACCESS_KEY_ID` | Storage access |
+| `SECRET_ACCESS_KEY` | Storage secret |
+| `OPENROUTER_API_KEY` | Generator, Judge, and image models |
+| `PARALLEL_PRO_API_KEY` | Primary research (Parallel Pro) |
+| `YOU_DOT_COM_API_KEY` | Secondary research (You.com) |
 | `APP_URL` | Stable `/media/…` origin |
-| `DEEPSEEK_API_KEY` | Leading Generator |
-| `OPENAI_API_KEY` | Fallback Generator, Judge, `gpt-image-2` |
-| Primary-research vendor key | Parallel Pro **or** Exa Agent high (config picks one) |
-| Secondary-research vendor key | You.com Research standard **or** Linkup M (config picks one) |
 
 Anthropic is not on the Generator or Judge path and is not a required secret. Claude remains off both paths.
 
@@ -78,7 +77,7 @@ Anthropic is not on the Generator or Judge path and is not a required secret. Cl
 
 Do not persist token streams or every mark-irrelevant Blueprint round.
 
-Provenance: [Users & data](https://linear.app/senoy/issue/SEN-8/users-and-data), [Runtime generation](https://linear.app/senoy/issue/SEN-15/runtime-generation), [Deployment](https://linear.app/senoy/issue/SEN-17/deployment). Env vendor names follow later Generator, Judge, and research locks.
+Provenance: [Users & data](https://linear.app/senoy/issue/SEN-8/users-and-data), [Runtime generation](https://linear.app/senoy/issue/SEN-15/runtime-generation), [Deployment](https://linear.app/senoy/issue/SEN-17/deployment). Env key names match the provisioned `.env` / `.env.example`.
 
 ---
 
