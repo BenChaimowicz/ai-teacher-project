@@ -8,6 +8,13 @@
       "when": 1788713699345,
       "tag": "0000_milky_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788960981561,
+      "tag": "0001_striped_the_spike",
+      "breakpoints": true
     }
   ]
 }

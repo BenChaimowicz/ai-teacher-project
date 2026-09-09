@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { margin:0; background:#0d1117; color:#e6edf3; font-family:'Segoe UI',sans-serif; overflow:hidden; }
+  .sidebar { position:fixed; left:0; top:0; width:230px; height:100vh; background:#11161d;
+    border-right:1px solid #1f2733; padding:24px; z-index:2; }
+  .logo { font-size:20px; font-weight:700; color:#7ee8c7; }
+  .nav a { display:block; color:#8b98a9; text-decoration:none; padding:10px 12px;
+    border-radius:8px; margin-top:6px; }
+  .nav a:hover, .nav a.active { background:#1a2230; color:#e6edf3; }
+  main { margin-left:230px; padding:80px 60px; position:relative; z-index:2; }
+  h1 { font-size:44px; max-width:600px; }
+  h1 span { color:#7ee8c7; }
+  p { color:#8b98a9; max-width:480px; line-height:1.6; }
+  .cta { background:#7ee8c7; color:#0d1117; border:none; padding:14px 28px;
+    border-radius:10px; font-size:16px; font-weight:600; cursor:pointer; margin-top:16px; }
+  .cta:hover { background:#a5f3da; }
+  /* floating blocks */
+  .block { position:fixed; border-radius:10px; background:linear-gradient(135deg,#1c2635,#141b26);
+    border:1px solid #243044; z-index:1; opacity:.7; animation:float 14s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-30px) rotate(6deg)} }
+</style>
+</head>
+<body>
+  <div class="block" style="width:90px;height:90px;top:15%;right:12%;animation-delay:0s"></div>
+  <div class="block" style="width:55px;height:55px;top:55%;right:25%;animation-delay:2s"></div>
+  <div class="block" style="width:120px;height:120px;bottom:10%;right:8%;animation-delay:4s"></div>
+  <div class="block" style="width:40px;height:40px;top:35%;right:35%;animation-delay:6s"></div>
+  <div class="block" style="width:70px;height:70px;bottom:30%;left:300px;animation-delay:3s"></div>
+
+  <aside class="sidebar">
+    <div class="logo">◆ LearnForge</div>
+    <nav class="nav">
+      <a href="#" class="active">Home</a><a href="#">My Courses</a>
+      <a href="#">Create Course</a><a href="#">Progress</a><a href="#">Settings</a>
+    </nav>
+  </aside>
+  <main>
+    <h1>Learn anything, <span>your way.</span></h1>
+    <p>Answer a few questions and we'll build a course that adapts to how you learn best.</p>
+    <button class="cta">Build my course →</button>
+  </main>
+</body>
+</html>

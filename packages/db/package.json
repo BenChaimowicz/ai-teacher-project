@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./teaching-profile": "./src/teaching-profile.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",

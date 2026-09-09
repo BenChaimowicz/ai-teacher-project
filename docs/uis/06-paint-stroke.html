@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      * { margin: 0; box-sizing: border-box; }
+      body { background: #17151a; color: #f6f1f3; font-family: Inter, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+      aside { width: 240px; padding: 24px; background: #1d1a20; border-right: 1px solid #2a262e; }
+      nav a { display: block; padding: 10px 12px; border-radius: 8px; color: #aaa2ad; text-decoration: none; }
+      nav a.active { background: #2a262e; color: #f7c948; }
+      main { flex: 1; padding: 64px; position: relative; }
+      .stroke { position: absolute; top: 40px; left: 20px; width: 720px; height: 260px; pointer-events: none; }
+      .stroke path { fill: none; stroke: #d64f8a; stroke-width: 110; stroke-linecap: round; stroke-dasharray: 800; stroke-dashoffset: 800; opacity: .5; animation: paint 1.6s cubic-bezier(.6,0,.2,1) .3s forwards; filter: url(#rough); }
+      @keyframes paint { to { stroke-dashoffset: 0; } }
+      h1 { position: relative; font-size: 46px; font-weight: 700; max-width: 600px; margin-top: 70px; }
+      p { color: #aaa2ad; margin: 16px 0 28px; }
+      .cta { background: #f7c948; color: #2b1f00; padding: 14px 26px; border-radius: 12px; font-weight: 600; border: 0; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <strong style="color:#f7c948">Learnly</strong>
+      <nav style="margin-top:28px">
+        <a class="active">Home</a><a>My courses</a><a>Progress</a><a>Settings</a>
+      </nav>
+    </aside>
+    <main>
+      <svg class="stroke" viewBox="0 0 720 260">
+        <defs>
+          <filter id="rough">
+            <feTurbulence baseFrequency=".04" numOctaves="2" result="n" />
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="18" />
+          </filter>
+        </defs>
+        <path d="M 60 140 Q 250 90 400 150 T 680 120" />
+      </svg>
+      <h1>Paint your own way to mastery.</h1>
+      <p>Answer a few questions. We'll shape the course around you.</p>
+      <button class="cta">Start learning</button>
+    </main>
+  </body>
+</html>

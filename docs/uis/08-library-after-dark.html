@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Library After Dark</title>
+
+    <style>
+      :root {
+        --bg: #101011;
+        --wood: #211b18;
+        --wood-light: #322521;
+        --panel: rgba(31, 28, 27, 0.78);
+        --border: rgba(255, 220, 171, 0.14);
+        --text: #f7eee0;
+        --muted: #a79a8d;
+        --amber: #f4c47d;
+        --cream: #ffe5b8;
+        --blue: #9bb8cf;
+        --rose: #dba8a5;
+        --green: #aac79b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        background:
+          radial-gradient(
+            circle at 68% 20%,
+            rgba(244, 196, 125, 0.12),
+            transparent 25%
+          ),
+          var(--bg);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .app {
+        display: grid;
+        min-height: 100vh;
+        grid-template-columns: 240px 1fr;
+      }
+
+      aside {
+        display: flex;
+        flex-direction: column;
+        padding: 28px 20px;
+        border-right: 1px solid var(--border);
+        background: rgba(13, 13, 13, 0.65);
+      }
+
+      .brand {
+        display: flex;
+        gap: 11px;
+        align-items: center;
+        margin-bottom: 49px;
+        font-weight: 850;
+        letter-spacing: -0.06em;
+      }
+
+      .brand-icon {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        color: #24170d;
+        background: var(--amber);
+        border-radius: 7px;
+        box-shadow: 0 0 20px rgba(244, 196, 125, 0.3);
+      }
+
+      nav {
+        display: grid;
+        gap: 7px;
+      }
+
+      nav button {
+        padding: 12px;
+        color: var(--muted);
+        cursor: pointer;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        text-align: left;
+      }
+
+      nav button.active,
+      nav button:hover {
+        color: var(--text);
+        background: rgba(244, 196, 125, 0.1);
+      }
+
+      .quote {
+        padding: 17px;
+        margin-top: auto;
+        color: var(--muted);
+        border-left: 2px solid var(--amber);
+        font-family: Georgia, serif;
+        font-size: 13px;
+        font-style: italic;
+        line-height: 1.55;
+      }
+
+      main {
+        width: min(1180px, 100%);
+        padding: 54px clamp(24px, 5vw, 80px);
+        margin: auto;
+      }
+
+      .header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 25px;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--amber);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(38px, 5vw, 66px);
+        line-height: 0.98;
+        letter-spacing: -0.08em;
+      }
+
+      .header p {
+        max-width: 350px;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .library {
+        position: relative;
+        min-height: 390px;
+        padding: 42px 28px 30px;
+        margin-top: 42px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background:
+          linear-gradient(
+            90deg,
+            transparent 0,
+            rgba(255, 255, 255, 0.02) 50%,
+            transparent 100%
+          ),
+          var(--wood);
+        box-shadow:
+          inset 0 20px 35px rgba(0, 0, 0, 0.14),
+          0 28px 70px rgba(0, 0, 0, 0.26);
+      }
+
+      .library::before,
+      .library::after {
+        position: absolute;
+        right: 0;
+        left: 0;
+        height: 18px;
+        border-top: 1px solid rgba(255, 220, 171, 0.16);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+        background: linear-gradient(var(--wood-light), #1c1715);
+        content: "";
+      }
+
+      .library::before {
+        top: 0;
+      }
+
+      .library::after {
+        bottom: 0;
+      }
+
+      .shelf {
+        position: absolute;
+        right: 20px;
+        bottom: 86px;
+        left: 20px;
+        height: 15px;
+        border: 1px solid rgba(255, 220, 171, 0.15);
+        border-radius: 4px;
+        background: linear-gradient(#49352b, #241b18);
+        box-shadow: 0 12px 12px rgba(0, 0, 0, 0.24);
+      }
+
+      .books {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        gap: 10px;
+        height: 280px;
+      }
+
+      .book {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 64px;
+        height: 238px;
+        padding: 14px 9px;
+        color: var(--book-color);
+        cursor: pointer;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 4px 8px 7px 4px;
+        background:
+          linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.24),
+            transparent 20%,
+            rgba(255, 255, 255, 0.08)
+          ),
+          var(--book-bg);
+        box-shadow: 7px 9px 13px rgba(0, 0, 0, 0.25);
+        transition:
+          transform 0.35s ease,
+          box-shadow 0.35s ease;
+      }
+
+      .book::after {
+        position: absolute;
+        top: 14px;
+        bottom: 14px;
+        left: 8px;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.16);
+        content: "";
+      }
+
+      .book:hover,
+      .book.selected {
+        z-index: 2;
+        box-shadow:
+          0 0 24px color-mix(in srgb, var(--book-color), transparent 68%),
+          9px 15px 19px rgba(0, 0, 0, 0.34);
+        transform: translateY(-28px) rotate(-1deg);
+      }
+
+      .book span {
+        color: inherit;
+        font-family: Georgia, serif;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        line-height: 1.15;
+        text-align: center;
+        transform: rotate(-90deg);
+      }
+
+      .book:nth-child(1) {
+        height: 210px;
+        --book-bg: #38516a;
+        --book-color: #e9f0fa;
+      }
+
+      .book:nth-child(2) {
+        height: 258px;
+        --book-bg: #765448;
+        --book-color: #fff0d7;
+      }
+
+      .book:nth-child(3) {
+        height: 231px;
+        --book-bg: #526a4d;
+        --book-color: #edf6e8;
+      }
+
+      .book:nth-child(4) {
+        height: 274px;
+        --book-bg: #a87558;
+        --book-color: #fff1df;
+      }
+
+      .book:nth-child(5) {
+        height: 248px;
+        --book-bg: #5b4a77;
+        --book-color: #f2eaff;
+      }
+
+      .book:nth-child(6) {
+        height: 220px;
+        --book-bg: #7c6a3e;
+        --book-color: #fff6ca;
+      }
+
+      .book:nth-child(7) {
+        height: 262px;
+        --book-bg: #3d6260;
+        --book-color: #e1faf5;
+      }
+
+      .book:nth-child(8) {
+        height: 236px;
+        --book-bg: #814c59;
+        --book-color: #ffe9e8;
+      }
+
+      .selected-book {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 20px;
+        align-items: center;
+        padding: 22px;
+        margin-top: 20px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--panel);
+        backdrop-filter: blur(15px);
+      }
+
+      .selected-book p {
+        margin: 0 0 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .selected-book h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .selected-book small {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+      }
+
+      .cta {
+        padding: 13px 18px;
+        color: #24170d;
+        cursor: pointer;
+        border: 0;
+        border-radius: 10px;
+        background: var(--amber);
+        font-weight: 800;
+      }
+
+      .cta:hover {
+        background: var(--cream);
+        transform: translateY(-2px);
+      }
+
+      @media (max-width: 760px) {
+        .app {
+          display: block;
+        }
+
+        aside {
+          padding: 18px 20px;
+        }
+
+        .brand {
+          margin: 0;
+        }
+
+        nav,
+        .quote {
+          display: none;
+        }
+
+        main {
+          padding-top: 40px;
+        }
+
+        .header {
+          display: block;
+        }
+
+        .header p {
+          margin-top: 15px;
+        }
+
+        .library {
+          padding-right: 14px;
+          padding-left: 14px;
+        }
+
+        .books {
+          justify-content: start;
+          overflow-x: auto;
+          padding: 0 15px;
+        }
+
+        .book {
+          min-width: 59px;
+        }
+
+        .selected-book {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app">
+      <aside>
+        <div class="brand">
+          <div class="brand-icon">▤</div>
+          <span>the study /</span>
+        </div>
+
+        <nav>
+          <button class="active">Reading now</button>
+          <button>My bookshelf</button>
+          <button>Discover</button>
+          <button>Notes & highlights</button>
+          <button>Learning profile</button>
+        </nav>
+
+        <div class="quote">
+          “A reader lives a thousand lives before he dies.”
+        </div>
+      </aside>
+
+      <main>
+        <div class="header">
+          <div>
+            <p class="eyebrow">Your personal library</p>
+            <h1>Pick up where<br />you left off.</h1>
+          </div>
+
+          <p>
+            Your shelf grows with your curiosity. Every course is shaped around
+            how you prefer to understand new ideas.
+          </p>
+        </div>
+
+        <section class="library">
+          <div class="books">
+            <button class="book" data-title="The language of images">
+              <span>The language of images</span>
+            </button>
+
+            <button class="book" data-title="A practical guide to psychology">
+              <span>Practical psychology</span>
+            </button>
+
+            <button class="book" data-title="Creative confidence">
+              <span>Creative confidence</span>
+            </button>
+
+            <button
+              class="book selected"
+              data-title="Artificial intelligence, explained"
+            >
+              <span>Artificial intelligence, explained</span>
+            </button>
+
+            <button class="book" data-title="The design of everyday things">
+              <span>Everyday design</span>
+            </button>
+
+            <button class="book" data-title="Learning how to learn">
+              <span>Learning how to learn</span>
+            </button>
+
+            <button class="book" data-title="Photography through practice">
+              <span>Photography through practice</span>
+            </button>
+
+            <button class="book" data-title="Writing that feels alive">
+              <span>Writing that feels alive</span>
+            </button>
+          </div>
+
+          <div class="shelf"></div>
+        </section>
+
+        <section class="selected-book">
+          <div>
+            <p>Currently reading · Chapter 4 of 12</p>
+            <h2 id="bookTitle">Artificial intelligence, explained</h2>
+            <small>Next: How machines learn · About 16 minutes</small>
+          </div>
+
+          <button class="cta" onclick="openBook()">Open book →</button>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const bookTitle = document.querySelector("#bookTitle");
+
+      document.querySelectorAll(".book").forEach((book) => {
+        book.addEventListener("click", () => {
+          document
+            .querySelector(".book.selected")
+            .classList.remove("selected");
+
+          book.classList.add("selected");
+          bookTitle.textContent = book.dataset.title;
+        });
+      });
+
+      function openBook() {
+        const button = document.querySelector(".cta");
+        button.textContent = "Opening chapter…";
+
+        setTimeout(() => {
+          button.textContent = "Chapter open ✓";
+        }, 800);
+      }
+    </script>
+  </body>
+</html>

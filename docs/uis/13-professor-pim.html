@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Professor Pim — AI Teacher</title>
+<style>
+  :root {
+    --bg: #16141f; --card: #1e1b29;
+    --fg: #f0edf7; --fg-soft: #a29cb8; --fg-faint: #6f6889;
+    --plum: #a78bfa; --peach: #f0a67a; --mint: #6ee7b7;
+    --line: rgba(240,237,247,0.09);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--fg); min-height: 100vh; display: flex;
+    font-family: ui-rounded, "SF Pro Rounded", Nunito, ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(50% 40% at 12% 8%, rgba(167,139,250,0.14), transparent 70%),
+      radial-gradient(45% 40% at 88% 92%, rgba(240,166,122,0.10), transparent 70%);
+  }
+
+  aside {
+    position: relative; z-index: 2; width: 276px; flex-shrink: 0;
+    background: rgba(30,27,41,0.5); border-right: 1px solid var(--line);
+    padding: 26px 20px; display: flex; flex-direction: column; gap: 22px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .brand .badge {
+    width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center;
+    background: linear-gradient(140deg, var(--plum), #7c5cf0); font-size: 14px;
+  }
+
+  /* ---- the owl ---- */
+  .pim { display: flex; flex-direction: column; align-items: center; gap: 11px; }
+  .owl { width: 124px; height: 124px; cursor: pointer; overflow: visible; }
+  .owl-body { animation: breathe 4.2s ease-in-out infinite; transform-origin: 50% 88%; }
+  @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+  .owl .pupil { transition: transform .18s cubic-bezier(.3,1.6,.5,1); }
+  .owl .lid { transform: scaleY(0); transform-origin: center; }
+  .owl.blink .lid { animation: blink .26s ease; }
+  @keyframes blink { 0%,100% { transform: scaleY(0); } 50% { transform: scaleY(1); } }
+  .owl .tuft-l { animation: tuft 5s ease-in-out infinite; transform-origin: bottom right; }
+  .owl .tuft-r { animation: tuft 5s ease-in-out infinite reverse; transform-origin: bottom left; }
+  @keyframes tuft { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(5deg); } }
+  .owl.excited .owl-body { animation: hop .6s cubic-bezier(.3,1.5,.4,1); }
+  @keyframes hop { 0%,100% { transform: translateY(0) scale(1); } 35% { transform: translateY(-11px) scale(1.05); } }
+
+  .bubble {
+    position: relative; background: rgba(240,237,247,0.055);
+    border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+    font-size: 13px; line-height: 1.55; color: var(--fg-soft); text-align: center; width: 100%;
+  }
+  .bubble::after {
+    content: ""; position: absolute; top: -6px; left: 50%;
+    transform: translateX(-50%) rotate(45deg); width: 10px; height: 10px;
+    background: #1c1926; border-left: 1px solid var(--line); border-top: 1px solid var(--line);
+  }
+  .bubble b { color: var(--fg); font-weight: 700; }
+
+  nav { display: flex; flex-direction: column; gap: 3px; }
+  nav a {
+    display: flex; align-items: center; gap: 11px; color: var(--fg-soft);
+    text-decoration: none; font-size: 14.5px; font-weight: 500;
+    padding: 10px 12px; border-radius: 11px; transition: .2s;
+  }
+  nav a span.ico { width: 17px; height: 17px; opacity: .75; }
+  nav a:hover { background: rgba(167,139,250,0.09); color: var(--fg); }
+  nav a[aria-current] { background: rgba(167,139,250,0.16); color: var(--fg); }
+  nav a .count {
+    margin-left: auto; font-size: 11px; font-weight: 700;
+    background: rgba(240,237,247,0.08); padding: 2px 8px; border-radius: 999px; color: var(--fg-faint);
+  }
+
+  .streak {
+    margin-top: auto; background: rgba(110,231,183,0.08);
+    border: 1px solid rgba(110,231,183,0.2); border-radius: 13px; padding: 13px 14px;
+  }
+  .streak small { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--mint); }
+  .streak .days { display: flex; gap: 5px; margin-top: 10px; }
+  .streak .days i {
+    width: 100%; height: 22px; border-radius: 5px; background: rgba(240,237,247,0.07);
+  }
+  .streak .days i[data-done] { background: var(--mint); opacity: .8; }
+
+  main { position: relative; z-index: 2; flex: 1; padding: 46px 5vw 90px; max-width: 1200px; }
+  .hey { font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -1.1px; line-height: 1.15; }
+  .hey em { font-style: normal; color: var(--peach); }
+  .lede { color: var(--fg-soft); font-size: 16px; margin-top: 11px; max-width: 46ch; line-height: 1.6; }
+
+  /* ---- input as an answer to Pim's question ---- */
+  .ask { margin-top: 32px; max-width: 690px; }
+  .ask-q {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 13px;
+    color: var(--fg-faint); margin-bottom: 10px; padding-left: 4px;
+  }
+  .ask-q .live { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 9px var(--mint); }
+  .askbox {
+    display: flex; align-items: center; gap: 10px; background: var(--card);
+    border: 1.5px solid var(--line); border-radius: 18px; padding: 6px 6px 6px 18px;
+    transition: border-color .25s, box-shadow .25s, transform .25s;
+  }
+  .askbox:focus-within {
+    border-color: rgba(167,139,250,0.55); transform: translateY(-2px);
+    box-shadow: 0 0 0 5px rgba(167,139,250,0.09), 0 22px 45px -22px rgba(0,0,0,.75);
+  }
+  .askbox input {
+    flex: 1; background: none; border: 0; outline: none; color: var(--fg);
+    font-size: 16.5px; font-family: inherit; padding: 15px 0; font-weight: 500;
+  }
+  .askbox input::placeholder { color: var(--fg-faint); font-weight: 400; }
+  .go {
+    background: linear-gradient(140deg, var(--plum), #7c5cf0); color: #120f1c;
+    border: 0; border-radius: 13px; font-family: inherit; font-size: 14.5px; font-weight: 800;
+    padding: 14px 20px; cursor: pointer; transition: .2s; white-space: nowrap;
+  }
+  .go:hover { filter: brightness(1.1); }
+
+  .ideas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .idea {
+    background: rgba(240,237,247,0.045); border: 1px solid var(--line); color: var(--fg-soft);
+    font-family: inherit; font-size: 13px; font-weight: 500; padding: 8px 14px;
+    border-radius: 999px; cursor: pointer; transition: .2s;
+  }
+  .idea:hover { background: rgba(240,166,122,0.12); border-color: rgba(240,166,122,.35); color: var(--peach); }
+
+  .row { display: flex; align-items: center; justify-content: space-between; margin: 66px 0 18px; }
+  .row h2 { font-size: 19px; font-weight: 800; letter-spacing: -.3px; }
+  .row a { color: var(--fg-faint); font-size: 13.5px; text-decoration: none; font-weight: 600; }
+  .row a:hover { color: var(--plum); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr)); gap: 15px; }
+  .cardx {
+    position: relative; background: var(--card); border: 1px solid var(--line);
+    border-radius: 18px; padding: 18px; cursor: pointer; overflow: hidden;
+    transition: transform .28s cubic-bezier(.2,.8,.3,1), border-color .28s;
+  }
+  .cardx:hover { transform: translateY(-4px); border-color: rgba(167,139,250,.32); }
+  .emoji {
+    width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+    font-size: 20px; background: rgba(240,237,247,0.06); margin-bottom: 13px;
+  }
+  .cardx h3 { font-size: 16px; font-weight: 700; line-height: 1.35; }
+  .cardx .nx { font-size: 13px; color: var(--fg-faint); margin-top: 6px; }
+  .bar { margin-top: 16px; height: 7px; border-radius: 99px; background: rgba(240,237,247,0.07); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--plum), var(--peach)); }
+  .fl { display: flex; justify-content: space-between; margin-top: 9px; font-size: 11.5px; color: var(--fg-faint); font-weight: 600; }
+
+  @media (max-width: 820px) {
+    body { flex-direction: column; }
+    aside { width: 100%; border-right: 0; border-bottom: 1px solid var(--line); }
+    .owl { width: 84px; height: 84px; } .streak { display: none; }
+    nav { flex-direction: row; flex-wrap: wrap; } main { padding: 30px 20px 70px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .owl-body, .owl .tuft-l, .owl .tuft-r { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <aside>
+    <div class="brand"><span class="badge">🦉</span> Professor Pim</div>
+
+    <div class="pim">
+      <svg class="owl" id="owl" viewBox="0 0 120 120">
+        <g class="owl-body">
+          <path class="tuft-l" d="M34 34 L28 16 L46 26 Z" fill="#5b4b8a"/>
+          <path class="tuft-r" d="M86 34 L92 16 L74 26 Z" fill="#5b4b8a"/>
+          <ellipse cx="60" cy="66" rx="36" ry="38" fill="#6b58a3"/>
+          <ellipse cx="60" cy="74" rx="25" ry="28" fill="#7c68b8" opacity=".55"/>
+          <circle cx="46" cy="56" r="15" fill="#f0edf7"/>
+          <circle cx="74" cy="56" r="15" fill="#f0edf7"/>
+          <g id="eyes">
+            <circle class="pupil" cx="46" cy="56" r="6.5" fill="#221d38"/>
+            <circle class="pupil" cx="74" cy="56" r="6.5" fill="#221d38"/>
+          </g>
+          <rect class="lid" x="31" y="49" width="30" height="15" rx="7" fill="#6b58a3"/>
+          <rect class="lid" x="59" y="49" width="30" height="15" rx="7" fill="#6b58a3"/>
+          <!-- glasses -->
+          <g stroke="#f0a67a" stroke-width="2.4" fill="none">
+            <circle cx="46" cy="56" r="16"/><circle cx="74" cy="56" r="16"/>
+            <path d="M62 56h-4M30 52l-8-5M90 52l8-5"/>
+          </g>
+          <path d="M60 66 l-5 7 h10 z" fill="#f0a67a"/>
+        </g>
+      </svg>
+      <div class="bubble" id="bubble">Ready when you are. <b>What are we learning?</b></div>
+    </div>
+
+    <nav>
+      <a href="#" aria-current="page">📚 Library <span class="count">4</span></a>
+      <a href="#">🎯 Today's plan <span class="count">3</span></a>
+      <a href="#">🧠 Recall drills</a>
+      <a href="#">🏅 Milestones</a>
+      <a href="#">⚙️ Settings</a>
+    </nav>
+
+    <div class="streak">
+      <small>6-day streak</small>
+      <div class="days">
+        <i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-done></i><i></i>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <h1 class="hey">Hey Yarden — <em>nice to see you.</em></h1>
+    <p class="lede">Pim kept your place in four courses. Or start something completely new; he likes a challenge.</p>
+
+    <div class="ask">
+      <div class="ask-q"><span class="live"></span> Pim asks:</div>
+      <div class="askbox">
+        <input id="topic" type="text" placeholder="Teach me… chess endgames? Neuroscience? Anything." autocomplete="off" />
+        <button class="go">Let's go →</button>
+      </div>
+      <div class="ideas">
+        <button class="idea">🐝 Beekeeping</button>
+        <button class="idea">♟ Chess endgames</button>
+        <button class="idea">🎬 Film editing</button>
+        <button class="idea">🧬 Genetics 101</button>
+      </div>
+    </div>
+
+    <div class="row"><h2>Keep going</h2><a href="#">See all 12 →</a></div>
+    <div class="grid">
+      <article class="cardx">
+        <div class="emoji">🎹</div><h3>Piano, from zero</h3>
+        <p class="nx">Next · Left-hand independence</p>
+        <div class="bar"><i style="width:48%"></i></div>
+        <div class="fl"><span>48%</span><span>12 min</span></div>
+      </article>
+      <article class="cardx">
+        <div class="emoji">🧪</div><h3>Everyday chemistry</h3>
+        <p class="nx">Next · Why soap works</p>
+        <div class="bar"><i style="width:71%"></i></div>
+        <div class="fl"><span>71%</span><span>8 min</span></div>
+      </article>
+      <article class="cardx">
+        <div class="emoji">🗺</div><h3>Cartography &amp; maps</h3>
+        <p class="nx">Next · Projections &amp; lies</p>
+        <div class="bar"><i style="width:22%"></i></div>
+        <div class="fl"><span>22%</span><span>20 min</span></div>
+      </article>
+      <article class="cardx">
+        <div class="emoji">🐝</div><h3>Beekeeping basics</h3>
+        <p class="nx">Next · Reading the hive</p>
+        <div class="bar"><i style="width:9%"></i></div>
+        <div class="fl"><span>9%</span><span>15 min</span></div>
+      </article>
+    </div>
+  </main>
+
+<script>
+  const owl = document.getElementById('owl');
+  const eyes = document.getElementById('eyes');
+  const bubble = document.getElementById('bubble');
+  const topic = document.getElementById('topic');
+
+  // eyes track the cursor
+  document.addEventListener('mousemove', e => {
+    const r = owl.getBoundingClientRect();
+    const dx = (e.clientX - (r.left + r.width / 2)) / r.width;
+    const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+    const x = Math.max(-1, Math.min(1, dx)) * 4.5;
+    const y = Math.max(-1, Math.min(1, dy)) * 3.5;
+    eyes.querySelectorAll('.pupil').forEach(p => p.style.transform = `translate(${x}px,${y}px)`);
+  });
+
+  // idle blinking
+  setInterval(() => {
+    owl.classList.add('blink');
+    setTimeout(() => owl.classList.remove('blink'), 300);
+  }, 4200);
+
+  // reacts to typing
+  const lines = [
+    'Ooh, <b>good pick.</b> I know a shortcut.',
+    'Interesting… I\'ll keep it <b>gentle</b> at first.',
+    'I\'ve got four questions, then we begin.',
+  ];
+  let t;
+  topic.addEventListener('input', () => {
+    clearTimeout(t);
+    if (topic.value.length > 3) {
+      t = setTimeout(() => {
+        bubble.innerHTML = lines[Math.floor(Math.random() * lines.length)];
+        owl.classList.add('excited');
+        setTimeout(() => owl.classList.remove('excited'), 650);
+      }, 420);
+    } else {
+      bubble.innerHTML = 'Ready when you are. <b>What are we learning?</b>';
+    }
+  });
+
+  owl.addEventListener('click', () => {
+    owl.classList.add('excited');
+    bubble.innerHTML = '<b>Hoo!</b> That tickles.';
+    setTimeout(() => owl.classList.remove('excited'), 650);
+  });
+
+  document.querySelectorAll('.idea').forEach(b => b.addEventListener('click', () => {
+    topic.value = b.textContent.trim().replace(/^\S+\s/, '');
+    topic.dispatchEvent(new Event('input')); topic.focus();
+  }));
+</script>
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sapling — AI Teacher</title>
+<style>
+  :root {
+    --bg: #0b1210;
+    --bg-2: #0f1a17;
+    --fg: #e8f2ec;
+    --fg-soft: #8fa89c;
+    --fg-faint: #5b7268;
+    --moss: #7bc49a;
+    --moss-deep: #2f6b4f;
+    --bloom: #d9a8e0;
+    --line: rgba(232,242,236,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: radial-gradient(120% 90% at 15% 0%, #12211c 0%, var(--bg) 55%);
+    color: var(--fg); min-height: 100vh; display: flex;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+
+  /* ---- ambient motes ---- */
+  .motes { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .mote {
+    position: absolute; width: 3px; height: 3px; border-radius: 50%;
+    background: var(--moss); opacity: 0.22;
+    animation: float linear infinite;
+  }
+  @keyframes float {
+    from { transform: translateY(105vh) translateX(0); opacity: 0; }
+    12% { opacity: 0.3; }
+    88% { opacity: 0.3; }
+    to { transform: translateY(-8vh) translateX(40px); opacity: 0; }
+  }
+
+  /* ---- sidebar w/ living vine ---- */
+  aside {
+    position: relative; z-index: 2; width: 268px; flex-shrink: 0;
+    border-right: 1px solid var(--line); padding: 28px 22px;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .vine { position: absolute; left: 0; top: 0; height: 100%; width: 100%; pointer-events: none; opacity: 0.5; }
+  .vine path { stroke: var(--moss-deep); stroke-width: 1.4; fill: none;
+    stroke-dasharray: 900; stroke-dashoffset: 900; animation: draw 3.4s ease forwards; }
+  .vine circle { fill: var(--moss); opacity: 0; animation: pop 0.5s ease forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes pop { to { opacity: 0.7; } }
+
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 34px; position: relative; z-index: 1; }
+  .brand-leaf { width: 26px; height: 26px; color: var(--moss); animation: sway 6s ease-in-out infinite; transform-origin: bottom center; }
+  @keyframes sway { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(6deg); } }
+  .brand b { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+
+  nav { display: flex; flex-direction: column; gap: 3px; position: relative; z-index: 1; }
+  nav a {
+    display: flex; align-items: center; gap: 11px; color: var(--fg-soft);
+    text-decoration: none; font-size: 14.5px; padding: 10px 12px;
+    border-radius: 10px; transition: 0.24s;
+  }
+  nav a .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.4; transition: 0.24s; }
+  nav a:hover { background: rgba(123,196,154,0.07); color: var(--fg); }
+  nav a[aria-current] { background: rgba(123,196,154,0.11); color: var(--fg); }
+  nav a[aria-current] .dot { background: var(--moss); opacity: 1; box-shadow: 0 0 10px var(--moss); }
+
+  .growth { margin-top: auto; position: relative; z-index: 1;
+    padding: 16px; border-radius: 12px; background: rgba(232,242,236,0.035); border: 1px solid var(--line); }
+  .growth h4 { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-faint); margin-bottom: 12px; }
+  .rings { display: flex; align-items: flex-end; gap: 4px; height: 42px; }
+  .rings i {
+    flex: 1; background: linear-gradient(180deg, var(--moss), var(--moss-deep));
+    border-radius: 2px; opacity: 0.75;
+    animation: rise 1s cubic-bezier(.2,.8,.2,1) backwards;
+  }
+  @keyframes rise { from { height: 0 !important; opacity: 0; } }
+  .growth p { font-size: 12.5px; color: var(--fg-faint); margin-top: 11px; }
+  .growth p b { color: var(--moss); font-weight: 600; }
+
+  /* ---- main ---- */
+  main { position: relative; z-index: 2; flex: 1; padding: 52px 5vw 90px; max-width: 1200px; }
+
+  /* the seed input — branch literally grows out of it */
+  .plant { max-width: 700px; position: relative; }
+  .plant h1 { font-size: clamp(30px, 4.4vw, 46px); font-weight: 600; line-height: 1.12; letter-spacing: -1px; }
+  .plant h1 span { color: var(--moss); }
+  .plant .lede { color: var(--fg-soft); font-size: 16.5px; line-height: 1.6; margin-top: 13px; max-width: 44ch; }
+
+  .seedbed { margin-top: 34px; position: relative; }
+  .sprout { position: absolute; left: 26px; bottom: 100%; width: 200px; height: 90px; pointer-events: none; }
+  .sprout path { stroke: var(--moss); stroke-width: 1.6; fill: none; stroke-linecap: round;
+    stroke-dasharray: 240; stroke-dashoffset: 240; transition: stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1); }
+  .sprout .leaf { fill: var(--moss); opacity: 0; transition: opacity 0.5s 0.6s; transform-origin: center; }
+  .seedbed.growing .sprout path { stroke-dashoffset: 0; }
+  .seedbed.growing .sprout .leaf { opacity: 0.85; }
+
+  .pot {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(232,242,236,0.04); border: 1px solid rgba(232,242,236,0.12);
+    border-radius: 16px; padding: 6px 6px 6px 18px;
+    transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+  }
+  .pot:focus-within {
+    border-color: rgba(123,196,154,0.5); background: rgba(123,196,154,0.06);
+    box-shadow: 0 0 0 4px rgba(123,196,154,0.08), 0 18px 40px -20px rgba(0,0,0,0.7);
+  }
+  .pot input {
+    flex: 1; background: none; border: 0; outline: none; color: var(--fg);
+    font-size: 16.5px; font-family: inherit; padding: 15px 0;
+  }
+  .pot input::placeholder { color: var(--fg-faint); }
+  .plantbtn {
+    background: var(--moss); color: #08130e; border: 0; border-radius: 12px;
+    font-size: 14px; font-weight: 600; padding: 13px 20px; cursor: pointer;
+    display: flex; align-items: center; gap: 7px; transition: 0.22s; font-family: inherit;
+  }
+  .plantbtn:hover { background: #93d6ae; transform: translateY(-1px); }
+  .plantbtn svg { width: 15px; height: 15px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip {
+    background: none; border: 1px dashed rgba(232,242,236,0.16); color: var(--fg-soft);
+    font-size: 12.5px; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+    font-family: inherit; transition: 0.2s;
+  }
+  .chip:hover { border-style: solid; border-color: var(--moss); color: var(--moss); }
+
+  /* ---- garden grid ---- */
+  .garden-head { display: flex; align-items: center; justify-content: space-between; margin: 72px 0 20px; }
+  .garden-head h2 { font-size: 19px; font-weight: 600; }
+  .filters { display: flex; gap: 6px; }
+  .filters button {
+    background: none; border: 1px solid var(--line); color: var(--fg-faint);
+    font-size: 12px; padding: 6px 13px; border-radius: 999px; cursor: pointer; font-family: inherit;
+    transition: 0.2s;
+  }
+  .filters button[data-on] { background: rgba(123,196,154,0.12); color: var(--moss); border-color: transparent; }
+
+  .garden { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; }
+  .plot {
+    position: relative; padding: 20px; border-radius: 16px;
+    background: rgba(232,242,236,0.035); border: 1px solid var(--line);
+    cursor: pointer; overflow: hidden;
+    transition: transform 0.3s cubic-bezier(.2,.8,.3,1), border-color 0.3s, background 0.3s;
+  }
+  .plot:hover { transform: translateY(-3px); border-color: rgba(123,196,154,0.3); background: rgba(123,196,154,0.055); }
+  .plot .stage { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .stage-icon { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+    background: rgba(123,196,154,0.14); color: var(--moss); }
+  .stage-icon svg { width: 16px; height: 16px; }
+  .stage small { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-faint); }
+  .plot h3 { font-size: 16.5px; font-weight: 600; line-height: 1.35; }
+  .plot .up { font-size: 13px; color: var(--fg-faint); margin-top: 7px; }
+
+  /* growth-ring progress instead of a bar */
+  .ringwrap { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+  .ring { width: 34px; height: 34px; flex-shrink: 0; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 3; }
+  .ring .track { stroke: rgba(232,242,236,0.1); }
+  .ring .fill { stroke: var(--moss); stroke-linecap: round;
+    transition: stroke-dashoffset 0.9s cubic-bezier(.2,.8,.2,1); }
+  .ringwrap div { font-size: 12.5px; color: var(--fg-soft); line-height: 1.4; }
+  .ringwrap b { color: var(--fg); font-weight: 600; }
+
+  .plot.bloomed { border-color: rgba(217,168,224,0.28); }
+  .plot.bloomed .stage-icon { background: rgba(217,168,224,0.15); color: var(--bloom); }
+  .plot.bloomed .ring .fill { stroke: var(--bloom); }
+
+  @media (max-width: 800px) {
+    body { flex-direction: column; }
+    aside { width: 100%; border-right: 0; border-bottom: 1px solid var(--line); }
+    .vine, .growth { display: none; } nav { flex-direction: row; flex-wrap: wrap; }
+    main { padding: 32px 20px 70px; } .sprout { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mote, .brand-leaf, .vine path, .vine circle { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="motes" id="motes"></div>
+
+  <aside>
+    <svg class="vine" viewBox="0 0 268 900" preserveAspectRatio="none">
+      <path d="M10 900 C 10 700, 60 640, 40 500 C 20 380, 80 320, 55 200 C 40 120, 70 70, 60 0" />
+      <circle cx="40" cy="500" r="3.5" style="animation-delay:1.6s" />
+      <circle cx="55" cy="200" r="3.5" style="animation-delay:2.4s" />
+      <circle cx="60" cy="60" r="3.5" style="animation-delay:3s" />
+    </svg>
+
+    <div class="brand">
+      <svg class="brand-leaf" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 22c0-6 2-10 8-13-1 7-3 10-8 13z" opacity=".85"/>
+        <path d="M12 22C12 15 9 11 4 9c1 7 3 10 8 13z" opacity=".55"/>
+        <rect x="11.4" y="14" width="1.2" height="8" rx=".6" opacity=".7"/>
+      </svg>
+      <b>Sapling</b>
+    </div>
+
+    <nav>
+      <a href="#" aria-current="page"><span class="dot"></span>Garden</a>
+      <a href="#"><span class="dot"></span>Growing</a>
+      <a href="#"><span class="dot"></span>Harvested</a>
+      <a href="#"><span class="dot"></span>Seeds saved</a>
+      <a href="#"><span class="dot"></span>Settings</a>
+    </nav>
+
+    <div class="growth">
+      <h4>This fortnight</h4>
+      <div class="rings">
+        <i style="height:30%; animation-delay:.05s"></i><i style="height:55%; animation-delay:.1s"></i>
+        <i style="height:20%; animation-delay:.15s"></i><i style="height:75%; animation-delay:.2s"></i>
+        <i style="height:60%; animation-delay:.25s"></i><i style="height:95%; animation-delay:.3s"></i>
+        <i style="height:45%; animation-delay:.35s"></i>
+      </div>
+      <p><b>6 days</b> tended in a row</p>
+    </div>
+  </aside>
+
+  <main>
+    <div class="plant">
+      <h1>Plant something<br /><span>new today.</span></h1>
+      <p class="lede">Type any subject. We'll ask four quick questions, then grow a path that bends to your pace — not a fixed curriculum.</p>
+
+      <div class="seedbed" id="seedbed">
+        <svg class="sprout" viewBox="0 0 200 90">
+          <path d="M8 88 C 8 60, 40 52, 62 34 C 80 20, 110 16, 140 12" />
+          <ellipse class="leaf" cx="66" cy="32" rx="11" ry="5.5" transform="rotate(-28 66 32)" />
+          <ellipse class="leaf" cx="120" cy="15" rx="13" ry="6" transform="rotate(-12 120 15)" />
+        </svg>
+        <div class="pot">
+          <input id="seed" type="text" placeholder="What do you want to grow? e.g. mycology" autocomplete="off" />
+          <button class="plantbtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            Plant it
+          </button>
+        </div>
+        <div class="chips">
+          <button class="chip">Mycology</button>
+          <button class="chip">Statistics without tears</button>
+          <button class="chip">Bread &amp; fermentation</button>
+          <button class="chip">Ancient Greek</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="garden-head">
+      <h2>Your garden</h2>
+      <div class="filters">
+        <button data-on>Growing</button><button>All</button><button>Bloomed</button>
+      </div>
+    </div>
+
+    <div class="garden">
+      <article class="plot">
+        <div class="stage">
+          <span class="stage-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg></span>
+          <small>Sprouting</small>
+        </div>
+        <h3>Mycology &amp; forest networks</h3>
+        <p class="up">Up next · Mycorrhizal exchange</p>
+        <div class="ringwrap">
+          <svg class="ring" viewBox="0 0 40 40"><circle class="track" cx="20" cy="20" r="16"/><circle class="fill" cx="20" cy="20" r="16" stroke-dasharray="100.5" stroke-dashoffset="76"/></svg>
+          <div><b>24%</b><br />3 of 12 lessons</div>
+        </div>
+      </article>
+
+      <article class="plot">
+        <div class="stage">
+          <span class="stage-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21V9M12 9C12 5 9 3 5 3c0 4 3 6 7 6zM12 9c0-4 3-6 7-6 0 4-3 6-7 6z"/></svg></span>
+          <small>Branching</small>
+        </div>
+        <h3>Statistics, intuitively</h3>
+        <p class="up">Up next · Bayes in plain words</p>
+        <div class="ringwrap">
+          <svg class="ring" viewBox="0 0 40 40"><circle class="track" cx="20" cy="20" r="16"/><circle class="fill" cx="20" cy="20" r="16" stroke-dasharray="100.5" stroke-dashoffset="34"/></svg>
+          <div><b>66%</b><br />8 of 12 lessons</div>
+        </div>
+      </article>
+
+      <article class="plot bloomed">
+        <div class="stage">
+          <span class="stage-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="6" r="2.6"/><circle cx="12" cy="18" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="12" r="2.6"/></svg></span>
+          <small>Bloomed</small>
+        </div>
+        <h3>Sourdough &amp; fermentation</h3>
+        <p class="up">Complete · revisit anytime</p>
+        <div class="ringwrap">
+          <svg class="ring" viewBox="0 0 40 40"><circle class="track" cx="20" cy="20" r="16"/><circle class="fill" cx="20" cy="20" r="16" stroke-dasharray="100.5" stroke-dashoffset="0"/></svg>
+          <div><b>100%</b><br />14 of 14 lessons</div>
+        </div>
+      </article>
+
+      <article class="plot">
+        <div class="stage">
+          <span class="stage-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg></span>
+          <small>Sprouting</small>
+        </div>
+        <h3>Ancient Greek, slowly</h3>
+        <p class="up">Up next · The middle voice</p>
+        <div class="ringwrap">
+          <svg class="ring" viewBox="0 0 40 40"><circle class="track" cx="20" cy="20" r="16"/><circle class="fill" cx="20" cy="20" r="16" stroke-dasharray="100.5" stroke-dashoffset="88"/></svg>
+          <div><b>12%</b><br />1 of 9 lessons</div>
+        </div>
+      </article>
+    </div>
+  </main>
+
+<script>
+  // ambient motes
+  const wrap = document.getElementById('motes');
+  for (let i = 0; i < 22; i++) {
+    const m = document.createElement('div');
+    m.className = 'mote';
+    m.style.left = Math.random() * 100 + 'vw';
+    m.style.animationDuration = 16 + Math.random() * 20 + 's';
+    m.style.animationDelay = -Math.random() * 30 + 's';
+    m.style.transform = `scale(${0.6 + Math.random() * 1.4})`;
+    wrap.appendChild(m);
+  }
+  // sprout grows when you type
+  const seed = document.getElementById('seed');
+  const bed = document.getElementById('seedbed');
+  seed.addEventListener('input', () => bed.classList.toggle('growing', seed.value.length > 2));
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    seed.value = c.textContent.trim(); bed.classList.add('growing'); seed.focus();
+  }));
+  document.querySelectorAll('.filters button').forEach(b => b.addEventListener('click', e => {
+    document.querySelectorAll('.filters button').forEach(x => x.removeAttribute('data-on'));
+    b.setAttribute('data-on', '');
+  }));
+</script>
+</body>
+</html>

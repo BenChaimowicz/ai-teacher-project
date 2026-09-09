@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button.tsx";
+import { CourseRequestControl } from "@/components/course-request-control.tsx";
 
 type LibraryItem = {
   id: string;
@@ -50,9 +49,9 @@ export function HomePage() {
           <p className="mt-2 max-w-md text-sm text-muted-foreground">
             When you request a Course, it will show up here — including ones still in progress or rejected.
           </p>
-          <Button asChild className="mt-6">
-            <Link to="/new-course-request">New Course Request</Link>
-          </Button>
+          <div className="mt-6">
+            <CourseRequestControl variant="button">New Course Request</CourseRequestControl>
+          </div>
         </div>
       ) : null}
 

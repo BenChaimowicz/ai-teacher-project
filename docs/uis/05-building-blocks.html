@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Concept 2 – Building Blocks</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: #08080c;
+    color: #d8d8e0;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    width: 260px;
+    background: #0c0c14;
+    border-right: 1px solid rgba(255,255,255,0.03);
+    padding: 28px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 2;
+  }
+
+  .logo {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 36px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #f0abfc;
+  }
+
+  .logo-blocks {
+    display: flex;
+    gap: 3px;
+  }
+
+  .logo-blocks span {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    animation: blockFloat 3s ease-in-out infinite;
+  }
+
+  .logo-blocks span:nth-child(1) { background: #c084fc; animation-delay: 0s; }
+  .logo-blocks span:nth-child(2) { background: #f0abfc; animation-delay: 0.3s; height: 12px; }
+  .logo-blocks span:nth-child(3) { background: #e879f9; animation-delay: 0.6s; height: 6px; }
+
+  @keyframes blockFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+  }
+
+  .nav-item {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .nav-item:hover, .nav-item.active {
+    background: rgba(240,171,252,0.06);
+    color: #e8b4f8;
+  }
+
+  .nav-item.active { font-weight: 500; }
+
+  .nav-icon {
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    background: rgba(240,171,252,0.12);
+  }
+
+  .spacer { flex: 1; }
+
+  .sidebar-footer {
+    font-size: 0.72rem;
+    color: #333;
+    padding: 12px 14px;
+    border-top: 1px solid rgba(255,255,255,0.03);
+  }
+
+  .main {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    padding: 44px 52px;
+  }
+
+  /* ── Floating Blocks ── */
+  .blocks-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .block-shape {
+    position: absolute;
+    border-radius: 6px;
+    opacity: 0;
+    animation: drift 20s linear infinite;
+  }
+
+  @keyframes drift {
+    0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+    10%  { opacity: 0.08; }
+    90%  { opacity: 0.08; }
+    100% { transform: translateY(-120px) rotate(180deg); opacity: 0; }
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+  }
+
+  .content .tag {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(240,171,252,0.08);
+    border: 1px solid rgba(240,171,252,0.15);
+    border-radius: 20px;
+    font-size: 0.78rem;
+    color: #d8a0e8;
+    margin-bottom: 20px;
+  }
+
+  .content h1 {
+    font-size: 2.6rem;
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 18px;
+    color: #f0e8ff;
+  }
+
+  .content h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, #c084fc, #f0abfc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .content p {
+    font-size: 1rem;
+    color: #777;
+    line-height: 1.7;
+    margin-bottom: 36px;
+    max-width: 500px;
+  }
+
+  .cta-group { display: flex; gap: 14px; align-items: center; }
+
+  .cta {
+    padding: 14px 30px;
+    background: linear-gradient(135deg, #a855f7, #e879f9);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.92rem;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.3s;
+    box-shadow: 0 4px 24px rgba(168,85,247,0.25);
+  }
+
+  .cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 36px rgba(168,85,247,0.4);
+  }
+
+  .cta-ghost {
+    padding: 14px 28px;
+    background: transparent;
+    color: #c084fc;
+    font-weight: 500;
+    font-size: 0.92rem;
+    border: 1px solid rgba(192,132,252,0.25);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .cta-ghost:hover {
+    background: rgba(192,132,252,0.06);
+    border-color: rgba(192,132,252,0.4);
+  }
+
+  .stats {
+    display: flex;
+    gap: 48px;
+    margin-top: 56px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .stat h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #e0c4fc;
+  }
+
+  .stat span {
+    font-size: 0.8rem;
+    color: #555;
+    margin-top: 4px;
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-blocks"><span></span><span></span><span></span></div>
+    Blockwise
+  </div>
+  <div class="nav-item active"><div class="nav-icon"></div> Home</div>
+  <div class="nav-item"><div class="nav-icon"></div> Courses</div>
+  <div class="nav-item"><div class="nav-icon"></div> Roadmap</div>
+  <div class="nav-item"><div class="nav-icon"></div> Community</div>
+  <div class="nav-item"><div class="nav-icon"></div> Account</div>
+  <div class="spacer"></div>
+  <div class="sidebar-footer">Built with blocks of knowledge</div>
+</aside>
+
+<main class="main">
+  <div class="blocks-layer" id="blocksLayer"></div>
+  <div class="content">
+    <span class="tag">✦ AI-Powered Learning</span>
+    <h1>Build your knowledge,<br><em>block by block.</em></h1>
+    <p>Tell us what you want to learn. Our AI crafts a personalized curriculum that grows with you — one concept at a time.</p>
+    <div class="cta-group">
+      <button class="cta">Get Started Free</button>
+      <button class="cta-ghost">See How It Works</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><h2>12k+</h2><span>Active learners</span></div>
+      <div class="stat"><h2>340+</h2><span>AI courses</span></div>
+      <div class="stat"><h2>96%</h2><span>Completion rate</span></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const layer = document.getElementById('blocksLayer');
+const colors = ['#c084fc22','#f0abfc18','#e879f915','#a855f720'];
+
+for (let i = 0; i < 18; i++) {
+  const el = document.createElement('div');
+  el.className = 'block-shape';
+  const size = 20 + Math.random() * 60;
+  el.style.width = size + 'px';
+  el.style.height = size * (0.6 + Math.random() * 0.8) + 'px';
+  el.style.left = Math.random() * 100 + '%';
+  el.style.background = colors[Math.floor(Math.random() * colors.length)];
+  el.style.animationDuration = (15 + Math.random() * 20) + 's';
+  el.style.animationDelay = -(Math.random() * 20) + 's';
+  layer.appendChild(el);
+}
+</script>
+</body>
+</html>

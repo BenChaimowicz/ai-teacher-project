@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>18 The Stacks — Night Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0c0b0b;
+    --wood: #3a2a22;
+    --text: #f7eee0;
+    --muted: #a79a8d;
+    --amber: #f4c47d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh; overflow-x: hidden;
+    color: var(--text);
+    background: radial-gradient(ellipse at 50% 30%, #2a1c14, var(--bg) 70%);
+    font-family: Figtree, system-ui, sans-serif;
+  }
+  button, input { font: inherit; color: inherit; }
+  .brand {
+    position: absolute; top: 22px; left: 28px; z-index: 4;
+    font-family: Fraunces, Georgia, serif; font-size: 20px;
+  }
+  .brand span { color: var(--amber); }
+
+  .aisle {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr minmax(260px, 34vw) 1fr;
+    align-items: stretch;
+    perspective: 1100px;
+    overflow: hidden;
+  }
+  .wall {
+    display: flex; align-items: end; gap: 8px;
+    padding: 90px 18px 120px;
+    background:
+      linear-gradient(var(--wood), #1a120f);
+    box-shadow: inset 0 0 80px rgba(0,0,0,0.45);
+  }
+  .wall-left { justify-content: end; transform: rotateY(38deg); transform-origin: right center; }
+  .wall-right { justify-content: start; transform: rotateY(-38deg); transform-origin: left center; }
+
+  .spine {
+    width: 46px; cursor: pointer; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 3px 6px 6px 3px;
+    background:
+      linear-gradient(90deg, rgba(0,0,0,0.28), transparent 22%, rgba(255,255,255,0.08)),
+      var(--bgc);
+    color: var(--fgc);
+    box-shadow: 6px 10px 16px rgba(0,0,0,0.35);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .35s ease, box-shadow .35s;
+  }
+  .wall-left .spine:hover, .wall-left .spine.pulled { transform: translateX(-22px) scale(1.04); }
+  .wall-right .spine:hover, .wall-right .spine.pulled { transform: translateX(22px) scale(1.04); }
+  .spine span {
+    font-family: Fraunces, Georgia, serif; font-size: 11px; font-weight: 600;
+    writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap;
+  }
+
+  .nave {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; justify-content: end;
+    padding: 0 18px 110px;
+    background:
+      linear-gradient(180deg, transparent, rgba(0,0,0,0.25) 40%),
+      repeating-linear-gradient(90deg, #2b1d17 0 28px, #241812 28px 56px);
+  }
+  .lamp {
+    position: absolute; top: 8%; width: 90px; height: 90px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(244,196,125,0.85), transparent 70%);
+    filter: blur(8px); pointer-events: none;
+  }
+  .card {
+    width: min(420px, 100%);
+    padding: 22px 22px 18px;
+    background: rgba(18,14,12,0.88);
+    border: 1px solid rgba(255,220,171,0.18);
+    border-radius: 14px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 24px 50px rgba(0,0,0,0.4);
+  }
+  .card small { color: var(--amber); letter-spacing: 0.14em; text-transform: uppercase; font-size: 11px; font-weight: 700; }
+  .card h1 { font-family: Fraunces, Georgia, serif; font-size: 28px; font-weight: 500; margin: 8px 0 10px; }
+  .card p { color: var(--muted); line-height: 1.5; }
+  .card .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+  .open {
+    padding: 11px 14px; border: 0; border-radius: 9px; cursor: pointer;
+    background: var(--amber); color: #24170d; font-weight: 800;
+  }
+  .ask {
+    width: min(420px, 100%); margin-top: 14px;
+    display: flex; gap: 8px; padding: 10px 12px;
+    background: #1a1411; border: 1px solid rgba(255,220,171,0.16); border-radius: 10px;
+  }
+  .ask input { flex: 1; background: none; border: 0; outline: none; font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 16px; }
+  .ask button { background: none; border: 0; color: var(--amber); cursor: pointer; font-weight: 700; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .compare {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 9;
+    display: flex; gap: 4px; padding: 6px; background: #1a1614; border: 1px solid rgba(255,220,171,0.18);
+    border-radius: 999px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .compare a { padding: 8px 12px; border-radius: 999px; color: #a79a8d; text-decoration: none; font-size: 12px; font-weight: 600; }
+  .compare a[aria-current] { background: #f4c47d; color: #24170d; }
+
+  @media (max-width: 860px) {
+    .aisle { grid-template-columns: 1fr; }
+    .wall { transform: none !important; min-height: 180px; padding: 70px 12px 20px; overflow-x: auto; }
+    .nave { min-height: 50vh; }
+  }
+</style>
+</head>
+<body>
+  <div class="brand">the study / <span>the stacks</span></div>
+  <div class="aisle">
+    <div class="wall wall-left" id="left"></div>
+    <div class="nave">
+      <div class="lamp" aria-hidden="true"></div>
+      <div class="card" id="card"></div>
+      <form class="ask" id="ask">
+        <input name="q" placeholder="Ask the librarian…" autocomplete="off" />
+        <button type="submit">Find it</button>
+      </form>
+    </div>
+    <div class="wall wall-right" id="right"></div>
+  </div>
+
+  <nav class="compare" aria-label="Night Library options">
+    <a href="16-night-library.html">16 Shelf</a>
+    <a href="17-open-volume.html">17 Open volume</a>
+    <a href="18-the-stacks.html" aria-current="page">18 Stacks</a>
+    <a href="19-window-seat.html">19 Window seat</a>
+  </nav>
+
+<script>
+  const books = [
+    { id: "images", spine: "Images", title: "The language of images", blurb: "How pictures argue, and how to answer them.", next: "Framing as a sentence · 14 min", h: 210, bg: "#a87558", fg: "#fff1df" },
+    { id: "psych", spine: "Psychology", title: "Practical psychology", blurb: "The mind as a workshop, not a mystery.", next: "Attention, not willpower · 18 min", h: 248, bg: "#526a4d", fg: "#edf6e8" },
+    { id: "creative", spine: "Confidence", title: "Creative confidence", blurb: "Making the next mark anyway.", next: "The ugly first draft · 12 min", h: 226, bg: "#765448", fg: "#fff0d7" },
+    { id: "ai", spine: "AI explained", title: "Artificial intelligence, explained", blurb: "A compressed map of patterns — useful, incomplete.", next: "How machines learn · 16 min", h: 270, bg: "#5b4a77", fg: "#f2eaff" },
+    { id: "design", spine: "Everyday design", title: "The design of everyday things", blurb: "Affordances you can feel with your hands.", next: "Affordances you can feel · 20 min", h: 232, bg: "#a87558", fg: "#fff1df" },
+    { id: "learn", spine: "How to learn", title: "Learning how to learn", blurb: "Practice is the floor you actually stand on.", next: "Interleaving practice · 11 min", h: 218, bg: "#3d6260", fg: "#e1faf5" },
+    { id: "photo", spine: "Photography", title: "Photography through practice", blurb: "Light before gear. Always.", next: "Light before gear · 15 min", h: 256, bg: "#38516a", fg: "#e9f0fa" },
+    { id: "write", spine: "Writing alive", title: "Writing that feels alive", blurb: "Cut until the sentence can breathe.", next: "Cut until it breathes · 13 min", h: 238, bg: "#814c59", fg: "#ffe9e8" },
+  ];
+  let current = "ai";
+
+  function spineHtml(b) {
+    return `<button class="spine${b.id === current ? " pulled" : ""}" data-id="${b.id}" style="height:${b.h}px;--bgc:${b.bg};--fgc:${b.fg}"><span>${b.spine}</span></button>`;
+  }
+  function render() {
+    const left = books.slice(0, 4);
+    const right = books.slice(4);
+    document.getElementById("left").innerHTML = left.map(spineHtml).join("");
+    document.getElementById("right").innerHTML = right.map(spineHtml).join("");
+    const b = books.find((x) => x.id === current);
+    document.getElementById("card").innerHTML = `
+      <small>Pulled from the stacks</small>
+      <h1>${b.title}</h1>
+      <p>${b.blurb}</p>
+      <div class="row">
+        <span>${b.next}</span>
+        <button class="open" id="open">Open volume →</button>
+      </div>`;
+    document.getElementById("open").onclick = () => {
+      document.getElementById("open").textContent = "Carrying it to the desk…";
+    };
+  }
+  document.querySelector(".aisle").addEventListener("click", (e) => {
+    const btn = e.target.closest(".spine");
+    if (!btn) return;
+    current = btn.dataset.id;
+    render();
+  });
+  document.getElementById("ask").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = new FormData(e.target).get("q").toString().trim();
+    if (!q) return;
+    books.push({ id: "new", spine: q.slice(0, 14), title: q, blurb: "The librarian found a first aisle for this.", next: "A first question · 10 min", h: 220, bg: "#7c6a3e", fg: "#fff6ca" });
+    current = "new";
+    e.target.reset();
+    render();
+  });
+  render();
+</script>
+</body>
+</html>

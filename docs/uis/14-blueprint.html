@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blueprint — AI Teacher</title>
+<style>
+  :root {
+    --bg: #0c1016; --panel: #111823;
+    --fg: #e6edf6; --fg-soft: #8c9bb0; --fg-faint: #5a6ская;
+    --fg-faint: #5a6a80;
+    --cyan: #5cc8d8; --amber: #e0b155;
+    --line: rgba(230,237,246,0.08);
+    --grid: rgba(92,200,216,0.055);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--fg); min-height: 100vh; display: flex;
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* blueprint grid + drafting sweep */
+  .plane { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .plane .g {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(110% 90% at 30% 0%, #000 30%, transparent 78%);
+  }
+  .plane svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .plane path, .plane circle, .plane rect {
+    stroke: rgba(92,200,216,0.32); fill: none; stroke-width: 1;
+    stroke-dasharray: 1400; stroke-dashoffset: 1400;
+    animation: draft 5s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  @keyframes draft { to { stroke-dashoffset: 0; } }
+  .sweep {
+    position: absolute; top: 0; bottom: 0; width: 180px;
+    background: linear-gradient(90deg, transparent, rgba(92,200,216,0.045), transparent);
+    animation: sweep 14s linear infinite;
+  }
+  @keyframes sweep { from { left: -200px; } to { left: 100%; } }
+
+  aside {
+    position: relative; z-index: 2; width: 244px; flex-shrink: 0;
+    border-right: 1px solid var(--line); background: rgba(17,24,35,0.6);
+    padding: 24px 18px; display: flex; flex-direction: column;
+  }
+  .logo { display: flex; align-items: center; gap: 9px; margin-bottom: 30px; }
+  .logo svg { width: 22px; height: 22px; color: var(--cyan); }
+  .logo b { font-size: 14px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  .sect { font-size: 10px; letter-spacing: .18em; color: var(--fg-faint); margin: 0 0 9px 3px; }
+  nav { display: flex; flex-direction: column; gap: 1px; margin-bottom: 26px; }
+  nav a {
+    color: var(--fg-soft); text-decoration: none; font-size: 12.5px;
+    padding: 8px 11px; border-left: 2px solid transparent; transition: .2s;
+    display: flex; justify-content: space-between;
+  }
+  nav a:hover { background: rgba(92,200,216,0.06); color: var(--fg); }
+  nav a[aria-current] { border-left-color: var(--cyan); background: rgba(92,200,216,0.09); color: var(--fg); }
+  nav a i { color: var(--fg-faint); font-style: normal; }
+
+  .spec { margin-top: auto; border: 1px solid var(--line); padding: 13px; }
+  .spec h5 { font-size: 10px; letter-spacing: .16em; color: var(--fg-faint); margin-bottom: 11px; }
+  .spec .kv { display: flex; justify-content: space-between; font-size: 11.5px; padding: 4px 0; color: var(--fg-soft); }
+  .spec .kv b { color: var(--cyan); font-weight: 600; }
+
+  main { position: relative; z-index: 2; flex: 1; padding: 40px 4vw 130px; max-width: 1280px; }
+  .crumb { font-size: 11px; letter-spacing: .14em; color: var(--fg-faint); margin-bottom: 16px; }
+  h1 { font-size: clamp(24px, 3.2vw, 34px); font-weight: 500; letter-spacing: -0.5px; }
+  h1 span { color: var(--cyan); }
+  .meta-line { display: flex; gap: 20px; margin-top: 13px; font-size: 11.5px; color: var(--fg-faint); flex-wrap: wrap; }
+  .meta-line b { color: var(--fg-soft); font-weight: 600; }
+
+  .tools { display: flex; gap: 6px; margin: 34px 0 16px; flex-wrap: wrap; }
+  .tools button {
+    background: none; border: 1px solid var(--line); color: var(--fg-faint);
+    font-family: inherit; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    padding: 7px 13px; cursor: pointer; transition: .2s;
+  }
+  .tools button:hover { color: var(--fg); border-color: rgba(92,200,216,.3); }
+  .tools button[data-on] { color: var(--cyan); border-color: var(--cyan); background: rgba(92,200,216,.08); }
+
+  .modules { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .mod {
+    background: var(--bg); padding: 20px; cursor: pointer; position: relative;
+    transition: background .25s;
+  }
+  .mod:hover { background: #101722; }
+  .mod:hover .corner { opacity: 1; }
+  .corner { position: absolute; width: 8px; height: 8px; opacity: 0; transition: opacity .25s; }
+  .corner.tl { top: 6px; left: 6px; border-top: 1px solid var(--cyan); border-left: 1px solid var(--cyan); }
+  .corner.br { bottom: 6px; right: 6px; border-bottom: 1px solid var(--cyan); border-right: 1px solid var(--cyan); }
+  .mod .id { font-size: 10px; letter-spacing: .16em; color: var(--fg-faint); }
+  .mod h3 { font-size: 16px; font-weight: 500; margin: 9px 0 5px; letter-spacing: -.2px; }
+  .mod .nxt { font-size: 12px; color: var(--fg-soft); }
+  /* segmented progress = modules built */
+  .segs { display: flex; gap: 3px; margin-top: 18px; }
+  .segs i { flex: 1; height: 6px; background: rgba(230,237,246,0.09); }
+  .segs i[data-done] { background: var(--cyan); }
+  .segs i[data-now] { background: var(--amber); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+  .mod .ft { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; color: var(--fg-faint); }
+
+  /* ---- docked command bar ---- */
+  .dock {
+    position: fixed; bottom: 0; left: 244px; right: 0; z-index: 5;
+    padding: 14px 4vw 20px;
+    background: linear-gradient(180deg, transparent, rgba(12,16,22,.94) 42%);
+  }
+  .dock-inner {
+    max-width: 780px; display: flex; align-items: center; gap: 10px;
+    background: rgba(17,24,35,.94); border: 1px solid rgba(92,200,216,.22);
+    padding: 5px 5px 5px 15px; backdrop-filter: blur(14px);
+    transition: border-color .25s, box-shadow .25s;
+  }
+  .dock-inner:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(92,200,216,.1), 0 -8px 40px -14px rgba(0,0,0,.9); }
+  .dock-inner .caret { color: var(--cyan); font-size: 13px; }
+  .dock-inner input {
+    flex: 1; background: none; border: 0; outline: none; color: var(--fg);
+    font-family: inherit; font-size: 14px; padding: 13px 0;
+  }
+  .dock-inner input::placeholder { color: var(--fg-faint); }
+  .kbd {
+    font-size: 10px; color: var(--fg-faint); border: 1px solid var(--line);
+    padding: 3px 7px; letter-spacing: .06em;
+  }
+  .build {
+    background: var(--cyan); color: #06222a; border: 0; font-family: inherit;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    padding: 12px 17px; cursor: pointer; transition: .2s;
+  }
+  .build:hover { background: #7ad9e8; }
+  .hints { display: flex; gap: 7px; margin-top: 9px; max-width: 780px; flex-wrap: wrap; }
+  .hints button {
+    background: rgba(17,24,35,.8); border: 1px solid var(--line); color: var(--fg-faint);
+    font-family: inherit; font-size: 11px; padding: 5px 11px; cursor: pointer; transition: .2s;
+  }
+  .hints button:hover { color: var(--cyan); border-color: rgba(92,200,216,.3); }
+
+  @media (max-width: 860px) {
+    body { flex-direction: column; }
+    aside { width: 100%; border-right: 0; border-bottom: 1px solid var(--line); }
+    .spec { display: none; } nav { flex-direction: row; flex-wrap: wrap; margin-bottom: 0; }
+    .sect { display: none; } main { padding: 26px 18px 150px; } .dock { left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .sweep, .segs i[data-now] { animation: none; } }
+</style>
+</head>
+<body>
+  <div class="plane">
+    <div class="g"></div>
+    <svg viewBox="0 0 1400 900" preserveAspectRatio="none">
+      <circle cx="1120" cy="200" r="150" style="animation-delay:.3s"/>
+      <circle cx="1120" cy="200" r="96" style="animation-delay:.6s"/>
+      <path d="M60 760 L340 760 L340 520 L620 520 L620 760 L900 760" style="animation-delay:.2s"/>
+      <path d="M340 520 L480 380 L620 520" style="animation-delay:.9s"/>
+      <rect x="980" y="600" width="240" height="160" style="animation-delay:1.2s"/>
+      <path d="M0 300 L1400 300" stroke-dasharray="6 10" style="animation:none; stroke-dashoffset:0; opacity:.35"/>
+    </svg>
+    <div class="sweep"></div>
+  </div>
+
+  <aside>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <path d="M3 21V7l9-4 9 4v14M3 21h18M9 21v-6h6v6"/>
+      </svg>
+      <b>Blueprint</b>
+    </div>
+    <p class="sect">WORKSPACE</p>
+    <nav>
+      <a href="#" aria-current="page">Library <i>12</i></a>
+      <a href="#">Active builds <i>4</i></a>
+      <a href="#">Assessments <i>2</i></a>
+      <a href="#">Archive <i>8</i></a>
+      <a href="#">Preferences</a>
+    </nav>
+    <div class="spec">
+      <h5>PROFILE SPEC</h5>
+      <div class="kv"><span>Pace</span><b>Steady</b></div>
+      <div class="kv"><span>Depth</span><b>Applied</b></div>
+      <div class="kv"><span>Session</span><b>20 min</b></div>
+      <div class="kv"><span>Format</span><b>Visual</b></div>
+    </div>
+  </aside>
+
+  <main>
+    <p class="crumb">LIBRARY / ALL ACTIVE</p>
+    <h1>Four structures <span>under construction</span></h1>
+    <div class="meta-line">
+      <span>LAST SESSION <b>2 days ago</b></span>
+      <span>COMPLETED <b>38 modules</b></span>
+      <span>THIS WEEK <b>2h 40m</b></span>
+    </div>
+
+    <div class="tools">
+      <button data-on>All</button><button>In progress</button><button>Blocked</button><button>Recently added</button><button>A–Z</button>
+    </div>
+
+    <div class="modules">
+      <article class="mod">
+        <span class="corner tl"></span><span class="corner br"></span>
+        <p class="id">CRS-014 · SYSTEMS</p>
+        <h3>Distributed systems</h3>
+        <p class="nxt">Next module: consensus &amp; Raft</p>
+        <div class="segs">
+          <i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-now></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="ft"><span>4 / 10 MODULES</span><span>~22 MIN</span></div>
+      </article>
+
+      <article class="mod">
+        <span class="corner tl"></span><span class="corner br"></span>
+        <p class="id">CRS-009 · DESIGN</p>
+        <h3>Type &amp; hierarchy</h3>
+        <p class="nxt">Next module: optical sizing</p>
+        <div class="segs">
+          <i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-now></i><i></i>
+        </div>
+        <div class="ft"><span>6 / 8 MODULES</span><span>~14 MIN</span></div>
+      </article>
+
+      <article class="mod">
+        <span class="corner tl"></span><span class="corner br"></span>
+        <p class="id">CRS-021 · MATH</p>
+        <h3>Linear algebra, visually</h3>
+        <p class="nxt">Next module: eigenvectors</p>
+        <div class="segs">
+          <i data-done></i><i data-done></i><i data-now></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="ft"><span>2 / 12 MODULES</span><span>~28 MIN</span></div>
+      </article>
+
+      <article class="mod">
+        <span class="corner tl"></span><span class="corner br"></span>
+        <p class="id">CRS-003 · HISTORY</p>
+        <h3>Bridges &amp; empire</h3>
+        <p class="nxt">Next module: the Forth Bridge</p>
+        <div class="segs">
+          <i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-now></i><i></i>
+        </div>
+        <div class="ft"><span>7 / 9 MODULES</span><span>~11 MIN</span></div>
+      </article>
+    </div>
+  </main>
+
+  <div class="dock">
+    <div class="dock-inner">
+      <span class="caret">▸</span>
+      <input id="cmd" type="text" placeholder="Specify a new subject to draft…" autocomplete="off" />
+      <span class="kbd">⌘K</span>
+      <button class="build">Draft</button>
+    </div>
+    <div class="hints">
+      <button>Thermodynamics</button><button>Urban planning</button><button>Compilers</button><button>Structural loads</button>
+    </div>
+  </div>
+
+<script>
+  const cmd = document.getElementById('cmd');
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); cmd.focus(); }
+  });
+  document.querySelectorAll('.hints button').forEach(b =>
+    b.addEventListener('click', () => { cmd.value = b.textContent; cmd.focus(); }));
+  document.querySelectorAll('.tools button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tools button').forEach(x => x.removeAttribute('data-on'));
+    b.setAttribute('data-on', '');
+  }));
+</script>
+</body>
+</html>

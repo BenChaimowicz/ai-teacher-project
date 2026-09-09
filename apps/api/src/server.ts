@@ -7,6 +7,7 @@ import spaPlugin from "./plugins/spa.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { libraryRoutes } from "./routes/library.ts";
 import { mediaRoutes } from "./routes/media.ts";
+import { teachingProfileRoutes } from "./routes/teaching-profile.ts";
 
 /**
  * Starts the Fastify API (JSON, `/media/…`, and the built SPA when present).
@@ -21,6 +22,7 @@ async function start() {
     await app.register(corsPlugin);
     await app.register(healthRoutes);
     await app.register(libraryRoutes);
+    await app.register(teachingProfileRoutes);
     await app.register(mediaRoutes);
     await app.register(spaPlugin, { root });
 

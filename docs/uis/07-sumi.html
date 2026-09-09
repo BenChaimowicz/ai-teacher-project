@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sumi — Home</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Manrope:wght@420;600&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0c0b0a;
+      color: #ece4d6;
+      font-family: Manrope, sans-serif;
+      min-height: 100vh;
+    }
+    .app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+    aside {
+      border-right: 1px solid #ffffff10;
+      padding: 32px 20px;
+      background: #100e0c;
+    }
+    .mark {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: #c45c4a;
+      margin-bottom: 14px;
+    }
+    .logo {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 32px;
+    }
+    nav { margin-top: 40px; }
+    nav a {
+      display: block;
+      color: #b9ae9c;
+      text-decoration: none;
+      padding: 10px 0;
+      font-size: 14px;
+    }
+    nav a.active { color: #ece4d6; }
+    main {
+      padding: 56px 64px;
+      position: relative;
+      overflow: hidden;
+    }
+    svg.stroke {
+      position: absolute;
+      right: -8%;
+      top: -10%;
+      width: 78%;
+      height: 120%;
+      opacity: .55;
+      pointer-events: none;
+    }
+    svg.stroke path {
+      fill: none;
+      stroke: #e8dcc8;
+      stroke-width: 38;
+      stroke-linecap: round;
+      stroke-dasharray: 1800;
+      stroke-dashoffset: 1800;
+      animation: draw 6s ease forwards, breathe 10s 6s ease-in-out infinite;
+    }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    @keyframes breathe {
+      0%, 100% { opacity: .9; }
+      50% { opacity: .55; }
+    }
+    .ink {
+      position: absolute;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #e8dcc8;
+      right: 22%;
+      bottom: 18%;
+      filter: blur(.2px);
+      animation: drip 5s 4s ease-in-out infinite;
+    }
+    @keyframes drip {
+      0%, 100% { transform: translateY(0) scale(1); opacity: .5; }
+      50% { transform: translateY(18px) scale(.7); opacity: .2; }
+    }
+    h1 {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 68px;
+      font-weight: 500;
+      line-height: .9;
+      max-width: 560px;
+      position: relative;
+    }
+    h1 i { color: #c9a86c; }
+    .lede {
+      margin: 22px 0 30px;
+      max-width: 400px;
+      color: #b9ae9c;
+      line-height: 1.6;
+      position: relative;
+    }
+    button {
+      position: relative;
+      font: 600 13px Manrope, sans-serif;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      border: 0;
+      padding: 14px 22px;
+      cursor: pointer;
+      background: #c45c4a;
+      color: #f7efe6;
+    }
+    .ghost {
+      background: transparent;
+      color: #ece4d6;
+      border-bottom: 1px solid #c9a86c;
+      margin-left: 16px;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .colophon {
+      position: absolute;
+      bottom: 36px;
+      color: #7d7468;
+      font-size: 12px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="mark"></div>
+      <div class="logo">Sumi</div>
+      <nav>
+        <a class="active" href="#">Home</a>
+        <a href="#">Atelier</a>
+        <a href="#">Library</a>
+        <a href="#">Progress</a>
+      </nav>
+    </aside>
+    <main>
+      <svg class="stroke" viewBox="0 0 800 900">
+        <path d="M120 80 C 180 220, 80 280, 220 360 S 520 300, 480 520 S 220 720, 560 820" />
+      </svg>
+      <div class="ink"></div>
+      <h1>One stroke.<br />Then we <i>adjust the pressure.</i></h1>
+      <p class="lede">A course should feel handmade. Tell us how you learn; we mix the ink to your density — slower, denser, or a wash.</p>
+      <button>Begin the sitting</button>
+      <button class="ghost">Five questions</button>
+      <div class="colophon">Custom courses · quiet software</div>
+    </main>
+  </div>
+</body>
+</html>

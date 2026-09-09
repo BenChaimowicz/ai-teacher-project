@@ -1,6 +1,6 @@
 # AI learning course platform
 
-A Learner selects a subject and Learning Goal; the platform assesses their Starting Level and teaching fit, then generates a Course of Lessons synthesized from web Sources.
+A Learner selects a subject and Learning Goal; the platform estimates a Course-specific Starting Level and applies a reusable Teaching Profile, then generates a Course of Lessons synthesized from web Sources.
 
 ## Wayfinding
 
@@ -91,8 +91,56 @@ The Course-level choice of whether Lessons unlock in Blueprint order (linear) or
 _Avoid_: Navigation mode, path lock, difficulty
 
 **Teaching Profile**:
-The Learner-level result describing teaching-method fit. It must exist before the first Course Request can start, and is reused across later Courses until the Learner explicitly requests reassessment.
-_Avoid_: Teaching fit, learning style
+The Learner-level record of declared needs and stated preferences for how Lessons are presented. It exists after the Learner first saves the questionnaire, including a save of only skips or no preference. New Course Request waits until it exists. Home stays reachable without it. After it exists, the Learner views it; changing it is Edit, Reassess, or Reset. Not a score, not a Learner type, not Starting Level.
+_Avoid_: Teaching fit, teaching-method fit, learning style, User, profile (unqualified)
+
+**Declared need**:
+A Teaching Profile answer the product must honor when it can: instructional language, or a required reading support. Q1 and Q2.
+_Avoid_: Preference (when meaning a requirement), diagnosis, disability, assistive technology name
+
+**Stated preference**:
+A Teaching Profile choice that selects a concrete, changeable behavior. Q3 through Q8.
+_Avoid_: Need (when meaning a preference), Learner type, learning style
+
+**Evidence default**:
+The product behavior used when a Teaching Profile answer is no preference or skipped. It is not recorded as something the Learner chose.
+_Avoid_: Inferred preference, implied answer, default preference (when meaning they selected it)
+
+**No preference**:
+The Learner asked the product to use the Evidence default. Stored as its own answer, not as skipped, and not as a selected value.
+_Avoid_: Skip, prefer not to answer, selected default
+
+**Prefer not to answer**:
+The Learner declined the question. Same stored status as skip. The Evidence default applies. Not recorded as a selected value.
+_Avoid_: No preference, inferred answer
+
+**Write-time field**:
+A Teaching Profile setting consumed when a Blueprint or Lesson is generated. Changing it later does not rewrite an approved Course.
+_Avoid_: Show-time field, preference (unqualified)
+
+**Show-time field**:
+A Teaching Profile setting consumed when presenting an already-published Course. Changing it later may change how that Course looks or behaves on screen, without regenerating it.
+_Avoid_: Write-time field, preference (unqualified)
+
+**Edit**:
+An explicit Teaching Profile action that opens the saved answers in Editing. Viewing is not a live form. Save keeps the new answers; Cancel discards them. Does not run a Starting Level diagnostic.
+_Avoid_: Reassess, Reset, always-on editor
+
+**Reassess**:
+An explicit Teaching Profile action, only on this screen, that starts a blank retake. Previous answers stay stored until Save. Does not run a Starting Level diagnostic.
+_Avoid_: Edit, Reset, Starting Level diagnostic
+
+**Reset**:
+An explicit Teaching Profile action that immediately deletes saved answers. The Teaching Profile is then not present; New Course Request is blocked until the Learner saves again.
+_Avoid_: Reassess, Edit, restore defaults (when meaning answers are kept)
+
+**Required reading supports**:
+The Q2 declared needs: plain language, short headed paragraphs, and inline definitions. “None of these” means none declared.
+_Avoid_: Diagnosis, assistive technology name, accessibility baseline (those are not this field)
+
+**Explanation order**:
+How a reading Lesson orders an example and its explanation: example first, principle first, or topic-appropriate. Topic-appropriate is the Evidence default; the Generator picks per topic. Not scaffolding dosage, not Starting Level.
+_Avoid_: Worked-example amount, difficulty, learning style
 
 **Instructional language**:
 The language of generated reading Lessons, Quiz questions, and Quiz feedback. It is a declared Teaching Profile need; this prototype supports English only.

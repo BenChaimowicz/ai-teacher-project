@@ -1,12 +1,12 @@
-import { Home, Plus, UserRound } from "lucide-react";
+import { Home, UserRound } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { CourseRequestControl } from "@/components/course-request-control.tsx";
 import { OpenItems } from "@/components/open-items.tsx";
+import { cn } from "@/lib/utils";
 
 const nav = [
   { to: "/", label: "Home", icon: Home, end: true },
   { to: "/teaching-profile", label: "Teaching Profile", icon: UserRound, end: true },
-  { to: "/new-course-request", label: "New Course Request", icon: Plus, end: true },
 ];
 
 /**
@@ -34,6 +34,7 @@ export function WorkspaceLayout() {
               {item.label}
             </NavLink>
           ))}
+          <CourseRequestControl variant="nav">New Course Request</CourseRequestControl>
         </nav>
         <OpenItems />
       </aside>

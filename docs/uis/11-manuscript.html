@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manuscript — AI Teacher</title>
+<style>
+  :root {
+    --paper: #14120f;
+    --paper-2: #1b1815;
+    --ink: #f2ece1;
+    --ink-soft: #a89f8f;
+    --ink-faint: #6b6357;
+    --accent: #c9a227;      /* aged gold */
+    --accent-soft: #7d6a2e;
+    --rule: rgba(242, 236, 225, 0.09);
+    --radius: 4px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    min-height: 100vh;
+    display: flex;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- paper grain + ink bleed background ---- */
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    opacity: 0.35;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  }
+  .bleed {
+    position: fixed; z-index: 0; pointer-events: none;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: 0.5;
+    animation: drift 26s ease-in-out infinite alternate;
+  }
+  .bleed.a { width: 46vw; height: 46vw; left: 8vw; top: -12vw;
+    background: radial-gradient(circle, rgba(201,162,39,0.16), transparent 68%); }
+  .bleed.b { width: 40vw; height: 40vw; right: -8vw; bottom: -14vw;
+    background: radial-gradient(circle, rgba(120,90,60,0.20), transparent 68%);
+    animation-duration: 34s; animation-delay: -8s; }
+  @keyframes drift {
+    from { transform: translate3d(0,0,0) scale(1); }
+    to   { transform: translate3d(3vw,4vh,0) scale(1.12); }
+  }
+
+  /* ---- sidebar ---- */
+  aside {
+    position: relative; z-index: 2;
+    width: 250px; flex-shrink: 0;
+    border-right: 1px solid var(--rule);
+    padding: 30px 22px;
+    display: flex; flex-direction: column;
+    background: linear-gradient(180deg, rgba(0,0,0,0.22), transparent);
+  }
+  .mark { display: flex; align-items: baseline; gap: 9px; margin-bottom: 38px; }
+  .mark b { font-size: 19px; font-weight: 600; letter-spacing: 0.2px; }
+  .mark span {
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+  .navlabel {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0 0 12px 2px;
+  }
+  nav { display: flex; flex-direction: column; gap: 1px; }
+  nav a {
+    color: var(--ink-soft); text-decoration: none;
+    font-size: 15px; padding: 9px 12px; border-radius: var(--radius);
+    position: relative; transition: color 0.22s, background 0.22s;
+  }
+  nav a::before {
+    content: ""; position: absolute; left: 0; top: 50%;
+    width: 2px; height: 0; background: var(--accent);
+    transform: translateY(-50%); transition: height 0.28s ease;
+  }
+  nav a:hover { color: var(--ink); background: rgba(242,236,225,0.035); }
+  nav a[aria-current] { color: var(--ink); background: rgba(242,236,225,0.05); }
+  nav a[aria-current]::before { height: 60%; }
+
+  .quill { margin-top: auto; padding-top: 24px; border-top: 1px solid var(--rule); }
+  .quill p {
+    font-size: 13.5px; line-height: 1.65; color: var(--ink-faint);
+    font-style: italic;
+  }
+  .quill cite {
+    display: block; margin-top: 8px; font-style: normal;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent-soft);
+  }
+
+  /* ---- main ---- */
+  main {
+    position: relative; z-index: 2;
+    flex: 1; padding: 56px 6vw 80px; max-width: 1180px;
+  }
+  .kicker {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 14px;
+  }
+  h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 500; line-height: 1.1; letter-spacing: -0.5px; }
+  h1 em { font-style: italic; color: var(--accent); }
+  .sub { color: var(--ink-soft); font-size: 17px; margin-top: 14px; max-width: 46ch; line-height: 1.6; }
+
+  /* ---- the manuscript title-line input ---- */
+  .compose { margin: 46px 0 18px; max-width: 680px; }
+  .compose-field {
+    display: flex; align-items: center; gap: 14px;
+    border-bottom: 1px solid rgba(242,236,225,0.22);
+    padding: 10px 2px 14px;
+    transition: border-color 0.3s;
+  }
+  .compose-field:focus-within { border-color: var(--accent); }
+  .compose-field .pen {
+    width: 18px; height: 18px; flex-shrink: 0; color: var(--ink-faint);
+    transition: color 0.3s, transform 0.3s;
+  }
+  .compose-field:focus-within .pen { color: var(--accent); transform: rotate(-12deg); }
+  .compose input {
+    flex: 1; background: none; border: 0; outline: none;
+    color: var(--ink); font-family: inherit;
+    font-size: clamp(20px, 2.4vw, 27px); font-style: italic;
+  }
+  .compose input::placeholder { color: var(--ink-faint); opacity: 0.75; }
+  .begin {
+    background: none; border: 1px solid var(--accent-soft); color: var(--accent);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 10px 18px; border-radius: 999px; cursor: pointer;
+    opacity: 0; transform: translateX(-6px);
+    transition: opacity 0.3s, transform 0.3s, background 0.2s;
+    white-space: nowrap;
+  }
+  .compose-field:focus-within .begin,
+  .compose-field.filled .begin { opacity: 1; transform: none; }
+  .begin:hover { background: rgba(201,162,39,0.12); }
+
+  .seeds {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+  .seeds span { font-size: 11px; color: var(--ink-faint); align-self: center; margin-right: 4px; }
+  .seed {
+    background: rgba(242,236,225,0.04); border: 1px solid var(--rule);
+    color: var(--ink-soft); font-size: 12.5px; padding: 6px 13px;
+    border-radius: 999px; cursor: pointer; transition: 0.2s;
+  }
+  .seed:hover { border-color: var(--accent-soft); color: var(--ink); background: rgba(201,162,39,0.07); }
+
+  /* ---- shelf ---- */
+  .shelf-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin: 62px 0 22px; padding-bottom: 12px; border-bottom: 1px solid var(--rule);
+  }
+  .shelf-head h2 { font-size: 20px; font-weight: 500; }
+  .shelf-head small {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px; letter-spacing: 0.1em; color: var(--ink-faint);
+  }
+  .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 18px; }
+
+  .vol {
+    position: relative; padding: 24px 22px 20px;
+    border: 1px solid var(--rule); border-radius: 6px;
+    background: linear-gradient(160deg, rgba(242,236,225,0.045), rgba(242,236,225,0.012));
+    cursor: pointer; overflow: hidden;
+    transition: transform 0.32s cubic-bezier(.2,.7,.3,1), border-color 0.32s;
+  }
+  .vol::after { /* gilt spine */
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-soft));
+    opacity: 0.35; transition: opacity 0.3s;
+  }
+  .vol:hover { transform: translateY(-4px); border-color: rgba(201,162,39,0.32); }
+  .vol:hover::after { opacity: 1; }
+  .vol .num {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 10px; letter-spacing: 0.16em; color: var(--accent-soft);
+    text-transform: uppercase;
+  }
+  .vol h3 { font-size: 19px; font-weight: 500; margin: 9px 0 6px; line-height: 1.3; }
+  .vol .next { font-size: 13.5px; color: var(--ink-faint); font-style: italic; }
+  .rule-progress {
+    margin-top: 20px; height: 1px; background: rgba(242,236,225,0.12); position: relative;
+  }
+  .rule-progress i {
+    position: absolute; left: 0; top: 0; height: 1px;
+    background: var(--accent); box-shadow: 0 0 8px rgba(201,162,39,0.6);
+  }
+  .vol .meta {
+    display: flex; justify-content: space-between; margin-top: 10px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px; color: var(--ink-faint); letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 780px) {
+    body { flex-direction: column; }
+    aside { width: 100%; border-right: 0; border-bottom: 1px solid var(--rule); padding: 20px; }
+    .mark { margin-bottom: 18px; } nav { flex-direction: row; flex-wrap: wrap; }
+    .quill { display: none; } main { padding: 34px 22px 60px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .bleed { animation: none; } }
+</style>
+</head>
+<body>
+  <div class="grain"></div>
+  <div class="bleed a"></div>
+  <div class="bleed b"></div>
+
+  <aside>
+    <div class="mark"><b>Marginalia</b><span>est. you</span></div>
+    <p class="navlabel">Study</p>
+    <nav>
+      <a href="#" aria-current="page">Library</a>
+      <a href="#">In progress</a>
+      <a href="#">Annotations</a>
+      <a href="#">Review queue</a>
+      <a href="#">Settings</a>
+    </nav>
+    <div class="quill">
+      <p>“Nothing you read is wasted; it only waits.”</p>
+      <cite>Reading room</cite>
+    </div>
+  </aside>
+
+  <main>
+    <p class="kicker">Monday · 4 chapters due</p>
+    <h1>Good morning, Yarden.<br />What shall we <em>study</em>?</h1>
+    <p class="sub">Name a subject and we'll draft a syllabus around how you actually learn — a few questions first, then chapter one.</p>
+
+    <div class="compose">
+      <div class="compose-field" id="field">
+        <svg class="pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/>
+        </svg>
+        <input id="subject" type="text" placeholder="Byzantine architecture…" autocomplete="off" />
+        <button class="begin">Draft syllabus</button>
+      </div>
+      <div class="seeds">
+        <span>Or resume a thread:</span>
+        <button class="seed">Music theory</button>
+        <button class="seed">Rust ownership</button>
+        <button class="seed">Watercolour</button>
+        <button class="seed">Ottoman history</button>
+      </div>
+    </div>
+
+    <div class="shelf-head">
+      <h2>Your volumes</h2>
+      <small>4 IN PROGRESS</small>
+    </div>
+    <div class="shelf">
+      <article class="vol">
+        <p class="num">Vol. I · Language</p>
+        <h3>Conversational Japanese</h3>
+        <p class="next">Next: particles は and が</p>
+        <div class="rule-progress"><i style="width:62%"></i></div>
+        <div class="meta"><span>62%</span><span>18 min left</span></div>
+      </article>
+      <article class="vol">
+        <p class="num">Vol. II · Science</p>
+        <h3>Astrophysics, gently</h3>
+        <p class="next">Next: stellar nucleosynthesis</p>
+        <div class="rule-progress"><i style="width:34%"></i></div>
+        <div class="meta"><span>34%</span><span>25 min left</span></div>
+      </article>
+      <article class="vol">
+        <p class="num">Vol. III · Craft</p>
+        <h3>The Art of the Essay</h3>
+        <p class="next">Next: the turn</p>
+        <div class="rule-progress"><i style="width:88%"></i></div>
+        <div class="meta"><span>88%</span><span>9 min left</span></div>
+      </article>
+      <article class="vol">
+        <p class="num">Vol. IV · Systems</p>
+        <h3>How Cities Work</h3>
+        <p class="next">Next: zoning &amp; density</p>
+        <div class="rule-progress"><i style="width:15%"></i></div>
+        <div class="meta"><span>15%</span><span>31 min left</span></div>
+      </article>
+    </div>
+  </main>
+
+<script>
+  const input = document.getElementById('subject');
+  const field = document.getElementById('field');
+  input.addEventListener('input', () => field.classList.toggle('filled', input.value.length > 0));
+  document.querySelectorAll('.seed').forEach(b => b.addEventListener('click', () => {
+    input.value = b.textContent; field.classList.add('filled'); input.focus();
+  }));
+</script>
+</body>
+</html>

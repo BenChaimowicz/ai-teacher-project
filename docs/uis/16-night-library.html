@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Night Library — AI Teacher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #101011;
+    --wood: #211b18;
+    --wood-light: #322521;
+    --wood-dark: #1d1613;
+    --panel: rgba(31, 28, 27, 0.78);
+    --border: rgba(255, 220, 171, 0.14);
+    --text: #f7eee0;
+    --muted: #a79a8d;
+    --faint: #6f655c;
+    --amber: #f4c47d;
+    --cream: #ffe5b8;
+    --gold: #c9a227;
+    --paper: #e8dcc2;
+    --ink: #2b2521;
+    --green: #a8d0ae;
+
+    --craft: #a87558;
+    --science: #526a4d;
+    --language: #38516a;
+    --systems: #5b4a77;
+    --history: #7c6a3e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { min-height: 100%; }
+
+  body {
+    color: var(--text);
+    background:
+      radial-gradient(circle at 68% 18%, rgba(244, 196, 125, 0.13), transparent 26%),
+      radial-gradient(circle at 8% 88%, rgba(201, 162, 39, 0.08), transparent 30%),
+      var(--bg);
+    font-family: Figtree, ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button, input, textarea { font: inherit; color: inherit; }
+
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.28;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+  }
+
+  .stroke {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.22;
+  }
+  .stroke path {
+    fill: none; stroke: #c45c4a; stroke-width: 70; stroke-linecap: round;
+    filter: blur(1px);
+    stroke-dasharray: 1800; stroke-dashoffset: 1800;
+    animation: draw 5.5s cubic-bezier(.35,0,.2,1) .2s forwards;
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  .app {
+    position: relative; z-index: 1;
+    display: grid; min-height: 100vh; grid-template-columns: 240px 1fr;
+  }
+
+  aside {
+    display: flex; flex-direction: column;
+    padding: 28px 20px;
+    border-right: 1px solid var(--border);
+    background: rgba(13, 13, 13, 0.65);
+  }
+
+  .brand { display: flex; gap: 11px; align-items: center; margin-bottom: 12px; }
+  .brand-icon {
+    display: grid; width: 32px; height: 32px; place-items: center;
+    color: #24170d; background: var(--amber); border-radius: 7px;
+    box-shadow: 0 0 20px rgba(244, 196, 125, 0.3); font-size: 15px;
+  }
+  .brand-name {
+    font-family: Fraunces, Georgia, serif;
+    font-size: 22px; font-weight: 600; letter-spacing: -0.04em;
+  }
+  .brand-sub {
+    margin: 0 0 36px 43px;
+    color: var(--gold);
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  }
+
+  nav { display: grid; gap: 4px; }
+  nav button {
+    padding: 11px 12px; color: var(--muted); cursor: pointer;
+    border: 0; border-radius: 10px; background: transparent; text-align: left;
+  }
+  nav button.active, nav button:hover {
+    color: var(--text); background: rgba(244, 196, 125, 0.1);
+  }
+
+  .streak {
+    margin-top: auto; padding-top: 22px;
+    border-top: 1px solid var(--border);
+  }
+  .streak small {
+    display: block; margin-bottom: 10px;
+    color: var(--faint); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  .days { display: flex; gap: 5px; }
+  .days i {
+    width: 14px; height: 14px; border-radius: 3px;
+    background: rgba(255, 220, 171, 0.12);
+  }
+  .days i[data-done] { background: var(--amber); box-shadow: 0 0 8px rgba(244, 196, 125, 0.35); }
+
+  .palette { margin-top: 18px; }
+  .palette h5 {
+    margin-bottom: 10px; color: var(--faint);
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
+  }
+  .dabs { display: flex; gap: 7px; }
+  .dab {
+    width: 18px; height: 18px; border: 1px solid transparent; cursor: pointer;
+    border-radius: 50%; transition: transform .2s;
+  }
+  .dab:hover { transform: scale(1.18); }
+  .dab.active { outline: 2px solid var(--cream); outline-offset: 2px; }
+
+  .quote {
+    margin-top: 22px; padding-left: 12px;
+    border-left: 2px solid var(--amber);
+    color: var(--muted); font-family: Fraunces, Georgia, serif;
+    font-size: 13px; font-style: italic; line-height: 1.55;
+  }
+
+  main {
+    width: min(1180px, 100%);
+    padding: 48px clamp(22px, 5vw, 72px) 72px;
+    margin: 0 auto;
+  }
+
+  .view { display: none; }
+  .app[data-view="library"] .view-library,
+  .app[data-view="volumes"] .view-volumes,
+  .app[data-view="desk"] .view-desk,
+  .app[data-view="notes"] .view-notes { display: block; }
+
+  .eyebrow {
+    margin-bottom: 10px; color: var(--amber);
+    font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  h1 {
+    font-family: Fraunces, Georgia, serif;
+    font-size: clamp(36px, 5vw, 62px);
+    font-weight: 500; line-height: 1.02; letter-spacing: -0.04em;
+  }
+  h1 em { font-style: italic; color: var(--amber); }
+  .lede {
+    max-width: 46ch; margin-top: 14px; color: var(--muted); font-size: 16px; line-height: 1.6;
+  }
+
+  .compose { margin: 36px 0 8px; max-width: 720px; }
+  .compose-field {
+    display: flex; align-items: center; gap: 14px;
+    padding: 8px 2px 14px;
+    border-bottom: 1px solid rgba(247, 238, 224, 0.18);
+    transition: border-color .3s;
+  }
+  .compose-field:focus-within { border-color: var(--amber); }
+  .pen { width: 18px; height: 18px; flex-shrink: 0; color: var(--faint); transition: color .3s, transform .3s; }
+  .compose-field:focus-within .pen { color: var(--amber); transform: rotate(-12deg); }
+  .compose input {
+    flex: 1; background: none; border: 0; outline: none;
+    font-family: Fraunces, Georgia, serif;
+    font-size: clamp(20px, 2.4vw, 28px); font-style: italic;
+  }
+  .compose input::placeholder { color: var(--faint); }
+  .draft {
+    padding: 10px 16px; cursor: pointer; white-space: nowrap;
+    color: var(--amber); background: transparent;
+    border: 1px solid rgba(201, 162, 39, 0.45); border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    opacity: 0; transform: translateX(-6px);
+    transition: opacity .3s, transform .3s, background .2s;
+  }
+  .compose-field:focus-within .draft,
+  .compose-field.filled .draft { opacity: 1; transform: none; }
+  .draft:hover { background: rgba(244, 196, 125, 0.12); }
+
+  .seeds { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .seeds span { align-self: center; margin-right: 4px; color: var(--faint); font-size: 11px; }
+  .seed {
+    padding: 6px 13px; cursor: pointer;
+    color: var(--muted); background: rgba(247, 238, 224, 0.04);
+    border: 1px solid var(--border); border-radius: 999px; font-size: 13px;
+  }
+  .seed:hover { color: var(--text); border-color: rgba(244, 196, 125, 0.4); }
+
+  .library {
+    position: relative; min-height: 360px;
+    padding: 36px 24px 28px; margin-top: 36px; overflow: hidden;
+    border: 1px solid var(--border); border-radius: 20px;
+    background:
+      linear-gradient(90deg, transparent, rgba(255,255,255,0.03) 50%, transparent),
+      var(--wood);
+    box-shadow: inset 0 20px 35px rgba(0,0,0,0.14), 0 28px 70px rgba(0,0,0,0.26);
+  }
+  .library::before, .library::after {
+    position: absolute; right: 0; left: 0; height: 16px; content: "";
+    border-top: 1px solid rgba(255, 220, 171, 0.16);
+    border-bottom: 1px solid rgba(0,0,0,0.35);
+    background: linear-gradient(var(--wood-light), #1c1715);
+  }
+  .library::before { top: 0; }
+  .library::after { bottom: 0; }
+
+  .plank {
+    position: absolute; right: 20px; bottom: 78px; left: 20px; height: 14px;
+    border: 1px solid rgba(255, 220, 171, 0.15); border-radius: 4px;
+    background: linear-gradient(#49352b, #241b18);
+    box-shadow: 0 12px 12px rgba(0,0,0,0.24);
+  }
+
+  .books {
+    position: relative; z-index: 1;
+    display: flex; align-items: end; justify-content: center;
+    gap: 10px; height: 270px;
+  }
+
+  .book {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    width: 62px; padding: 14px 8px;
+    color: var(--book-color); cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 4px 8px 7px 4px;
+    background:
+      linear-gradient(90deg, rgba(0,0,0,0.24), transparent 20%, rgba(255,255,255,0.08)),
+      var(--book-bg);
+    box-shadow: 7px 9px 13px rgba(0,0,0,0.25);
+    transition: transform .35s ease, box-shadow .35s ease, opacity .3s;
+  }
+  .book.hidden { display: none; }
+  .book.arriving { animation: arrive .55s cubic-bezier(.2,1.2,.3,1); }
+  @keyframes arrive {
+    from { transform: translateY(40px) scale(.85); opacity: 0; }
+    to { transform: none; opacity: 1; }
+  }
+  .book::after {
+    position: absolute; top: 14px; bottom: 14px; left: 8px; width: 1px; content: "";
+    background: rgba(255,255,255,0.16);
+  }
+  .book:hover, .book.selected {
+    z-index: 2;
+    box-shadow:
+      0 0 24px color-mix(in srgb, var(--book-color), transparent 68%),
+      9px 15px 19px rgba(0,0,0,0.34);
+    transform: translateY(-26px) rotate(-1deg);
+  }
+  .book span {
+    font-family: Fraunces, Georgia, serif;
+    font-size: 12px; font-weight: 600; line-height: 1.15; text-align: center;
+    transform: rotate(-90deg); white-space: nowrap;
+  }
+
+  .now {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center;
+    padding: 20px; margin-top: 18px;
+    border: 1px solid var(--border); border-radius: 18px;
+    background: var(--panel); backdrop-filter: blur(14px);
+  }
+  .now-spine {
+    width: 18px; height: 64px; border-radius: 2px 4px 4px 2px;
+    background: var(--tint, var(--amber));
+    box-shadow: inset 1px 0 rgba(255,255,255,0.25);
+  }
+  .now p { color: var(--muted); font-size: 13px; }
+  .now h2 { margin: 4px 0 8px; font-family: Fraunces, Georgia, serif; font-size: 22px; font-weight: 500; }
+  .now small { color: var(--muted); }
+  .progress {
+    height: 4px; margin-top: 10px; overflow: hidden;
+    background: rgba(255,220,171,0.12); border-radius: 99px;
+  }
+  .progress i {
+    display: block; height: 100%;
+    background: var(--tint, var(--amber));
+    box-shadow: 0 0 10px color-mix(in srgb, var(--tint, var(--amber)), transparent 40%);
+  }
+  .cta {
+    padding: 13px 18px; cursor: pointer; border: 0; border-radius: 10px;
+    color: #24170d; background: var(--amber); font-weight: 800;
+  }
+  .cta:hover { background: var(--cream); }
+
+  .head-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin: 8px 0 22px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .head-row h2 { font-family: Fraunces, Georgia, serif; font-size: 22px; font-weight: 500; }
+  .head-row small { color: var(--faint); letter-spacing: 0.1em; font-size: 11px; }
+
+  .vols { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .vol {
+    position: relative; padding: 22px 20px 18px; cursor: pointer; overflow: hidden;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: linear-gradient(160deg, rgba(247,238,224,0.05), rgba(247,238,224,0.015));
+    transition: transform .3s, border-color .3s;
+  }
+  .vol::after {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--tint, var(--amber)); opacity: .55;
+  }
+  .vol:hover { transform: translateY(-4px); border-color: rgba(244,196,125,0.35); }
+  .vol .num { color: var(--gold); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }
+  .vol h3 { margin: 8px 0 6px; font-family: Fraunces, Georgia, serif; font-size: 19px; font-weight: 500; }
+  .vol .next { color: var(--muted); font-style: italic; font-size: 13.5px; }
+  .vol .meta {
+    display: flex; justify-content: space-between; margin-top: 10px;
+    color: var(--faint); font-size: 11px;
+  }
+  .rule { margin-top: 18px; height: 1px; background: rgba(247,238,224,0.12); position: relative; }
+  .rule i { position: absolute; left: 0; top: 0; height: 1px; background: var(--tint, var(--amber)); }
+
+  .back {
+    margin-bottom: 18px; padding: 0; cursor: pointer;
+    color: var(--muted); background: none; border: 0; font-size: 13px;
+  }
+  .back:hover { color: var(--text); }
+
+  .desk {
+    position: relative; min-height: 540px; overflow: hidden;
+    border: 1px solid var(--border); border-radius: 22px;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.04), transparent 28%, rgba(0,0,0,0.25)),
+      var(--wood);
+    box-shadow: inset 0 1px rgba(255,255,255,0.1), 0 30px 70px rgba(0,0,0,0.34);
+  }
+  .desk::after {
+    position: absolute; right: 0; bottom: 0; left: 0; height: 52px; content: "";
+    border-top: 1px solid rgba(0,0,0,0.35); background: var(--wood-dark);
+  }
+  .desk-grain {
+    position: absolute; inset: 0; opacity: 0.15; pointer-events: none;
+    background-image: repeating-linear-gradient(175deg, transparent 0, transparent 35px, rgba(255,255,255,0.035) 36px, transparent 38px);
+  }
+  .lamp { position: absolute; top: 44px; right: 72px; z-index: 3; width: 125px; height: 92px; }
+  .lamp-shade {
+    position: absolute; top: 0; left: 20px; width: 86px; height: 47px;
+    border: 2px solid #6e4d33; border-radius: 50% 50% 18% 18%;
+    background: var(--amber); box-shadow: 0 0 45px rgba(243, 189, 110, 0.62);
+  }
+  .lamp-arm { position: absolute; top: 42px; left: 65px; width: 5px; height: 53px; background: #6e4d33; }
+  .lamp-base { position: absolute; bottom: 0; left: 37px; width: 63px; height: 8px; border-radius: 50%; background: #6e4d33; }
+  .light-cone {
+    position: absolute; top: 72px; right: 8px; width: 270px; height: 320px;
+    opacity: 0.18; pointer-events: none; filter: blur(15px);
+    background: linear-gradient(155deg, rgba(243,189,110,0.9), transparent 58%);
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 30% 100%);
+  }
+  .notebook {
+    position: absolute; top: 86px; left: 11%; z-index: 2;
+    width: min(440px, 56%); min-height: 300px; padding: 28px;
+    color: var(--ink); border-radius: 4px;
+    background:
+      repeating-linear-gradient(0deg, transparent 0, transparent 30px, rgba(80,69,54,0.12) 31px),
+      var(--paper);
+    box-shadow: 13px 18px 0 rgba(21,14,12,0.24), 0 22px 32px rgba(0,0,0,0.23);
+    transform: rotate(-3deg);
+  }
+  .notebook-label {
+    margin-bottom: 16px; color: #756753;
+    font-family: Fraunces, Georgia, serif; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase;
+  }
+  .notebook h2 {
+    margin: 0 0 14px; font-family: Fraunces, Georgia, serif;
+    font-size: 26px; font-weight: 500; letter-spacing: -0.03em;
+  }
+  .notebook p { font-family: Fraunces, Georgia, serif; font-size: 16px; line-height: 1.75; }
+  .device {
+    position: absolute; right: 16%; bottom: 92px; z-index: 2;
+    width: 188px; padding: 18px;
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 17px;
+    background: linear-gradient(145deg, #29343b, #131b20);
+    box-shadow: 11px 15px 20px rgba(0,0,0,0.3); transform: rotate(4deg);
+  }
+  .device-light {
+    width: 9px; height: 9px; margin-bottom: 18px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 14px var(--green);
+  }
+  .device p { margin-bottom: 6px; color: var(--muted); font-size: 11px; }
+  .device h3 { font-size: 15px; line-height: 1.3; }
+
+  .desk-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    margin-top: 16px; color: var(--muted); font-size: 13px;
+  }
+
+  .notes { display: grid; gap: 14px; }
+  .note {
+    padding: 20px 22px;
+    border: 1px solid var(--border); border-radius: 14px;
+    background: var(--panel);
+  }
+  .note cite {
+    display: block; margin-top: 10px;
+    color: var(--gold); font-style: normal; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .note q { font-family: Fraunces, Georgia, serif; font-size: 18px; line-height: 1.5; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; z-index: 5;
+    transform: translateX(-50%) translateY(20px);
+    padding: 12px 18px; border-radius: 999px;
+    color: #24170d; background: var(--cream);
+    font-weight: 700; font-size: 13px; opacity: 0; pointer-events: none;
+    transition: opacity .3s, transform .3s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 820px) {
+    .app { display: block; }
+    aside { padding: 18px 20px; }
+    .brand-sub, nav, .streak, .quote { display: none; }
+    .books { justify-content: start; overflow-x: auto; padding: 0 12px; }
+    .now { grid-template-columns: 1fr; }
+    .now-spine { display: none; }
+    .notebook { left: 6%; width: 70%; }
+    .device { right: 6%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stroke path { animation: none; stroke-dashoffset: 0; }
+    .book, .vol { transition: none; }
+  }
+
+  .compare {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 9;
+    display: flex; gap: 4px; padding: 6px; background: #1a1614; border: 1px solid rgba(255,220,171,0.18);
+    border-radius: 999px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .compare a {
+    padding: 8px 12px; border-radius: 999px; color: #a79a8d; text-decoration: none; font-size: 12px; font-weight: 600;
+  }
+  .compare a[aria-current] { background: #f4c47d; color: #24170d; }
+</style>
+</head>
+<body>
+  <div class="grain"></div>
+  <svg class="stroke" viewBox="0 0 1400 900" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M 80 220 Q 420 90 780 240 T 1380 180" />
+  </svg>
+
+  <div class="app" data-view="library" id="app">
+    <aside>
+      <div class="brand">
+        <div class="brand-icon">▤</div>
+        <div class="brand-name">the study /</div>
+      </div>
+      <p class="brand-sub">Night library</p>
+
+      <nav>
+        <button class="active" data-go="library">Reading now</button>
+        <button data-go="volumes">My bookshelf</button>
+        <button data-go="compose">Ask a question</button>
+        <button data-go="notes">Notes &amp; highlights</button>
+      </nav>
+
+      <div class="streak">
+        <small>6-day streak</small>
+        <div class="days">
+          <i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-done></i><i data-done></i><i></i>
+        </div>
+        <div class="palette">
+          <h5>Disciplines</h5>
+          <div class="dabs" id="dabs"></div>
+        </div>
+        <div class="quote">“A reader lives a thousand lives before he dies.”</div>
+      </div>
+    </aside>
+
+    <main>
+      <section class="view view-library">
+        <p class="eyebrow" id="kicker">Wednesday · your shelf is waiting</p>
+        <h1>Pick up where<br />you <em>left off.</em></h1>
+        <p class="lede">Name a subject and we’ll draft a syllabus around how you actually learn — a few questions first, then chapter one. Or take a book from the shelf.</p>
+
+        <div class="compose" id="compose">
+          <div class="compose-field" id="field">
+            <svg class="pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+            </svg>
+            <input id="subject" type="text" placeholder="What have you been wondering about?" autocomplete="off" />
+            <button class="draft" id="draft">Draft syllabus</button>
+          </div>
+          <div class="seeds">
+            <span>Or start with</span>
+            <button class="seed">How machines learn</button>
+            <button class="seed">Practical psychology</button>
+            <button class="seed">Writing that feels alive</button>
+          </div>
+        </div>
+
+        <section class="library">
+          <div class="books" id="books"></div>
+          <div class="plank"></div>
+        </section>
+
+        <section class="now" id="now"></section>
+      </section>
+
+      <section class="view view-volumes">
+        <p class="eyebrow">The catalogue</p>
+        <h1>Your <em>volumes.</em></h1>
+        <p class="lede">When the shelf gets crowded, read them as a list. Same books, same progress — just easier to scan.</p>
+        <div class="head-row">
+          <h2>In progress</h2>
+          <small id="volCount"></small>
+        </div>
+        <div class="vols" id="vols"></div>
+      </section>
+
+      <section class="view view-desk">
+        <button class="back" data-go="library">← Return to the shelf</button>
+        <p class="eyebrow" id="deskEyebrow">Currently reading</p>
+        <h1 id="deskTitle">Chapter</h1>
+        <p class="lede" id="deskLede"></p>
+
+        <div class="desk">
+          <div class="desk-grain"></div>
+          <div class="light-cone"></div>
+          <div class="lamp">
+            <div class="lamp-shade"></div>
+            <div class="lamp-arm"></div>
+            <div class="lamp-base"></div>
+          </div>
+          <section class="notebook">
+            <div class="notebook-label" id="noteLabel">Today’s chapter</div>
+            <h2 id="noteTitle"></h2>
+            <p id="noteBody"></p>
+          </section>
+          <section class="device">
+            <div class="device-light"></div>
+            <p>Your AI teacher</p>
+            <h3 id="teacherMsg">I found a gentle next step for you.</h3>
+          </section>
+        </div>
+
+        <div class="desk-bar">
+          <span id="deskMeta">Suggested focus · 16 minutes</span>
+          <button class="cta" id="continueBtn">Continue reading →</button>
+        </div>
+      </section>
+
+      <section class="view view-notes">
+        <p class="eyebrow">Marginalia</p>
+        <h1>Notes &amp; <em>highlights.</em></h1>
+        <p class="lede">Lines you marked while reading. They wait here until you need them again.</p>
+        <div class="notes" style="margin-top:28px">
+          <article class="note">
+            <q>A model is not a mind. It is a compressed map of patterns that used to live in the world.</q>
+            <cite>Artificial intelligence, explained · Chapter 4</cite>
+          </article>
+          <article class="note">
+            <q>Confidence is not the absence of doubt. It is the decision to make the next mark anyway.</q>
+            <cite>Creative confidence · Chapter 2</cite>
+          </article>
+          <article class="note">
+            <q>You do not rise to the level of your goals. You fall to the level of your practice.</q>
+            <cite>Learning how to learn · Chapter 1</cite>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <nav class="compare" aria-label="Night Library options">
+    <a href="16-night-library.html" aria-current="page">16 Shelf</a>
+    <a href="17-open-volume.html">17 Open volume</a>
+    <a href="18-the-stacks.html">18 Stacks</a>
+    <a href="19-window-seat.html">19 Window seat</a>
+  </nav>
+
+<script>
+  const DISCIPLINES = {
+    Craft:    { bg: "#a87558", color: "#fff1df" },
+    Science:  { bg: "#526a4d", color: "#edf6e8" },
+    Language: { bg: "#38516a", color: "#e9f0fa" },
+    Systems:  { bg: "#5b4a77", color: "#f2eaff" },
+    History:  { bg: "#7c6a3e", color: "#fff6ca" },
+  };
+
+  const CHAPTERS = {
+    default: {
+      title: "How machines learn",
+      body: "Start with an example you already know. Then we will name the pattern underneath it — slowly, without the jargon getting in the way.",
+      teacher: "I kept your place. Sixteen quiet minutes from here.",
+    },
+  };
+
+  const books = [
+    { id: "images", spine: "Language of images", title: "The language of images", discipline: "Craft", chapter: 3, of: 10, next: "Framing as a sentence", minutes: 14, progress: 28, height: 210 },
+    { id: "psych", spine: "Practical psychology", title: "A practical guide to psychology", discipline: "Science", chapter: 2, of: 11, next: "Attention, not willpower", minutes: 18, progress: 19, height: 252 },
+    { id: "creative", spine: "Creative confidence", title: "Creative confidence", discipline: "Craft", chapter: 5, of: 9, next: "The ugly first draft", minutes: 12, progress: 54, height: 228 },
+    { id: "ai", spine: "AI, explained", title: "Artificial intelligence, explained", discipline: "Systems", chapter: 4, of: 12, next: "How machines learn", minutes: 16, progress: 33, height: 274, selected: true },
+    { id: "design", spine: "Everyday design", title: "The design of everyday things", discipline: "Craft", chapter: 1, of: 8, next: "Affordances you can feel", minutes: 20, progress: 8, height: 240 },
+    { id: "learn", spine: "Learning how to learn", title: "Learning how to learn", discipline: "Science", chapter: 6, of: 10, next: "Interleaving practice", minutes: 11, progress: 61, height: 218 },
+    { id: "photo", spine: "Photography", title: "Photography through practice", discipline: "Craft", chapter: 2, of: 9, next: "Light before gear", minutes: 15, progress: 22, height: 258 },
+    { id: "write", spine: "Writing alive", title: "Writing that feels alive", discipline: "Language", chapter: 7, of: 12, next: "Cut until it breathes", minutes: 13, progress: 58, height: 232 },
+  ];
+
+  const app = document.getElementById("app");
+  const booksEl = document.getElementById("books");
+  const nowEl = document.getElementById("now");
+  const volsEl = document.getElementById("vols");
+  const dabsEl = document.getElementById("dabs");
+  const field = document.getElementById("field");
+  const input = document.getElementById("subject");
+  let filter = null;
+
+  function selected() {
+    return books.find((b) => b.selected) || books[0];
+  }
+
+  function setView(name) {
+    app.dataset.view = name;
+    document.querySelectorAll("nav button").forEach((b) => {
+      b.classList.toggle("active", b.dataset.go === name || (name === "desk" && b.dataset.go === "library"));
+    });
+    if (name === "compose") {
+      app.dataset.view = "library";
+      document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("active", b.dataset.go === "library"));
+      input.focus();
+    }
+  }
+
+  function toast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 2200);
+  }
+
+  function renderDabs() {
+    dabsEl.innerHTML = Object.entries(DISCIPLINES).map(([name, d]) =>
+      `<button class="dab${filter === name ? " active" : ""}" title="${name}" data-d="${name}" style="background:${d.bg}"></button>`
+    ).join("");
+  }
+
+  function renderBooks() {
+    booksEl.innerHTML = books.map((b) => {
+      const d = DISCIPLINES[b.discipline];
+      const hidden = filter && b.discipline !== filter ? " hidden" : "";
+      const sel = b.selected ? " selected" : "";
+      const arrive = b.arriving ? " arriving" : "";
+      return `<button class="book${sel}${hidden}${arrive}" data-id="${b.id}" style="height:${b.height}px;--book-bg:${d.bg};--book-color:${d.color}"><span>${b.spine}</span></button>`;
+    }).join("");
+    books.forEach((b) => { b.arriving = false; });
+  }
+
+  function renderNow() {
+    const b = selected();
+    const d = DISCIPLINES[b.discipline];
+    nowEl.style.setProperty("--tint", d.bg);
+    nowEl.innerHTML = `
+      <div class="now-spine"></div>
+      <div>
+        <p>Currently reading · ${b.discipline} · Chapter ${b.chapter} of ${b.of}</p>
+        <h2>${b.title}</h2>
+        <small>Next: ${b.next} · About ${b.minutes} minutes</small>
+        <div class="progress"><i style="width:${b.progress}%"></i></div>
+      </div>
+      <button class="cta" id="openBook">Open book →</button>`;
+  }
+
+  function renderVols() {
+    const list = filter ? books.filter((b) => b.discipline === filter) : books;
+    document.getElementById("volCount").textContent = `${list.length} volumes`;
+    volsEl.innerHTML = list.map((b, i) => {
+      const d = DISCIPLINES[b.discipline];
+      return `<article class="vol" data-id="${b.id}" style="--tint:${d.bg}">
+        <p class="num">Vol. ${["I","II","III","IV","V","VI","VII","VIII","IX","X"][i] || i + 1} · ${b.discipline}</p>
+        <h3>${b.title}</h3>
+        <p class="next">Next: ${b.next}</p>
+        <div class="rule"><i style="width:${b.progress}%"></i></div>
+        <div class="meta"><span>${b.progress}%</span><span>${b.minutes} min</span></div>
+      </article>`;
+    }).join("");
+  }
+
+  function selectBook(id) {
+    books.forEach((b) => { b.selected = b.id === id; });
+    renderBooks();
+    renderNow();
+  }
+
+  function openDesk(id) {
+    if (id) selectBook(id);
+    const b = selected();
+    const ch = CHAPTERS[b.id] || CHAPTERS.default;
+    document.getElementById("deskEyebrow").textContent = `${b.discipline} · Chapter ${b.chapter} of ${b.of}`;
+    document.getElementById("deskTitle").innerHTML = b.title.replace(/, /, ",<br />");
+    document.getElementById("deskLede").textContent = `Next: ${b.next}. About ${b.minutes} minutes if you sit down now.`;
+    document.getElementById("noteLabel").textContent = `Chapter ${b.chapter}`;
+    document.getElementById("noteTitle").textContent = b.next;
+    document.getElementById("noteBody").textContent = ch.body;
+    document.getElementById("teacherMsg").textContent = ch.teacher;
+    document.getElementById("deskMeta").textContent = `Suggested focus · ${b.minutes} minutes`;
+    setView("desk");
+  }
+
+  function addBook(title) {
+    const names = Object.keys(DISCIPLINES);
+    const discipline = names[title.length % names.length];
+    const id = "new-" + Date.now();
+    books.forEach((b) => { b.selected = false; });
+    books.push({
+      id, spine: title.slice(0, 18), title, discipline,
+      chapter: 1, of: 8, next: "A first question", minutes: 10, progress: 0,
+      height: 200 + (title.length % 7) * 8, selected: true, arriving: true,
+    });
+    filter = null;
+    renderDabs();
+    renderBooks();
+    renderNow();
+    renderVols();
+    toast("Syllabus drafted. Four questions, then chapter one.");
+  }
+
+  document.querySelectorAll("[data-go]").forEach((el) => {
+    el.addEventListener("click", () => setView(el.dataset.go));
+  });
+
+  booksEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".book");
+    if (btn) selectBook(btn.dataset.id);
+  });
+
+  nowEl.addEventListener("click", (e) => {
+    if (e.target.id === "openBook") openDesk();
+  });
+
+  volsEl.addEventListener("click", (e) => {
+    const card = e.target.closest(".vol");
+    if (card) openDesk(card.dataset.id);
+  });
+
+  dabsEl.addEventListener("click", (e) => {
+    const dab = e.target.closest(".dab");
+    if (!dab) return;
+    filter = filter === dab.dataset.d ? null : dab.dataset.d;
+    renderDabs();
+    renderBooks();
+    renderVols();
+  });
+
+  input.addEventListener("input", () => field.classList.toggle("filled", input.value.trim().length > 0));
+  document.getElementById("draft").addEventListener("click", () => {
+    const v = input.value.trim();
+    if (!v) return input.focus();
+    addBook(v);
+    input.value = "";
+    field.classList.remove("filled");
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("draft").click();
+  });
+  document.querySelectorAll(".seed").forEach((s) => s.addEventListener("click", () => {
+    input.value = s.textContent;
+    field.classList.add("filled");
+    input.focus();
+  }));
+
+  document.getElementById("continueBtn").addEventListener("click", () => {
+    const b = selected();
+    toast("Marking the page. See you tomorrow.");
+    b.progress = Math.min(100, b.progress + 8);
+    renderNow();
+  });
+
+  const hour = new Date().getHours();
+  const when = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+  document.getElementById("kicker").textContent = `Good ${when}, Yarden · your shelf is waiting`;
+
+  renderDabs();
+  renderBooks();
+  renderNow();
+  renderVols();
+</script>
+</body>
+</html>

@@ -1,9 +1,14 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import type { TeachingProfileAnswers } from "./teaching-profile.ts";
 
-/** One person taking Courses. The prototype seeds a single row. */
+/** One person taking Courses. The prototype seeds a single row. Teaching Profile lives here. */
 export const learners = pgTable("learners", {
   id: uuid("id").primaryKey().defaultRandom(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  teachingProfileVersion: integer("teaching_profile_version"),
+  teachingProfileAnswers: jsonb("teaching_profile_answers").$type<TeachingProfileAnswers>(),
+  teachingProfileAssessedAt: timestamp("teaching_profile_assessed_at", { withTimezone: true }),
+  teachingProfileUpdatedAt: timestamp("teaching_profile_updated_at", { withTimezone: true }),
 });
 
 /** Unpublished Course Request owned by a Learner. Home lists these in the Library. */

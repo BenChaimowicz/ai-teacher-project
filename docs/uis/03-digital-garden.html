@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digital Garden</title>
+
+    <style>
+      :root {
+        --bg: #0e1815;
+        --surface: #15231e;
+        --surface-2: #1c3028;
+        --border: #294339;
+        --text: #eff7ef;
+        --muted: #91a99b;
+        --coral: #ffae91;
+        --lavender: #cbb8ff;
+        --green: #9dde9b;
+        --yellow: #f2d68b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        font-family: Inter, system-ui, sans-serif;
+        background:
+          radial-gradient(circle at 72% 8%, #274736, transparent 25%),
+          var(--bg);
+      }
+
+      .app {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      aside {
+        width: 245px;
+        padding: 26px 20px;
+        background: rgba(9, 19, 15, 0.7);
+        border-right: 1px solid var(--border);
+      }
+
+      .brand {
+        margin-bottom: 50px;
+        font-size: 21px;
+        font-weight: 900;
+      }
+
+      .brand span {
+        color: var(--green);
+      }
+
+      nav {
+        display: grid;
+        gap: 7px;
+      }
+
+      nav a {
+        padding: 12px 14px;
+        color: var(--muted);
+        border-radius: 12px;
+        text-decoration: none;
+      }
+
+      nav a.active,
+      nav a:hover {
+        color: var(--text);
+        background: var(--surface-2);
+      }
+
+      main {
+        width: min(1150px, 100%);
+        padding: 48px 6%;
+        margin: auto;
+      }
+
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 40px;
+        margin-bottom: 48px;
+      }
+
+      .hero small {
+        color: var(--green);
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 650px;
+        margin: 12px 0;
+        font-size: clamp(38px, 5vw, 66px);
+        line-height: 1;
+        letter-spacing: -0.06em;
+      }
+
+      .hero p {
+        max-width: 560px;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.7;
+      }
+
+      .create {
+        flex: 0 0 auto;
+        padding: 14px 18px;
+        color: #281915;
+        background: var(--coral);
+        border-radius: 12px;
+        font-weight: 900;
+        text-decoration: none;
+      }
+
+      .section-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 17px;
+      }
+
+      .section-title h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .section-title a {
+        color: var(--green);
+        text-decoration: none;
+      }
+
+      .garden {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .plant {
+        position: relative;
+        min-height: 230px;
+        padding: 22px;
+        overflow: hidden;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+      }
+
+      .plant::after {
+        position: absolute;
+        right: -25px;
+        bottom: -50px;
+        width: 150px;
+        height: 150px;
+        content: "";
+        background: var(--green);
+        border-radius: 50%;
+        opacity: 0.14;
+      }
+
+      .plant:nth-child(2)::after {
+        background: var(--lavender);
+      }
+
+      .plant:nth-child(3)::after {
+        background: var(--yellow);
+      }
+
+      .plant-icon {
+        display: grid;
+        width: 46px;
+        height: 46px;
+        place-items: center;
+        margin-bottom: 40px;
+        background: var(--surface-2);
+        border-radius: 15px;
+        font-size: 22px;
+      }
+
+      .plant h3 {
+        margin: 0 0 7px;
+      }
+
+      .plant p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 5px 8px;
+        margin-top: 18px;
+        color: var(--green);
+        background: rgba(157, 222, 155, 0.1);
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      @media (max-width: 800px) {
+        aside {
+          display: none;
+        }
+
+        main {
+          padding: 35px 22px;
+        }
+
+        .hero {
+          display: block;
+        }
+
+        .create {
+          display: inline-block;
+          margin-top: 16px;
+        }
+
+        .garden {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app">
+      <aside>
+        <div class="brand">mind<span>garden</span></div>
+
+        <nav>
+          <a class="active" href="#">My garden</a>
+          <a href="#">Plant a topic</a>
+          <a href="#">Explore</a>
+          <a href="#">Journal</a>
+          <a href="#">Settings</a>
+        </nav>
+      </aside>
+
+      <main>
+        <section class="hero">
+          <div>
+            <small>Your garden is growing</small>
+            <h1>Follow your curiosity wherever it leads.</h1>
+            <p>
+              Grow knowledge gradually with learning paths that adapt as your
+              interests and understanding develop.
+            </p>
+          </div>
+
+          <a class="create" href="#">+ Plant a new topic</a>
+        </section>
+
+        <div class="section-title">
+          <h2>Your growing topics</h2>
+          <a href="#">See all topics</a>
+        </div>
+
+        <section class="garden">
+          <article class="plant">
+            <div class="plant-icon">✎</div>
+            <h3>Visual design</h3>
+            <p>12 lessons • 3 skills growing</p>
+            <span class="status">Growing well</span>
+          </article>
+
+          <article class="plant">
+            <div class="plant-icon">✦</div>
+            <h3>Artificial intelligence</h3>
+            <p>8 lessons • 2 skills growing</p>
+            <span class="status">Needs attention</span>
+          </article>
+
+          <article class="plant">
+            <div class="plant-icon">◎</div>
+            <h3>Better communication</h3>
+            <p>16 lessons • 5 skills growing</p>
+            <span class="status">Blooming</span>
+          </article>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

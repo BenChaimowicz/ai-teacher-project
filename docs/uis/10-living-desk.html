@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Living Desk</title>
+
+    <style>
+      :root {
+        --bg: #0e0e10;
+        --wood: #33241e;
+        --wood-dark: #1d1613;
+        --paper: #e8dcc2;
+        --ink: #2b2521;
+        --text: #f4eee4;
+        --muted: #a49a91;
+        --amber: #f3bd6e;
+        --green: #a8d0ae;
+        --blue: #9fcbd7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: hidden;
+        color: var(--text);
+        background:
+          radial-gradient(
+            circle at 65% 30%,
+            rgba(243, 189, 110, 0.13),
+            transparent 28%
+          ),
+          var(--bg);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      button,
+      textarea {
+        font: inherit;
+      }
+
+      .app {
+        display: grid;
+        min-height: 100vh;
+        grid-template-columns: 232px 1fr;
+      }
+
+      aside {
+        display: flex;
+        flex-direction: column;
+        padding: 28px 20px;
+        border-right: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(8, 8, 10, 0.76);
+      }
+
+      .brand {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 49px;
+        font-weight: 850;
+        letter-spacing: -0.06em;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 31px;
+        height: 31px;
+        place-items: center;
+        color: #2c1d11;
+        background: var(--amber);
+        border-radius: 8px;
+        box-shadow: 0 0 25px rgba(243, 189, 110, 0.33);
+      }
+
+      nav {
+        display: grid;
+        gap: 7px;
+      }
+
+      nav button {
+        padding: 12px;
+        color: var(--muted);
+        cursor: pointer;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        text-align: left;
+      }
+
+      nav button.active,
+      nav button:hover {
+        color: var(--text);
+        background: rgba(243, 189, 110, 0.1);
+      }
+
+      .desk-note {
+        padding: 16px;
+        margin-top: auto;
+        color: var(--muted);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .desk-note strong {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--text);
+      }
+
+      main {
+        width: min(1200px, 100%);
+        padding: 52px clamp(22px, 5vw, 78px) 70px;
+        margin: auto;
+      }
+
+      .eyebrow {
+        margin: 0 0 11px;
+        color: var(--amber);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(40px, 6vw, 74px);
+        line-height: 0.92;
+        letter-spacing: -0.1em;
+      }
+
+      .intro {
+        max-width: 510px;
+        margin: 20px 0 39px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .desk {
+        position: relative;
+        min-height: 530px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 22px;
+        background:
+          linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.04),
+            transparent 28%,
+            rgba(0, 0, 0, 0.25)
+          ),
+          var(--wood);
+        box-shadow:
+          inset 0 1px rgba(255, 255, 255, 0.1),
+          0 30px 70px rgba(0, 0, 0, 0.34);
+      }
+
+      .desk::after {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 55px;
+        border-top: 1px solid rgba(0, 0, 0, 0.35);
+        background: var(--wood-dark);
+        content: "";
+      }
+
+      .desk-grain {
+        position: absolute;
+        inset: 0;
+        opacity: 0.15;
+        background-image: repeating-linear-gradient(
+          175deg,
+          transparent 0,
+          transparent 35px,
+          rgba(255, 255, 255, 0.035) 36px,
+          transparent 38px
+        );
+      }
+
+      .lamp {
+        position: absolute;
+        top: 48px;
+        right: 75px;
+        z-index: 3;
+        width: 125px;
+        height: 92px;
+      }
+
+      .lamp-shade {
+        position: absolute;
+        top: 0;
+        left: 20px;
+        width: 86px;
+        height: 47px;
+        border: 2px solid #6e4d33;
+        border-radius: 50% 50% 18% 18%;
+        background: var(--amber);
+        box-shadow: 0 0 45px rgba(243, 189, 110, 0.62);
+        transform: perspective(80px) rotateX(-9deg);
+      }
+
+      .lamp-arm {
+        position: absolute;
+        top: 42px;
+        left: 65px;
+        width: 5px;
+        height: 53px;
+        background: #6e4d33;
+      }
+
+      .lamp-base {
+        position: absolute;
+        bottom: 0;
+        left: 37px;
+        width: 63px;
+        height: 8px;
+        border-radius: 50%;
+        background: #6e4d33;
+      }
+
+      .light-cone {
+        position: absolute;
+        top: 75px;
+        right: 10px;
+        width: 270px;
+        height: 320px;
+        opacity: 0.18;
+        background: linear-gradient(
+          155deg,
+          rgba(243, 189, 110, 0.9),
+          transparent 58%
+        );
+        clip-path: polygon(0 0, 100% 0, 70% 100%, 30% 100%);
+        filter: blur(15px);
+        pointer-events: none;
+        transition: opacity 0.4s ease;
+      }
+
+      .lamp.off .light-cone,
+      .lamp.off .lamp-shade {
+        opacity: 0.22;
+        box-shadow: none;
+      }
+
+      .notebook {
+        position: absolute;
+        top: 90px;
+        left: 13%;
+        z-index: 2;
+        width: min(430px, 55%);
+        min-height: 290px;
+        padding: 29px;
+        color: var(--ink);
+        border-radius: 4px;
+        background:
+          repeating-linear-gradient(
+            0deg,
+            transparent 0,
+            transparent 30px,
+            rgba(80, 69, 54, 0.12) 31px
+          ),
+          var(--paper);
+        box-shadow:
+          13px 18px 0 rgba(21, 14, 12, 0.24),
+          0 22px 32px rgba(0, 0, 0, 0.23);
+        transform: rotate(-3deg);
+        transition: transform 0.35s ease;
+      }
+
+      .notebook:hover {
+        transform: rotate(-1deg) translateY(-5px);
+      }
+
+      .notebook-label {
+        margin-bottom: 19px;
+        color: #756753;
+        font-family: Georgia, serif;
+        font-size: 12px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .notebook h2 {
+        margin: 0 0 17px;
+        font-family: Georgia, serif;
+        font-size: 28px;
+        font-weight: 500;
+        letter-spacing: -0.05em;
+      }
+
+      .notebook textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 0;
+        resize: vertical;
+        color: var(--ink);
+        border: 0;
+        outline: 0;
+        background: transparent;
+        font-family: Georgia, serif;
+        font-size: 17px;
+        line-height: 1.8;
+      }
+
+      .notebook textarea::placeholder {
+        color: #9b907e;
+      }
+
+      .device {
+        position: absolute;
+        right: 18%;
+        bottom: 96px;
+        z-index: 2;
+        width: 170px;
+        min-height: 165px;
+        padding: 19px;
+        color: var(--text);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 17px;
+        background: linear-gradient(145deg, #29343b, #131b20);
+        box-shadow:
+          11px 15px 20px rgba(0, 0, 0, 0.3),
+          inset 0 1px rgba(255, 255, 255, 0.12);
+        transform: rotate(4deg);
+        transition: transform 0.35s ease;
+      }
+
+      .device:hover {
+        transform: rotate(0deg) translateY(-7px);
+      }
+
+      .device-light {
+        width: 9px;
+        height: 9px;
+        margin-bottom: 22px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 14px var(--green);
+      }
+
+      .device p {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .device h3 {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.2;
+      }
+
+      .drawer {
+        position: absolute;
+        right: 5%;
+        bottom: 78px;
+        z-index: 2;
+        width: 180px;
+        min-height: 75px;
+        padding: 16px;
+        color: var(--text);
+        cursor: pointer;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 4px;
+        background: #5a3d2c;
+        box-shadow: 0 13px 18px rgba(0, 0, 0, 0.25);
+        text-align: left;
+        transition:
+          transform 0.3s ease,
+          background 0.3s ease;
+      }
+
+      .drawer:hover {
+        background: #704b34;
+        transform: translateY(-5px);
+      }
+
+      .drawer strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+
+      .drawer span {
+        color: #d3bbaa;
+        font-size: 11px;
+      }
+
+      .bottom-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        padding: 18px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .timer {
+        display: flex;
+        gap: 9px;
+        align-items: center;
+      }
+
+      .timer strong {
+        color: var(--text);
+      }
+
+      .continue {
+        padding: 11px 16px;
+        color: #2b1e12;
+        cursor: pointer;
+        border: 0;
+        border-radius: 9px;
+        background: var(--amber);
+        font-weight: 800;
+      }
+
+      @media (max-width: 850px) {
+        .notebook {
+          left: 7%;
+          width: 53%;
+        }
+
+        .device {
+          right: 17%;
+        }
+
+        .drawer {
+          right: 4%;
+        }
+      }
+
+      @media (max-width: 670px) {
+        .app {
+          display: block;
+        }
+
+        aside {
+          padding: 18px 20px;
+        }
+
+        .brand {
+          margin: 0;
+        }
+
+        nav,
+        .desk-note {
+          display: none;
+        }
+
+        main {
+          padding-top: 39px;
+        }
+
+        .desk {
+          min-height: 690px;
+        }
+
+        .lamp {
+          top: 35px;
+          right: 33px;
+        }
+
+        .notebook {
+          top: 120px;
+          left: 7%;
+          width: 86%;
+        }
+
+        .device {
+          right: 14%;
+          bottom: 115px;
+        }
+
+        .drawer {
+          right: 8%;
+          bottom: 42px;
+        }
+
+        .bottom-bar {
+          display: block;
+        }
+
+        .continue {
+          width: 100%;
+          margin-top: 13px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app">
+      <aside>
+        <div class="brand">
+          <div class="brand-mark">⌂</div>
+          <span>the desk /</span>
+        </div>
+
+        <nav>
+          <button class="active">My desk</button>
+          <button>Notebook archive</button>
+          <button>Teacher messages</button>
+          <button>Learning history</button>
+        </nav>
+
+        <div class="desk-note">
+          <strong>A place for unfinished work</strong>
+          Your desk remembers what you were thinking about, even when you need
+          to step away.
+        </div>
+      </aside>
+
+      <main>
+        <p class="eyebrow">Good evening, Yarden</p>
+        <h1>Your desk is<br />ready for you.</h1>
+
+        <p class="intro">
+          Sit down, leave a thought in your notebook, or ask your teacher what
+          deserves your attention next.
+        </p>
+
+        <section class="desk">
+          <div class="desk-grain"></div>
+
+          <div class="light-cone"></div>
+
+          <div class="lamp">
+            <div class="lamp-shade"></div>
+            <div class="lamp-arm"></div>
+            <div class="lamp-base"></div>
+          </div>
+
+          <section class="notebook">
+            <div class="notebook-label">Today's notebook</div>
+            <h2>What would be useful to understand today?</h2>
+
+            <textarea
+              id="note"
+              placeholder="Write a thought, question, or intention..."
+            ></textarea>
+          </section>
+
+          <section class="device">
+            <div class="device-light"></div>
+            <p>Your AI teacher</p>
+            <h3 id="teacherMessage">
+              I found a gentle next step for you.
+            </h3>
+          </section>
+
+          <button class="drawer" onclick="openDrawer()">
+            <strong>Open idea drawer</strong>
+            <span id="drawerText">6 unfinished thoughts</span>
+          </button>
+        </section>
+
+        <div class="bottom-bar">
+          <div class="timer">
+            <span>Suggested focus:</span>
+            <strong id="timer">18 minutes</strong>
+          </div>
+
+          <button class="continue" onclick="continueLearning()">
+            Sit down and begin →
+          </button>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const note = document.querySelector("#note");
+      const teacherMessage = document.querySelector("#teacherMessage");
+      const lamp = document.querySelector(".lamp");
+
+      note.addEventListener("input", () => {
+        if (note.value.trim().length > 12) {
+          teacherMessage.textContent =
+            "That thought is enough to begin. I can shape it with you.";
+        } else {
+          teacherMessage.textContent =
+            "I found a gentle next step for you.";
+        }
+      });
+
+      lamp.addEventListener("click", () => {
+        lamp.classList.toggle("off");
+      });
+
+      function openDrawer() {
+        const drawerText = document.querySelector("#drawerText");
+
+        if (drawerText.textContent.includes("6")) {
+          drawerText.textContent = "The drawer is open";
+        } else {
+          drawerText.textContent = "6 unfinished thoughts";
+        }
+      }
+
+      function continueLearning() {
+        const button = document.querySelector(".continue");
+        button.textContent = "Preparing your desk…";
+
+        setTimeout(() => {
+          button.textContent = "Your lesson is ready ✓";
+        }, 850);
+      }
+    </script>
+  </body>
+</html>
