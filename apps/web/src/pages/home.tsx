@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { CourseRequestControl } from "@/components/course-request-control.tsx";
 
 type LibraryItem = {
@@ -6,7 +7,36 @@ type LibraryItem = {
   kind: "course" | "course_request";
   title: string;
   status: string;
+  href: string | null;
 };
+
+/**
+ * One Library card. Published Courses open Study; Course Requests stay inert.
+ * @param item - Library row from `/api/library`
+ */
+function LibraryCard({ item }: { item: LibraryItem }) {
+  const inner = (
+    <>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.status}</p>
+      <p className="mt-1 font-medium">{item.title}</p>
+    </>
+  );
+
+  if (item.href) {
+    return (
+      <li>
+        <Link
+          to={item.href}
+          className="block rounded-xl border border-border bg-card p-4 hover:bg-accent"
+        >
+          {inner}
+        </Link>
+      </li>
+    );
+  }
+
+  return <li className="rounded-xl border border-border bg-card p-4">{inner}</li>;
+}
 
 /**
  * Home Library. An empty query shows the empty-state copy.
@@ -58,10 +88,7 @@ export function HomePage() {
       {items && items.length > 0 ? (
         <ul className="mt-8 grid gap-3">
           {items.map((item) => (
-            <li key={item.id} className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.status}</p>
-              <p className="mt-1 font-medium">{item.title}</p>
-            </li>
+            <LibraryCard key={`${item.kind}-${item.id}`} item={item} />
           ))}
         </ul>
       ) : null}

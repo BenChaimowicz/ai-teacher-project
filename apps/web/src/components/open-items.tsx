@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
-type OpenItem = { id: string; title: string; status: string };
+type OpenItem = {
+  id: string;
+  kind: "course" | "course_request";
+  title: string;
+  status: string;
+  href: string | null;
+};
 
 /**
- * Sidebar group for in-progress items. Empty until Course Requests exist.
+ * Sidebar group for in-progress Course Requests and published Courses.
  */
 export function OpenItems() {
   const [items, setItems] = useState<OpenItem[] | null>(null);
@@ -30,11 +37,21 @@ export function OpenItems() {
     <div className="mt-6 px-4">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Open items</p>
       {items && items.length > 0
-        ? items.map((item) => (
-            <p key={item.id} className="mt-2 truncate text-sm text-foreground">
-              {item.title}
-            </p>
-          ))
+        ? items.map((item) =>
+            item.href ? (
+              <Link
+                key={`${item.kind}-${item.id}`}
+                to={item.href}
+                className="mt-2 block truncate text-sm text-foreground hover:text-primary"
+              >
+                {item.title}
+              </Link>
+            ) : (
+              <p key={`${item.kind}-${item.id}`} className="mt-2 truncate text-sm text-foreground">
+                {item.title}
+              </p>
+            ),
+          )
         : null}
     </div>
   );

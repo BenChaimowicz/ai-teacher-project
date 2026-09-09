@@ -28,6 +28,6 @@ export { schema };
 export * from "./schema.ts";
 export * from "./env.ts";
 export * from "./teaching-profile.ts";
-
-/** Stable seed id for the prototype's single Learner. Runtime still loads "the only row". */
-export const SEEDED_LEARNER_ID = "8f0c2e1a-4b3d-4a7c-9e12-6d5f8a90b1c3";
+export * from "./progress.ts";
+export * from "./fixture-course.ts";
+export * from "./seed-ids.ts";

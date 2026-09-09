@@ -30,8 +30,16 @@ _Avoid_: dashboard, catalog (when meaning Home), media library
 The Workspace sidebar group of shortcuts into in-progress Course Requests and published Courses. Not a fourth screen. Empty when nothing is in flight.
 _Avoid_: Open (as a destination), inbox, fourth screen
 
+**Study**:
+The Learner-facing screen for a published Course. The Workspace sidebar is hidden. It opens on the current Lesson; there is no Course overview first. Leaving Study returns to Home.
+_Avoid_: player, course view, course overview, learn mode
+
+**Study bar**:
+The chrome on Study: back to Workspace, Lessons toggle (list off until shown), Course title, Progress as completed / total Lessons, and one-way free jump.
+_Avoid_: app bar, header (unqualified), workspace sidebar
+
 **Course**:
-The generated sequence of Modules that takes a Learner from their Starting Level to their Learning Goal. Once published, it is an immutable snapshot; a different Starting Level is a separate Course.
+The sequence of Modules that takes a Learner from their Starting Level to their Learning Goal. Once published, it is an immutable snapshot of Modules and Lessons; Progress does not edit it. A different Starting Level is a separate Course. A published Course may exist without a Course Request (a seeded snapshot); a generated Course always has one.
 _Avoid_: Curriculum, class, program, version (when meaning an in-place regenerate)
 
 **Course Request**:
@@ -83,15 +91,15 @@ The remaining-gap input to Blueprint generation, produced by a Course Request di
 _Avoid_: Skill level (when the relevant goal is unstated), entry point, Progress (when meaning assessed capability), placement score, proficiency
 
 **Progress**:
-The Learner's 0–100 remaining-gap position through an approved Course, from the first Lesson (0) to the Learning Goal (100). It accumulates by completing Lessons, not by opening them; it is not a re-estimated Starting Level. The formula is completed Lessons over total Lessons in both Sequence modes.
-_Avoid_: Starting Level (when meaning the bar), level, capability score
+The Learner's position through a published Course, shown as completed Lessons over total Lessons. It accumulates by completing Lessons, not by opening them; it is not a re-estimated Starting Level. Completions are Learner runtime on that Course; they do not edit the published snapshot.
+_Avoid_: Starting Level (when meaning the bar), level, capability score, percent (when meaning the n / total label)
 
 **Sequence mode**:
 The Course-level choice of whether Lessons unlock in Blueprint order (linear) or are all openable (free jump). Default is linear, with completed Lessons revisitable. Switching to free jump is one-way.
 _Avoid_: Navigation mode, path lock, difficulty
 
 **Teaching Profile**:
-The Learner-level record of declared needs and stated preferences for how Lessons are presented. It exists after the Learner first saves the questionnaire, including a save of only skips or no preference. New Course Request waits until it exists. Home stays reachable without it. After it exists, the Learner views it; changing it is Edit, Reassess, or Reset. Not a score, not a Learner type, not Starting Level.
+The Learner-level record of declared needs and stated preferences for how Lessons are presented. It exists after the Learner first saves the questionnaire, including a save of only skips or no preference. New Course Request waits until it exists. Home and Study of a published Course stay reachable without it. After it exists, the Learner views it; changing it is Edit, Reassess, or Reset. Not a score, not a Learner type, not Starting Level.
 _Avoid_: Teaching fit, teaching-method fit, learning style, User, profile (unqualified)
 
 **Declared need**:
@@ -151,6 +159,10 @@ A named grouping of lessons inside a Course.
 
 **Lesson**:
 A single teaching unit that uses one teaching method. Each Lesson belongs to one Course; reuse copies it from any Learner's Course into another rather than sharing the original.
+
+**Current Lesson**:
+The Lesson Study opens when the Learner enters from Workspace: the first incomplete Lesson in Course order, or the last Lesson if every Lesson is complete. Opening a Lesson from the Lessons list does not change Current Lesson and does not complete it.
+_Avoid_: Course overview, resume pointer, active lesson
 
 **Lesson completion**:
 The event that counts a Lesson toward Progress. A reading Lesson completes when the Learner reaches the end and marks it complete; opening or partial reading does not count. A Quiz completes when the Learner's best score is at least 70%.

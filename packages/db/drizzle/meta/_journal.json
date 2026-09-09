@@ -15,6 +15,13 @@
       "when": 1788960981561,
       "tag": "0001_striped_the_spike",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788963984773,
+      "tag": "0002_flat_paibok",
+      "breakpoints": true
     }
   ]
 }
