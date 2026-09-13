@@ -15,4 +15,12 @@ pnpm run apps
 
 Then open `http://127.0.0.1:5173`. That one command starts the Vite Workspace, the Fastify API, and the idle worker.
 
+## Check
+
+```bash
+pnpm check
+```
+
+Typechecks database, API, worker, and web, then runs the API smoke check and the Progress/completion check.
+
 Deploy notes: [`docs/deploy.md`](docs/deploy.md).
