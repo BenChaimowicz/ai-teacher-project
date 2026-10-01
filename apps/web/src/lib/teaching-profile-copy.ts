@@ -20,13 +20,13 @@ export const PROFILE_SKIP_NOTE =
 export const LANGUAGE_NOT_LISTED_DISCLAIMER =
   "Lessons are English only at this moment. There is no translation into another language. Instructional language will stay English.";
 
-/** Confirm copy for Save after the Teaching Profile already exists. */
+/** Confirm text for Save after the Teaching Profile already exists. */
 export const SAVE_EXISTING_DISCLAIMER =
-  "These choices apply to Courses you request after this. Courses you already have keep their current Lessons and layout.";
+  "These choices apply to Courses you request after this. Courses you already have will not be regenerated.";
 
-/** Confirm copy for Reset. */
+/** Confirm text for Reset. */
 export const RESET_DISCLAIMER =
-  "This deletes your saved answers. Courses you already have still do not change. New Course Request stays blocked until you save again.";
+  "This deletes your saved answers. Courses you already have will not be regenerated. New Course Request stays blocked until you save again.";
 
 /** Why New Course Request waits. */
 export const COURSE_REQUEST_BLOCKED =

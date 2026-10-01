@@ -30,4 +30,5 @@ export * from "./env.ts";
 export * from "./teaching-profile.ts";
 export * from "./progress.ts";
 export * from "./fixture-course.ts";
+export * from "./reading-lesson.ts";
 export * from "./seed-ids.ts";

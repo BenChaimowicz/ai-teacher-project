@@ -50,6 +50,16 @@ async function seedPublishedCourse(db: ReturnType<typeof createDb>) {
       .values([SEEDED_READING_LESSON, SEEDED_QUIZ_LESSON])
       .onConflictDoNothing({ target: publishedLessons.id });
 
+    await db
+      .update(publishedLessons)
+      .set({
+        body: SEEDED_READING_LESSON.body,
+        sources: SEEDED_READING_LESSON.sources,
+        citations: SEEDED_READING_LESSON.citations,
+        teachingMethod: SEEDED_READING_LESSON.teachingMethod,
+      })
+      .where(eq(publishedLessons.id, SEEDED_READING_LESSON.id));
+
     const [course] = await db
       .select()
       .from(publishedCourses)

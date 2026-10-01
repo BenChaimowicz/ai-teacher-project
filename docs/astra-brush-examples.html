@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ben — Three Directions</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        color-scheme: dark;
+        font-family: Arial, sans-serif;
+      }
+
+      body {
+        --bg: #111211;
+        --fg: #eeeae2;
+        --muted: #92958f;
+        --paint: #ded9cc;
+        --nav-fg: #171915;
+        --accent: #d4e7b2;
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        transition: background 400ms, color 400ms;
+      }
+
+      body[data-theme="cobalt"] {
+        --bg: #0b0e16;
+        --fg: #f1f4ff;
+        --muted: #8a92a8;
+        --paint: #315dff;
+        --nav-fg: #ffffff;
+        --accent: #88a7ff;
+      }
+
+      body[data-theme="ember"] {
+        --bg: #181513;
+        --fg: #eee4d8;
+        --muted: #a5988c;
+        --paint: #b85436;
+        --nav-fg: #fff2dc;
+        --accent: #e2ab78;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      button {
+        font: inherit;
+        cursor: pointer;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      button:focus-visible,
+      a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 6px;
+      }
+
+      .topbar {
+        position: relative;
+        z-index: 5;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding: 28px 5vw;
+      }
+
+      .menu-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border: 0;
+        background: transparent;
+        color: var(--fg);
+      }
+
+      .menu-icon {
+        display: grid;
+        gap: 5px;
+        width: 22px;
+      }
+
+      .menu-icon::before,
+      .menu-icon::after {
+        content: "";
+        height: 1px;
+        background: currentColor;
+      }
+
+      .variations {
+        display: flex;
+        padding: 4px;
+        border: 1px solid #ffffff18;
+        border-radius: 100px;
+      }
+
+      .variations button {
+        padding: 9px 16px;
+        border: 0;
+        border-radius: 100px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .variations button[aria-pressed="true"] {
+        background: var(--fg);
+        color: var(--bg);
+      }
+
+      .sidebar {
+        position: fixed;
+        z-index: 4;
+        inset: 0 auto 0 0;
+        width: 340px;
+        pointer-events: none;
+      }
+
+      .sidebar.open {
+        pointer-events: auto;
+      }
+
+      .paint {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      .paint rect {
+        fill: var(--paint);
+        transition: fill 400ms;
+      }
+
+      .brush {
+        fill: none;
+        stroke: white;
+        stroke-linecap: butt;
+        stroke-dasharray: 1;
+        stroke-dashoffset: 1;
+        transition: stroke-dashoffset 650ms cubic-bezier(0.65, 0, 0.3, 1);
+      }
+
+      .open .brush {
+        stroke-dashoffset: 0;
+        transition-duration: 1100ms;
+      }
+
+      .open .bristle:nth-child(2) {
+        transition-delay: 70ms;
+      }
+
+      .open .bristle:nth-child(3) {
+        transition-delay: 130ms;
+      }
+
+      .open .bristle:nth-child(4) {
+        transition-delay: 190ms;
+      }
+
+      .paint-layer {
+        display: none;
+      }
+
+      body[data-theme="ink"] .paint-ink,
+      body[data-theme="cobalt"] .paint-cobalt,
+      body[data-theme="ember"] .paint-ember {
+        display: block;
+      }
+
+      .sidebar-content {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 132px 44px 48px;
+        color: var(--nav-fg);
+        opacity: 0;
+        transform: translateY(-8px);
+        transition: opacity 140ms, transform 200ms;
+      }
+
+      .open .sidebar-content {
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity 450ms 500ms, transform 450ms 500ms;
+      }
+
+      .sidebar-label,
+      .eyebrow,
+      .section-label {
+        font-family: monospace;
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      nav {
+        display: grid;
+        gap: 24px;
+        margin-top: 52px;
+      }
+
+      nav a {
+        width: fit-content;
+        font-size: 32px;
+        letter-spacing: -0.05em;
+      }
+
+      nav a:hover {
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 8px;
+      }
+
+      .sidebar-footer {
+        margin-top: auto;
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.8;
+      }
+
+      body.menu-open .menu-toggle {
+        color: var(--nav-fg);
+        transition: color 200ms 200ms;
+      }
+
+      main {
+        max-width: 1440px;
+        margin: auto;
+        padding: 90px 8vw 40px;
+        transition: padding 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--muted);
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      h1 {
+        max-width: 950px;
+        margin: 36px 0 26px;
+        font-size: clamp(64px, 8.5vw, 132px);
+        font-weight: 500;
+        line-height: 0.96;
+        letter-spacing: -0.075em;
+      }
+
+      h1 span {
+        color: var(--muted);
+      }
+
+      .intro {
+        max-width: 380px;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.8;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 48px;
+        margin-top: 24px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--accent);
+        font-size: 14px;
+      }
+
+      .cta span {
+        color: var(--accent);
+        transition: transform 200ms;
+      }
+
+      .cta:hover span {
+        transform: translate(4px, -4px);
+      }
+
+      .bottom {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: 100px;
+        padding-top: 24px;
+        border-top: 1px solid #ffffff20;
+      }
+
+      .section-label {
+        color: var(--muted);
+      }
+
+      .bottom p {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      body[data-theme="cobalt"] h1 {
+        font-weight: 750;
+        letter-spacing: -0.065em;
+      }
+
+      body[data-theme="cobalt"] .eyebrow,
+      body[data-theme="cobalt"] .intro {
+        font-family: monospace;
+      }
+
+      body[data-theme="ember"] h1 {
+        font-family: Georgia, serif;
+        font-weight: 400;
+        letter-spacing: -0.06em;
+      }
+
+      body[data-theme="ember"] h1 span {
+        font-style: italic;
+        color: var(--accent);
+      }
+
+      @media (min-width: 1000px) {
+        body.menu-open main {
+          padding-left: 380px;
+          padding-right: 5vw;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .topbar {
+          padding: 20px;
+        }
+
+        .variations button {
+          padding: 8px 11px;
+        }
+
+        .sidebar {
+          width: min(340px, 88vw);
+        }
+
+        main {
+          padding: 80px 24px 32px;
+        }
+
+        h1 {
+          font-size: clamp(56px, 14vw, 84px);
+        }
+
+        .bottom {
+          margin-top: 72px;
+          gap: 24px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body data-theme="ink">
+    <header class="topbar">
+      <button
+        class="menu-toggle"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <span class="menu-icon" aria-hidden="true"></span>
+        <span id="menu-label">Menu</span>
+      </button>
+
+      <div class="variations" role="group" aria-label="Design variation">
+        <button data-choice="ink" aria-pressed="true">01 Ink</button>
+        <button data-choice="cobalt" aria-pressed="false">02 Cobalt</button>
+        <button data-choice="ember" aria-pressed="false">03 Ember</button>
+      </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar" inert aria-label="Main navigation">
+      <svg
+        class="paint"
+        viewBox="0 0 340 1000"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <defs>
+          <filter
+            id="rough"
+            x="-20%"
+            y="-10%"
+            width="140%"
+            height="120%"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.045 0.15"
+              numOctaves="3"
+              seed="8"
+              result="grain"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="grain"
+              scale="24"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+
+          <mask
+            id="ink-mask"
+            maskUnits="userSpaceOnUse"
+            x="0"
+            y="0"
+            width="340"
+            height="1000"
+          >
+            <g filter="url(#rough)">
+              <path
+                class="brush"
+                pathLength="1"
+                stroke-width="310"
+                d="M 135,-180 C 165,180 110,540 145,1180"
+              />
+              <path
+                class="brush"
+                pathLength="1"
+                stroke-width="5"
+                d="M 306,-100 Q 280,540 304,1100"
+              />
+            </g>
+          </mask>
+
+          <mask
+            id="cobalt-mask"
+            maskUnits="userSpaceOnUse"
+            x="0"
+            y="0"
+            width="340"
+            height="1000"
+          >
+            <g filter="url(#rough)">
+              <path
+                class="brush bristle"
+                pathLength="1"
+                stroke-width="110"
+                d="M 20,-130 Q 0,500 30,1130"
+              />
+              <path
+                class="brush bristle"
+                pathLength="1"
+                stroke-width="105"
+                d="M 98,-130 Q 125,500 98,1130"
+              />
+              <path
+                class="brush bristle"
+                pathLength="1"
+                stroke-width="100"
+                d="M 182,-130 Q 165,500 190,1130"
+              />
+              <path
+                class="brush bristle"
+                pathLength="1"
+                stroke-width="70"
+                d="M 258,-130 Q 280,500 256,1130"
+              />
+            </g>
+          </mask>
+
+          <mask
+            id="ember-mask"
+            maskUnits="userSpaceOnUse"
+            x="0"
+            y="0"
+            width="340"
+            height="1000"
+          >
+            <path
+              class="brush"
+              pathLength="1"
+              stroke-width="325"
+              filter="url(#rough)"
+              d="M 95,-190 C 220,230 70,570 150,1190"
+            />
+          </mask>
+        </defs>
+
+        <g class="paint-layer paint-ink">
+          <rect width="340" height="1000" mask="url(#ink-mask)" />
+        </g>
+        <g class="paint-layer paint-cobalt">
+          <rect width="340" height="1000" mask="url(#cobalt-mask)" />
+        </g>
+        <g class="paint-layer paint-ember">
+          <rect width="340" height="1000" mask="url(#ember-mask)" />
+        </g>
+      </svg>
+
+      <div class="sidebar-content">
+        <div class="sidebar-label">Ben / Personal space</div>
+        <nav>
+          <a href="#home">Home ↗</a>
+          <a href="#about">About</a>
+          <a href="#currently">Currently</a>
+        </nav>
+        <div class="sidebar-footer">
+          Code. Rhythm. Play.<br />
+          A little bit of everything.
+        </div>
+      </div>
+    </aside>
+
+    <main id="home">
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 id="headline"></h1>
+      <p class="intro" id="intro"></p>
+      <a class="cta" href="#about">
+        A little about me <span aria-hidden="true">↗</span>
+      </a>
+
+      <section class="bottom">
+        <div id="about">
+          <div class="section-label">01 / About</div>
+          <p>Developer. Drummer. Gamer.<br />Usually making something.</p>
+        </div>
+        <div id="currently">
+          <div class="section-label">02 / Off the clock</div>
+          <p>Behind a drum kit.<br />Or one more round.</p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const designs = {
+        ink: {
+          eyebrow: "Ben / Developer & creative",
+          headline: "Less noise.<br /><span>More meaning.</span>",
+          intro:
+            "I’m Ben. I build for the web, play the drums, and spend " +
+            "the rest of my time somewhere between curiosity and play.",
+        },
+        cobalt: {
+          eyebrow: "Hello, world. I'm Ben.",
+          headline: "Build things.<br /><span>Break patterns.</span>",
+          intro:
+            "Developer by trade. Drummer by instinct. " +
+            "Into thoughtful interfaces and games worth getting lost in.",
+        },
+        ember: {
+          eyebrow: "A small corner of the internet",
+          headline: "Made of code.<br /><span>Moved by rhythm.</span>",
+          intro:
+            "I’m Ben — a developer, drummer, and gamer. " +
+            "This is where those worlds meet.",
+        },
+      };
+
+      const sidebar = document.querySelector(".sidebar");
+      const toggle = document.querySelector(".menu-toggle");
+      const menuLabel = document.querySelector("#menu-label");
+      const choices = document.querySelectorAll("[data-choice]");
+      let isOpen = false;
+
+      function setOpen(next, restoreFocus = false) {
+        isOpen = next;
+        sidebar.inert = !next;
+        sidebar.classList.toggle("open", next);
+        document.body.classList.toggle("menu-open", next);
+        toggle.setAttribute("aria-expanded", String(next));
+        menuLabel.textContent = next ? "Close" : "Menu";
+
+        if (restoreFocus) toggle.focus();
+      }
+
+      function setTheme(theme) {
+        const design = designs[theme];
+        document.body.dataset.theme = theme;
+        document.querySelector("#eyebrow").textContent = design.eyebrow;
+        document.querySelector("#headline").innerHTML = design.headline;
+        document.querySelector("#intro").textContent = design.intro;
+
+        choices.forEach((button) => {
+          button.setAttribute(
+            "aria-pressed",
+            String(button.dataset.choice === theme),
+          );
+        });
+      }
+
+      toggle.addEventListener("click", () => setOpen(!isOpen));
+
+      choices.forEach((button) => {
+        button.addEventListener("click", () => {
+          setTheme(button.dataset.choice);
+        });
+      });
+
+      sidebar.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => setOpen(false, true));
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && isOpen) {
+          setOpen(false, true);
+        }
+      });
+
+      document.addEventListener("click", (event) => {
+        const insideControls = event.target.closest(
+          ".sidebar, .menu-toggle, .variations",
+        );
+
+        if (isOpen && !insideControls) setOpen(false);
+      });
+
+      setTheme("ink");
+    </script>
+  </body>
+</html>

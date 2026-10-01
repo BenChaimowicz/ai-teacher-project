@@ -85,6 +85,8 @@ Provenance: [Users & data](https://linear.app/senoy/issue/SEN-8/users-and-data),
 
 Four screens. Dark workspace as the default. Throwaway IA probe: `prototype/ui-scope/` (variant B). Not the product.
 
+**Product name.** **Knibbler** (silent **k** — spelled *Knibbler*, pronounced like "Nibbler"). Sidebar lockup, browser tab title, greeting, empty states. Companion avatars are unnamed characters from the avatar collection; they are not sub-branded under Knibbler. Professor Pim is visual direction only, not the name.
+
 ### Home
 
 Published Courses and unpublished Course Requests (including rejected) in one library. Workspace sidebar: Home, Teaching Profile, New Course Request, and Open items. Opening a published Course leaves Home for Study. Opening an unpublished Request opens that Request at its current status.
@@ -134,7 +136,7 @@ Sequence mode is Course-level. Default: linear unlock; completed Lessons revisit
 
 A reading Lesson completes when the Learner reaches the end and marks it complete. A Quiz completes when best score is at least 70%.
 
-Provenance: [UI scope (screens)](https://linear.app/senoy/issue/SEN-10/ui-scope-screens), [Level-to-course mapping](https://linear.app/senoy/issue/SEN-12/level-to-course-mapping), [Quiz mechanics](https://linear.app/senoy/issue/SEN-13/quiz-mechanics), [Plugin contract](https://linear.app/senoy/issue/SEN-14/plugin-contract), [Runtime generation](https://linear.app/senoy/issue/SEN-15/runtime-generation).
+Provenance: [UI scope (screens)](https://linear.app/senoy/issue/SEN-10/ui-scope-screens), [Level-to-course mapping](https://linear.app/senoy/issue/SEN-12/level-to-course-mapping), [Quiz mechanics](https://linear.app/senoy/issue/SEN-13/quiz-mechanics), [Plugin contract](https://linear.app/senoy/issue/SEN-14/plugin-contract), [Runtime generation](https://linear.app/senoy/issue/SEN-15/runtime-generation), [Decide product name](https://linear.app/senoy/issue/SEN-51/decide-product-name).
 
 ---
 
