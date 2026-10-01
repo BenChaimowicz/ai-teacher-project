@@ -2,11 +2,15 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import {
   currentLessonId,
   lessonCompletions,
+  parseNumberedSources,
   publishedCourses,
   publishedLessons,
   publishedModules,
+  QUIZ_METHOD_ID,
+  READING_METHOD_ID,
   studyPath,
   type Database,
+  type NumberedSource,
 } from "@senoy/db";
 
 /** One Lesson in the Study list. */
@@ -16,6 +20,9 @@ export type StudyLessonListItem = {
   teachingMethod: string;
   position: number;
   lessonGoal: string;
+  completed: boolean;
+  body: unknown;
+  citations: NumberedSource[];
 };
 
 /** One Module in the Study list. */
@@ -77,6 +84,8 @@ export async function loadStudyCourse(
         teachingMethod: publishedLessons.teachingMethod,
         position: publishedLessons.position,
         lessonGoal: publishedLessons.lessonGoal,
+        body: publishedLessons.body,
+        citations: publishedLessons.citations,
       })
       .from(publishedLessons)
       .where(eq(publishedLessons.publishedCourseId, courseId))
@@ -103,6 +112,9 @@ export async function loadStudyCourse(
         teachingMethod: row.teachingMethod,
         position: row.position,
         lessonGoal: row.lessonGoal,
+        completed: completedIds.has(row.id),
+        body: row.body,
+        citations: parseNumberedSources(row.citations),
       };
       const list = lessonsByModule.get(row.moduleId) ?? [];
       list.push(item);
@@ -195,5 +207,62 @@ export async function studyLinksByCourseId(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`[study.ts: studyLinksByCourseId] Failed to resolve Study links || ${message}`);
+  }
+}
+
+/** Result of marking a Lesson complete. */
+export type CompleteLessonResult =
+  | { ok: true; payload: StudyCoursePayload }
+  | { ok: false; status: 400 | 404; error: string };
+
+/**
+ * Reading-plugin `complete`: records Lesson completion. Progress never drops.
+ * Quiz complete is a later ticket.
+ * @param db - Drizzle client
+ * @param learnerId - Current Learner
+ * @param courseId - Published Course id
+ * @param lessonId - Lesson to complete
+ */
+export async function completeLesson(
+  db: Database,
+  learnerId: string,
+  courseId: string,
+  lessonId: string,
+): Promise<CompleteLessonResult> {
+  try {
+    const course = await loadStudyCourse(db, learnerId, courseId);
+    if (!course) return { ok: false, status: 404, error: "Published Course not found." };
+
+    const [lesson] = await db
+      .select({
+        id: publishedLessons.id,
+        teachingMethod: publishedLessons.teachingMethod,
+      })
+      .from(publishedLessons)
+      .where(and(eq(publishedLessons.id, lessonId), eq(publishedLessons.publishedCourseId, courseId)))
+      .limit(1);
+
+    if (!lesson) return { ok: false, status: 404, error: "Lesson not found." };
+
+    if (lesson.teachingMethod === QUIZ_METHOD_ID) {
+      return { ok: false, status: 400, error: "Quiz completion is not available yet." };
+    }
+    if (lesson.teachingMethod !== READING_METHOD_ID) {
+      return { ok: false, status: 400, error: "This teaching method cannot be marked complete yet." };
+    }
+
+    await db
+      .insert(lessonCompletions)
+      .values({ learnerId, lessonId: lesson.id })
+      .onConflictDoNothing();
+
+    const payload = await loadStudyCourse(db, learnerId, courseId);
+    if (!payload) return { ok: false, status: 404, error: "Published Course not found." };
+    return { ok: true, payload };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `[study.ts: completeLesson] Failed to complete Lesson || courseId=${courseId} || lessonId=${lessonId} || ${message}`,
+    );
   }
 }

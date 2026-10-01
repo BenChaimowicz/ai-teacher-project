@@ -1,29 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, NavLink, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button.tsx";
+import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
+import type { StudyLesson, StudyModule, StudyPayload } from "@/lib/study-types.ts";
 import { cn } from "@/lib/utils";
-
-type StudyLesson = {
-  id: string;
-  title: string;
-  teachingMethod: string;
-  position: number;
-  lessonGoal: string;
-};
-
-type StudyModule = {
-  id: string;
-  title: string;
-  position: number;
-  lessons: StudyLesson[];
-};
-
-type StudyPayload = {
-  course: { id: string; title: string; sequenceMode: string };
-  progress: { completed: number; total: number };
-  currentLessonId: string;
-  modules: StudyModule[];
-};
+import { renderForTeachingMethod } from "@/teaching-methods/register.ts";
 
 /**
  * Flatten Lessons in Course order.
@@ -38,9 +19,12 @@ function allLessons(modules: StudyModule[]): StudyLesson[] {
  */
 export function StudyPage() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
+  const { record, loading: profileLoading } = useTeachingProfile();
   const [payload, setPayload] = useState<StudyPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lessonsOpen, setLessonsOpen] = useState(false);
+
+  const sectionAdvance = record?.resolved?.sectionAdvance.value ?? "continuous";
 
   useEffect(() => {
     if (!courseId) return;
@@ -66,6 +50,7 @@ export function StudyPage() {
 
   const lessons = useMemo(() => (payload ? allLessons(payload.modules) : []), [payload]);
   const visible = lessons.find((row) => row.id === lessonId) ?? null;
+  const Play = visible ? renderForTeachingMethod(visible.teachingMethod) : null;
 
   if (error) {
     return (
@@ -80,7 +65,7 @@ export function StudyPage() {
     );
   }
 
-  if (!payload || !courseId) {
+  if (!payload || !courseId || profileLoading) {
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         <p className="p-8 text-sm text-muted-foreground">Loading…</p>
@@ -139,10 +124,19 @@ export function StudyPage() {
             ))}
           </nav>
         ) : null}
-        <main className="min-w-0 flex-1 p-8">
+        <main className="min-w-0 flex-1 overflow-y-auto p-8">
           <h1 className="text-3xl font-semibold tracking-tight">{visible.title}</h1>
           <p className="mt-2 max-w-xl text-muted-foreground">{visible.lessonGoal}</p>
-          <p className="mt-8 text-sm text-muted-foreground">Lesson body comes in a later ticket.</p>
+          {Play ? (
+            <Play
+              courseId={courseId}
+              lesson={visible}
+              sectionAdvance={sectionAdvance}
+              onPayload={setPayload}
+            />
+          ) : (
+            <p className="mt-8 text-sm text-muted-foreground">Quiz play comes in a later ticket.</p>
+          )}
         </main>
       </div>
     </div>

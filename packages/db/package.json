@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./teaching-profile": "./src/teaching-profile.ts"
+    "./teaching-profile": "./src/teaching-profile.ts",
+    "./reading-lesson": "./src/reading-lesson.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",

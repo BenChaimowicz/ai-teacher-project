@@ -10,6 +10,10 @@ Implementation is a **new effort**: [Prototype: AI learning course platform](htt
 
 ## Language
 
+**Knibbler**:
+The product name. Spelled **Knibbler**; the initial **k** is silent (pronounced like "Nibbler"). Used in Workspace sidebar lockup, browser tab title, greeting, and empty states. Professor Pim was a visual mockup direction, not the name.
+_Avoid_: Professor Pim, Workspace (when meaning the product brand string)
+
 **Learner**:
 The person taking a Course. The prototype has exactly one (a single seeded row, no auth); every learner-owned record carries their id so accounts can be added later without migration.
 _Avoid_: User, account (when meaning the person learning)
