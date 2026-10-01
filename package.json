@@ -7,7 +7,8 @@
     "apps": "pnpm --parallel --filter @senoy/web --filter @senoy/api --filter @senoy/worker dev",
     "check": "pnpm typecheck && pnpm test",
     "typecheck": "pnpm --filter @senoy/db --filter @senoy/api --filter @senoy/worker --filter @senoy/web exec tsc --noEmit",
-    "test": "pnpm --filter @senoy/db exec tsx --test src/progress.test.ts && pnpm --filter @senoy/api exec tsx --test src/routes/health.test.ts",
+    "test": "pnpm --filter @senoy/db exec tsx --test src/progress.test.ts && pnpm --filter @senoy/api exec tsx --test src/routes/*.test.ts",
+    "check:course-requests:live": "pnpm --filter @senoy/api exec tsx src/routes/course-requests.live-check.ts",
     "db:generate": "pnpm --filter @senoy/db generate",
     "db:migrate": "pnpm --filter @senoy/db migrate",
     "db:seed": "pnpm --filter @senoy/db seed"

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 type OpenItem = {
   id: string;
@@ -13,6 +13,7 @@ type OpenItem = {
  * Sidebar group for in-progress Course Requests and published Courses.
  */
 export function OpenItems() {
+  const { pathname } = useLocation();
   const [items, setItems] = useState<OpenItem[] | null>(null);
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export function OpenItems() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [pathname]);
 
   return (
     <div className="mt-6 px-4">

@@ -21,6 +21,16 @@ Then open `http://127.0.0.1:5173`. That one command starts the Vite Workspace, t
 pnpm check
 ```
 
-Typechecks database, API, worker, and web, then runs the API smoke check and the Progress/completion check.
+Typechecks database, API, worker, and web, then runs the API checks (including Course Request creation, validation, Profile gating, and history) and the Progress/completion check. These tests do not access Supabase.
+
+To verify Course Request persistence against the configured Supabase database:
+
+```bash
+pnpm check:course-requests:live
+```
+
+This opt-in check creates temporary Learners inside a transaction and rolls back all writes. It does not change the seeded Learner or existing Courses.
+
+Course Requests can be saved with a subject and Learning Goal, then reopened from Home or Open items. They remain **Awaiting validity review**; validity, Assessment, and generation are follow-on work.
 
 Deploy notes: [`docs/deploy.md`](docs/deploy.md).

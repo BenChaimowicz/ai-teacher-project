@@ -16,6 +16,7 @@ export async function libraryRoutes(app: FastifyInstance) {
         .select({
           id: courseRequests.id,
           subject: courseRequests.subject,
+          learningGoal: courseRequests.learningGoal,
           status: courseRequests.status,
         })
         .from(courseRequests)
@@ -48,8 +49,9 @@ export async function libraryRoutes(app: FastifyInstance) {
             id: row.id,
             kind: "course_request" as const,
             title: row.subject,
+            learningGoal: row.learningGoal,
             status: row.status,
-            href: null,
+            href: `/course-requests/${row.id}`,
           })),
         ],
       };
@@ -69,6 +71,7 @@ export async function libraryRoutes(app: FastifyInstance) {
         .select({
           id: courseRequests.id,
           subject: courseRequests.subject,
+          learningGoal: courseRequests.learningGoal,
           status: courseRequests.status,
         })
         .from(courseRequests)
@@ -110,8 +113,9 @@ export async function libraryRoutes(app: FastifyInstance) {
             id: row.id,
             kind: "course_request" as const,
             title: row.subject,
+            learningGoal: row.learningGoal,
             status: row.status,
-            href: null as string | null,
+            href: `/course-requests/${row.id}`,
           })),
         ],
       };

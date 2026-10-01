@@ -1,24 +1,28 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CourseRequestControl } from "@/components/course-request-control.tsx";
+import { courseRequestStatusLabel } from "@/lib/course-request-types.ts";
 
+/** Published Course or unpublished Course Request in the Home Library. */
 type LibraryItem = {
   id: string;
   kind: "course" | "course_request";
   title: string;
   status: string;
   href: string | null;
+  learningGoal?: string;
 };
 
 /**
- * One Library card. Published Courses open Study; Course Requests stay inert.
+ * One Library card. Published Courses open Study; Requests open their saved status.
  * @param item - Library row from `/api/library`
  */
 function LibraryCard({ item }: { item: LibraryItem }) {
   const inner = (
     <>
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.status}</p>
-      <p className="mt-1 font-medium">{item.title}</p>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.kind === "course_request" ? courseRequestStatusLabel(item.status) : item.status}</p>
+      <p className="mt-1 break-words font-medium">{item.title}</p>
+      {item.kind === "course_request" && item.learningGoal ? <p className="mt-2 break-words text-sm text-muted-foreground">{item.learningGoal}</p> : null}
     </>
   );
 
