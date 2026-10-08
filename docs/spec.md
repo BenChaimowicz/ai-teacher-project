@@ -10,7 +10,7 @@ Terms are defined in `CONTEXT.md`. This spec uses them; it does not redefine the
 
 **Destination.** A Learner selects a subject and Learning Goal. The platform estimates a Course-specific Starting Level and applies a reusable Teaching Profile, then generates a Course of reading Lessons and Quizzes from web Sources. Progress is completion plus Quiz results. The prototype is a TypeScript full-stack web app. Success is a spec a separate team can build from, then generate and complete three Test courses.
 
-**Provenance.** Each section ends with ticket and research links. Those are history, not required reading. Later locks supersede earlier ones (for example DeepSeek leads generation; two research calls replace a single You.com Web Search stack; Teaching Profile is collected before the first Course Request).
+**Provenance.** Each section ends with ticket and research links. Those are history, not required reading. Later locks supersede earlier ones (for example OpenRouter supplies Generator and Judge model access; two direct research calls replace a single You.com Web Search stack; Teaching Profile is collected before the first Course Request).
 
 **Depth.** This file is normative product behavior: locked numbers, model IDs, screens, plugin methods, job rules, Publish gates, and Test-course constraints. It does not prescribe package layout, file paths, or SQL. Data is conceptual records and fields. Inline types appear only where they state a decision more precisely than prose.
 
@@ -27,7 +27,7 @@ Terms are defined in `CONTEXT.md`. This spec uses them; it does not redefine the
 - Human review of Lesson bodies. The Learner reviews Blueprint titles and Lesson goals only.
 - A persistent app sidebar while studying; a chat Course Guide; Learner-facing Lesson reuse or lineage UI.
 - Publishing a partial Course; a policy-override or appeal path on the Validity gate.
-- Vendor built-in web search on Generator or Judge calls. OpenRouter is not a product Provider.
+- Vendor built-in web search on Generator or Judge calls.
 
 Provenance: [Wayfinder map: AI learning course platform](https://linear.app/senoy/issue/SEN-5/wayfinder-map-ai-learning-course-platform), [Spec form](https://linear.app/senoy/issue/SEN-18/spec-form).
 
@@ -61,6 +61,8 @@ TypeScript full-stack web app. One seeded Learner; no authentication. Every Lear
 | `APP_URL` | Stable `/media/…` origin |
 
 Anthropic is not on the Generator or Judge path and is not a required secret. Claude remains off both paths.
+
+Optional server-only model overrides: `GENERATOR_MODEL`, `GENERATOR_FALLBACK_MODEL`, `JUDGE_MODEL`, and `JUDGE_FALLBACK_MODEL`. Defaults are resolved in the shared model configuration; a model change must preserve author/Judge independence. Configuring a fallback does not automatically retry a validity call.
 
 **Conceptual records (not SQL).**
 
@@ -359,14 +361,14 @@ No-copy hosts (sheet/tab stores, streaming audio/video files, personal-license c
 
 ### 5.4 Generator models
 
-Domain **Generator** port. Model and provider IDs live in configuration, not on Lesson records. SDK types stay inside adapters.
+Domain **Generator** port. Model IDs live in shared server configuration, not on Lesson records. Generator and Judge use one OpenRouter transport; vendor-specific SDK types do not cross the domain ports. Parallel Pro and You.com research remain direct and separate.
 
-| Role | Model | How |
+| Role | OpenRouter model ID | How |
 | --- | --- | --- |
-| Leading writer | DeepSeek `deepseek-v4-pro` | OpenAI-compatible Chat Completions at `https://api.deepseek.com` |
-| Fallback writer | OpenAI `gpt-5.6-terra` | Official `openai` SDK, Responses API |
+| Leading writer | `deepseek/deepseek-v4-pro` | Shared strict JSON-schema Chat Completions transport |
+| Fallback writer | `openai/gpt-5.6-terra` | Same transport; selection belongs to the calling generation stage |
 
-Claude is not a Generator fallback. OpenRouter is not a product Provider.
+Claude is not a Generator fallback. No direct DeepSeek/OpenAI text adapters are required. Structured calls use `response_format: json_schema`, strict mode, `provider.require_parameters: true`, application-side output validation, and no search tools or plugins. Invalid output, refusal, interruption, or timeout is a provider failure, never a passing validity decision.
 
 Domain operations: `generateCitedReading` then `generateStructured`. Generate the cited reading first; generate quiz JSON from that reading (and, at Course time, from the assessed Lesson bodies plus Blueprint objectives). Two-step contract stays even when a provider could combine schemas.
 
@@ -448,14 +450,14 @@ Automated, binary, on every Course (including Test courses). Any fail fails that
 
 | Role | Model |
 | --- | --- |
-| Default Judge (text and vision) | OpenAI `gpt-5.6-luna` |
-| Judge fallback | OpenAI `gpt-5.6-terra`, **only when Terra did not author** that artifact |
+| Default Judge (text and vision) | `openai/gpt-5.6-luna` |
+| Judge fallback | `openai/gpt-5.6-terra`, **only when Terra did not author** that artifact |
 
-Pairing: author `deepseek-v4-pro` or `gpt-5.6-terra` → judge `gpt-5.6-luna`. If Luna is down or schema-fails: bump to Terra only when Terra did not write. Never DeepSeek as Judge. Never Terra judging a Terra-authored artifact. Sol is not a default Judge. Do not default to Claude Sonnet or Opus.
+Pairing: author `deepseek/deepseek-v4-pro` or `openai/gpt-5.6-terra` → judge `openai/gpt-5.6-luna`. If Luna is down or schema-fails: bump to Terra only when Terra did not write. Never DeepSeek as Judge. Never Terra judging a Terra-authored artifact. Sol is not a default Judge. Do not default to Claude Sonnet or Opus.
 
 Independence is different **model ID**, not different vendor. IDs live in config behind a thin Judge port, not on Lesson records.
 
-Call shape: OpenAI Responses API; strict `json_schema`; `reasoning.effort: "none"`; `store: false`; no `web_search`; our source-ID excerpts. Vision is a **separate** Luna request (`input_image`, `detail: "high"`) so a media miss spends the one vision repair, not a Lesson regeneration. For a loop, pass a still frame. Binary JSON only:
+Call shape: shared OpenRouter Chat Completions transport; strict `json_schema`; Judge `reasoning.effort: "none"`; no search tools; our source-ID excerpts. The application persists finalized artifacts, not model token streams. Vision is a **separate** Luna request with attached images (`image_url`, `detail: "high"`) so a media miss spends the one vision repair, not a Lesson regeneration. For a loop, pass a still frame. Binary JSON only:
 
 ```ts
 type JudgeResult = {

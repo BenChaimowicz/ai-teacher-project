@@ -34,3 +34,4 @@ export * from "./reading-lesson.ts";
 export * from "./quiz.ts";
 export * from "./sequence-mode.ts";
 export * from "./seed-ids.ts";
+export * from "./course-request.ts";

@@ -8,7 +8,8 @@
     "./reading-lesson": "./src/reading-lesson.ts",
     "./quiz": "./src/quiz.ts",
     "./sequence-mode": "./src/sequence-mode.ts",
-    "./seed-fixture": "./src/seed-fixture.ts"
+    "./seed-fixture": "./src/seed-fixture.ts",
+    "./course-request": "./src/course-request.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",
