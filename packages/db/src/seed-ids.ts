@@ -12,3 +12,6 @@ export const SEEDED_READING_LESSON_ID = "c0a1e001-0000-4000-8000-000000000003";
 
 /** Stable id for the seeded Quiz. */
 export const SEEDED_QUIZ_LESSON_ID = "c0a1e001-0000-4000-8000-000000000004";
+
+/** Stable id for the seeded reading Lesson after the Quiz. */
+export const SEEDED_FOLLOW_UP_LESSON_ID = "c0a1e001-0000-4000-8000-000000000005";

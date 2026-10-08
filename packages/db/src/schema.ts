@@ -1,5 +1,7 @@
-import { integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
-import type { TeachingProfileAnswers } from "./teaching-profile.ts";
+import { sql } from "drizzle-orm";
+import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import type { QuizAnswers, QuizAttemptStatus } from "./quiz.ts";
+import type { FeedbackTiming, TeachingProfileAnswers } from "./teaching-profile.ts";
 
 /** One person taking Courses. The prototype seeds a single row. Teaching Profile lives here. */
 export const learners = pgTable("learners", {
@@ -90,4 +92,32 @@ export const lessonCompletions = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.learnerId, table.lessonId] })],
+);
+
+/**
+ * Learner runtime: one Quiz attempt. A draft until Submit, then scored. Best score is derived across submitted rows.
+ * `feedbackTiming` is the Teaching Profile value when the attempt started; it holds for the whole attempt.
+ */
+export const quizAttempts = pgTable(
+  "quiz_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => learners.id),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => publishedLessons.id),
+    status: text("status").$type<QuizAttemptStatus>().notNull().default("draft"),
+    feedbackTiming: text("feedback_timing").$type<FeedbackTiming>().notNull(),
+    answers: jsonb("answers").$type<QuizAnswers>().notNull().default({}),
+    correct: integer("correct"),
+    total: integer("total"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("quiz_attempts_learner_lesson").on(table.learnerId, table.lessonId),
+    uniqueIndex("quiz_attempts_one_draft").on(table.learnerId, table.lessonId).where(sql`${table.status} = 'draft'`),
+  ],
 );

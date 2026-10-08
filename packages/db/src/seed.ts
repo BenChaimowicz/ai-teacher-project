@@ -1,82 +1,5 @@
-import { eq } from "drizzle-orm";
-import {
-  createDb,
-  loadRootEnv,
-  SEEDED_COURSE,
-  SEEDED_COURSE_ID,
-  SEEDED_LEARNER_ID,
-  SEEDED_MODULE,
-  SEEDED_QUIZ_LESSON,
-  SEEDED_READING_LESSON,
-  learners,
-  publishedCourses,
-  publishedLessons,
-  publishedModules,
-} from "./index.ts";
-
-/**
- * Inserts the prototype's single Learner if that row is missing.
- * @param db - Drizzle client
- */
-async function seedLearner(db: ReturnType<typeof createDb>) {
-  try {
-    await db
-      .insert(learners)
-      .values({ id: SEEDED_LEARNER_ID })
-      .onConflictDoNothing({ target: learners.id });
-
-    const [row] = await db.select().from(learners).where(eq(learners.id, SEEDED_LEARNER_ID)).limit(1);
-    if (!row) {
-      throw new Error("Seed Learner was not inserted.");
-    }
-
-    console.log(`Seeded Learner ${row.id}`);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`[seed.ts: seedLearner] Failed to seed Learner || id=${SEEDED_LEARNER_ID} || ${message}`);
-  }
-}
-
-/**
- * Inserts the fixture published Course snapshot if those rows are missing.
- * @param db - Drizzle client
- */
-async function seedPublishedCourse(db: ReturnType<typeof createDb>) {
-  try {
-    await db.insert(publishedCourses).values(SEEDED_COURSE).onConflictDoNothing({ target: publishedCourses.id });
-    await db.insert(publishedModules).values(SEEDED_MODULE).onConflictDoNothing({ target: publishedModules.id });
-    await db
-      .insert(publishedLessons)
-      .values([SEEDED_READING_LESSON, SEEDED_QUIZ_LESSON])
-      .onConflictDoNothing({ target: publishedLessons.id });
-
-    await db
-      .update(publishedLessons)
-      .set({
-        body: SEEDED_READING_LESSON.body,
-        sources: SEEDED_READING_LESSON.sources,
-        citations: SEEDED_READING_LESSON.citations,
-        teachingMethod: SEEDED_READING_LESSON.teachingMethod,
-      })
-      .where(eq(publishedLessons.id, SEEDED_READING_LESSON.id));
-
-    const [course] = await db
-      .select()
-      .from(publishedCourses)
-      .where(eq(publishedCourses.id, SEEDED_COURSE_ID))
-      .limit(1);
-    if (!course) {
-      throw new Error("Seed published Course was not inserted.");
-    }
-
-    console.log(`Seeded published Course ${course.id}`);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `[seed.ts: seedPublishedCourse] Failed to seed published Course || id=${SEEDED_COURSE_ID} || ${message}`,
-    );
-  }
-}
+import { createDb, loadRootEnv } from "./index.ts";
+import { seedLearner, seedPublishedCourse } from "./seed-fixture.ts";
 
 try {
   loadRootEnv(import.meta.url, 3);
@@ -87,8 +10,10 @@ try {
   }
 
   const db = createDb(url, { max: 1 });
-  await seedLearner(db);
-  await seedPublishedCourse(db);
+  const learner = await seedLearner(db);
+  console.log(`Seeded Learner ${learner.id}`);
+  const course = await seedPublishedCourse(db);
+  console.log(`Seeded published Course ${course.id}`);
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   throw new Error(`[seed.ts] Seed failed || ${message}`);

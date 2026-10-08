@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, NavLink, useParams } from "react-router-dom";
+import { Lock, MoreHorizontal } from "lucide-react";
+import { ConfirmDialog } from "@/components/confirm-dialog.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
+import { requestJson } from "@/lib/api.ts";
 import type { StudyLesson, StudyModule, StudyPayload } from "@/lib/study-types.ts";
 import { cn } from "@/lib/utils";
 import { renderForTeachingMethod } from "@/teaching-methods/register.ts";
@@ -23,6 +26,10 @@ export function StudyPage() {
   const [payload, setPayload] = useState<StudyPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lessonsOpen, setLessonsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmFreeJump, setConfirmFreeJump] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
 
   const sectionAdvance = record?.resolved?.sectionAdvance.value ?? "continuous";
 
@@ -52,6 +59,29 @@ export function StudyPage() {
   const visible = lessons.find((row) => row.id === lessonId) ?? null;
   const Play = visible ? renderForTeachingMethod(visible.teachingMethod) : null;
 
+  /**
+   * One-way switch to free jump. Linear cannot be restored.
+   */
+  async function switchToFreeJump() {
+    if (!courseId || switching) return;
+    setSwitching(true);
+    setSwitchError(null);
+    try {
+      const next = await requestJson<StudyPayload>(
+        `/api/courses/${courseId}/sequence-mode`,
+        "PUT",
+        { mode: "free_jump" },
+        "Could not switch to free jump",
+      );
+      setPayload(next);
+      setConfirmFreeJump(false);
+    } catch (caught: unknown) {
+      setSwitchError(caught instanceof Error ? caught.message : "Could not switch to free jump");
+    } finally {
+      setSwitching(false);
+    }
+  }
+
   if (error) {
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -73,7 +103,7 @@ export function StudyPage() {
     );
   }
 
-  if (!visible) {
+  if (!visible || visible.locked) {
     return <Navigate to={`/study/${courseId}/lessons/${payload.currentLessonId}`} replace />;
   }
 
@@ -95,7 +125,53 @@ export function StudyPage() {
         <p className="min-w-0 flex-1 truncate text-sm">
           {payload.course.title} · {payload.progress.completed} / {payload.progress.total}
         </p>
+        <div className="relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Course menu"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <MoreHorizontal />
+          </Button>
+          {menuOpen ? (
+            <div
+              role="menu"
+              className="absolute right-0 top-full z-40 mt-1 w-64 rounded-lg border border-border bg-card p-1 shadow-xl"
+            >
+              {payload.course.sequenceMode === "linear" ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setSwitchError(null);
+                    setConfirmFreeJump(true);
+                  }}
+                >
+                  Switch to free jump
+                </button>
+              ) : (
+                <p className="px-3 py-2 text-sm text-muted-foreground">Free jump is on. Every Lesson is open.</p>
+              )}
+            </div>
+          ) : null}
+        </div>
       </header>
+      <ConfirmDialog
+        open={confirmFreeJump}
+        title="Switch to free jump?"
+        body="Every Lesson in this Course opens, in any order. Progress still counts a Quiz only once you pass it. You can't switch back to linear order."
+        confirmLabel="Switch to free jump"
+        busy={switching}
+        onConfirm={() => void switchToFreeJump()}
+        onCancel={() => setConfirmFreeJump(false)}
+        extra={switchError ? <p className="mt-3 text-sm text-red-400">{switchError}</p> : null}
+      />
       <div className="flex min-h-0 flex-1">
         {lessonsOpen ? (
           <nav id="study-lessons" className="w-64 shrink-0 overflow-y-auto border-r border-border p-3" aria-label="Lessons">
@@ -105,18 +181,29 @@ export function StudyPage() {
                 <ul className="mt-2 grid gap-1">
                   {module.lessons.map((lesson) => (
                     <li key={lesson.id}>
-                      <NavLink
-                        end
-                        to={`/study/${courseId}/lessons/${lesson.id}`}
-                        className={({ isActive }) =>
-                          cn(
-                            "block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                            isActive && "bg-accent text-foreground",
-                          )
-                        }
-                      >
-                        {lesson.title}
-                      </NavLink>
+                      {lesson.locked ? (
+                        <span
+                          aria-disabled="true"
+                          title="Locked until you pass the Quiz before it"
+                          className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground/60"
+                        >
+                          {lesson.title}
+                          <Lock aria-label="Locked" className="size-3.5 shrink-0" />
+                        </span>
+                      ) : (
+                        <NavLink
+                          end
+                          to={`/study/${courseId}/lessons/${lesson.id}`}
+                          className={({ isActive }) =>
+                            cn(
+                              "block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                              isActive && "bg-accent text-foreground",
+                            )
+                          }
+                        >
+                          {lesson.title}
+                        </NavLink>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -135,7 +222,7 @@ export function StudyPage() {
               onPayload={setPayload}
             />
           ) : (
-            <p className="mt-8 text-sm text-muted-foreground">Quiz play comes in a later ticket.</p>
+            <p className="mt-8 text-sm text-muted-foreground">This teaching method cannot be shown yet.</p>
           )}
         </main>
       </div>
