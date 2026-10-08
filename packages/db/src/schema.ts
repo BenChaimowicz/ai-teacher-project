@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
+import type { ValidityClarification, ValidityResult } from "./course-request.ts";
 import type { QuizAnswers, QuizAttemptStatus } from "./quiz.ts";
 import type { FeedbackTiming, TeachingProfileAnswers } from "./teaching-profile.ts";
 
@@ -22,6 +23,9 @@ export const courseRequests = pgTable("course_requests", {
   subject: text("subject").notNull(),
   learningGoal: text("learning_goal").notNull(),
   status: text("status").notNull(),
+  validity: jsonb("validity").$type<ValidityResult>(),
+  clarification: jsonb("clarification").$type<ValidityClarification>(),
+  revisedFromId: uuid("revised_from_id").references((): AnyPgColumn => courseRequests.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
