@@ -5,6 +5,8 @@ export type StructuredRequest<T> = {
   schemaName: string;
   schema: Readonly<Record<string, unknown>>;
   parse: (value: unknown) => T;
+  /** Whole-call limit; defaults to 60 s. Long authoring calls may ask for more. */
+  timeoutMs?: number;
 };
 
 /** The one transport used by both domain model roles. */
@@ -82,7 +84,7 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
         response = await (options.fetch ?? globalThis.fetch)("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(60_000),
+          signal: AbortSignal.timeout(request.timeoutMs ?? 60_000),
           body: JSON.stringify({
             model: modelId,
             messages: [

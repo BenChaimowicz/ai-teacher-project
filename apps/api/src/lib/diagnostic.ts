@@ -13,6 +13,9 @@ import { ModelError } from "./openrouter.ts";
 /** Eight items: a coarse capability map, not a reliable score (spec §4.3). */
 export const DIAGNOSTIC_ITEM_COUNT = 8;
 
+/** Writing eight items with reasoning takes the author model well over the transport's 60 s default. */
+const AUTHOR_TIMEOUT_MS = 5 * 60 * 1000;
+
 /** Rewrite rounds after the first review; anything still failing fails the diagnostic. */
 export const MAX_REWRITE_ROUNDS = 2;
 
@@ -325,6 +328,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
         systemPrompt: AUTHOR_PROMPT,
         input: { subject: input.subject, learningGoal: input.learningGoal },
         schemaName: "starting_level_diagnostic_items",
+        timeoutMs: AUTHOR_TIMEOUT_MS,
         schema: SET_SCHEMA,
         parse: parseSet,
       });
@@ -408,6 +412,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
             keep: items.filter((item) => !pending.includes(item.id)).map((item) => item.stem),
           },
           schemaName: "starting_level_diagnostic_rewrites",
+          timeoutMs: AUTHOR_TIMEOUT_MS,
           schema: REWRITE_SCHEMA,
           parse: rewriteParser(capabilityIds),
         });
