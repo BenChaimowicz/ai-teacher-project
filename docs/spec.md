@@ -366,7 +366,7 @@ Domain **Generator** port. Model IDs live in shared server configuration, not on
 | Role | OpenRouter model ID | How |
 | --- | --- | --- |
 | Leading writer | `deepseek/deepseek-v4-pro` | Shared strict JSON-schema Chat Completions transport |
-| Fallback writer | `openai/gpt-5.6-terra` | Same transport; selection belongs to the calling generation stage |
+| Fallback writer | `openai/gpt-6.1-sol` | Same transport; selection belongs to the calling generation stage |
 
 Claude is not a Generator fallback. No direct DeepSeek/OpenAI text adapters are required. Structured calls use `response_format: json_schema`, strict mode, `provider.require_parameters: true`, application-side output validation, and no search tools or plugins. Invalid output, refusal, interruption, or timeout is a provider failure, never a passing validity decision.
 
@@ -451,9 +451,9 @@ Automated, binary, on every Course (including Test courses). Any fail fails that
 | Role | Model |
 | --- | --- |
 | Default Judge (text and vision) | `openai/gpt-5.6-luna` |
-| Judge fallback | `openai/gpt-5.6-terra`, **only when Terra did not author** that artifact |
+| Judge fallback | `openai/gpt-6.1-sol`, **only when Sol did not author** that artifact |
 
-Pairing: author `deepseek/deepseek-v4-pro` or `openai/gpt-5.6-terra` → judge `openai/gpt-5.6-luna`. If Luna is down or schema-fails: bump to Terra only when Terra did not write. Never DeepSeek as Judge. Never Terra judging a Terra-authored artifact. Sol is not a default Judge. Do not default to Claude Sonnet or Opus.
+Pairing: author `deepseek/deepseek-v4-pro` or `openai/gpt-6.1-sol` → judge `openai/gpt-5.6-luna`. If Luna is down or schema-fails: bump to Sol only when Sol did not write. Never DeepSeek as Judge. Never Sol judging a Sol-authored artifact. Do not default to Claude Sonnet or Opus.
 
 Independence is different **model ID**, not different vendor. IDs live in config behind a thin Judge port, not on Lesson records.
 
@@ -467,7 +467,7 @@ type JudgeResult = {
 };
 ```
 
-If Test-course protocol finds missed factual errors, bump Judge SKU in config (`luna` → `terra`) without changing the pairing rule — never to the authoring model.
+If Test-course protocol finds missed factual errors, bump Judge SKU in config (`luna` → `gpt-6.1-sol`) without changing the pairing rule — never to the authoring model.
 
 **Repair budget.** Two regenerations per slot after the first failed validate (initial generate + two repairs). A third failure on that slot is terminal: keep unpublished Lessons before it; Course Request fails; Retry refreshes that slot’s budget on the same approved Blueprint; Revise request discards unpublished Lessons. No Course-wide repair pool. Retrieval’s 2–3 query reformulations and the one media vision repair stay inside generate and do not draw on this number. A Judge **fail** consumes a regeneration of the artifact, not a second Judge SKU, unless the Judge call itself errored.
 
