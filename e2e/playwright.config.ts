@@ -22,7 +22,7 @@ export default defineConfig({
     {
       command: "pnpm --filter @senoy/api start",
       url: `http://127.0.0.1:${API_PORT}/api/health`,
-      env: { PORT: String(API_PORT), DATABASE_URL: process.env.DATABASE_URL },
+      env: { PORT: String(API_PORT), DATABASE_URL: process.env.DATABASE_URL, DIAGNOSTIC_FIXTURE: "1" },
       reuseExistingServer: false,
     },
     {

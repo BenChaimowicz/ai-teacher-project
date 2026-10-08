@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button.tsx";
+import { DIAGNOSTIC_STATUSES, StartingLevelDiagnostic } from "@/components/starting-level-diagnostic.tsx";
 import { courseRequestStatusLabel, type CourseRequestRecord } from "@/lib/course-request-types.ts";
 
 /** Opens a persisted Request for explicit validity review, clarification, or revision. */
@@ -121,7 +122,7 @@ export function CourseRequestPage() {
           )}
           {visibleRecord.validity ? <div className="mt-6"><h2 className="font-medium">Validity decision</h2><p className="mt-2 whitespace-pre-wrap break-words text-sm">{visibleRecord.validity.reason}</p></div> : null}
           {visibleRecord.clarification ? <dl className="mt-6 space-y-2"><div><dt className="text-sm text-muted-foreground">Clarification question</dt><dd className="whitespace-pre-wrap break-words">{visibleRecord.clarification.question}</dd></div><div><dt className="text-sm text-muted-foreground">Your submitted answer</dt><dd className="whitespace-pre-wrap break-words">{visibleRecord.clarification.answer}</dd></div></dl> : null}
-          {visibleRecord.status === "awaiting_validity" ? <div className="mt-6"><p className="mb-4 text-sm text-muted-foreground">Your Request is saved. Check whether its learning outcomes can proceed before Assessment. Saving alone does not generate a Course.</p><Button type="button" disabled={busy} onClick={() => void act("validity")}>{busy ? "Checking…" : "Check request"}</Button></div> : null}
+          {visibleRecord.status === "awaiting_validity" ? <div className="mt-6"><p className="mb-4 text-sm text-muted-foreground">Your Request is saved. Check whether its learning outcomes can proceed before the Starting Level check. Saving alone does not generate a Course.</p><Button type="button" disabled={busy} onClick={() => void act("validity")}>{busy ? "Checking…" : "Check request"}</Button></div> : null}
           {visibleRecord.status === "awaiting_clarification" ? (
             <form className="mt-6" onSubmit={(event) => void act("validity", event)}>
               <fieldset disabled={busy} className="space-y-4">
@@ -133,7 +134,7 @@ export function CourseRequestPage() {
             </form>
           ) : null}
           {visibleRecord.status === "rejected" ? <div className="mt-6">{visibleRecord.validity?.safeReframe ? <><h2 className="font-medium">Safe reframe</h2><p className="mt-2 mb-4 whitespace-pre-wrap break-words text-sm">{visibleRecord.validity.safeReframe}</p></> : null}<p className="mb-4 text-sm text-muted-foreground">Revise the learning outcome in a new draft. The original decision stays unchanged.</p><Button type="button" disabled={busy} onClick={() => void act("revise")}>{busy ? "Creating draft…" : "Revise request"}</Button></div> : null}
-          {visibleRecord.status === "validity_passed" ? <p className="mt-6 text-sm text-muted-foreground">Your Request passed validity review and is ready for Starting Level Assessment. Assessment and Course generation are not yet implemented (SEN-41).</p> : null}
+          {DIAGNOSTIC_STATUSES.has(visibleRecord.status) ? <StartingLevelDiagnostic record={visibleRecord} onRecord={setRecord} /> : null}
         </div>
       ) : null}
       <Button asChild variant="outline" className="mt-6"><Link to="/">Back to Home</Link></Button>

@@ -10,6 +10,7 @@
     "typecheck": "pnpm --filter @senoy/db --filter @senoy/research --filter @senoy/api --filter @senoy/worker --filter @senoy/web --filter @senoy/e2e exec tsc --noEmit",
     "test": "pnpm --filter @senoy/db exec tsx --test src/*.test.ts && pnpm --filter @senoy/research exec tsx --test src/*.test.ts && pnpm --filter @senoy/api exec tsx --test src/routes/*.test.ts src/lib/*.test.ts",
     "check:course-requests:live": "pnpm --filter @senoy/api exec tsx src/routes/course-requests.live-check.ts",
+    "check:starting-level:live": "pnpm --filter @senoy/api exec tsx src/routes/starting-level.live-check.ts",
     "check:research:live": "pnpm --filter @senoy/research exec tsx src/research.live-check.ts",
     "check:validity:live": "pnpm --filter @senoy/api exec tsx src/routes/validity.live-check.ts",
     "db:generate": "pnpm --filter @senoy/db generate",

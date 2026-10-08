@@ -7,6 +7,7 @@ import spaPlugin from "./plugins/spa.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { courseRequestRoutes } from "./routes/course-requests.ts";
 import { startingLevelRoutes } from "./routes/starting-level.ts";
+import { createFixtureDiagnosticBuilder } from "./lib/diagnostic-fixture.ts";
 import { libraryRoutes } from "./routes/library.ts";
 import { mediaRoutes } from "./routes/media.ts";
 import { studyRoutes } from "./routes/study.ts";
@@ -26,7 +27,10 @@ async function start() {
     await app.register(healthRoutes);
     await app.register(libraryRoutes);
     await app.register(courseRequestRoutes);
-    await app.register(startingLevelRoutes);
+    // Browser tests run without provider calls; never set DIAGNOSTIC_FIXTURE in a deployed service.
+    await app.register(startingLevelRoutes, {
+      diagnosticBuilder: process.env.DIAGNOSTIC_FIXTURE === "1" ? createFixtureDiagnosticBuilder() : undefined,
+    });
     await app.register(studyRoutes);
     await app.register(teachingProfileRoutes);
     await app.register(mediaRoutes);
