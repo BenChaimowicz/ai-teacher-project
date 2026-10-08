@@ -16,6 +16,12 @@ export const DIAGNOSTIC_ITEM_COUNT = 8;
 /** Writing eight items with reasoning takes the author model well over the transport's 60 s default. */
 const AUTHOR_TIMEOUT_MS = 5 * 60 * 1000;
 
+/**
+ * Hidden-reasoning cap for writing and rewriting items. Uncapped, the author spent ~4,000 tokens (~2 min) per set
+ * and up to ~12,000 per rewrite; the "low" effort hint was ignored by some providers. Code checks and the Judge gate quality.
+ */
+const AUTHOR_REASONING_TOKENS = 1500;
+
 /** Rewrite rounds after the first review; anything still failing fails the diagnostic. */
 export const MAX_REWRITE_ROUNDS = 2;
 
@@ -285,8 +291,11 @@ export function itemWritingFailures(item: Pick<DiagnosticItem, "stem" | "options
   }
   if (options.some((option) => /^(true|false|yes|no)\.?$/i.test(option))) failures.push("Do not write true/false or yes/no items.");
   if (options.some((option) => /\b(always|never|only)\b/i.test(option))) failures.push("Avoid specific determiners (always, never, only) in options.");
-  const lengths = options.map((option) => option.length);
-  if (Math.max(...lengths) > 2.5 * Math.min(...lengths) + 10) failures.push("Options must be of similar length.");
+  const keyLength = options[item.keyIndex]?.length ?? 0;
+  const longestDistractor = Math.max(...options.filter((_, index) => index !== item.keyIndex).map((option) => option.length));
+  if (keyLength > 1.5 * longestDistractor && keyLength - longestDistractor >= 15) {
+    failures.push("The key must not stand out as the longest option.");
+  }
   const stemWords = longWords(item.stem);
   const key = options[item.keyIndex] ?? "";
   const distractorWords = new Set(options.filter((_, index) => index !== item.keyIndex).flatMap((option) => [...longWords(option)]));
@@ -335,8 +344,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
         input: { subject: input.subject, learningGoal: input.learningGoal },
         schemaName: "starting_level_diagnostic_items",
         timeoutMs: AUTHOR_TIMEOUT_MS,
-        // Default reasoning spent ~4,000 hidden tokens (~2 min) per set and up to ~12,000 per rewrite; Code checks and the Judge still gate quality.
-        reasoningEffort: "low",
+        reasoningMaxTokens: AUTHOR_REASONING_TOKENS,
         schema: SET_SCHEMA,
         parse: parseSet,
       });
@@ -421,7 +429,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
           },
           schemaName: "starting_level_diagnostic_rewrites",
           timeoutMs: AUTHOR_TIMEOUT_MS,
-          reasoningEffort: "low",
+          reasoningMaxTokens: AUTHOR_REASONING_TOKENS,
           schema: REWRITE_SCHEMA,
           parse: rewriteParser(capabilityIds),
         });

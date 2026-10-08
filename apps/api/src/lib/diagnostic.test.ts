@@ -177,19 +177,30 @@ test("The remaining-gap statement never claims the Learning Goal is already met"
   assert.equal(statement, "Start with how mordants fix crystal violet, then decolorization.");
 });
 
-test("Items are written and rewritten with low reasoning effort", async () => {
-  const efforts: Record<string, unknown> = {};
-  const { generator } = scriptedGenerator(cleanSet);
-  const recording: typeof generator = {
+test("Writing and rewriting items cap hidden reasoning tokens", async () => {
+  const budgets: Record<string, unknown> = {};
+  const { generator } = scriptedGenerator(cleanSet, [{ items: [rewrite("cap1", 1)] }]);
+  const recording: Generator = {
     modelId: generator.modelId,
     generateStructured(request) {
-      efforts[request.schemaName] = request.reasoningEffort;
+      budgets[request.schemaName] = request.reasoningMaxTokens;
       return generator.generateStructured(request);
     },
   };
-  const judged = scriptedJudge((itemId, stem) => itemId === "item1" && !stem.startsWith("Rewritten") ? { defensibleOptions: [] } : {});
-  generator.generateStructured = scriptedGenerator(cleanSet, [{ items: [rewrite("cap1", 1)] }]).generator.generateStructured;
-  await createDiagnosticBuilder({ generator: recording, ...judged, ...scriptedFactChecker() }).build(INPUT);
-  assert.equal(efforts.starting_level_diagnostic_items, "low");
-  assert.equal(efforts.starting_level_diagnostic_rewrites, "low");
+  const { judge } = scriptedJudge((itemId, stem) => itemId === "item1" && !stem.startsWith("Rewritten") ? { defensibleOptions: [] } : {});
+  await createDiagnosticBuilder({ generator: recording, judge, ...scriptedFactChecker() }).build(INPUT);
+  for (const schemaName of ["starting_level_diagnostic_items", "starting_level_diagnostic_rewrites"]) {
+    const budget = budgets[schemaName];
+    assert.ok(typeof budget === "number" && budget > 0 && budget <= 2000, `${schemaName} reasoning budget: ${budget}`);
+  }
+});
+
+test("Options may differ in length; only a key that stands out as clearly longest is rejected", async () => {
+  const probes = [...cleanSet.probes];
+  probes[0] = probe(1, { options: ["Heat", "A longer but plausible distractor about cell walls", "Iodine"] });
+  probes[1] = probe(2, { options: ["Heat", "Water", "Iodine, which binds crystal violet into a large complex inside the cell"] });
+  const { generator, calls } = scriptedGenerator({ ...cleanSet, probes }, [{ items: [rewrite("cap2", 2)] }]);
+  await createDiagnosticBuilder({ generator, ...scriptedJudge(), ...scriptedFactChecker() }).build(INPUT);
+  const rewritten = (calls[1]!.input as { rewrite: { capabilityId: string }[] }).rewrite.map((r) => r.capabilityId);
+  assert.deepEqual(rewritten, ["cap2"]);
 });

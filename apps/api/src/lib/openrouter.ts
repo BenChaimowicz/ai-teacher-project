@@ -7,8 +7,8 @@ export type StructuredRequest<T> = {
   parse: (value: unknown) => T;
   /** Whole-call limit; defaults to 60 s. Long authoring calls may ask for more. */
   timeoutMs?: number;
-  /** How much hidden reasoning a reasoning model may spend; omitted means the model default. */
-  reasoningEffort?: ReasoningEffort;
+  /** Hard cap on hidden reasoning tokens; omitted means the model default. Effort hints proved unreliable. */
+  reasoningMaxTokens?: number;
 };
 
 /** OpenRouter reasoning effort levels. */
@@ -82,7 +82,8 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
   return {
     /** Sends a single strict structured call and rejects any unvalidated model output. */
     async complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: ReasoningEffort): Promise<T> {
-      const effort = reasoningEffort ?? request.reasoningEffort;
+      const reasoning = reasoningEffort ? { effort: reasoningEffort }
+        : request.reasoningMaxTokens ? { max_tokens: request.reasoningMaxTokens } : undefined;
       const apiKey = (options.apiKey ?? process.env.OPENROUTER_API_KEY)?.trim();
       if (!apiKey) throw new ModelError("configuration");
       let response: Response;
@@ -103,7 +104,7 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
             },
             // Provider speed varies several-fold for the same model; prefer the fastest that supports strict output.
             provider: { require_parameters: true, sort: "throughput" },
-            reasoning: effort ? { effort } : undefined,
+            reasoning,
             stream: false,
           }),
         });
