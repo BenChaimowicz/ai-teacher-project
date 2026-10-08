@@ -5,7 +5,10 @@
   "exports": {
     ".": "./src/index.ts",
     "./teaching-profile": "./src/teaching-profile.ts",
-    "./reading-lesson": "./src/reading-lesson.ts"
+    "./reading-lesson": "./src/reading-lesson.ts",
+    "./quiz": "./src/quiz.ts",
+    "./sequence-mode": "./src/sequence-mode.ts",
+    "./seed-fixture": "./src/seed-fixture.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",

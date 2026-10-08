@@ -63,7 +63,7 @@ export type QuizCadence = "every_reading" | "every_2_to_3_readings" | "module_en
 /** When Quiz feedback appears. */
 export type FeedbackTiming = "per_item" | "end_of_quiz";
 
-/** How much Quiz feedback to write. */
+/** How much Quiz feedback to show. Every Quiz item stores all three. */
 export type FeedbackDepth = "brief" | "standard" | "detailed";
 
 /** The eight stored Teaching Profile answers. Untouched items are saved as skipped. */
@@ -97,8 +97,8 @@ export const PROFILE_FIELD_CONSUMPTION = {
   contentScope: "write_time",
   explanationOrder: "write_time",
   quizCadence: "write_time",
-  feedbackDepth: "write_time",
   sectionAdvance: "show_time",
+  feedbackDepth: "show_time",
   feedbackTiming: "show_time",
 } as const;
 

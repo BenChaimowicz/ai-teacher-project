@@ -1,6 +1,7 @@
-import { READING_METHOD_ID } from "@senoy/db/reading-lesson";
+import { QUIZ_METHOD_ID, READING_METHOD_ID } from "@senoy/db/reading-lesson";
 import type { ComponentType } from "react";
 import type { StudyLesson, StudyPayload } from "@/lib/study-types.ts";
+import { QuizLessonPlay } from "@/teaching-methods/quiz-lesson-play.tsx";
 import { ReadingLessonPlay } from "@/teaching-methods/reading-lesson-play.tsx";
 
 /** Props shared by teaching-method `render` components. */
@@ -13,10 +14,11 @@ export type LessonPlayProps = {
 
 const renders: Record<string, ComponentType<LessonPlayProps>> = {
   [READING_METHOD_ID]: ReadingLessonPlay,
+  [QUIZ_METHOD_ID]: QuizLessonPlay,
 };
 
 /**
- * Reading Teaching-method plugin `render`. Generate and validate are later tickets.
+ * Teaching-method plugin `render` for a Lesson. Generate and validate are later tickets.
  * @param method - Lesson teaching method
  */
 export function renderForTeachingMethod(method: string): ComponentType<LessonPlayProps> | null {

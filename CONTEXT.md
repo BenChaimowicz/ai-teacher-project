@@ -99,7 +99,7 @@ The Learner's position through a published Course, shown as completed Lessons ov
 _Avoid_: Starting Level (when meaning the bar), level, capability score, percent (when meaning the n / total label)
 
 **Sequence mode**:
-The Course-level choice of whether Lessons unlock in Blueprint order (linear) or are all openable (free jump). Default is linear, with completed Lessons revisitable. Switching to free jump is one-way.
+The Course-level choice of whether Lessons unlock in Blueprint order (linear) or are all openable (free jump). Default is linear: every Lesson after a Quiz that is not passed yet is locked; Lessons before it stay open, completed or not. Switching to free jump is one-way. It is a setting on the published Course, not part of the snapshot, so the one-way switch may change it (ADR 0004).
 _Avoid_: Navigation mode, path lock, difficulty
 
 **Teaching Profile**:
@@ -189,7 +189,7 @@ The recorded origin of a copied Lesson: which Lesson it came from, and whether t
 _Avoid_: parent, source (when meaning the origin Lesson), fork
 
 **Quiz**:
-A Lesson that uses the quiz teaching method, placed after the instructional Lessons it assesses. It is completed for Progress when the Learner's best score is at least 70% of questions correct, equal weight per question; retakes are unlimited on the same items. A Quiz is always generated for its Course; it is not copied from another Course.
+A Lesson that uses the quiz teaching method, placed after the instructional Lessons it assesses. It is completed for Progress when the Learner's best score is at least 70% of questions correct, equal weight per question; retakes are unlimited on the same items. Each item stores its explanation at all three Feedback detail levels, so Study shows the Learner's current one. A Quiz is always generated for its Course; it is not copied from another Course.
 _Avoid_: checkpoint (as a separate object), test, exam, assessment (when meaning this Lesson), Starting Level diagnostic
 
 **Source**:
@@ -199,6 +199,10 @@ _Avoid_: Hit, result, URL (when meaning the page), reference (when meaning the p
 **Source pack**:
 The structured, citation-bearing evidence one research call returns for a Lesson topic. The Generator synthesizes from Source packs, not from a search-result list.
 _Avoid_: SERP, hit list, search results (when meaning this artifact)
+
+**Source ID**:
+The stable identifier of a Source, derived from its normalized URL, so the same page found by Primary and Secondary research has one ID. Generated Lessons cite Sources by Source ID; a Citation to an unknown ID is rejected.
+_Avoid_: index, ordinal, footnote number (when meaning the identity)
 
 **Primary research**:
 The first research call for a Lesson topic, producing a Source pack.

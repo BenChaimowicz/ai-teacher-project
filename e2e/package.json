@@ -1,0 +1,18 @@
+{
+  "name": "@senoy/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "tsx run.ts"
+  },
+  "dependencies": {
+    "@senoy/db": "workspace:*",
+    "drizzle-orm": "^0.44.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.18.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

@@ -122,7 +122,7 @@ The **Course Guide** is ordinary page copy on this screen (headings, explanation
 Only a published Course. Land on the current Lesson (no Course overview first). Workspace sidebar hidden. Study bar: back to Workspace, **Lessons** toggle (Module/Lesson list off until shown), title and Progress, one-way free jump. Reading and Quiz share this chrome; the plugin supplies the body.
 
 - **Reading:** reading sections, Demonstrative media, **Mark complete**. Opening or partial reading does not complete. With `sectionAdvance = manual`, pause after each section until Continue; with `continuous`, scroll. Never auto-advance to the next Lesson.
-- **Quiz:** draft until Submit; every item must have an answer; untimed; open-book (completed Lessons stay revisitable). After Submit: right/wrong; while best score is under 100%, the Learner may open the correct answers; retake in place. Peeking does not block retakes.
+- **Quiz:** draft until Submit; every item must have an answer; untimed; open-book (completed Lessons stay revisitable). After Submit: right/wrong; while best score is under 100%, the Learner may open the correct answers; retake in place. Peeking does not block retakes. With `feedbackTiming = per_item`, each item has **Check**, which locks that answer and shows right/wrong; Submit waits until every item is checked. An attempt keeps the timing it started with. The draft is saved on the server; grading is server-side and the answer key reaches the browser only through **Show answer**.
 
 Progress is completed Lessons / total Lessons. Opening does not complete. Progress never drops.
 
@@ -130,7 +130,7 @@ Progress is completed Lessons / total Lessons. Opening does not complete. Progre
 
 Sequence mode is Course-level. Default: linear unlock; completed Lessons revisitable. The Learner may choose free jump at Blueprint review or later via a menu. Switching to free jump is one-way; the disclaimer says linear cannot be restored. Sequence mode does not change the Blueprint or generation — only unlock rules.
 
-- Linear: a Quiz gates later Lessons until it is passed.
+- Linear: a Quiz gates later Lessons until it is passed. Readings before the first unpassed Quiz stay open, completed or not.
 - Free jump: later Lessons stay open.
 - Progress waits on a Quiz pass in both modes (best score `correct / n ≥ 0.70`).
 
@@ -176,7 +176,7 @@ Drop “Use my current app language.” Silent substitution is prohibited: an ex
 
 **Q7 — Feedback timing.** After each question / after submitting the whole Quiz / No preference / Prefer not to answer. `feedbackTiming = per_item | end_of_quiz`. Default: `per_item`. Show-time. The Learner must answer before feedback appears.
 
-**Q8 — Feedback detail.** Brief / Standard / Detailed / No preference / Prefer not to answer. `feedbackDepth = brief | standard | detailed`. All three include the correct answer and a reason; the preference changes depth. Default: `standard`.
+**Q8 — Feedback detail.** Brief / Standard / Detailed / No preference / Prefer not to answer. `feedbackDepth = brief | standard | detailed`. All three include the correct answer and a reason; the preference changes depth. Default: `standard`. Show-time: every Quiz item stores all three depths, and Study shows the current one.
 
 Field resolution (from the research note; encodes the lock):
 
@@ -380,7 +380,7 @@ This prototype ships `reading` and `quiz`.
 
 **Reading body:** ordered reading sections, each with a heading and content blocks (prose and optional Demonstrative media). Numbered Citations live in the prose.
 
-**Quiz body:** 5–10 single-correct four-option items. No reading sections. No Demonstrative media. Generator chooses `n` in 5–10. Equal weight per question. Pass is the raw ratio `correct / n ≥ 0.70`. Unlimited retakes, same question set, best score kept. Prototype does not generate new items per attempt.
+**Quiz body:** 5–10 single-correct four-option items. Each item stores a `brief`, `standard`, and `detailed` explanation (Q8 is show-time). No reading sections. No Demonstrative media. Generator chooses `n` in 5–10. Equal weight per question. Pass is the raw ratio `correct / n ≥ 0.70`. Unlimited retakes, same question set, best score kept. Prototype does not generate new items per attempt.
 
 ### 5.6 Demonstrative media
 

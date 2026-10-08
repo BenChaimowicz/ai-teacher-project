@@ -21,7 +21,16 @@ Then open `http://127.0.0.1:5173`. That one command starts the Vite Workspace, t
 pnpm check
 ```
 
-Typechecks database, API, worker, and web, then runs the API checks (including Course Request creation, validation, Profile gating, and history) and the Progress/completion check. These tests do not access Supabase.
+Typechecks database, API, worker, web, and browser tests, then runs the logic checks (Progress, Quiz scoring, Sequence mode) and the API checks (Course Requests, Study, Quiz play). These tests do not access Supabase.
+
+Browser tests (Playwright) are separate and need Docker running:
+
+```bash
+pnpm --filter @senoy/e2e exec playwright install chromium   # once
+pnpm test:e2e
+```
+
+They start a throwaway Postgres container, migrate it, reset the fixture Course before each test, and remove the container afterwards. Your `.env` database is never touched.
 
 To verify Course Request persistence against the configured Supabase database:
 
