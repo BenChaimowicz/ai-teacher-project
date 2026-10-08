@@ -209,8 +209,8 @@ The first research call for a Lesson topic, producing a Source pack.
 _Avoid_: web search (when meaning this call), Secondary research
 
 **Secondary research**:
-A second research call on the same topic through a different engine and index, producing another Source pack.
-_Avoid_: fact-check (unqualified), web search (when meaning this call), Primary research
+A second research call on the same topic through a different engine and index, producing another Source pack. It always runs alongside Primary research, not as a fallback when Primary research fails.
+_Avoid_: fact-check (unqualified), fallback research, web search (when meaning this call), Primary research
 
 **Preference list**:
 The ranked set of educational hosts the research layer prefers, without excluding the rest of the web.
@@ -219,6 +219,14 @@ _Avoid_: Allowlist, whitelist, trusted domains (as a closed set)
 **Denylist**:
 Hosts the research layer never uses as Sources.
 _Avoid_: Blocklist, blacklist
+
+**Host policy**:
+The app-owned rules that apply the Preference list and Denylist to Source packs after retrieval: drop denylisted hosts, rank preferred hosts first, and record what was dropped and why. Research adapters do not repeat it and do not pass it to vendors as domain filters.
+_Avoid_: boost_domains, source_policy, vendor filter (when meaning our rules)
+
+**Excerpt**:
+A passage of a Source's text, held in a Source pack under its Source ID, that a generated claim must be checked against. Vendor-returned excerpts are labelled as vendor excerpts; they are not yet verified page text and do not count as a quote.
+_Avoid_: snippet (when meaning our stored evidence), quote (unless verified page text), summary
 
 **Citation**:
 An inline marker in a Lesson that points at a Source, with a matching entry in the lesson's source list.
