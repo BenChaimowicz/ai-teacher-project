@@ -44,8 +44,14 @@ export type DiagnosticDraft = {
 
 /** The item set still had failing items after the last rewrite round. SEN-57 owns the fallback. */
 export class DiagnosticFailedError extends Error {
-  constructor(public readonly failedItemIds: string[]) {
-    super(`[diagnostic: build] Diagnostic items still failing after ${MAX_REWRITE_ROUNDS} rewrite rounds || items=${failedItemIds.join(",")}`);
+  public readonly failedItemIds: string[];
+
+  /** @param problems - Last round's reasons, per still-failing item id */
+  constructor(public readonly problems: Record<string, string[]>) {
+    const failedItemIds = Object.keys(problems);
+    super(`[diagnostic: build] Diagnostic items still failing after ${MAX_REWRITE_ROUNDS} rewrite rounds || ${
+      failedItemIds.map((id) => `${id}: ${problems[id]!.join(" ")}`).join(" || ")}`);
+    this.failedItemIds = failedItemIds;
     this.name = "DiagnosticFailedError";
   }
 }
@@ -329,6 +335,8 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
         input: { subject: input.subject, learningGoal: input.learningGoal },
         schemaName: "starting_level_diagnostic_items",
         timeoutMs: AUTHOR_TIMEOUT_MS,
+        // Default reasoning spent ~4,000 hidden tokens (~2 min) per set and up to ~12,000 per rewrite; Code checks and the Judge still gate quality.
+        reasoningEffort: "low",
         schema: SET_SCHEMA,
         parse: parseSet,
       });
@@ -396,7 +404,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
         }
         if (problems.size === 0) break;
         pending = [...problems.keys()];
-        if (round >= MAX_REWRITE_ROUNDS) throw new DiagnosticFailedError(pending);
+        if (round >= MAX_REWRITE_ROUNDS) throw new DiagnosticFailedError(Object.fromEntries(problems));
 
         const capabilityIds = pending.map((id) => items.find((item) => item.id === id)!.capabilityId);
         const rewritten = await generator.generateStructured({
@@ -413,6 +421,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
           },
           schemaName: "starting_level_diagnostic_rewrites",
           timeoutMs: AUTHOR_TIMEOUT_MS,
+          reasoningEffort: "low",
           schema: REWRITE_SCHEMA,
           parse: rewriteParser(capabilityIds),
         });

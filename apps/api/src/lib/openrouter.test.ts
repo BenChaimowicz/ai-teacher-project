@@ -164,3 +164,33 @@ test("Independent same-vendor models accept standard empty optional response fie
     assert.equal(score, 0.8);
   }
 });
+
+test("Requests route to the fastest provider that supports strict structured output", async () => {
+  let sent: { provider?: unknown } = {};
+  const transport = createOpenRouterTransport({
+    apiKey: "fixture-key",
+    /** Captures the request body the provider receives. */
+    fetch: async (_url, init) => {
+      sent = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify(completion('{"score":1}')), { status: 200 });
+    },
+  });
+  await transport.complete("fixture/model", REQUEST);
+  assert.deepEqual(sent.provider, { require_parameters: true, sort: "throughput" });
+});
+
+test("A request's reasoning effort reaches the provider unless the caller overrides it", async () => {
+  const sent: { reasoning?: unknown }[] = [];
+  const transport = createOpenRouterTransport({
+    apiKey: "fixture-key",
+    /** Captures each request body. */
+    fetch: async (_url, init) => {
+      sent.push(JSON.parse(String(init?.body)));
+      return new Response(JSON.stringify(completion('{"score":1}')), { status: 200 });
+    },
+  });
+  await transport.complete("fixture/model", { ...REQUEST, reasoningEffort: "low" });
+  await transport.complete("fixture/model", { ...REQUEST, reasoningEffort: "low" }, "none");
+  await transport.complete("fixture/model", REQUEST);
+  assert.deepEqual(sent.map((body) => body.reasoning), [{ effort: "low" }, { effort: "none" }, undefined]);
+});

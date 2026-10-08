@@ -7,12 +7,17 @@ export type StructuredRequest<T> = {
   parse: (value: unknown) => T;
   /** Whole-call limit; defaults to 60 s. Long authoring calls may ask for more. */
   timeoutMs?: number;
+  /** How much hidden reasoning a reasoning model may spend; omitted means the model default. */
+  reasoningEffort?: ReasoningEffort;
 };
+
+/** OpenRouter reasoning effort levels. */
+export type ReasoningEffort = "none" | "low" | "medium" | "high";
 
 /** The one transport used by both domain model roles. */
 export interface StructuredTransport {
   /** Generates and validates one non-streaming response, with no search or retries. */
-  complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: "none"): Promise<T>;
+  complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: ReasoningEffort): Promise<T>;
 }
 
 /** Injects fetch and credentials without introducing a vendor SDK. */
@@ -76,7 +81,8 @@ function responseContent(raw: unknown): string {
 export function createOpenRouterTransport(options: OpenRouterOptions = {}): StructuredTransport {
   return {
     /** Sends a single strict structured call and rejects any unvalidated model output. */
-    async complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: "none"): Promise<T> {
+    async complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: ReasoningEffort): Promise<T> {
+      const effort = reasoningEffort ?? request.reasoningEffort;
       const apiKey = (options.apiKey ?? process.env.OPENROUTER_API_KEY)?.trim();
       if (!apiKey) throw new ModelError("configuration");
       let response: Response;
@@ -95,8 +101,9 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
               type: "json_schema",
               json_schema: { name: request.schemaName, strict: true, schema: request.schema },
             },
-            provider: { require_parameters: true },
-            reasoning: reasoningEffort ? { effort: reasoningEffort } : undefined,
+            // Provider speed varies several-fold for the same model; prefer the fastest that supports strict output.
+            provider: { require_parameters: true, sort: "throughput" },
+            reasoning: effort ? { effort } : undefined,
             stream: false,
           }),
         });

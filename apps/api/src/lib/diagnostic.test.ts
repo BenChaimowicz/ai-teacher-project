@@ -152,7 +152,8 @@ test("Items still failing after two rewrite rounds fail the diagnostic", async (
   const { judge } = scriptedJudge((itemId) => itemId === "item8" ? { defensibleOptions: [] } : {});
   await assert.rejects(
     createDiagnosticBuilder({ generator, judge, ...scriptedFactChecker() }).build(INPUT),
-    (error) => error instanceof DiagnosticFailedError && error.failedItemIds.includes("item8"),
+    (error) => error instanceof DiagnosticFailedError && error.failedItemIds.includes("item8") &&
+      error.problems.item8?.[0] === "The reviewer found no defensible answer.",
   );
   assert.equal(calls.length, 3, "One authoring call and two rewrite rounds.");
 });
@@ -174,4 +175,21 @@ test("The remaining-gap statement never claims the Learning Goal is already met"
   const builder = createDiagnosticBuilder({ generator, ...scriptedJudge(), ...scriptedFactChecker() });
   const statement = await builder.writeGapStatement({ ...INPUT, extremity: "ceiling", capabilities: [] });
   assert.equal(statement, "Start with how mordants fix crystal violet, then decolorization.");
+});
+
+test("Items are written and rewritten with low reasoning effort", async () => {
+  const efforts: Record<string, unknown> = {};
+  const { generator } = scriptedGenerator(cleanSet);
+  const recording: typeof generator = {
+    modelId: generator.modelId,
+    generateStructured(request) {
+      efforts[request.schemaName] = request.reasoningEffort;
+      return generator.generateStructured(request);
+    },
+  };
+  const judged = scriptedJudge((itemId, stem) => itemId === "item1" && !stem.startsWith("Rewritten") ? { defensibleOptions: [] } : {});
+  generator.generateStructured = scriptedGenerator(cleanSet, [{ items: [rewrite("cap1", 1)] }]).generator.generateStructured;
+  await createDiagnosticBuilder({ generator: recording, ...judged, ...scriptedFactChecker() }).build(INPUT);
+  assert.equal(efforts.starting_level_diagnostic_items, "low");
+  assert.equal(efforts.starting_level_diagnostic_rewrites, "low");
 });
