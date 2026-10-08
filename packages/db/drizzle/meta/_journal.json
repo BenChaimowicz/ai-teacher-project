@@ -36,6 +36,13 @@
       "when": 1791482000187,
       "tag": "0004_perfect_night_thrasher",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791484916391,
+      "tag": "0005_spicy_betty_ross",
+      "breakpoints": true
     }
   ]
 }

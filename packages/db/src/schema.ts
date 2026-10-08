@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
 import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
-import type { ValidityClarification, ValidityResult } from "./course-request.ts";
+import type { CourseRequestStatus, ValidityClarification, ValidityResult } from "./course-request.ts";
 import type { QuizAnswers, QuizAttemptStatus } from "./quiz.ts";
+import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
 import type { FeedbackTiming, TeachingProfileAnswers } from "./teaching-profile.ts";
 
 /** One person taking Courses. The prototype seeds a single row. Teaching Profile lives here. */
@@ -22,12 +23,44 @@ export const courseRequests = pgTable("course_requests", {
     .references(() => learners.id),
   subject: text("subject").notNull(),
   learningGoal: text("learning_goal").notNull(),
-  status: text("status").notNull(),
+  status: text("status").$type<CourseRequestStatus>().notNull(),
   validity: jsonb("validity").$type<ValidityResult>(),
   clarification: jsonb("clarification").$type<ValidityClarification>(),
   revisedFromId: uuid("revised_from_id").references((): AnyPgColumn => courseRequests.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * One Starting Level diagnostic attempt for a Course Request. A retry is a new row.
+ * Keys, warrants, and reviews never leave the server. Model IDs are recorded for provenance (ADR 0007).
+ */
+export const startingLevelDiagnostics = pgTable(
+  "starting_level_diagnostics",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    courseRequestId: uuid("course_request_id")
+      .notNull()
+      .references(() => courseRequests.id),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => learners.id),
+    capabilities: jsonb("capabilities").$type<CapabilityPlan[]>().notNull().default([]),
+    items: jsonb("items").$type<DiagnosticItem[]>().notNull().default([]),
+    reviews: jsonb("reviews").$type<ItemReview[]>().notNull().default([]),
+    coverageNote: text("coverage_note"),
+    answers: jsonb("answers").$type<Record<string, DiagnosticAnswer>>(),
+    startingLevel: jsonb("starting_level").$type<StartingLevel>(),
+    confirmation: text("confirmation").$type<GapConfirmation>(),
+    authorModelId: text("author_model_id"),
+    judgeModelId: text("judge_model_id"),
+    factCheckVendor: text("fact_check_vendor"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    readyAt: timestamp("ready_at", { withTimezone: true }),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  },
+  (table) => [index("starting_level_diagnostics_request").on(table.courseRequestId)],
+);
 
 /** Published Course snapshot owned by a Learner. Progress is not stored here. */
 export const publishedCourses = pgTable("published_courses", {

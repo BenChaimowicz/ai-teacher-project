@@ -9,7 +9,8 @@
     "./quiz": "./src/quiz.ts",
     "./sequence-mode": "./src/sequence-mode.ts",
     "./seed-fixture": "./src/seed-fixture.ts",
-    "./course-request": "./src/course-request.ts"
+    "./course-request": "./src/course-request.ts",
+    "./starting-level": "./src/starting-level.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",

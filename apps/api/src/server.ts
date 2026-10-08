@@ -6,6 +6,7 @@ import dbPlugin from "./plugins/db.ts";
 import spaPlugin from "./plugins/spa.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { courseRequestRoutes } from "./routes/course-requests.ts";
+import { startingLevelRoutes } from "./routes/starting-level.ts";
 import { libraryRoutes } from "./routes/library.ts";
 import { mediaRoutes } from "./routes/media.ts";
 import { studyRoutes } from "./routes/study.ts";
@@ -25,6 +26,7 @@ async function start() {
     await app.register(healthRoutes);
     await app.register(libraryRoutes);
     await app.register(courseRequestRoutes);
+    await app.register(startingLevelRoutes);
     await app.register(studyRoutes);
     await app.register(teachingProfileRoutes);
     await app.register(mediaRoutes);

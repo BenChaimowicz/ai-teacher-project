@@ -1,0 +1,835 @@
+{
+  "id": "9b03d1d8-546a-4793-adf7-8c49f044bad8",
+  "prevId": "b521b8f7-82ab-4cff-84d3-e304d4f774e7",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.course_requests": {
+      "name": "course_requests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "learner_id": {
+          "name": "learner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "learning_goal": {
+          "name": "learning_goal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "validity": {
+          "name": "validity",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "clarification": {
+          "name": "clarification",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revised_from_id": {
+          "name": "revised_from_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "course_requests_learner_id_learners_id_fk": {
+          "name": "course_requests_learner_id_learners_id_fk",
+          "tableFrom": "course_requests",
+          "tableTo": "learners",
+          "columnsFrom": [
+            "learner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "course_requests_revised_from_id_course_requests_id_fk": {
+          "name": "course_requests_revised_from_id_course_requests_id_fk",
+          "tableFrom": "course_requests",
+          "tableTo": "course_requests",
+          "columnsFrom": [
+            "revised_from_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.learners": {
+      "name": "learners",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "teaching_profile_version": {
+          "name": "teaching_profile_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "teaching_profile_answers": {
+          "name": "teaching_profile_answers",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "teaching_profile_assessed_at": {
+          "name": "teaching_profile_assessed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "teaching_profile_updated_at": {
+          "name": "teaching_profile_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.lesson_completions": {
+      "name": "lesson_completions",
+      "schema": "",
+      "columns": {
+        "learner_id": {
+          "name": "learner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lesson_id": {
+          "name": "lesson_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "lesson_completions_learner_id_learners_id_fk": {
+          "name": "lesson_completions_learner_id_learners_id_fk",
+          "tableFrom": "lesson_completions",
+          "tableTo": "learners",
+          "columnsFrom": [
+            "learner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "lesson_completions_lesson_id_published_lessons_id_fk": {
+          "name": "lesson_completions_lesson_id_published_lessons_id_fk",
+          "tableFrom": "lesson_completions",
+          "tableTo": "published_lessons",
+          "columnsFrom": [
+            "lesson_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "lesson_completions_learner_id_lesson_id_pk": {
+          "name": "lesson_completions_learner_id_lesson_id_pk",
+          "columns": [
+            "learner_id",
+            "lesson_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.published_courses": {
+      "name": "published_courses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "learner_id": {
+          "name": "learner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "course_request_id": {
+          "name": "course_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "learning_goal": {
+          "name": "learning_goal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence_mode": {
+          "name": "sequence_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'linear'"
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "published_courses_learner_id_learners_id_fk": {
+          "name": "published_courses_learner_id_learners_id_fk",
+          "tableFrom": "published_courses",
+          "tableTo": "learners",
+          "columnsFrom": [
+            "learner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "published_courses_course_request_id_course_requests_id_fk": {
+          "name": "published_courses_course_request_id_course_requests_id_fk",
+          "tableFrom": "published_courses",
+          "tableTo": "course_requests",
+          "columnsFrom": [
+            "course_request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.published_lessons": {
+      "name": "published_lessons",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "published_course_id": {
+          "name": "published_course_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "module_id": {
+          "name": "module_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "teaching_method": {
+          "name": "teaching_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lesson_goal": {
+          "name": "lesson_goal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "objectives": {
+          "name": "objectives",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "topic_tags": {
+          "name": "topic_tags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "assessed_lesson_ids": {
+          "name": "assessed_lesson_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "lineage": {
+          "name": "lineage",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sources": {
+          "name": "sources",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "citations": {
+          "name": "citations",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "body": {
+          "name": "body",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "published_lessons_published_course_id_published_courses_id_fk": {
+          "name": "published_lessons_published_course_id_published_courses_id_fk",
+          "tableFrom": "published_lessons",
+          "tableTo": "published_courses",
+          "columnsFrom": [
+            "published_course_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "published_lessons_module_id_published_modules_id_fk": {
+          "name": "published_lessons_module_id_published_modules_id_fk",
+          "tableFrom": "published_lessons",
+          "tableTo": "published_modules",
+          "columnsFrom": [
+            "module_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "published_lessons_course_position": {
+          "name": "published_lessons_course_position",
+          "nullsNotDistinct": false,
+          "columns": [
+            "published_course_id",
+            "position"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.published_modules": {
+      "name": "published_modules",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "published_course_id": {
+          "name": "published_course_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "published_modules_published_course_id_published_courses_id_fk": {
+          "name": "published_modules_published_course_id_published_courses_id_fk",
+          "tableFrom": "published_modules",
+          "tableTo": "published_courses",
+          "columnsFrom": [
+            "published_course_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "published_modules_course_position": {
+          "name": "published_modules_course_position",
+          "nullsNotDistinct": false,
+          "columns": [
+            "published_course_id",
+            "position"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.quiz_attempts": {
+      "name": "quiz_attempts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "learner_id": {
+          "name": "learner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lesson_id": {
+          "name": "lesson_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "feedback_timing": {
+          "name": "feedback_timing",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "answers": {
+          "name": "answers",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "correct": {
+          "name": "correct",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total": {
+          "name": "total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "quiz_attempts_learner_lesson": {
+          "name": "quiz_attempts_learner_lesson",
+          "columns": [
+            {
+              "expression": "learner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lesson_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "quiz_attempts_one_draft": {
+          "name": "quiz_attempts_one_draft",
+          "columns": [
+            {
+              "expression": "learner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lesson_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"quiz_attempts\".\"status\" = 'draft'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "quiz_attempts_learner_id_learners_id_fk": {
+          "name": "quiz_attempts_learner_id_learners_id_fk",
+          "tableFrom": "quiz_attempts",
+          "tableTo": "learners",
+          "columnsFrom": [
+            "learner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "quiz_attempts_lesson_id_published_lessons_id_fk": {
+          "name": "quiz_attempts_lesson_id_published_lessons_id_fk",
+          "tableFrom": "quiz_attempts",
+          "tableTo": "published_lessons",
+          "columnsFrom": [
+            "lesson_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.starting_level_diagnostics": {
+      "name": "starting_level_diagnostics",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "course_request_id": {
+          "name": "course_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "learner_id": {
+          "name": "learner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "capabilities": {
+          "name": "capabilities",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "items": {
+          "name": "items",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "reviews": {
+          "name": "reviews",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "coverage_note": {
+          "name": "coverage_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "answers": {
+          "name": "answers",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "starting_level": {
+          "name": "starting_level",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confirmation": {
+          "name": "confirmation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_model_id": {
+          "name": "author_model_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "judge_model_id": {
+          "name": "judge_model_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fact_check_vendor": {
+          "name": "fact_check_vendor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "ready_at": {
+          "name": "ready_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confirmed_at": {
+          "name": "confirmed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "starting_level_diagnostics_request": {
+          "name": "starting_level_diagnostics_request",
+          "columns": [
+            {
+              "expression": "course_request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "starting_level_diagnostics_course_request_id_course_requests_id_fk": {
+          "name": "starting_level_diagnostics_course_request_id_course_requests_id_fk",
+          "tableFrom": "starting_level_diagnostics",
+          "tableTo": "course_requests",
+          "columnsFrom": [
+            "course_request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "starting_level_diagnostics_learner_id_learners_id_fk": {
+          "name": "starting_level_diagnostics_learner_id_learners_id_fk",
+          "tableFrom": "starting_level_diagnostics",
+          "tableTo": "learners",
+          "columnsFrom": [
+            "learner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
