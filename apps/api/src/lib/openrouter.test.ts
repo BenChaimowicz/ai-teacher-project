@@ -165,18 +165,42 @@ test("Independent same-vendor models accept standard empty optional response fie
   }
 });
 
-test("Requests route to the fastest provider that supports strict structured output", async () => {
-  let sent: { provider?: unknown } = {};
+test("Author calls prefer the configured hosts with fallback; Judge calls use default routing", async () => {
+  const sent: { model: string; provider?: unknown }[] = [];
   const transport = createOpenRouterTransport({
     apiKey: "fixture-key",
-    /** Captures the request body the provider receives. */
+    /** Captures each request body the provider receives. */
     fetch: async (_url, init) => {
-      sent = JSON.parse(String(init?.body));
+      sent.push(JSON.parse(String(init?.body)));
       return new Response(JSON.stringify(completion('{"score":1}')), { status: 200 });
     },
   });
-  await transport.complete("fixture/model", REQUEST);
-  assert.deepEqual(sent.provider, { require_parameters: true, sort: "throughput" });
+  const config = loadModelConfig({ GENERATOR_MODEL: "fixture/author", JUDGE_MODEL: "fixture/judge", GENERATOR_PROVIDER_ORDER: " alibaba, baidu " });
+  const { generator, judge } = createModelPorts({ config, transport });
+  await generator.generateStructured(REQUEST);
+  await judge.judge({ ...REQUEST, authorModelId: generator.modelId });
+  assert.deepEqual(sent.map((body) => body.provider), [
+    { require_parameters: true, order: ["alibaba", "baidu"], allow_fallbacks: true },
+    { require_parameters: true },
+  ]);
+  assert.deepEqual(loadModelConfig({}).generatorProviderOrder, ["alibaba"]);
+});
+
+test("A call that runs past its time limit is a timeout, not invalid output", async () => {
+  const transport = createOpenRouterTransport({
+    apiKey: "fixture-key",
+    /** Sends headers, then never finishes the body, like a hung provider. */
+    fetch: async (_url, init) => new Response(new ReadableStream({
+      start(controller) {
+        init?.signal?.addEventListener("abort", () => controller.error(init.signal!.reason));
+      },
+    }), { status: 200 }),
+  });
+  await assert.rejects(transport.complete("fixture/model", { ...REQUEST, timeoutMs: 20 }), (error: unknown) => {
+    assert.ok(error instanceof ModelError);
+    assert.equal(error.code, "timeout");
+    return true;
+  });
 });
 
 test("A request's reasoning budget reaches the provider unless the caller sets an effort", async () => {

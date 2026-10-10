@@ -218,3 +218,13 @@ test("Completion stems, contrastive 'not', and 'only' are accepted; a NOT/EXCEPT
   const rewritten = (calls[1]!.input as { rewrite: { capabilityId: string }[] }).rewrite.map((r) => r.capabilityId);
   assert.deepEqual(rewritten, ["cap4", "cap5", "cap6"]);
 });
+
+test("Re-reviewed items are judged alongside the kept items so duplicates can be caught", async () => {
+  const { generator } = scriptedGenerator(cleanSet, [{ items: [rewrite("cap2", 2)] }]);
+  const { judge, calls } = scriptedJudge((itemId, stem) => itemId === "item2" && !stem.startsWith("Rewritten") ? { flaws: ["Duplicates item 1."] } : {});
+  await createDiagnosticBuilder({ generator, judge, ...scriptedFactChecker() }).build(INPUT);
+  const second = calls[1]!.input as { items: { itemId: string }[]; otherItems: { stem: string }[] };
+  assert.deepEqual(second.items.map((item) => item.itemId), ["item2"]);
+  assert.equal(second.otherItems.length, 7);
+  assert.ok(!JSON.stringify(second.otherItems).includes("keyIndex"));
+});
