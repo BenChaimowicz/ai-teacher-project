@@ -78,9 +78,10 @@ export interface DiagnosticBuilder {
 
 const ITEM_RULES = `Item-writing rules (Haladyna subset):
 - Exactly three options, one single correct key, two plausible distractors of similar length and form.
-- English. Simple vocabulary. The stem is a complete question ending with "?".
-- No negative stems (NOT, EXCEPT, LEAST). No true/false, multi-select, "all of the above", or "none of the above".
-- No specific determiners in options (always, never, all, none, only).
+- English. Simple vocabulary. The stem is a direct question or a sentence the options complete, and holds the whole problem.
+- No negative stems ("Which is NOT…", EXCEPT, LEAST). No true/false, multi-select, "all of the above", or "none of the above".
+- No absolute determiners in options (always, never).
+- The key must not be noticeably longer or more detailed than the distractors.
 - The key must not repeat distinctive words from the stem that the distractors lack.
 - Each item stands alone; no item gives away another.
 - Construct-relevant: ask written knowledge or reasoning in words. Never require physical performance, lab technique, playing an instrument, or religious practice.
@@ -283,14 +284,17 @@ function longWords(value: string) {
 export function itemWritingFailures(item: Pick<DiagnosticItem, "stem" | "options" | "keyIndex">): string[] {
   const failures: string[] = [];
   const options = item.options.map((option) => option.trim());
-  if (!item.stem.trim().endsWith("?")) failures.push("The stem must be a complete question ending with a question mark.");
-  if (/\b(not|except|least)\b/i.test(item.stem)) failures.push("The stem must not be negative (NOT, EXCEPT, LEAST).");
+  // Question and completion stems are both fine; a negative stem asks for the wrong answer ("Which is NOT…").
+  if (/\b(NOT|LEAST)\b/.test(item.stem) || /\bexcept\b/i.test(item.stem) ||
+      /\b(which|what)\b[^?]*\b(is|are|does|do|would)\s+not\b/i.test(item.stem)) {
+    failures.push("The stem must not ask which option is NOT, EXCEPT, or LEAST.");
+  }
   if (new Set(options.map((option) => option.toLowerCase())).size !== 3) failures.push("The three options must be distinct.");
   if (options.some((option) => /\b(all|none|both|neither) of the (above|options)\b/i.test(option))) {
     failures.push("Do not use all, none, both, or neither of the above.");
   }
   if (options.some((option) => /^(true|false|yes|no)\.?$/i.test(option))) failures.push("Do not write true/false or yes/no items.");
-  if (options.some((option) => /\b(always|never|only)\b/i.test(option))) failures.push("Avoid specific determiners (always, never, only) in options.");
+  if (options.some((option) => /\b(always|never)\b/i.test(option))) failures.push("Avoid absolute determiners (always, never) in options.");
   const keyLength = options[item.keyIndex]?.length ?? 0;
   const longestDistractor = Math.max(...options.filter((_, index) => index !== item.keyIndex).map((option) => option.length));
   if (keyLength > 1.5 * longestDistractor && keyLength - longestDistractor >= 15) {

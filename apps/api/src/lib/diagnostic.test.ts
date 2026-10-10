@@ -204,3 +204,17 @@ test("Options may differ in length; only a key that stands out as clearly longes
   const rewritten = (calls[1]!.input as { rewrite: { capabilityId: string }[] }).rewrite.map((r) => r.capabilityId);
   assert.deepEqual(rewritten, ["cap2"]);
 });
+
+test("Completion stems, contrastive 'not', and 'only' are accepted; a NOT/EXCEPT stem and absolutes are rewritten", async () => {
+  const probes = [...cleanSet.probes];
+  probes[0] = probe(1, { stem: "Under the microscope, bacilli are bacteria shaped as", options: ["spheres", "spirals", "rods"] });
+  probes[1] = probe(2, { stem: "Why does decolorizer clear Gram-negative but not Gram-positive cells, at least briefly?" });
+  probes[2] = probe(3, { options: ["Crystal violet 3", "Only safranin 3", "Iodine mordant 3"] });
+  probes[3] = probe(4, { stem: "Which reagent is NOT used in step 4?" });
+  probes[4] = probe(5, { stem: "Every reagent is applied in step 5 except which one?" });
+  probes[5] = probe(6, { options: ["Crystal violet 6", "Safranin always 6", "Iodine mordant 6"] });
+  const { generator, calls } = scriptedGenerator({ ...cleanSet, probes }, [{ items: [rewrite("cap4", 4), rewrite("cap5", 5), rewrite("cap6", 6)] }]);
+  await createDiagnosticBuilder({ generator, ...scriptedJudge(), ...scriptedFactChecker() }).build(INPUT);
+  const rewritten = (calls[1]!.input as { rewrite: { capabilityId: string }[] }).rewrite.map((r) => r.capabilityId);
+  assert.deepEqual(rewritten, ["cap4", "cap5", "cap6"]);
+});
