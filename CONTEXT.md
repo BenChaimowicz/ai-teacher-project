@@ -8,6 +8,8 @@ The spec effort was charted with `/wayfinder`. The **map** lives on Linear (team
 
 Implementation is a **new effort**: [Prototype: AI learning course platform](https://linear.app/senoy/issue/SEN-30/prototype-ai-learning-course-platform). Tickets are sub-issues of that parent; blocking uses Linear `blocks`; a ticket is unclaimed until assigned. Research assets live in `docs/research/`.
 
+The Operator-facing usage tracking effort has its own map: [Wayfinder map: Usage Console](https://linear.app/senoy/issue/SEN-70/wayfinder-map-usage-console). Its destination is a buildable spec; tickets are its sub-issues.
+
 ## Language
 
 **Knibbler**:
@@ -299,3 +301,27 @@ _Avoid_: Sample course, demo course
 **Test-course protocol**:
 The destination-QA ritual: after a Test course publishes, the team completes it as a Learner and signs off accuracy, required Demonstrative media, and subject-specific rules. A miss does not un-publish; it blocks treating the spec or prototype as done.
 _Avoid_: Publish gate, Learner Blueprint review
+
+**Operator**:
+A developer running the platform. Not a Learner; never sees the Workspace as part of their operator role. Operators are the only audience for the Usage Console.
+_Avoid_: Admin, user, dev (when meaning this role)
+
+**Usage Console**:
+The Operator-only view of everything the platform tracks: external AI and research calls with their cost, pipeline and product events, and the platform's own API traffic.
+_Avoid_: Dashboard, admin panel, analytics page
+
+**Usage Record**:
+One captured call to an external paid service (an LLM via OpenRouter, or a research vendor): what it was for, the full prompt and response, its outcome, and its cost marked as actual (vendor-reported) or estimated.
+_Avoid_: Log line, event (when meaning a single external call)
+
+**Pipeline Event**:
+One step of the platform's own work (a validity check, diagnostic attempt, rewrite round, fact-check, generation, publish), tied to the Course Request it serves. It groups the Usage Records it caused and gives them their purpose.
+_Avoid_: Job, task, trace (when meaning this record)
+
+**Product Event**:
+Something a Learner did, such as creating a Course Request, answering a Diagnostic item, completing a Lesson, or attempting a Quiz.
+_Avoid_: Analytics event, Pipeline Event (when the Learner, not the platform, acted)
+
+**API Request**:
+One hit on the platform's own HTTP API, with route, status, and latency. Not an external call; that is a Usage Record.
+_Avoid_: Course Request, Usage Record, call (unqualified)
