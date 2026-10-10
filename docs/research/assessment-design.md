@@ -185,7 +185,7 @@ type StartingLevel = {
     | "floor"              // little or no evidenced capability
     | "mixed"
     | "ceiling"            // all or nearly all correct
-    | "insufficient_evidence"; // generation failed, or all skipped
+    | "insufficient_evidence"; // partial abandon confirmed as floor (spec §4.3); all I don't know/skip is "floor"
 };
 ```
 

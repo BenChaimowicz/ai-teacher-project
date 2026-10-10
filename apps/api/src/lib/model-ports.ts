@@ -32,7 +32,7 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
       modelId: config.generatorModel,
       /** Sends structured authoring work through the shared transport. */
       generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
-        return transport.complete(config.generatorModel, request);
+        return transport.complete(config.generatorModel, request, undefined, config.generatorProviderOrder);
       },
     },
     judge: {

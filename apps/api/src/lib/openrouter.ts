@@ -5,12 +5,19 @@ export type StructuredRequest<T> = {
   schemaName: string;
   schema: Readonly<Record<string, unknown>>;
   parse: (value: unknown) => T;
+  /** Whole-call limit; defaults to 60 s. Long authoring calls may ask for more. */
+  timeoutMs?: number;
+  /** Hard cap on hidden reasoning tokens; omitted means the model default. Effort hints proved unreliable. */
+  reasoningMaxTokens?: number;
 };
+
+/** OpenRouter reasoning effort levels. */
+export type ReasoningEffort = "none" | "low" | "medium" | "high";
 
 /** The one transport used by both domain model roles. */
 export interface StructuredTransport {
   /** Generates and validates one non-streaming response, with no search or retries. */
-  complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: "none"): Promise<T>;
+  complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: ReasoningEffort, providerOrder?: string[]): Promise<T>;
 }
 
 /** Injects fetch and credentials without introducing a vendor SDK. */
@@ -20,7 +27,7 @@ export type OpenRouterOptions = {
 };
 
 /** Safe failure categories that do not expose provider bodies, prompts, or credentials. */
-export type ModelErrorCode = "configuration" | "network" | "http" | "refusal" | "incomplete" | "invalid_output";
+export type ModelErrorCode = "configuration" | "network" | "timeout" | "http" | "refusal" | "incomplete" | "invalid_output";
 
 /** A provider failure is not a Validity decision and may be retried by the caller. */
 export class ModelError extends Error {
@@ -29,6 +36,7 @@ export class ModelError extends Error {
     const descriptions: Record<ModelErrorCode, string> = {
       configuration: "Model provider is not configured",
       network: "Model provider could not be reached",
+      timeout: "Model provider did not finish within the time limit",
       http: "Model provider request failed",
       refusal: "Model provider refused the request",
       incomplete: "Model provider returned an incomplete response",
@@ -37,6 +45,11 @@ export class ModelError extends Error {
     super(`[openrouter: complete] ${descriptions[code]} || code=${code}${status === undefined ? "" : ` || status=${status}`}`);
     this.name = "ModelError";
   }
+}
+
+/** True when the call's time limit aborted it, while connecting or while reading the body. */
+function isTimeout(error: unknown) {
+  return error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
 }
 
 /** Extracts only a complete assistant text response, rejecting refusals and tool output. */
@@ -74,7 +87,9 @@ function responseContent(raw: unknown): string {
 export function createOpenRouterTransport(options: OpenRouterOptions = {}): StructuredTransport {
   return {
     /** Sends a single strict structured call and rejects any unvalidated model output. */
-    async complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: "none"): Promise<T> {
+    async complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: ReasoningEffort, providerOrder?: string[]): Promise<T> {
+      const reasoning = reasoningEffort ? { effort: reasoningEffort }
+        : request.reasoningMaxTokens ? { max_tokens: request.reasoningMaxTokens } : undefined;
       const apiKey = (options.apiKey ?? process.env.OPENROUTER_API_KEY)?.trim();
       if (!apiKey) throw new ModelError("configuration");
       let response: Response;
@@ -82,7 +97,7 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
         response = await (options.fetch ?? globalThis.fetch)("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(60_000),
+          signal: AbortSignal.timeout(request.timeoutMs ?? 60_000),
           body: JSON.stringify({
             model: modelId,
             messages: [
@@ -93,20 +108,22 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
               type: "json_schema",
               json_schema: { name: request.schemaName, strict: true, schema: request.schema },
             },
-            provider: { require_parameters: true },
-            reasoning: reasoningEffort ? { effort: reasoningEffort } : undefined,
+            provider: providerOrder?.length
+              ? { require_parameters: true, order: providerOrder, allow_fallbacks: true }
+              : { require_parameters: true },
+            reasoning,
             stream: false,
           }),
         });
-      } catch {
-        throw new ModelError("network");
+      } catch (error) {
+        throw new ModelError(isTimeout(error) ? "timeout" : "network");
       }
       if (!response.ok) throw new ModelError("http", response.status);
       let raw: unknown;
       try {
         raw = await response.json();
-      } catch {
-        throw new ModelError("invalid_output");
+      } catch (error) {
+        throw new ModelError(isTimeout(error) ? "timeout" : "invalid_output");
       }
       const content = responseContent(raw);
       try {

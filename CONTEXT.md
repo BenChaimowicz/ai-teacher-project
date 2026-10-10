@@ -8,6 +8,8 @@ The spec effort was charted with `/wayfinder`. The **map** lives on Linear (team
 
 Implementation is a **new effort**: [Prototype: AI learning course platform](https://linear.app/senoy/issue/SEN-30/prototype-ai-learning-course-platform). Tickets are sub-issues of that parent; blocking uses Linear `blocks`; a ticket is unclaimed until assigned. Research assets live in `docs/research/`.
 
+The Operator-facing usage tracking effort has its own map: [Wayfinder map: Usage Console](https://linear.app/senoy/issue/SEN-70/wayfinder-map-usage-console). Its destination is a buildable spec; tickets are its sub-issues.
+
 ## Language
 
 **Knibbler**:
@@ -47,15 +49,15 @@ The sequence of Modules that takes a Learner from their Starting Level to their 
 _Avoid_: Curriculum, class, program, version (when meaning an in-place regenerate)
 
 **Course Request**:
-The Learner's selected subject and stated Learning Goal that initiate a goal-specific Assessment and Course generation. It persists with a status through Blueprint review, generation, failure, and publish.
+The Learner's selected subject and stated Learning Goal that initiate a goal-specific Starting Level diagnostic and Course generation. It persists with a status through Blueprint review, generation, failure, and publish.
 _Avoid_: Prompt, topic request
 
 **Validity gate**:
-The Course Request-time decision that combines deterministic policy rules with Generator judgment before Assessment. It passes a valid request, asks the Course Guide to clarify ambiguous framing, or rejects a prohibited or unsupported factual premise.
+The Course Request-time decision that combines deterministic policy rules with Generator judgment before the Starting Level diagnostic. It passes a valid request, asks the Course Guide to clarify ambiguous framing, or rejects a prohibited or unsupported factual premise.
 _Avoid_: Safety prompt, moderation prompt
 
 **Course Guide**:
-The Learner-facing copy on the Course Request screen that helps form the request, asks Assessment questions, and explains validity decisions. It presents policy but does not own or override it.
+The Learner-facing copy on the Course Request screen that helps form the request, asks Diagnostic items, and explains validity decisions. It presents policy but does not own or override it.
 _Avoid_: Character, chatbot, chat transcript, Generator (when meaning this voice)
 
 **Course Blueprint**:
@@ -93,6 +95,42 @@ _Avoid_: Lesson goal (when meaning the checklist), Learning Goal, outcomes
 **Starting Level**:
 The remaining-gap input to Blueprint generation, produced by a Course Request diagnostic: evidenced versus not-evidenced prerequisite capabilities plus a short remaining-gap statement. It is not a 0–100, not a Quiz, not Progress, and not a certification of real-world performance.
 _Avoid_: Skill level (when the relevant goal is unstated), entry point, Progress (when meaning assessed capability), placement score, proficiency
+
+**Starting Level diagnostic**:
+The eight-item check, run on every Course Request after the Validity gate passes, that produces Starting Level. Not a Quiz, not a grade, not Progress. "Assessment" survives only as the Course Request status label for this step.
+_Avoid_: Assessment (as the concept name), placement test, pre-test, Quiz
+
+**Diagnostic item**:
+One three-option, single-correct question in the Starting Level diagnostic, plus a separate I don't know. It probes exactly one Probed capability and is never reused as a Quiz question.
+_Avoid_: Quiz item, question (unqualified), test question
+
+**Probed capability**:
+One of the eight prerequisite capabilities the Starting Level diagnostic decomposes a Learning Goal into, each ranked from basic to near-goal, and each probed by one Diagnostic item.
+_Avoid_: Objective, skill (unqualified), Topic tag
+
+**Evidenced**:
+A Probed capability whose Diagnostic item the Learner answered correctly. Only evidenced capabilities may be treated as already in place.
+_Avoid_: mastered, known, passed
+
+**Not evidenced**:
+A Probed capability answered incorrectly, with I don't know, or skipped, or moved there by Too easy. It belongs in the remaining gap. Incorrect may signal a misconception; I don't know and skip signal absence of evidence; neither is worse.
+_Avoid_: failed, wrong, unknown
+
+**Too easy**:
+The Learner's response to the Remaining-gap statement that moves the most basic evidenced capabilities to not evidenced, widening the gap. Repeatable while anything is still evidenced, including from ceiling; Extremity follows the widened gap, and what the Learner actually answered stays recorded. There is no opposite "I'm more advanced" action.
+_Avoid_: override, skip ahead, self-rating
+
+**Remaining-gap statement**:
+The short Learner-facing sentence saying where the Course would start, written from the Learner's answers. Never a number, and never claims the Learner already meets the Learning Goal.
+_Avoid_: score, result, level (unqualified)
+
+**Coverage note**:
+The Learner-facing honesty statement of what the Starting Level diagnostic could not measure (for example, kit playing or wet-lab technique). Written with the Diagnostic items, independent of answers.
+_Avoid_: disclaimer (unqualified), caveat
+
+**Extremity**:
+The coarse shape of a Starting Level after any Too easy: floor (at most one evidenced, including all I don't know or skip), ceiling (all or all but one evidenced), or mixed. Not a band to average into.
+_Avoid_: band, tier, difficulty, novice/intermediate/advanced
 
 **Progress**:
 The Learner's position through a published Course, shown as completed Lessons over total Lessons. It accumulates by completing Lessons, not by opening them; it is not a re-estimated Starting Level. Completions are Learner runtime on that Course; they do not edit the published snapshot.
@@ -263,3 +301,27 @@ _Avoid_: Sample course, demo course
 **Test-course protocol**:
 The destination-QA ritual: after a Test course publishes, the team completes it as a Learner and signs off accuracy, required Demonstrative media, and subject-specific rules. A miss does not un-publish; it blocks treating the spec or prototype as done.
 _Avoid_: Publish gate, Learner Blueprint review
+
+**Operator**:
+A developer running the platform. Not a Learner; never sees the Workspace as part of their operator role. Operators are the only audience for the Usage Console.
+_Avoid_: Admin, user, dev (when meaning this role)
+
+**Usage Console**:
+The Operator-only view of everything the platform tracks: external AI and research calls with their cost, pipeline and product events, and the platform's own API traffic.
+_Avoid_: Dashboard, admin panel, analytics page
+
+**Usage Record**:
+One captured call to an external paid service (an LLM via OpenRouter, or a research vendor): what it was for, the full prompt and response, its outcome, and its cost marked as actual (vendor-reported) or estimated.
+_Avoid_: Log line, event (when meaning a single external call)
+
+**Pipeline Event**:
+One step of the platform's own work (a validity check, diagnostic attempt, rewrite round, fact-check, generation, publish), tied to the Course Request it serves. It groups the Usage Records it caused and gives them their purpose.
+_Avoid_: Job, task, trace (when meaning this record)
+
+**Product Event**:
+Something a Learner did, such as creating a Course Request, answering a Diagnostic item, completing a Lesson, or attempting a Quiz.
+_Avoid_: Analytics event, Pipeline Event (when the Learner, not the platform, acted)
+
+**API Request**:
+One hit on the platform's own HTTP API, with route, status, and latency. Not an external call; that is a Usage Record.
+_Avoid_: Course Request, Usage Record, call (unqualified)
