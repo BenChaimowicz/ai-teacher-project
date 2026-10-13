@@ -1,5 +1,32 @@
+# Dependencies
+node_modules/
+
+# Secrets: every .env file except the committed examples
+.env
+.env.*
 *.env
-node_modules
-e2e/test-results
-e2e/playwright-report
+!.env.example
+
+# Build output and caches
 dist/
+build/
+*.tsbuildinfo
+.vite/
+.cache/
+coverage/
+
+# Browser tests
+e2e/test-results/
+e2e/playwright-report/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
