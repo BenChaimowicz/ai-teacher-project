@@ -192,7 +192,9 @@ test("A call that runs past its time limit is a timeout, not invalid output", as
     /** Sends headers, then never finishes the body, like a hung provider. */
     fetch: async (_url, init) => new Response(new ReadableStream({
       start(controller) {
-        init?.signal?.addEventListener("abort", () => controller.error(init.signal!.reason));
+        // AbortSignal.timeout does not hold the event loop open; a real socket would, so this timer stands in for it.
+        const pending = setTimeout(() => {}, 10_000);
+        init?.signal?.addEventListener("abort", () => { clearTimeout(pending); controller.error(init.signal!.reason); });
       },
     }), { status: 200 }),
   });
@@ -203,7 +205,7 @@ test("A call that runs past its time limit is a timeout, not invalid output", as
   });
 });
 
-test("A request's reasoning budget reaches the provider unless the caller sets an effort", async () => {
+test("A request's reasoning effort, else its reasoning budget, reaches the provider", async () => {
   const sent: { reasoning?: unknown }[] = [];
   const transport = createOpenRouterTransport({
     apiKey: "fixture-key",
@@ -214,7 +216,7 @@ test("A request's reasoning budget reaches the provider unless the caller sets a
     },
   });
   await transport.complete("fixture/model", { ...REQUEST, reasoningMaxTokens: 1500 });
-  await transport.complete("fixture/model", { ...REQUEST, reasoningMaxTokens: 1500 }, "none");
+  await transport.complete("fixture/model", { ...REQUEST, reasoningMaxTokens: 1500, reasoningEffort: "none" });
   await transport.complete("fixture/model", REQUEST);
   assert.deepEqual(sent.map((body) => body.reasoning), [{ max_tokens: 1500 }, { effort: "none" }, undefined]);
 });

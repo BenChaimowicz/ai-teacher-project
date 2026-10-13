@@ -1,0 +1,186 @@
+{
+  "startedAt": "2026-10-13T19:43:29.961Z",
+  "latencyMs": 94322,
+  "generatorModel": "deepseek/deepseek-v4-pro",
+  "judgeModel": "openai/gpt-5.6-luna",
+  "sourcePacks": "docs/research/sen-36-norse-source-packs.json",
+  "slot": {
+    "id": "slot1",
+    "method": "reading",
+    "title": "Yggdrasil and the Nine Worlds",
+    "lessonGoal": "Describe how Norse sources picture Yggdrasil connecting the Nine Worlds.",
+    "objectives": [
+      "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "Explain why accounts of Yggdrasil's roots differ between Norse sources"
+    ],
+    "topicTags": [
+      "yggdrasil",
+      "nine-worlds",
+      "norse-cosmology"
+    ],
+    "assessesSlotIds": []
+  },
+  "profile": {
+    "instructionLanguage": "en",
+    "requiredReadingSupports": [],
+    "contentScope": "standard",
+    "explanationOrder": "topic_appropriate"
+  },
+  "status": "checkpoint",
+  "lesson": {
+    "slotId": "slot1",
+    "teachingMethod": "reading",
+    "title": "Yggdrasil and the Nine Worlds",
+    "lessonGoal": "Describe how Norse sources picture Yggdrasil connecting the Nine Worlds.",
+    "objectives": [
+      "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "Explain why accounts of Yggdrasil's roots differ between Norse sources"
+    ],
+    "topicTags": [
+      "yggdrasil",
+      "nine-worlds",
+      "norse-cosmology"
+    ],
+    "lineage": null,
+    "body": {
+      "sections": [
+        {
+          "heading": "A Great Ash Tree at the Centre",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "In Norse cosmology, the universe is pictured around a vast ash tree named Yggdrasil [1][2]. This tree stands at the very centre of the cosmos, and the Nine Worlds either spread outward from it or are arranged in levels stretching from its roots [3]. The Poetic Edda poem Völuspá describes Yggdrasil as a high, ever‑green tree sprinkled with white moisture, from which dews fall into the valleys [1]. Later writers also emphasise its immense size: the Prose Edda says its limbs cover the whole world and reach above heaven [4]."
+            }
+          ]
+        },
+        {
+          "heading": "The Realms of Gods, Humans, and the Dead",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "The Nine Worlds anchored around Yggdrasil include the homes of gods, humans, and the dead, though no single ancient source lists the same nine. Asgard is the realm of the Æsir gods, joined to Midgard by the rainbow bridge Bifrost [3]; Vanaheim is the realm of another group of deities called the Vanir [3]. Midgard is the world of human beings, created as a fortress‑wall from the eyelashes of the primeval giant Ymir [3]. The abode of the dead is Hel, a dark realm that received those who died of illness or old age and, over time, became the most populous afterlife destination [3]. Other worlds in the cluster include Jotunheim (the land of giants), Alfheim (elves), Svartalfheim/Nidavellir (dwarves), Muspelheim (fire), and Niflheim (primordial ice and mist), though the ninth world is uncertain [3][1]."
+            }
+          ]
+        },
+        {
+          "heading": "Roots That Run in Different Directions",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Accounts of Yggdrasil’s roots vary between the two major Norse sources. In the Poetic Edda poem Grímnismál, the tree is supported by three roots that run ‘neath Hel, ‘neath the frost‑giants, and ‘neath the lands of men [5]. By contrast, Snorri Sturluson’s Prose Edda, written in the 13th century, describes the three roots as spreading among the Æsir (gods), among the Rime‑Giants, and over Niflheim, where the dragon Nídhöggr gnaws the root from below [4]."
+            }
+          ]
+        },
+        {
+          "heading": "Why the Descriptions Differ",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Such differences illustrate how Norse cosmology was transmitted. The earliest Eddic and skaldic poems assumed listeners already knew the world‑picture and rarely gave detailed descriptions of places, so many details were fluid [3]. Because the religion had no written scripture, no single, fixed system existed [3]. When Snorri Sturluson compiled the Prose Edda, he rearranged and systematised older material, merging some realms and re‑interpreting others [3]. His arrangement of the roots differs from that in Grímnismál, showing that later writers reshaped the traditional image to create a more ordered cosmos."
+            }
+          ]
+        }
+      ]
+    },
+    "sources": [
+      {
+        "n": 1,
+        "sourceId": "src_b6cf1c25b8",
+        "url": "https://sacred-texts.com/neu/poe/poe03.htm",
+        "title": "Völuspá (Voluspo) – Poetic Edda, Vol. I | Bellows Translation",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 2,
+        "sourceId": "src_8c1061af65",
+        "url": "https://en.wikipedia.org/w/index.php?title=Norse_cosmology&oldid=1357244099",
+        "title": "Norse cosmology",
+        "publisher": "en.wikipedia.org",
+        "retrievedAt": "2026-10-08T17:41:28.581Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 3,
+        "sourceId": "src_2b9c51c172",
+        "url": "https://www.worldhistory.org/article/1305/nine-realms-of-norse-cosmology",
+        "title": "Nine Realms of Norse Cosmology",
+        "publisher": "worldhistory.org",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 4,
+        "sourceId": "src_238610fc85",
+        "url": "https://www.sacred-texts.com/neu/pre/pre04.htm",
+        "title": "Gylfaginning | Internet Sacred Text Archive",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 5,
+        "sourceId": "src_7d9e9ae17d",
+        "url": "https://sacred-texts.com/neu/poe/poe06.htm",
+        "title": "Grimnismol – The Poetic Edda | Internet Sacred Text Archive",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      }
+    ],
+    "citations": [
+      {
+        "n": 1,
+        "title": "Völuspá (Voluspo) – Poetic Edda, Vol. I | Bellows Translation",
+        "url": "https://sacred-texts.com/neu/poe/poe03.htm"
+      },
+      {
+        "n": 2,
+        "title": "Norse cosmology",
+        "url": "https://en.wikipedia.org/w/index.php?title=Norse_cosmology&oldid=1357244099"
+      },
+      {
+        "n": 3,
+        "title": "Nine Realms of Norse Cosmology",
+        "url": "https://www.worldhistory.org/article/1305/nine-realms-of-norse-cosmology"
+      },
+      {
+        "n": 4,
+        "title": "Gylfaginning | Internet Sacred Text Archive",
+        "url": "https://www.sacred-texts.com/neu/pre/pre04.htm"
+      },
+      {
+        "n": 5,
+        "title": "Grimnismol – The Poetic Edda | Internet Sacred Text Archive",
+        "url": "https://sacred-texts.com/neu/poe/poe06.htm"
+      }
+    ]
+  },
+  "judge": {
+    "pass": true,
+    "failedChecks": [],
+    "reasons": []
+  },
+  "repairs": 0,
+  "rejectedSources": [
+    {
+      "sourceId": "src_39d3dea075",
+      "url": "https://www.glanzundgravur.de/en/blog-yggdrasil.html",
+      "reason": "Appears to be a commercial jewelry business blog rather than an independent scholarly or educational source."
+    },
+    {
+      "sourceId": "src_afdad0e405",
+      "url": "https://www.mythic-harmonies.com/norse-mythology/yggdrasil-world-tree-nine-realms/",
+      "reason": "General SEO-style mythology explainer from an unclear commercial or non-scholarly site; not a strong evidence source for a lesson."
+    },
+    {
+      "sourceId": "src_6feffb6846",
+      "url": "https://norse-mythology.org/cosmology/yggdrasil-and-the-well-of-urd/",
+      "reason": "Independent popular-mythology website aimed at general readers, not a scholarly, educational, archival, or primary source."
+    }
+  ],
+  "codeFailures": []
+}

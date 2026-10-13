@@ -9,6 +9,7 @@ import {
 } from "@senoy/db/blueprint";
 import { isEvidenced, type GapConfirmation, type StartingLevel } from "@senoy/db/starting-level";
 import type { ExplanationOrder, QuizCadence } from "@senoy/db/teaching-profile";
+import { judgeParser, judgeSchema } from "./judge-result.ts";
 import { createModelPorts, type Generator, type Judge } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
 
@@ -106,17 +107,6 @@ const BLUEPRINT_SCHEMA = {
   },
 } as const;
 
-const JUDGE_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: ["pass", "failedChecks", "reasons"],
-  properties: {
-    pass: { type: "boolean" },
-    failedChecks: { type: "array", items: { type: "string", enum: BLUEPRINT_JUDGE_CHECKS } },
-    reasons: { type: "array", items: { type: "string" } },
-  },
-} as const;
-
 /** Narrows unknown model output to a plain object. */
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new ModelError("invalid_output");
@@ -158,16 +148,6 @@ export function parseAuthoredBlueprint(raw: unknown): CourseBlueprint {
     };
   });
   return { courseTitle: text(row.courseTitle), modules: [{ title: text(row.moduleTitle), slots }] };
-}
-
-/** Parses a Judge verdict. Any failed check fails, whatever `pass` says. */
-function parseJudge(raw: unknown): JudgeResult {
-  const row = record(raw);
-  if (typeof row.pass !== "boolean" || !Array.isArray(row.failedChecks) || !Array.isArray(row.reasons) ||
-      row.failedChecks.some((check) => !(BLUEPRINT_JUDGE_CHECKS as readonly unknown[]).includes(check)) ||
-      row.reasons.some((reason) => typeof reason !== "string")) throw new ModelError("invalid_output");
-  const failedChecks = [...new Set(row.failedChecks as string[])];
-  return { pass: row.pass && failedChecks.length === 0, failedChecks, reasons: row.reasons as string[] };
 }
 
 /** The Starting Level as both roles see it: evidenced capabilities in place, the rest in the remaining gap. */
@@ -226,8 +206,8 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
         systemPrompt: JUDGE_PROMPT,
         input: { subject: input.subject, learningGoal: input.learningGoal, ...startingLevel, blueprint },
         schemaName: "course_blueprint_review",
-        schema: JUDGE_SCHEMA,
-        parse: parseJudge,
+        schema: judgeSchema(BLUEPRINT_JUDGE_CHECKS),
+        parse: judgeParser(BLUEPRINT_JUDGE_CHECKS),
         authorModelId: generator.modelId,
       });
       if (!verdict.pass) throw new BlueprintFailedError([], verdict);

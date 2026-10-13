@@ -32,7 +32,7 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
       modelId: config.generatorModel,
       /** Sends structured authoring work through the shared transport. */
       generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
-        return transport.complete(config.generatorModel, request, undefined, config.generatorProviderOrder);
+        return transport.complete(config.generatorModel, request, config.generatorProviderOrder);
       },
     },
     judge: {
@@ -42,7 +42,7 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
         if (!request.authorModelId.trim() || request.authorModelId.trim() === config.judgeModel.trim()) {
           throw new Error("[model-ports: judge] Judge must use a different model from the author");
         }
-        return transport.complete(config.judgeModel, request, "none");
+        return transport.complete(config.judgeModel, request);
       },
     },
   };

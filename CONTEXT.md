@@ -262,6 +262,10 @@ _Avoid_: Blocklist, blacklist
 The app-owned rules that apply the Preference list and Denylist to Source packs after retrieval: drop denylisted hosts, rank preferred hosts first, and record what was dropped and why. Research adapters do not repeat it and do not pass it to vendors as domain filters.
 _Avoid_: boost_domains, source_policy, vendor filter (when meaning our rules)
 
+**Source vetting**:
+The per-Lesson check, by a model that does not write the Lesson, that drops retrieved Sources a careful teacher would not cite (shops, marketing pages, commercial blogs, content farms) before the Generator sees them. Preferred hosts are never vetted out. It complements Host policy, which only applies fixed lists.
+_Avoid_: Host policy (when meaning this model check), Denylist, Judge check (this runs before writing, not on the Lesson)
+
 **Excerpt**:
 A passage of a Source's text, held in a Source pack under its Source ID, that a generated claim must be checked against. Vendor-returned excerpts are labelled as vendor excerpts; they are not yet verified page text and do not count as a quote.
 _Avoid_: snippet (when meaning our stored evidence), quote (unless verified page text), summary

@@ -9,6 +9,8 @@ export type StructuredRequest<T> = {
   timeoutMs?: number;
   /** Hard cap on hidden reasoning tokens; omitted means the model default. Effort hints proved unreliable. */
   reasoningMaxTokens?: number;
+  /** Reasoning effort for this call; overrides any token cap. Omitted with no cap means the model default. */
+  reasoningEffort?: ReasoningEffort;
 };
 
 /** OpenRouter reasoning effort levels. */
@@ -17,7 +19,7 @@ export type ReasoningEffort = "none" | "low" | "medium" | "high";
 /** The one transport used by both domain model roles. */
 export interface StructuredTransport {
   /** Generates and validates one non-streaming response, with no search or retries. */
-  complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: ReasoningEffort, providerOrder?: string[]): Promise<T>;
+  complete<T>(modelId: string, request: StructuredRequest<T>, providerOrder?: string[]): Promise<T>;
 }
 
 /** Injects fetch and credentials without introducing a vendor SDK. */
@@ -87,8 +89,8 @@ function responseContent(raw: unknown): string {
 export function createOpenRouterTransport(options: OpenRouterOptions = {}): StructuredTransport {
   return {
     /** Sends a single strict structured call and rejects any unvalidated model output. */
-    async complete<T>(modelId: string, request: StructuredRequest<T>, reasoningEffort?: ReasoningEffort, providerOrder?: string[]): Promise<T> {
-      const reasoning = reasoningEffort ? { effort: reasoningEffort }
+    async complete<T>(modelId: string, request: StructuredRequest<T>, providerOrder?: string[]): Promise<T> {
+      const reasoning = request.reasoningEffort ? { effort: request.reasoningEffort }
         : request.reasoningMaxTokens ? { max_tokens: request.reasoningMaxTokens } : undefined;
       const apiKey = (options.apiKey ?? process.env.OPENROUTER_API_KEY)?.trim();
       if (!apiKey) throw new ModelError("configuration");

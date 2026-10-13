@@ -7,7 +7,7 @@ import type { Database } from "@senoy/db";
 type Row = Record<string, unknown>;
 
 /**
- * In-memory stand-in for the Drizzle calls routes make: insert/returning, select/where/orderBy (newest first only)/limit,
+ * In-memory stand-in for the Drizzle calls routes make: insert (awaited or with returning), select/where/orderBy (newest first only)/limit,
  * and conditional update/returning. Evaluates only equality and `is null` predicates.
  * @param tables - Tables the routes under test touch
  */
@@ -59,14 +59,19 @@ export function fakeDb(tables: PgTable[]) {
 
   const db = {
     insert: (table: PgTable) => ({
-      values: (values: Row) => ({
-        returning: async (fields?: Record<string, PgColumn>) => {
+      values: (values: Row) => {
+        /** Stores the row with database defaults. */
+        function insert() {
           const row = withDefaults(table, values);
           rows.get(table)!.push(row);
           inserts.push({ table, values });
-          return [project(table, row, fields)];
-        },
-      }),
+          return row;
+        }
+        return {
+          returning: async (fields?: Record<string, PgColumn>) => [project(table, insert(), fields)],
+          then: (resolve: (value: unknown) => unknown) => resolve((insert(), undefined)),
+        };
+      },
     }),
     select: (fields?: Record<string, PgColumn>) => ({
       from: (table: PgTable) => ({
