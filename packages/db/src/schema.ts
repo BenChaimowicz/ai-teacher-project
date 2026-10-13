@@ -1,8 +1,10 @@
 import { sql } from "drizzle-orm";
 import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
+import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
 import type { CourseRequestStatus, ValidityClarification, ValidityResult } from "./course-request.ts";
 import type { QuizAnswers, QuizAttemptStatus } from "./quiz.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
+import type { SequenceMode } from "./sequence-mode.ts";
 import type { FeedbackTiming, TeachingProfileAnswers } from "./teaching-profile.ts";
 
 /** One person taking Courses. The prototype seeds a single row. Teaching Profile lives here. */
@@ -61,6 +63,27 @@ export const startingLevelDiagnostics = pgTable(
   },
   (table) => [index("starting_level_diagnostics_request").on(table.courseRequestId)],
 );
+
+/**
+ * The Course Blueprint for one Course Request: the current draft, its system checks, and the last approved snapshot.
+ * `sequenceMode` is the Learner's pick during review, kept so closing and returning preserves it.
+ */
+export const courseBlueprints = pgTable("course_blueprints", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  courseRequestId: uuid("course_request_id")
+    .notNull()
+    .unique()
+    .references(() => courseRequests.id),
+  learnerId: uuid("learner_id")
+    .notNull()
+    .references(() => learners.id),
+  draft: jsonb("draft").$type<CourseBlueprint>().notNull(),
+  judge: jsonb("judge").$type<JudgeResult>().notNull(),
+  sequenceMode: text("sequence_mode").$type<SequenceMode>().notNull().default("linear"),
+  approved: jsonb("approved").$type<ApprovedBlueprint>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+});
 
 /** Published Course snapshot owned by a Learner. Progress is not stored here. */
 export const publishedCourses = pgTable("published_courses", {

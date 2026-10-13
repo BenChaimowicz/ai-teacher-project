@@ -8,6 +8,8 @@ import { healthRoutes } from "./routes/health.ts";
 import { courseRequestRoutes } from "./routes/course-requests.ts";
 import { startingLevelRoutes } from "./routes/starting-level.ts";
 import { createFixtureDiagnosticBuilder } from "./lib/diagnostic-fixture.ts";
+import { blueprintRoutes } from "./routes/blueprint.ts";
+import { createFixtureBlueprintBuilder } from "./lib/blueprint-fixture.ts";
 import { libraryRoutes } from "./routes/library.ts";
 import { mediaRoutes } from "./routes/media.ts";
 import { studyRoutes } from "./routes/study.ts";
@@ -28,8 +30,12 @@ async function start() {
     await app.register(libraryRoutes);
     await app.register(courseRequestRoutes);
     // Browser tests run without provider calls; never set DIAGNOSTIC_FIXTURE in a deployed service.
+    const fixtures = process.env.DIAGNOSTIC_FIXTURE === "1";
     await app.register(startingLevelRoutes, {
-      diagnosticBuilder: process.env.DIAGNOSTIC_FIXTURE === "1" ? createFixtureDiagnosticBuilder() : undefined,
+      diagnosticBuilder: fixtures ? createFixtureDiagnosticBuilder() : undefined,
+    });
+    await app.register(blueprintRoutes, {
+      blueprintBuilder: fixtures ? createFixtureBlueprintBuilder() : undefined,
     });
     await app.register(studyRoutes);
     await app.register(teachingProfileRoutes);

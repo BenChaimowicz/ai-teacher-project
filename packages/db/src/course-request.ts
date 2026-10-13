@@ -13,7 +13,10 @@ export type ValidityClarification = {
   answer: string;
 };
 
-/** Every Course Request status. Statuses after `validity_passed` belong to the Starting Level diagnostic. */
+/**
+ * Every Course Request status. `assessment_*` through `starting_level_confirmed` belong to the Starting Level diagnostic;
+ * `blueprint_*` to the Course Blueprint; `generating` starts after Approve.
+ */
 export type CourseRequestStatus =
   | "draft"
   | "awaiting_validity"
@@ -23,7 +26,10 @@ export type CourseRequestStatus =
   | "assessment_preparing"
   | "assessment_ready"
   | "awaiting_gap_confirmation"
-  | "starting_level_confirmed";
+  | "starting_level_confirmed"
+  | "blueprint_preparing"
+  | "blueprint_review"
+  | "generating";
 
 /** Learner-facing unpublished Request; ownership is never exposed or accepted. */
 export type CourseRequestRecord = {

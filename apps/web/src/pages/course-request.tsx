@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button.tsx";
+import { BLUEPRINT_STATUSES, CourseBlueprintReview } from "@/components/course-blueprint-review.tsx";
 import { DIAGNOSTIC_STATUSES, StartingLevelDiagnostic } from "@/components/starting-level-diagnostic.tsx";
 import { courseRequestStatusLabel, type CourseRequestRecord } from "@/lib/course-request-types.ts";
 
@@ -135,6 +136,7 @@ export function CourseRequestPage() {
           ) : null}
           {visibleRecord.status === "rejected" ? <div className="mt-6">{visibleRecord.validity?.safeReframe ? <><h2 className="font-medium">Safe reframe</h2><p className="mt-2 mb-4 whitespace-pre-wrap break-words text-sm">{visibleRecord.validity.safeReframe}</p></> : null}<p className="mb-4 text-sm text-muted-foreground">Revise the learning outcome in a new draft. The original decision stays unchanged.</p><Button type="button" disabled={busy} onClick={() => void act("revise")}>{busy ? "Creating draft…" : "Revise request"}</Button></div> : null}
           {DIAGNOSTIC_STATUSES.has(visibleRecord.status) ? <StartingLevelDiagnostic record={visibleRecord} onRecord={setRecord} /> : null}
+          {BLUEPRINT_STATUSES.has(visibleRecord.status) ? <CourseBlueprintReview record={visibleRecord} onRecord={setRecord} /> : null}
         </div>
       ) : null}
       <Button asChild variant="outline" className="mt-6"><Link to="/">Back to Home</Link></Button>

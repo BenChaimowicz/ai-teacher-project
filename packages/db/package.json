@@ -10,7 +10,8 @@
     "./sequence-mode": "./src/sequence-mode.ts",
     "./seed-fixture": "./src/seed-fixture.ts",
     "./course-request": "./src/course-request.ts",
-    "./starting-level": "./src/starting-level.ts"
+    "./starting-level": "./src/starting-level.ts",
+    "./blueprint": "./src/blueprint.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",

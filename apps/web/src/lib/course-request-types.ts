@@ -1,3 +1,5 @@
+import type { LearnerBlueprint } from "@senoy/db/blueprint";
+import type { SequenceMode } from "@senoy/db/sequence-mode";
 import type { Extremity, GapConfirmation, LearnerDiagnosticItem } from "@senoy/db/starting-level";
 
 /** Saved, unpublished Course Request returned by the API. */
@@ -16,6 +18,13 @@ export type DiagnosticView = {
   confirmation: GapConfirmation | null;
 };
 
+/** What Learner review sees of a Course Blueprint: titles and Lesson goals, and the Sequence mode pick. */
+export type BlueprintView = {
+  blueprint: LearnerBlueprint;
+  sequenceMode: SequenceMode;
+  approved: boolean;
+};
+
 /** Displays stored Request statuses without exposing underscore-separated identifiers. */
 export function courseRequestStatusLabel(status: string): string {
   switch (status) {
@@ -28,6 +37,9 @@ export function courseRequestStatusLabel(status: string): string {
     case "assessment_ready": return "Starting Level check";
     case "awaiting_gap_confirmation": return "Confirm where your Course starts";
     case "starting_level_confirmed": return "Starting point confirmed";
+    case "blueprint_preparing": return "Designing your Course Blueprint";
+    case "blueprint_review": return "Review your Course Blueprint";
+    case "generating": return "Generating your Course";
     default: return status.replaceAll("_", " ");
   }
 }
