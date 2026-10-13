@@ -40,7 +40,17 @@ pnpm check:course-requests:live
 
 This opt-in check creates temporary Learners inside a transaction and rolls back all writes. It does not change the seeded Learner or existing Courses.
 
-Course Requests can be saved with a subject and Learning Goal, then reopened from Home or Open items. **Check request** runs validity before Assessment, without research search. The outcome passes, asks one targeted clarification, or rejects with a reason and safe reframe. **Revise request** creates an editable new draft; the rejected original stays in history. Provider errors leave the Request unchanged. Assessment and generation remain follow-on work (SEN-41 onward).
+Course Requests can be saved with a subject and Learning Goal, then reopened from Home or Open items. **Check request** runs validity before Assessment, without research search. The outcome passes, asks one targeted clarification, or rejects with a reason and safe reframe. **Revise request** creates an editable new draft; the rejected original stays in history. Provider errors leave the Request unchanged.
+
+Once the Starting Level is confirmed, **Design my Course Blueprint** designs one Reading followed by one Quiz for the remaining gap, runs the Code checks and an independent Judge, and shows the Learner titles and Lesson goals with a Sequence mode choice. Closing and returning keeps the review. **Approve** stores the approved snapshot and moves the Request to generating; Lesson generation is follow-on work (SEN-43 onward).
+
+To design one real Blueprint against OpenRouter and the configured Supabase database (after `pnpm db:migrate`):
+
+```bash
+pnpm check:blueprint:live
+```
+
+This opt-in check makes billable author and Judge calls, prints the Blueprint, and rolls back every temporary record.
 
 To exercise real validity decisions against OpenRouter and the configured Supabase database:
 
