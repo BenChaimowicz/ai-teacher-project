@@ -117,7 +117,7 @@ test("The author is never its own Judge", async () => {
   assert.equal(calls.length, 0);
 });
 
-test("Author and Judge share one OpenRouter transport; the Judge runs on a different model", async () => {
+test("Author and Judge share one OpenRouter transport; the Judge runs at high effort on a different model", async () => {
   const sent: { modelId: string; schemaName: string; effort: string | undefined }[] = [];
   const transport: StructuredTransport = {
     async complete<T>(modelId: string, request: StructuredRequest<T>): Promise<T> {
@@ -129,6 +129,6 @@ test("Author and Judge share one OpenRouter transport; the Judge runs on a diffe
   await createBlueprintBuilder(createModelPorts({ config, transport })).build(INPUT);
   assert.deepEqual(sent, [
     { modelId: config.generatorModel, schemaName: "course_blueprint", effort: undefined },
-    { modelId: config.judgeModel, schemaName: "course_blueprint_review", effort: undefined },
+    { modelId: config.judgeModel, schemaName: "course_blueprint_review", effort: "high" },
   ]);
 });
