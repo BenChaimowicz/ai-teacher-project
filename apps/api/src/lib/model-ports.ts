@@ -23,6 +23,9 @@ export type ModelPortsOptions = {
   transport?: StructuredTransport;
 };
 
+/** Every Judge call reasons at high effort unless the request sets its own (ADR 0010). */
+const JUDGE_REASONING_EFFORT = "high" as const;
+
 /** Creates two small domain ports backed by one transport, without making provider calls. */
 export function createModelPorts(options: ModelPortsOptions = {}): { generator: Generator; judge: Judge } {
   const config = options.config ?? loadModelConfig();
@@ -42,7 +45,7 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
         if (!request.authorModelId.trim() || request.authorModelId.trim() === config.judgeModel.trim()) {
           throw new Error("[model-ports: judge] Judge must use a different model from the author");
         }
-        return transport.complete(config.judgeModel, request);
+        return transport.complete(config.judgeModel, { ...request, reasoningEffort: request.reasoningEffort ?? JUDGE_REASONING_EFFORT });
       },
     },
   };

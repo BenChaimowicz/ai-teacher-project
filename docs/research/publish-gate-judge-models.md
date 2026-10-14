@@ -1,6 +1,6 @@
 # Publish-gate Judge models
 
-**Amendment 2026-10-13:** Judges no longer pin `reasoning.effort: "none"`. The cost and latency estimates below assume it, so reasoning Judges cost and take more (ADR 0010).
+**Amendment 2026-10-13:** Judges run at `reasoning.effort: "high"`, not `"none"`. The cost and latency estimates below assume `"none"`, so real Judge calls cost and take more (ADR 0010).
 
 **Date:** 2026-09-04
 
