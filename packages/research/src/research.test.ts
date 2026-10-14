@@ -139,7 +139,9 @@ test("Empty packs say why: vendor found nothing vs Host policy dropped everythin
 test("A timed-out or failing call yields its own pack without the key; the other pack is unaffected", async () => {
   const [p, s] = await runResearch(TOPIC, {
     primary: fakeAdapter("parallel-pro", "PARALLEL_PRO_API_KEY", (signal) => new Promise((_, reject) => {
-      signal.addEventListener("abort", () => reject(signal.reason));
+      // AbortSignal.timeout does not hold the event loop open; a real request would, so this timer stands in for it.
+      const pending = setTimeout(() => {}, 10_000);
+      signal.addEventListener("abort", () => { clearTimeout(pending); reject(signal.reason); });
     })),
     secondary: fakeAdapter("you-research", "YOU_DOT_COM_API_KEY", async (_signal, apiKey) => {
       throw new Error(`401 for key ${apiKey}`);

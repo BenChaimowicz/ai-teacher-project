@@ -332,6 +332,8 @@ Preference list and Denylist are host policy in the app, not a vendor-specific `
 
 **Denylist:** junk hosts, content farms, social scrapes, quiz mills, Pinterest, unlicensed tab mills. Post-filter in app even if a vendor misses. Do not denylist YouTube solely to hide it; treat it as cite-the-URL, do-not-scrape.
 
+**Source vetting.** A Denylist cannot name every shop. Before the Generator writes, the Judge model vets each non-preferred Source and drops shop, product and marketing pages, commercial blogs, and content farms. The Generator never sees a vetted-out Source, so citing one is a Citation to an unknown ID. Vetted-out Sources and reasons are stored with the Lesson checkpoint. The reading Judge still fails `unreliable_source` as a backstop.
+
 Give every retrieved excerpt a stable source ID. Pass those excerpts to the Generator. Require source IDs in the generated Lesson. Reject citations to unknown IDs.
 
 Persist with each Lesson:
@@ -457,7 +459,7 @@ Pairing: author `deepseek/deepseek-v4-pro` or `openai/gpt-6.1-sol` → judge `op
 
 Independence is different **model ID**, not different vendor. IDs live in config behind a thin Judge port, not on Lesson records.
 
-Call shape: shared OpenRouter Chat Completions transport; strict `json_schema`; Judge `reasoning.effort: "none"`; no search tools; our source-ID excerpts. The application persists finalized artifacts, not model token streams. Vision is a **separate** Luna request with attached images (`image_url`, `detail: "high"`) so a media miss spends the one vision repair, not a Lesson regeneration. For a loop, pass a still frame. Binary JSON only:
+Call shape: shared OpenRouter Chat Completions transport; strict `json_schema`; no search tools; our source-ID excerpts. The application persists finalized artifacts, not model token streams. Vision is a **separate** Luna request with attached images (`image_url`, `detail: "high"`) so a media miss spends the one vision repair, not a Lesson regeneration. For a loop, pass a still frame. Binary JSON only:
 
 ```ts
 type JudgeResult = {

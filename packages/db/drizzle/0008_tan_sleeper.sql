@@ -1,0 +1,1 @@
+ALTER TABLE "unpublished_lessons" ADD COLUMN "rejected_sources" jsonb DEFAULT '[]'::jsonb NOT NULL;

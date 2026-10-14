@@ -36,6 +36,8 @@ async function start() {
     });
     await app.register(blueprintRoutes, {
       blueprintBuilder: fixtures ? createFixtureBlueprintBuilder() : undefined,
+      // Browser tests stop at the generating screen; no research or Lesson generation runs.
+      courseGeneration: fixtures ? { async start() {} } : undefined,
     });
     await app.register(studyRoutes);
     await app.register(teachingProfileRoutes);

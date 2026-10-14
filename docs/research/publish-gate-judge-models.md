@@ -1,5 +1,7 @@
 # Publish-gate Judge models
 
+**Amendment 2026-10-13:** Judges no longer pin `reasoning.effort: "none"`. The cost and latency estimates below assume it, so reasoning Judges cost and take more (ADR 0010).
+
 **Date:** 2026-09-04
 
 Which models should run the Publish-gate **Judge** checks, given that the authoring model and the judging model must be different? Name a default Judge (and a fallback) for factual-claim grounding against retrieved excerpts, Blueprint / Lesson objective coverage, Quiz alignment, Course coherence, and the Demonstrative-media vision pass. What is the pairing rule when the DeepSeek fallback adapter wrote the Lesson? Cover cost, latency, independence from the Generator, and whether one Judge model covers text and vision or they split. Locked constraints: TypeScript full-stack; DeepSeek `deepseek-v4-pro` (OpenAI-compatible Chat Completions) is the leading Generator; OpenAI `gpt-5.6-terra` (official `openai` SDK, Responses API) is the fallback adapter ([Provider bakeoff: OpenAI vs DeepSeek](https://linear.app/senoy/issue/SEN-20/provider-bakeoff-openai-vs-deepseek)); Claude is not a Generator fallback; this ticket picks Judges; You.com is the only search layer; Judges ground on *our* retrieved excerpts with stable source IDs, not vendor `web_search`; Quality bar (SEN-16) is hybrid binary Publish gates — Code checks in-process, Judge checks pass/fail (no 0–100), authoring model must not judge its own artifact; two regenerations per slot then terminal; Judge-check lists for Blueprint / reading Lesson / Quiz / whole-Course are already locked; generated Demonstrative media (SEN-28) currently described a cheap Anthropic vision-check — this ticket may confirm or replace it; never generate photomicrographs; vision must not classify Gram species from a generated stain; team standing preference is disdain for Anthropic Sonnet/Opus as default Judges (wasteful long-run); same vendor + different SKU satisfies independence; Judge outputs are strict structured JSON; model IDs live in config, not on Lesson records; a thin Judge port analogous to Generator.
@@ -25,7 +27,7 @@ The independence bar is **different model ID**, not different vendor. Zheng et a
 
 Vision-check: **same luna model, separate call** from the reading-Lesson text Judge, with the still (or a still frame of a loop) as `input_image` at `detail: "high"`. Checklist is caption/alt binary items (finger count, named stain colors, no logos, not a photomicrograph-looking generated field, not a named-work copy). Do **not** ask the VLM to ID Gram species from a generated stain ([Future Microbiology, 2024](https://doi.org/10.1080/17460913.2024.2381967)). Merging vision into the text Judge would fail the whole Lesson and spend a Lesson regeneration on a bad grip photo; SEN-28 kept one media repair inside generate. This **replaces** the SEN-28 placeholder that pinned Anthropic Messages image input on `claude-sonnet-5`.
 
-Call settings for Judges: Responses API, `store: false`, `reasoning.effort: "none"` (OpenAI lists classification as a `none` use case; default `medium` bills hidden reasoning tokens as output). Do not enable `web_search`. Schema: `{ pass: boolean, failedChecks: string[], reasons: string[] }` — binary, not a score.
+Call settings for Judges: Responses API, `store: false`. Do not enable `web_search`. Schema: `{ pass: boolean, failedChecks: string[], reasons: string[] }` — binary, not a score.
 
 Residual quality risk: luna is the GPT-5.6 “nano” tier. If Test-course protocol finds missed factual errors after publish, bump Judge SKU in config (`luna` → `terra`) without changing the pairing rule — never to the model that authored the Lesson. That is config, not a new ticket.
 
@@ -42,7 +44,7 @@ Residual quality risk: luna is the GPT-5.6 “nano” tier. If Test-course proto
 
 ### 2.1 Decision text for the Linear resolution comment
 
-> Resolve with a single default Judge model: OpenAI `gpt-5.6-luna` via the Responses API (`text.format` json_schema strict, `reasoning.effort: "none"`, no web_search). Same model for Blueprint coverage, reading-Lesson claim/coverage/coherence, Quiz alignment, whole-Course coherence, and Demonstrative-media vision. Vision is a **separate luna call** (`input_image`, `detail: "high"`, caption/alt checklist — not Gram-species ID) so the one media repair does not draw on the Lesson repair budget. Fallback if luna is down, schema-fails, or would equal the author: `gpt-5.6-terra` (not Sol — Sol is the leading Generator). Pairing: author `gpt-5.6-sol` or `deepseek-v4-pro` → judge `gpt-5.6-luna`; if Judge ID equals Author ID, bump to `gpt-5.6-terra`. Do not default to Claude Sonnet/Opus/Haiku. Model IDs live in config behind a thin Judge port. Binary pass/fail JSON only. If Test-course protocol finds missed factual errors, bump Judge SKU in config (luna → terra) without changing the pairing rule.
+> Resolve with a single default Judge model: OpenAI `gpt-5.6-luna` via the Responses API (`text.format` json_schema strict, no web_search). Same model for Blueprint coverage, reading-Lesson claim/coverage/coherence, Quiz alignment, whole-Course coherence, and Demonstrative-media vision. Vision is a **separate luna call** (`input_image`, `detail: "high"`, caption/alt checklist — not Gram-species ID) so the one media repair does not draw on the Lesson repair budget. Fallback if luna is down, schema-fails, or would equal the author: `gpt-5.6-terra` (not Sol — Sol is the leading Generator). Pairing: author `gpt-5.6-sol` or `deepseek-v4-pro` → judge `gpt-5.6-luna`; if Judge ID equals Author ID, bump to `gpt-5.6-terra`. Do not default to Claude Sonnet/Opus/Haiku. Model IDs live in config behind a thin Judge port. Binary pass/fail JSON only. If Test-course protocol finds missed factual errors, bump Judge SKU in config (luna → terra) without changing the pairing rule.
 
 The quote above is the original SEN-29 resolution. After [Provider bakeoff: OpenAI vs DeepSeek](https://linear.app/senoy/issue/SEN-20/provider-bakeoff-openai-vs-deepseek), authors are DeepSeek or Terra; Luna still judges; Terra-as-Judge only when Terra did not write.
 
@@ -127,7 +129,7 @@ Two regenerations per slot then terminal (locked). A Judge **fail** consumes a r
 
 ## 7. Cost and latency ballpark (one Course)
 
-**Assumptions (explicit).** ~16 reading Lessons + 4 Quizzes + 1 Blueprint + 1 whole-Course Judge. Reading Judge prompt ≈ 15k input (body + excerpts + objectives + prior titles/goals) and 0.8k structured JSON out. Quiz Judge ≈ 25k in (assessed Lesson bodies) / 1k out. Blueprint ≈ 8k / 0.8k. Whole-Course ≈ 12k / 1k (titles, goals, objectives, short commitments — not a re-judge of every Lesson). Vision on **8** media slots: 1229 image tokens + 2k text in / 0.5k out each, `detail: "high"`. `reasoning.effort: "none"` so output is roughly the JSON, not hidden reasoning. No web_search. Short-context list prices. Claude 4.7+ tokenizer ≈ **30% more tokens for the same text** ([Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing)); apply that to Sonnet 5 / Opus 5 only. Haiku 4.5 predates that tokenizer.
+**Assumptions (explicit).** ~16 reading Lessons + 4 Quizzes + 1 Blueprint + 1 whole-Course Judge. Reading Judge prompt ≈ 15k input (body + excerpts + objectives + prior titles/goals) and 0.8k structured JSON out. Quiz Judge ≈ 25k in (assessed Lesson bodies) / 1k out. Blueprint ≈ 8k / 0.8k. Whole-Course ≈ 12k / 1k (titles, goals, objectives, short commitments — not a re-judge of every Lesson). Vision on **8** media slots: 1229 image tokens + 2k text in / 0.5k out each, `detail: "high"`. Estimated at `reasoning.effort: "none"`, so output is roughly the JSON, not hidden reasoning. No web_search. Short-context list prices. Claude 4.7+ tokenizer ≈ **30% more tokens for the same text** ([Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing)); apply that to Sonnet 5 / Opus 5 only. Haiku 4.5 predates that tokenizer.
 
 | SKU | In + image (k) | Out (k) | List $ / Course | vs luna |
 | --- | --- | --- | --- | --- |
@@ -138,7 +140,7 @@ Two regenerations per slot then terminal (locked). A Judge **fail** consumes a r
 | `claude-opus-5` | ~502 | ~30 | **~$3.26** | ~30× |
 | `claude-haiku-4-5` | ~386 | ~23 | ~$0.51 | ~5× |
 
-Token sums: reading 16×15k = 240k in, 12.8k out; quizzes 100k in, 4k out; Blueprint 8k / 0.8k; Course 12k / 1k; vision text 16k / 4k; vision images ~10k. If every slot spends both regenerations, multiply Judge spend by up to ~3× — luna still **well under $1** per Course. Medium reasoning effort could add hundreds to tens of thousands of **billed output** tokens per call ([reasoning guide](https://developers.openai.com/api/docs/guides/reasoning)); that is why Judges pin `none`.
+Token sums: reading 16×15k = 240k in, 12.8k out; quizzes 100k in, 4k out; Blueprint 8k / 0.8k; Course 12k / 1k; vision text 16k / 4k; vision images ~10k. If every slot spends both regenerations, multiply Judge spend by up to ~3× — luna still **well under $1** per Course. Reasoning effort adds hundreds to tens of thousands of **billed output** tokens per call ([reasoning guide](https://developers.openai.com/api/docs/guides/reasoning)); these figures assume `none` and undercount Judges that reason.
 
 **Why Sonnet/Opus are wasteful here.** A Publish-gate Judge is a binary checklist with the evidence already in the prompt. You are not buying agentic coding, 1M-context adaptive thinking, or OpenAI’s “start with astra” preference-ranking judge. You are buying json_schema adherence + instruction following, ~25 times per Course, forever. Sonnet 5 at $2/$10 is the **same input price as terra** with **more** tokens per word; Opus 5 is a research-lab luxury SKU for a pass/fail. Haiku is the only Anthropic SKU in the “cheap” neighborhood, and it is still 5× luna without being uniquely capable (§8).
 
@@ -220,7 +222,7 @@ type JudgePort = {
 };
 ```
 
-**Call shape (adapter-internal).** `openai.responses.create({ model, input, text: { format: { type: "json_schema", strict: true, name: "judge_verdict", schema } }, reasoning: { effort: "none" }, store: false, max_output_tokens: 2048 })`. Attach `input_image` only for media vision. Zod in the official SDK may build the schema; still validate `failedChecks` ⊆ requested checks in-process (Code check).
+**Call shape (adapter-internal).** `openai.responses.create({ model, input, text: { format: { type: "json_schema", strict: true, name: "judge_verdict", schema } }, store: false, max_output_tokens: 2048 })`. Attach `input_image` only for media vision. Zod in the official SDK may build the schema; still validate `failedChecks` ⊆ requested checks in-process (Code check).
 
 **Grounding.** System+user text includes numbered excerpts `{ sourceId, url, quotedText }`. Instruct: fail `lesson_claim_grounding` if a factual claim has no supporting excerpt; never invent a URL; never call tools. Drop any model-emitted URL not in the retrieval set (existing Source-trust rule).
 
@@ -241,7 +243,6 @@ OpenAI vision docs: account for model limitations; `high`/`original` when spatia
 ## 12. Risks the spec should carry
 
 - **Luna weaker than terra/sol on hard unsupported claims.** Residual. Mitigation: Test-course protocol; config bump luna → terra; keep pairing rule.
-- **`reasoning.effort` default is `medium`.** Forgetting to set `none` silently multiplies output cost. Pin it in the adapter.
 - **`detail: "auto"` on GPT-5.6 is original-sized**, not a cheap default. Pin `high`.
 - **Animated WebP / loops.** Pass a still frame; do not assume animated WEBP is a legal vision input.
 - **Structured-output refusals.** Safety refusals may not match the schema; Responses includes a `refusal` field — treat as Judge-call error → retry/fallback, not a Lesson pass.

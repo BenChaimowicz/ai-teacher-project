@@ -2,7 +2,9 @@ import { sql } from "drizzle-orm";
 import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
 import type { CourseRequestStatus, ValidityClarification, ValidityResult } from "./course-request.ts";
+import type { LessonSource } from "./lesson-checkpoint.ts";
 import type { QuizAnswers, QuizAttemptStatus } from "./quiz.ts";
+import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
 import type { SequenceMode } from "./sequence-mode.ts";
 import type { FeedbackTiming, TeachingProfileAnswers } from "./teaching-profile.ts";
@@ -84,6 +86,38 @@ export const courseBlueprints = pgTable("course_blueprints", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
 });
+
+/**
+ * A finalized, unpublished Lesson checkpoint for one approved Blueprint slot (spec §5.1). Study and reuse read only
+ * published tables, so a checkpoint is not playable or reusable until the Course publishes atomically.
+ * `sourcePacks` is the Lesson's retrieval set as research returned it; the Code and Judge checks ran against it (ADR 0009).
+ */
+export const unpublishedLessons = pgTable(
+  "unpublished_lessons",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    courseRequestId: uuid("course_request_id")
+      .notNull()
+      .references(() => courseRequests.id),
+    slotId: text("slot_id").notNull(),
+    position: integer("position").notNull(),
+    teachingMethod: text("teaching_method").notNull(),
+    title: text("title").notNull(),
+    lessonGoal: text("lesson_goal").notNull(),
+    objectives: jsonb("objectives").$type<string[]>().notNull(),
+    topicTags: jsonb("topic_tags").$type<string[]>().notNull(),
+    lineage: jsonb("lineage"),
+    sources: jsonb("sources").$type<LessonSource[]>().notNull(),
+    citations: jsonb("citations").$type<NumberedSource[]>().notNull(),
+    body: jsonb("body").$type<ReadingBody>().notNull(),
+    sourcePacks: jsonb("source_packs").$type<unknown[]>().notNull(),
+    /** Retrieved Sources the Judge model vetted out before writing, with reasons. */
+    rejectedSources: jsonb("rejected_sources").$type<{ sourceId: string; url: string; reason: string }[]>().notNull().default([]),
+    judge: jsonb("judge").$type<JudgeResult>().notNull(),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique("unpublished_lessons_request_slot").on(table.courseRequestId, table.slotId)],
+);
 
 /** Published Course snapshot owned by a Learner. Progress is not stored here. */
 export const publishedCourses = pgTable("published_courses", {

@@ -11,7 +11,8 @@
     "./seed-fixture": "./src/seed-fixture.ts",
     "./course-request": "./src/course-request.ts",
     "./starting-level": "./src/starting-level.ts",
-    "./blueprint": "./src/blueprint.ts"
+    "./blueprint": "./src/blueprint.ts",
+    "./lesson-checkpoint": "./src/lesson-checkpoint.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",
