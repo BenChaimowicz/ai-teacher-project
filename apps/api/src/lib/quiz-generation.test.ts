@@ -1,0 +1,216 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import type { BlueprintSlot } from "@senoy/db/blueprint";
+import { parseQuizBody } from "@senoy/db/quiz";
+import type { Generator, Judge, StructuredRequest } from "./model-ports.ts";
+import { createQuizGenerator, QuizFailedError, type AssessedLesson, type QuizInput } from "./quiz-generation.ts";
+
+const READING_SLOT: BlueprintSlot = {
+  id: "slot1", method: "reading", title: "The World Tree", lessonGoal: "Describe how Yggdrasil connects the Nine Worlds.",
+  objectives: ["Describe Yggdrasil", "Name its roots"], topicTags: ["yggdrasil", "nine-worlds"], assessesSlotIds: [],
+};
+
+const QUIZ_SLOT: BlueprintSlot = {
+  id: "slot2", method: "quiz", title: "Check: the World Tree", lessonGoal: "Recall how Yggdrasil connects the worlds.",
+  objectives: ["Describe Yggdrasil", "Name its roots"], topicTags: ["yggdrasil", "quiz"], assessesSlotIds: ["slot1"],
+};
+
+const READING: AssessedLesson = {
+  slotId: "slot1", title: READING_SLOT.title, lessonGoal: READING_SLOT.lessonGoal, objectives: READING_SLOT.objectives,
+  body: { sections: [{ heading: "The tree", blocks: [{ kind: "prose", text: "Yggdrasil is the world tree [1]. It has three roots [2][1]." }] }] },
+};
+
+const INPUT: QuizInput = {
+  courseTitle: "Norse cosmology",
+  learningGoal: "Explain the Norse picture of the world",
+  slot: QUIZ_SLOT,
+  slots: [READING_SLOT, QUIZ_SLOT],
+  assessed: [READING],
+  profile: { instructionLanguage: "en" },
+};
+
+/** One authored item for `objective`. */
+function item(n: number, objective = n % 2 ? "Describe Yggdrasil" : "Name its roots") {
+  return {
+    objective,
+    prompt: `Question ${n} about Yggdrasil?`,
+    options: [
+      { id: "opt1", text: `Right ${n}`, correct: true },
+      ...["a", "b", "c"].map((letter, index) => ({ id: `opt${index + 2}`, text: `Wrong ${n}${letter}`, correct: false })),
+    ],
+    explanations: { brief: `Brief ${n}.`, standard: `Standard ${n}.`, detailed: `Detailed ${n}.` },
+  };
+}
+
+/** An authored Quiz of `count` items. */
+function authored(count = 6, objective?: string) {
+  return { items: Array.from({ length: count }, (_, index) => item(index + 1, objective)) };
+}
+
+/** Scripted Generator: one output per call, repeating the last; records what it was shown. */
+function scriptedGenerator(...outputs: unknown[]) {
+  const calls: StructuredRequest<unknown>[] = [];
+  const generator: Generator = {
+    modelId: "fixture/author",
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
+      calls.push(request as StructuredRequest<unknown>);
+      return request.parse(outputs[Math.min(calls.length, outputs.length) - 1]);
+    },
+  };
+  return { generator, calls };
+}
+
+const PASS = { pass: true, failedChecks: [], reasons: [] };
+
+/** Scripted Judge: one verdict per call, repeating the last; records what it was shown. */
+function scriptedJudge(...verdicts: unknown[]) {
+  const calls: (StructuredRequest<unknown> & { authorModelId: string })[] = [];
+  const judge: Judge = {
+    modelId: "fixture/judge",
+    async judge<T>(request: StructuredRequest<T> & { authorModelId: string }): Promise<T> {
+      calls.push(request as StructuredRequest<unknown> & { authorModelId: string });
+      return request.parse(verdicts.length ? verdicts[Math.min(calls.length, verdicts.length) - 1] : PASS);
+    },
+  };
+  return { judge, calls };
+}
+
+test("Authored items become a Quiz body the Quiz plugin accepts, each with one key among four options", async () => {
+  const { generator } = scriptedGenerator(authored());
+  const { judge, calls } = scriptedJudge();
+  const { lesson, judge: verdict, repairs } = await createQuizGenerator({ generator, judge }).generate(INPUT);
+
+  assert.equal(verdict.pass, true);
+  assert.equal(repairs, 0);
+  assert.equal(lesson.teachingMethod, "quiz");
+  assert.equal(lesson.slotId, "slot2");
+  assert.equal(lesson.lineage, null);
+  assert.deepEqual([lesson.sources, lesson.citations], [[], []]);
+  assert.deepEqual(Object.keys(lesson.body), ["items"], "No reading sections and no media.");
+  assert.deepEqual(parseQuizBody(lesson.body), lesson.body);
+  for (const [index, quizItem] of lesson.body.items.entries()) {
+    assert.equal(quizItem.id, `item${index + 1}`);
+    assert.deepEqual(quizItem.options.map((option) => option.id), ["a", "b", "c", "d"]);
+    assert.equal(quizItem.options.find((option) => option.id === quizItem.correctOptionId)!.text, `Right ${index + 1}`);
+    assert.equal(quizItem.explanations.detailed, `Detailed ${index + 1}.`);
+  }
+  // The answer's position follows the question, not the author's habit of writing it first.
+  assert.ok(new Set(lesson.body.items.map((quizItem) => quizItem.correctOptionId)).size > 1);
+  assert.equal(calls[0]!.authorModelId, "fixture/author");
+});
+
+test("The author and Judge read the assessed Lesson without Citation markers; the Judge sees each key", async () => {
+  const { generator, calls } = scriptedGenerator(authored());
+  const { judge, calls: judgeCalls } = scriptedJudge();
+  await createQuizGenerator({ generator, judge }).generate(INPUT);
+
+  const told = calls[0]!.input as { lessons: { sections: { paragraphs: string[] }[] }[]; slot: { objectives: string[] }; profile: unknown };
+  assert.deepEqual(told.lessons[0]!.sections[0]!.paragraphs, ["Yggdrasil is the world tree. It has three roots."]);
+  assert.deepEqual(told.slot.objectives, QUIZ_SLOT.objectives);
+  assert.deepEqual(told.profile, { instructionLanguage: "en" });
+  assert.deepEqual((calls[0]!.schema as { properties: { items: { items: { properties: { objective: { enum: string[] } } } } } })
+    .properties.items.items.properties.objective.enum, QUIZ_SLOT.objectives);
+
+  const shown = judgeCalls[0]!.input as { lessons: unknown; items: { n: number; key: string; options: Record<string, string> }[] };
+  assert.deepEqual(shown.lessons, told.lessons);
+  assert.equal(shown.items.length, 6);
+  assert.equal(shown.items[0]!.options[shown.items[0]!.key], "Right 1");
+});
+
+test("A Judge failure is repaired once: the author sees its draft and the reasons", async () => {
+  const unanswerable = { pass: false, failedChecks: ["answerable_from_lessons"], reasons: ["Item 3 asks about Odin, who is not in the lessons."] };
+  const { generator, calls } = scriptedGenerator(authored(), authored(7));
+  const { judge } = scriptedJudge(unanswerable, PASS);
+  const { lesson, repairs } = await createQuizGenerator({ generator, judge }).generate(INPUT);
+
+  assert.equal(repairs, 1);
+  assert.equal(lesson.body.items.length, 7);
+  const revision = (calls[1]!.input as { revision: { previousDraft: unknown[]; problems: string[] } }).revision;
+  assert.equal(revision.previousDraft.length, 6);
+  assert.deepEqual(revision.problems, unanswerable.reasons);
+});
+
+test("Deterministic failures are repaired before the Judge runs: too few items and an untested objective", async () => {
+  const { generator, calls } = scriptedGenerator(authored(4, "Describe Yggdrasil"), authored());
+  const { judge, calls: judgeCalls } = scriptedJudge();
+  const { repairs } = await createQuizGenerator({ generator, judge }).generate(INPUT);
+
+  assert.equal(repairs, 1);
+  assert.equal(judgeCalls.length, 1, "The Judge only sees a Quiz that passed the Code checks.");
+  const { problems } = (calls[1]!.input as { revision: { problems: string[] } }).revision;
+  assert.ok(problems.includes("A Quiz has 5–10 items, not 4."), problems.join("\n"));
+  assert.ok(problems.includes('No item assesses the objective "Name its roots".'), problems.join("\n"));
+});
+
+test("Explanations mention options by id, and the mention becomes the option's text wherever it lands", async () => {
+  const draft = authored();
+  draft.items[0]!.explanations.detailed = "{opt1} is right; {opt3} confuses the roots.";
+  draft.items[1]!.explanations.brief = "{opt2} Wrong 2a is not the answer.";
+  const { generator } = scriptedGenerator(draft);
+  const { judge, calls } = scriptedJudge();
+  const { lesson } = await createQuizGenerator({ generator, judge }).generate(INPUT);
+
+  assert.equal(lesson.body.items[0]!.explanations.detailed, "“Right 1” is right; “Wrong 1b” confuses the roots.");
+  assert.equal(lesson.body.items[1]!.explanations.brief, "“Wrong 2a” is not the answer.", "Text repeated after its mention is dropped.");
+  const shown = calls[0]!.input as { items: { explanations: { detailed: string } }[] };
+  assert.equal(shown.items[0]!.explanations.detailed, "“Right 1” is right; “Wrong 1b” confuses the roots.", "The Judge reads what the Learner will.");
+});
+
+test("A mention of a missing option, or a repeated option id, fails the Code checks", async () => {
+  const draft = authored();
+  draft.items[0]!.explanations.brief = "{opt9} is wrong.";
+  draft.items[1]!.options[1]!.id = "opt1";
+  const { generator } = scriptedGenerator(draft);
+  const { judge, calls } = scriptedJudge();
+  const error = await createQuizGenerator({ generator, judge }).generate(INPUT).catch((caught: unknown) => caught);
+
+  assert.ok(error instanceof QuizFailedError);
+  assert.deepEqual(error.codeFailures, [
+    "Item 1's explanation mentions an option id the item does not have.",
+    "Item 2 gives two options the same id.",
+  ]);
+  assert.equal(calls.length, 0);
+});
+
+test("An item marking two options correct, or a placeholder option, fails the Code checks", async () => {
+  const draft = authored();
+  draft.items[0]!.options[1]!.correct = true;
+  draft.items[1]!.options[0]!.text = "option1";
+  const { generator } = scriptedGenerator(draft);
+  const { judge, calls } = scriptedJudge();
+  const error = await createQuizGenerator({ generator, judge }).generate(INPUT).catch((caught: unknown) => caught);
+
+  assert.ok(error instanceof QuizFailedError);
+  assert.deepEqual(error.codeFailures, ["Item 1 needs exactly one correct option.", "Item 2 has a placeholder instead of an option."]);
+  assert.equal(calls.length, 0);
+});
+
+test("A Quiz still failing after its repair throws with the last verdict and draft", async () => {
+  const ambiguous = { pass: false, failedChecks: ["single_correct_answer"], reasons: ["Item 2 has two right options."] };
+  const { generator } = scriptedGenerator(authored());
+  const { judge } = scriptedJudge(ambiguous);
+  const error = await createQuizGenerator({ generator, judge }).generate(INPUT).catch((caught: unknown) => caught);
+
+  assert.ok(error instanceof QuizFailedError);
+  assert.deepEqual(error.judge?.failedChecks, ["single_correct_answer"]);
+  assert.equal(error.lesson?.body.items.length, 6);
+});
+
+test("A Quiz whose assessed Reading is not checkpointed fails its Code checks without a Judge call", async () => {
+  const { generator } = scriptedGenerator(authored());
+  const { judge, calls } = scriptedJudge();
+  const error = await createQuizGenerator({ generator, judge }).generate({ ...INPUT, assessed: [] }).catch((caught: unknown) => caught);
+
+  assert.ok(error instanceof QuizFailedError);
+  assert.deepEqual(error.codeFailures, ["Assessed slot slot1 has no checkpointed Lesson."]);
+  assert.equal(calls.length, 0);
+});
+
+test("The author may not judge its own Quiz", async () => {
+  const { generator } = scriptedGenerator(authored());
+  const { judge } = scriptedJudge();
+  await assert.rejects(
+    createQuizGenerator({ generator, judge: { ...judge, modelId: "fixture/author" } }).generate(INPUT),
+    /Judge must use a different model/,
+  );
+});

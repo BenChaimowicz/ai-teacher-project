@@ -3,7 +3,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { loadRootEnv, parseTeachingProfileAnswers, resolveTeachingProfile, type BlueprintSlot } from "@senoy/db";
 import { redact, type SourcePack } from "@senoy/research";
-import { readingWriteTimeProfile } from "./course-generation.ts";
+import { readingPlugin } from "../teaching-methods/reading.ts";
+import { writeTimeProfile } from "./course-generation.ts";
 import { createModelPorts } from "./model-ports.ts";
 import { createReadingGenerator, ReadingFailedError } from "./reading-generation.ts";
 
@@ -36,7 +37,7 @@ async function checkReadingGeneration() {
     assert.ok(apiKey, "OPENROUTER_API_KEY is not set.");
     const packs = JSON.parse(await readFile(packPath, "utf8")) as SourcePack[];
     const { generator, judge } = createModelPorts();
-    const profile = readingWriteTimeProfile(resolveTeachingProfile(parseTeachingProfileAnswers({})));
+    const profile = writeTimeProfile(readingPlugin, resolveTeachingProfile(parseTeachingProfileAnswers({})));
     process.stdout.write(`Generating "${NORSE_READING_SLOT.title}" with ${generator.modelId}, judged by ${judge.modelId}…\n`);
 
     const startedAt = new Date();

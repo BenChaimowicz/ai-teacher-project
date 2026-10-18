@@ -3,7 +3,7 @@ import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, un
 import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
 import type { CourseRequestStatus, ValidityClarification, ValidityResult } from "./course-request.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
-import type { QuizAnswers, QuizAttemptStatus } from "./quiz.ts";
+import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
 import type { SequenceMode } from "./sequence-mode.ts";
@@ -109,7 +109,8 @@ export const unpublishedLessons = pgTable(
     lineage: jsonb("lineage"),
     sources: jsonb("sources").$type<LessonSource[]>().notNull(),
     citations: jsonb("citations").$type<NumberedSource[]>().notNull(),
-    body: jsonb("body").$type<ReadingBody>().notNull(),
+    body: jsonb("body").$type<ReadingBody | QuizBody>().notNull(),
+    /** The Reading's Source packs; a Quiz is generated from its assessed Lessons and has none. */
     sourcePacks: jsonb("source_packs").$type<unknown[]>().notNull(),
     /** Retrieved Sources the Judge model vetted out before writing, with reasons. */
     rejectedSources: jsonb("rejected_sources").$type<{ sourceId: string; url: string; reason: string }[]>().notNull().default([]),

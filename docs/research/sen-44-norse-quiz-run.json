@@ -1,0 +1,316 @@
+{
+  "startedAt": "2026-10-16T19:02:41.130Z",
+  "latencyMs": 221727,
+  "generatorModel": "deepseek/deepseek-v4-pro",
+  "judgeModel": "openai/gpt-6-luna",
+  "reading": "docs/research/sen-43-norse-reading-run.json",
+  "slot": {
+    "id": "slot2",
+    "method": "quiz",
+    "title": "Check: Yggdrasil and the Nine Worlds",
+    "lessonGoal": "Recall how Norse sources picture Yggdrasil connecting the Nine Worlds.",
+    "objectives": [
+      "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "Explain why accounts of Yggdrasil's roots differ between Norse sources"
+    ],
+    "topicTags": [
+      "yggdrasil",
+      "nine-worlds",
+      "quiz"
+    ],
+    "assessesSlotIds": [
+      "slot1"
+    ]
+  },
+  "profile": {
+    "instructionLanguage": "en"
+  },
+  "status": "failed",
+  "lesson": {
+    "slotId": "slot2",
+    "teachingMethod": "quiz",
+    "title": "Check: Yggdrasil and the Nine Worlds",
+    "lessonGoal": "Recall how Norse sources picture Yggdrasil connecting the Nine Worlds.",
+    "objectives": [
+      "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "Explain why accounts of Yggdrasil's roots differ between Norse sources"
+    ],
+    "topicTags": [
+      "yggdrasil",
+      "nine-worlds",
+      "quiz"
+    ],
+    "lineage": null,
+    "sources": [],
+    "citations": [],
+    "body": {
+      "items": [
+        {
+          "id": "item1",
+          "prompt": "What kind of tree is Yggdrasil in Norse cosmology?",
+          "options": [
+            {
+              "id": "a",
+              "text": "An oak"
+            },
+            {
+              "id": "b",
+              "text": "A yew"
+            },
+            {
+              "id": "c",
+              "text": "An elm"
+            },
+            {
+              "id": "d",
+              "text": "An ash"
+            }
+          ],
+          "correctOptionId": "d",
+          "explanations": {
+            "brief": "Yggdrasil is described as an ash tree in Norse cosmology.",
+            "standard": "Both the Poetic Edda and the Prose Edda refer to Yggdrasil as a great ash tree that stands at the centre of the cosmos.",
+            "detailed": "The lessons picture the cosmos around a 'vast ash tree' named Yggdrasil. “An oak” (oak), “A yew” (yew), and “An elm” (elm) do not match this description, as the source material only mentions an ash."
+          }
+        },
+        {
+          "id": "item2",
+          "prompt": "According to the Poetic Edda poem Völuspá, what falls from Yggdrasil?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Snow"
+            },
+            {
+              "id": "b",
+              "text": "Leaves"
+            },
+            {
+              "id": "c",
+              "text": "Dew"
+            },
+            {
+              "id": "d",
+              "text": "Golden apples"
+            }
+          ],
+          "correctOptionId": "c",
+          "explanations": {
+            "brief": "The poem Völuspá says dews fall from Yggdrasil.",
+            "standard": "Völuspá describes Yggdrasil as a high, ever‑green tree with white moisture from which dews fall into the valleys.",
+            "detailed": "The lesson quotes Völuspá: the tree is 'sprinkled with white moisture, from which dews fall'. “Snow” (snow), “Leaves” (leaves), and “Golden apples” (golden apples) are never mentioned as falling from Yggdrasil."
+          }
+        },
+        {
+          "id": "item3",
+          "prompt": "Where is Yggdrasil located in the Norse cosmos?",
+          "options": [
+            {
+              "id": "a",
+              "text": "In Asgard"
+            },
+            {
+              "id": "b",
+              "text": "On a mountain peak"
+            },
+            {
+              "id": "c",
+              "text": "Under the sea"
+            },
+            {
+              "id": "d",
+              "text": "At the centre"
+            }
+          ],
+          "correctOptionId": "d",
+          "explanations": {
+            "brief": "Yggdrasil stands at the very centre of the cosmos.",
+            "standard": "The lessons describe the universe as pictured around Yggdrasil, which stands at the centre of the cosmos.",
+            "detailed": "The text explicitly states that Yggdrasil is placed at the centre, with the Nine Worlds spreading outward or layered from its roots. “In Asgard”, “On a mountain peak”, and “Under the sea” are not positions assigned to the tree in the lessons."
+          }
+        },
+        {
+          "id": "item4",
+          "prompt": "What does the Prose Edda say about the limbs of Yggdrasil?",
+          "options": [
+            {
+              "id": "a",
+              "text": "They hold up the sky"
+            },
+            {
+              "id": "b",
+              "text": "They are the roots"
+            },
+            {
+              "id": "c",
+              "text": "They cover the whole world and reach above heaven"
+            },
+            {
+              "id": "d",
+              "text": "They are golden"
+            }
+          ],
+          "correctOptionId": "c",
+          "explanations": {
+            "brief": "The Prose Edda says Yggdrasil’s limbs cover the whole world and reach above heaven.",
+            "standard": "According to the Prose Edda, the tree’s limbs cover the whole world and stretch above heaven, emphasising its immense size.",
+            "detailed": "The lesson states that the Prose Edda describes Yggdrasil’s limbs as covering the whole world and reaching above heaven. “They hold up the sky”, “They are the roots”, and “They are golden” are not how the limbs are described; the text says nothing about holding the sky, being roots, or being golden."
+          }
+        },
+        {
+          "id": "item5",
+          "prompt": "Which of the Nine Worlds is the realm of the Æsir gods?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Vanaheim"
+            },
+            {
+              "id": "b",
+              "text": "Midgard"
+            },
+            {
+              "id": "c",
+              "text": "Hel"
+            },
+            {
+              "id": "d",
+              "text": "Asgard"
+            }
+          ],
+          "correctOptionId": "d",
+          "explanations": {
+            "brief": "Asgard is the realm of the Æsir gods.",
+            "standard": "Among the Nine Worlds, Asgard is the realm of the Æsir gods, joined to Midgard by Bifrost.",
+            "detailed": "The lessons name Asgard as the home of the Æsir gods. “Vanaheim” is the realm of the Vanir, “Midgard” is the world of humans, and “Hel” is the abode of the dead."
+          }
+        },
+        {
+          "id": "item6",
+          "prompt": "What is the name of the world of human beings in Norse cosmology?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Midgard"
+            },
+            {
+              "id": "b",
+              "text": "Asgard"
+            },
+            {
+              "id": "c",
+              "text": "Hel"
+            },
+            {
+              "id": "d",
+              "text": "Jotunheim"
+            }
+          ],
+          "correctOptionId": "a",
+          "explanations": {
+            "brief": "Midgard is the world of human beings.",
+            "standard": "Midgard is the human world, built as a fortress‑wall from the eyelashes of the primeval giant Ymir.",
+            "detailed": "The text identifies Midgard as the world of humans, created from Ymir’s eyelashes. “Asgard” is the realm of the Æsir gods, “Hel” is the abode of the dead, and “Jotunheim” is the land of giants."
+          }
+        },
+        {
+          "id": "item7",
+          "prompt": "Which realm is the abode of the dead?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Asgard"
+            },
+            {
+              "id": "b",
+              "text": "Hel"
+            },
+            {
+              "id": "c",
+              "text": "Midgard"
+            },
+            {
+              "id": "d",
+              "text": "Niflheim"
+            }
+          ],
+          "correctOptionId": "b",
+          "explanations": {
+            "brief": "Hel is the abode of the dead.",
+            "standard": "Hel is the afterlife destination for those who die of illness or old age and is the most populous realm of the dead.",
+            "detailed": "The lessons describe Hel as the dark realm that receives those who die of illness or old age. “Asgard” is the home of the gods, “Midgard” is the human world, and “Niflheim” is the realm of primordial ice and mist, not an afterlife destination."
+          }
+        },
+        {
+          "id": "item8",
+          "prompt": "According to the Prose Edda, where does the dragon Nídhöggr gnaw a root of Yggdrasil?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Over Niflheim"
+            },
+            {
+              "id": "b",
+              "text": "Under Hel"
+            },
+            {
+              "id": "c",
+              "text": "Under Midgard"
+            },
+            {
+              "id": "d",
+              "text": "In Jotunheim"
+            }
+          ],
+          "correctOptionId": "a",
+          "explanations": {
+            "brief": "The Prose Edda places Nídhöggr gnawing a root over Niflheim.",
+            "standard": "According to the Prose Edda, one of Yggdrasil’s roots extends over Niflheim, and the dragon Nídhöggr gnaws that root from below.",
+            "detailed": "Snorri describes three roots, one of which runs over Niflheim, where the dragon Nídhöggr gnaws it. “Under Hel” and “Under Midgard” are from the Grímnismál poem but are not associated with the dragon’s gnawing in the Prose Edda. “In Jotunheim” is the land of giants, not the location specified for the dragon."
+          }
+        },
+        {
+          "id": "item9",
+          "prompt": "Why do the descriptions of Yggdrasil's roots differ between the Poetic Edda and the Prose Edda?",
+          "options": [
+            {
+              "id": "a",
+              "text": "The Poetic Edda was written after the Prose Edda."
+            },
+            {
+              "id": "b",
+              "text": "Snorri Sturluson rearranged and systematised older material."
+            },
+            {
+              "id": "c",
+              "text": "The differences arose from mistranslations of the original texts."
+            },
+            {
+              "id": "d",
+              "text": "The Prose Edda refers to a different world tree."
+            }
+          ],
+          "correctOptionId": "b",
+          "explanations": {
+            "brief": "Snorri Sturluson rearranged and systematised older material.",
+            "standard": "Because the religion had no written scripture, details were fluid, and when Snorri Sturluson wrote the Prose Edda he rearranged earlier material to make a more ordered cosmos, resulting in a different account of the roots.",
+            "detailed": "The lessons explain that Snorri compiled the Prose Edda by rearranging and re‑interpreting older traditions, creating a different root arrangement. “The Poetic Edda was written after the Prose Edda.” is wrong because the Poetic Edda poems are older. “The differences arose from mistranslations of the original texts.” is not given as a reason; the text points to fluidity and Snorri’s systematisation. “The Prose Edda refers to a different world tree.” is false because both sources speak of the same Yggdrasil."
+          }
+        }
+      ]
+    }
+  },
+  "judge": {
+    "pass": false,
+    "failedChecks": [
+      "explanation_support"
+    ],
+    "reasons": [
+      "Item 1's standard explanation says both Eddas identify Yggdrasil as an ash tree, but the lesson does not attribute that detail to both sources."
+    ]
+  },
+  "repairs": null,
+  "codeFailures": []
+}

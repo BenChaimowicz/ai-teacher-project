@@ -15,7 +15,7 @@ export function loadModelConfig(env: NodeJS.ProcessEnv = process.env): ModelConf
     generatorFallbackModel: env.GENERATOR_FALLBACK_MODEL?.trim() || "openai/gpt-6.1-sol",
     // Measured 2026-10-10: Alibaba was the only DeepSeek host that honoured the reasoning cap (~35 s per item set vs 66–255 s).
     generatorProviderOrder: (env.GENERATOR_PROVIDER_ORDER?.trim() || "alibaba").split(",").map((slug) => slug.trim()).filter(Boolean),
-    judgeModel: env.JUDGE_MODEL?.trim() || "openai/gpt-5.6-luna",
+    judgeModel: env.JUDGE_MODEL?.trim() || "openai/gpt-6-luna",
     judgeFallbackModel: env.JUDGE_FALLBACK_MODEL?.trim() || "openai/gpt-6.1-sol",
   };
 }

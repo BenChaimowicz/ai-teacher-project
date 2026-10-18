@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { readingCodeFailures, type ReadingLessonDraft } from "./lesson-checkpoint.ts";
+import type { BlueprintSlot } from "./blueprint.ts";
+import { quizCodeFailures, readingCodeFailures, type QuizLessonDraft, type ReadingLessonDraft } from "./lesson-checkpoint.ts";
 
 const RETRIEVED = new Set(["https://en.wikipedia.org/w/index.php?oldid=1", "https://www.britannica.com/topic/Yggdrasil"]);
 
@@ -76,4 +77,86 @@ test("The stored source list must match the numbered Citations, and a quote must
   const quoted = valid();
   quoted.sources[0] = { ...quoted.sources[0]!, usedAs: "quote" };
   assert.ok(readingCodeFailures(quoted, RETRIEVED).some((failure) => failure.includes("quoted text")));
+});
+
+const READING_SLOT: BlueprintSlot = {
+  id: "slot1", method: "reading", title: "The World Tree", lessonGoal: "Describe how Yggdrasil connects the Nine Worlds.",
+  objectives: ["Name the Nine Worlds"], topicTags: ["yggdrasil", "nine-worlds"], assessesSlotIds: [],
+};
+const QUIZ_SLOT: BlueprintSlot = {
+  id: "slot2", method: "quiz", title: "Check: the World Tree", lessonGoal: "Recall how Yggdrasil connects the worlds.",
+  objectives: ["Name the Nine Worlds"], topicTags: ["yggdrasil", "quiz"], assessesSlotIds: ["slot1"],
+};
+const SLOTS = [READING_SLOT, QUIZ_SLOT];
+const CHECKPOINTED = new Set(["slot1"]);
+
+/** A five-item Quiz assessing the checkpointed Reading. */
+function quiz(): QuizLessonDraft {
+  return {
+    slotId: "slot2", teachingMethod: "quiz", title: QUIZ_SLOT.title, lessonGoal: QUIZ_SLOT.lessonGoal,
+    objectives: QUIZ_SLOT.objectives, topicTags: QUIZ_SLOT.topicTags, lineage: null, sources: [], citations: [],
+    body: {
+      items: [1, 2, 3, 4, 5].map((n) => ({
+        id: `item${n}`,
+        prompt: `Question ${n}?`,
+        options: ["a", "b", "c", "d"].map((id) => ({ id, text: `Option ${id} of ${n}` })),
+        correctOptionId: "b",
+        explanations: { brief: "Brief.", standard: "Standard.", detailed: "Detailed." },
+      })),
+    },
+  };
+}
+
+test("A five-item, four-option Quiz on a checkpointed preceding Reading passes the Code checks", () => {
+  assert.deepEqual(quizCodeFailures(quiz(), SLOTS, CHECKPOINTED), []);
+});
+
+test("A Quiz outside 5–10 items, or an item without four options and one key, fails", () => {
+  const short = quiz();
+  short.body.items.pop();
+  assert.ok(quizCodeFailures(short, SLOTS, CHECKPOINTED).some((failure) => failure.includes("not 4")));
+
+  const broken = quiz();
+  broken.body.items[0]!.options.pop();
+  broken.body.items[1]!.correctOptionId = "z";
+  broken.body.items[2]!.options[1]!.text = broken.body.items[2]!.options[0]!.text;
+  const failures = quizCodeFailures(broken, SLOTS, CHECKPOINTED);
+  assert.ok(failures.includes("Item 1 needs exactly 4 options."), failures.join("\n"));
+  assert.ok(failures.includes("Item 2 needs exactly one correct option."), failures.join("\n"));
+  assert.ok(failures.includes("Item 3 needs 4 different, non-empty options."), failures.join("\n"));
+
+  const placeholder = quiz();
+  placeholder.body.items[0]!.options[2]!.text = "Option 3";
+  assert.deepEqual(quizCodeFailures(placeholder, SLOTS, CHECKPOINTED), ["Item 1 has a placeholder instead of an option."]);
+
+  const lettered = quiz();
+  lettered.body.items[0]!.explanations.detailed = "Option A reverses the order.";
+  lettered.body.items[1]!.explanations.brief = "Answer B is a trap, as is (c).";
+  lettered.body.items[2]!.explanations.standard = "The first option is wrong because the Lesson says so.";
+  lettered.body.items[3]!.explanations.detailed = "It is the ash; the third is wrong because it names Hel.";
+  assert.deepEqual(quizCodeFailures(lettered, SLOTS, CHECKPOINTED).map((failure) => failure.slice(0, 26)), [
+    "Item 1's explanation names", "Item 2's explanation names", "Item 3's explanation names", "Item 4's explanation names",
+  ]);
+  const prose = quiz();
+  prose.body.items[0]!.explanations.detailed = "Answer Asgard looks close, but the answer a careful reader picks is the ash. The first root runs under Hel.";
+  assert.deepEqual(quizCodeFailures(prose, SLOTS, CHECKPOINTED), [], "Ordinary prose is not a letter reference.");
+});
+
+test("A Quiz with reading sections, media, Sources, or lineage fails", () => {
+  const lesson = quiz();
+  Object.assign(lesson.body, { sections: [] });
+  Object.assign(lesson.body.items[0]!, { media: { kind: "image" } });
+  Object.assign(lesson, { lineage: { originLessonId: "x" }, citations: [{ n: 1, title: "t", url: "https://example.org" }] });
+  const failures = quizCodeFailures(lesson, SLOTS, CHECKPOINTED);
+  assert.ok(failures.includes("A Quiz has no reading sections or Demonstrative media."), failures.join("\n"));
+  assert.ok(failures.some((failure) => failure.startsWith("Item 1 carries")), failures.join("\n"));
+  assert.ok(failures.includes("A Quiz is always generated, never reused."), failures.join("\n"));
+  assert.ok(failures.includes("A Quiz carries no Sources or Citations of its own."), failures.join("\n"));
+});
+
+test("A Quiz fails when an assessed slot is missing, not a Reading, later, or not checkpointed", () => {
+  assert.deepEqual(quizCodeFailures(quiz(), SLOTS, new Set()), ["Assessed slot slot1 has no checkpointed Lesson."]);
+  assert.deepEqual(quizCodeFailures(quiz(), [QUIZ_SLOT, READING_SLOT], CHECKPOINTED), ["Assessed slot slot1 does not precede the Quiz."]);
+  assert.deepEqual(quizCodeFailures(quiz(), [{ ...READING_SLOT, method: "quiz" }, QUIZ_SLOT], CHECKPOINTED), ["Assessed slot slot1 is not a Reading."]);
+  assert.deepEqual(quizCodeFailures(quiz(), [QUIZ_SLOT], CHECKPOINTED), ["Assessed slot slot1 is not in the Blueprint."]);
 });

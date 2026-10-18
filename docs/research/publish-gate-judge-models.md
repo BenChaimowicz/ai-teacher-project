@@ -10,6 +10,8 @@ Which models should run the Publish-gate **Judge** checks, given that the author
 
 ## 2. Recommendation
 
+> **Update 2026-10-16:** the default Judge is now `openai/gpt-6-luna` (OpenRouter: structured outputs, reasoning, image input; $0.10 / $0.50 per M tokens). The analysis below was done on `gpt-5.6-luna`; the spec (§6.1) and `model-config.ts` hold the current pin.
+
 **Pin one OpenAI model for every Judge check, text and vision: `gpt-5.6-luna`.** Fallback if luna is unavailable or schema-fails: **`gpt-5.6-terra`**, and only when Terra did not author that artifact. Do not use DeepSeek as Judge. Do not split text vs vision across **vendors or SKUs**. Do keep **two luna call shapes** so a media miss spends the one vision repair, not a Lesson regeneration ([Generated demonstrative media](https://linear.app/senoy/issue/SEN-28/generated-demonstrative-media)). Do not default to `claude-sonnet-5`, `claude-opus-5`, or `claude-haiku-4-5`. Do not judge with the same model ID that authored the artifact.
 
 Current first-party model cards (fetched 2026-09-04) document that **luna accepts image input, emits text, and supports Structured Outputs**, at **$0.20 / $1.20 per 1M input/output tokens** (short context), 1.05M context, 128k max output, knowledge cutoff 16 February 2026. Terra and sol document the same modalities at 10× and 20× luna’s list price. That is enough to keep a single Responses-API Judge adapter: `text.format` `{ type: "json_schema", strict: true }` plus `input_image` blocks, no `web_search`, excerpts pasted as ordinary text with stable source IDs.
