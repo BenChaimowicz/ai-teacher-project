@@ -1,8 +1,11 @@
 import { eq } from "drizzle-orm";
 import { blueprintSlots, type ApprovedBlueprint, type BlueprintSlot } from "@senoy/db/blueprint";
-import { courseRequests, learners, resolveTeachingProfile, unpublishedLessons, type Database, type ResolvedTeachingProfile } from "@senoy/db";
+import { courseRequests, learners, resolveTeachingProfile, unpublishedLessons, type Database, type ReadingBody, type ResolvedTeachingProfile } from "@senoy/db";
 import { researchAdaptersFromEnv, runResearch, type SourcePack } from "@senoy/research";
+import { quizPlugin } from "../teaching-methods/quiz.ts";
 import { readingPlugin } from "../teaching-methods/reading.ts";
+import type { TeachingMethodPlugin } from "../teaching-methods/types.ts";
+import { createQuizGenerator, type QuizGenerator } from "./quiz-generation.ts";
 import { createReadingGenerator, type PriorLesson, type ReadingGenerator } from "./reading-generation.ts";
 
 /** What generation receives after Approve. */
@@ -25,7 +28,7 @@ export interface CourseGeneration {
 export type LessonResearch = (topic: string) => Promise<SourcePack[]>;
 
 /** Injectable research and Generator; omitted ones are created lazily from the environment. */
-export type CourseGenerationOptions = { research?: LessonResearch; readingGenerator?: ReadingGenerator };
+export type CourseGenerationOptions = { research?: LessonResearch; readingGenerator?: ReadingGenerator; quizGenerator?: QuizGenerator };
 
 /**
  * The research topic for one slot: research is scoped per Lesson (spec §5.2).
@@ -37,19 +40,21 @@ export function lessonResearchTopic(subject: string, slot: BlueprintSlot): strin
 }
 
 /**
- * Only the write-time Teaching Profile values the reading plugin declared (spec §5.5).
+ * Only the write-time Teaching Profile values a plugin declared (spec §5.5).
+ * @param plugin - The slot's Teaching-method plugin
  * @param profile - The Learner's resolved Teaching Profile
  */
-export function readingWriteTimeProfile(profile: ResolvedTeachingProfile): Record<string, unknown> {
-  return Object.fromEntries(readingPlugin.writeTimeFields.map((field) => [field, profile[field].value]));
+export function writeTimeProfile(plugin: TeachingMethodPlugin, profile: ResolvedTeachingProfile): Record<string, unknown> {
+  return Object.fromEntries(plugin.writeTimeFields.map((field) => [field, profile[field].value]));
 }
 
 /** Research run against both vendors with keys from the environment. */
 const researchFromEnv: LessonResearch = (topic) => runResearch(topic, { ...researchAdaptersFromEnv(process.env), env: process.env });
 
 /**
- * Generates each Reading slot in Blueprint order and saves it as an unpublished checkpoint. Quizzes, publication,
- * and repair are later tickets, so the Request stays `generating`; a failed Lesson throws and nothing is saved for it.
+ * Generates each Reading slot in Blueprint order, then each Quiz from its checkpointed Readings (spec §5.2.3), saving
+ * each as an unpublished checkpoint. Publication and repair are later tickets, so the Request stays `generating`; a
+ * failed Lesson throws and nothing is saved for it.
  * @param options - Injected research and Generator; tests pass fixtures
  */
 export function createCourseGeneration(options: CourseGenerationOptions = {}): CourseGeneration {
@@ -60,7 +65,8 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       if (!request || !learner?.teachingProfileAnswers) {
         throw new Error(`[course-generation: start] Request or Teaching Profile is missing || requestId=${courseRequestId}`);
       }
-      const profile = readingWriteTimeProfile(resolveTeachingProfile(learner.teachingProfileAnswers));
+      const resolved = resolveTeachingProfile(learner.teachingProfileAnswers);
+      const profile = writeTimeProfile(readingPlugin, resolved);
       const research = options.research ?? researchFromEnv;
       const generator = options.readingGenerator ?? createReadingGenerator();
       const priorLessons: PriorLesson[] = [];
@@ -84,6 +90,27 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
           objectives: lesson.objectives,
           headings: lesson.body.sections.map((section) => section.heading),
         });
+      }
+
+      // Quizzes follow every instructional Lesson and read the checkpoints, not this run's memory, so they assess
+      // exactly what was saved.
+      const quizGenerator = options.quizGenerator ?? createQuizGenerator();
+      const checkpoints = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
+      for (const [position, slot] of slots.entries()) {
+        if (slot.method !== quizPlugin.id) continue;
+        const assessed = slot.assessesSlotIds.flatMap((slotId) => {
+          const checkpoint = checkpoints.find((row) => row.slotId === slotId && row.teachingMethod === readingPlugin.id);
+          return checkpoint ? [{ ...checkpoint, body: checkpoint.body as ReadingBody }] : [];
+        });
+        const { lesson, judge } = await quizGenerator.generate({
+          courseTitle: approved.blueprint.courseTitle,
+          learningGoal: request.learningGoal,
+          slot,
+          slots,
+          assessed,
+          profile: writeTimeProfile(quizPlugin, resolved),
+        });
+        await db.insert(unpublishedLessons).values({ ...lesson, courseRequestId, position, sourcePacks: [], rejectedSources: [], judge });
       }
     },
   };

@@ -452,10 +452,10 @@ Automated, binary, on every Course (including Test courses). Any fail fails that
 
 | Role | Model |
 | --- | --- |
-| Default Judge (text and vision) | `openai/gpt-5.6-luna` |
+| Default Judge (text and vision) | `openai/gpt-6-luna` |
 | Judge fallback | `openai/gpt-6.1-sol`, **only when Sol did not author** that artifact |
 
-Pairing: author `deepseek/deepseek-v4-pro` or `openai/gpt-6.1-sol` → judge `openai/gpt-5.6-luna`. If Luna is down or schema-fails: bump to Sol only when Sol did not write. Never DeepSeek as Judge. Never Sol judging a Sol-authored artifact. Do not default to Claude Sonnet or Opus.
+Pairing: author `deepseek/deepseek-v4-pro` or `openai/gpt-6.1-sol` → judge `openai/gpt-6-luna`. If Luna is down or schema-fails: bump to Sol only when Sol did not write. Never DeepSeek as Judge. Never Sol judging a Sol-authored artifact. Do not default to Claude Sonnet or Opus.
 
 Independence is different **model ID**, not different vendor. IDs live in config behind a thin Judge port, not on Lesson records.
 

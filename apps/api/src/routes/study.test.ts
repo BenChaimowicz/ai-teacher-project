@@ -16,12 +16,18 @@ import {
   SEEDED_READING_LESSON_ID,
   TEACHING_PROFILE_VERSION,
   type Database,
+  type QuizBody,
 } from "@senoy/db";
+import type { Generator, Judge } from "../lib/model-ports.ts";
+import { createQuizGenerator } from "../lib/quiz-generation.ts";
 import type { QuizAttemptRow, StudyStore } from "../lib/study-store.ts";
 import { studyRoutes } from "./study.ts";
 
-/** In-memory Study store holding the fixture Course. */
-function memoryStore(): StudyStore {
+/**
+ * In-memory Study store holding the fixture Course.
+ * @param quizBody - Body of the fixture's Quiz Lesson
+ */
+function memoryStore(quizBody: QuizBody): StudyStore {
   let sequenceMode: string = SEEDED_COURSE.sequenceMode;
   const completions = new Set<string>();
   const attempts: (QuizAttemptRow & { lessonId: string })[] = [];
@@ -34,7 +40,7 @@ function memoryStore(): StudyStore {
       return [{ id: SEEDED_MODULE.id, title: SEEDED_MODULE.title, position: SEEDED_MODULE.position }];
     },
     async listLessons() {
-      return SEEDED_LESSONS.map((lesson) => ({ ...lesson }));
+      return SEEDED_LESSONS.map((lesson) => ({ ...lesson, ...(lesson.id === SEEDED_QUIZ_LESSON_ID ? { body: quizBody } : {}) }));
     },
     async completedLessonIds(_learnerId, lessonIds) {
       return new Set(lessonIds.filter((id) => completions.has(id)));
@@ -84,14 +90,14 @@ function learnerWith(answers: Record<string, unknown> = {}): typeof learners.$in
 }
 
 /** Real Study handlers over the in-memory store. `state.learner` can change between requests. */
-async function testApp(answers: Record<string, unknown> = {}) {
+async function testApp(answers: Record<string, unknown> = {}, quizBody: QuizBody = SEEDED_QUIZ_BODY) {
   const state = { learner: learnerWith(answers) };
   const app = Fastify();
   app.decorate("db", {} as Database);
   app.addHook("onRequest", async (request) => {
     request.currentLearner = state.learner;
   });
-  await app.register(studyRoutes, { store: memoryStore() });
+  await app.register(studyRoutes, { store: memoryStore(quizBody) });
 
   const base = `/api/courses/${SEEDED_COURSE_ID}`;
   const quiz = `${base}/lessons/${SEEDED_QUIZ_LESSON_ID}/quiz`;
@@ -102,6 +108,7 @@ async function testApp(answers: Record<string, unknown> = {}) {
   return {
     app,
     state,
+    quizBody,
     study: () => call("GET", base),
     quiz: () => call("GET", quiz),
     answer: (itemId: string, optionId: string) => call("PUT", `${quiz}/answers/${itemId}`, { optionId }),
@@ -123,7 +130,7 @@ type TestApp = Awaited<ReturnType<typeof testApp>>;
  * @param check - Per-item timing: Check after answering
  */
 async function answerAll(t: TestApp, correct: number, check: boolean) {
-  for (const [index, item] of SEEDED_QUIZ_BODY.items.entries()) {
+  for (const [index, item] of t.quizBody.items.entries()) {
     const wrong = item.options.find((option) => option.id !== item.correctOptionId)!;
     const saved = await t.answer(item.id, index < correct ? item.correctOptionId : wrong.id);
     assert.equal(saved.status, 200, JSON.stringify(saved.body));
@@ -282,6 +289,56 @@ test("Free jump is one-way and opens later Lessons; Progress still waits on a Qu
     });
     assert.equal((await t.complete(SEEDED_FOLLOW_UP_LESSON_ID)).status, 200);
     assert.equal((await t.complete(SEEDED_QUIZ_LESSON_ID)).status, 400);
+  } finally {
+    await t.app.close();
+  }
+});
+
+test("A generated Quiz plays through the Quiz plugin: attempts, best score, and completion at 70%", async () => {
+  const generator: Generator = {
+    modelId: "fixture/author",
+    async generateStructured(request) {
+      return request.parse({
+        items: [1, 2, 3, 4, 5, 6].map((n) => ({
+          objective: "Name the Nine Worlds", prompt: `Which world is number ${n}?`,
+          options: [
+            { id: "opt1", text: `World ${n}`, correct: true },
+            ...["a", "b", "c"].map((letter, index) => ({ id: `opt${index + 2}`, text: `Not ${n}${letter}`, correct: false })),
+          ],
+          explanations: { brief: `Brief ${n}.`, standard: `Standard ${n}.`, detailed: `Detailed ${n}.` },
+        })),
+      });
+    },
+  };
+  const judge: Judge = { modelId: "fixture/judge", judge: async (request) => request.parse({ pass: true, failedChecks: [], reasons: [] }) };
+  const reading = {
+    id: "slot1", method: "reading" as const, title: "Worlds", lessonGoal: "Name the worlds.", objectives: ["Name the Nine Worlds"],
+    topicTags: ["norse", "worlds"], assessesSlotIds: [],
+  };
+  const slot = { ...reading, id: "slot2", method: "quiz" as const, title: "Check: worlds", assessesSlotIds: ["slot1"] };
+  const { lesson } = await createQuizGenerator({ generator, judge }).generate({
+    courseTitle: "Norse cosmology", learningGoal: "Explain the Norse world", slot, slots: [reading, slot], profile: {},
+    assessed: [{ slotId: "slot1", title: "Worlds", lessonGoal: "Name the worlds.", objectives: reading.objectives, body: { sections: [] } }],
+  });
+
+  const t = await testApp({}, lesson.body);
+  try {
+    const shown = await t.quiz();
+    assert.equal(shown.status, 200);
+    assert.ok(!JSON.stringify(shown.body).includes("correctOptionId"), "The generated key stays on the server.");
+
+    await answerAll(t, 4, true);
+    const failed = await t.submit();
+    assert.deepEqual(failed.body.quiz.attempt.score, { correct: 4, total: 6 });
+    assert.equal(failed.body.quiz.passed, false, "4/6 is under 70%.");
+    assert.equal(lessonIn(failed.body.study, SEEDED_QUIZ_LESSON_ID).completed, false);
+
+    await t.retake();
+    await answerAll(t, 5, true);
+    const passed = await t.submit();
+    assert.equal(passed.body.quiz.passed, true);
+    assert.deepEqual(passed.body.quiz.best, { correct: 5, total: 6 });
+    assert.equal(lessonIn(passed.body.study, SEEDED_QUIZ_LESSON_ID).completed, true);
   } finally {
     await t.app.close();
   }
