@@ -185,13 +185,24 @@ test("An item marking two options correct, or a placeholder option, fails the Co
   assert.equal(calls.length, 0);
 });
 
-test("A Quiz still failing after its repair throws with the last verdict and draft", async () => {
+test("A Judge failing twice is repaired twice", async () => {
+  const overstated = { pass: false, failedChecks: ["explanation_support"], reasons: ["Item 5's explanation adds a detail the lessons do not state."] };
+  const { generator, calls } = scriptedGenerator(authored());
+  const { judge } = scriptedJudge(overstated, overstated, PASS);
+  const { repairs } = await createQuizGenerator({ generator, judge }).generate(INPUT);
+
+  assert.equal(repairs, 2);
+  assert.equal(calls.length, 3);
+});
+
+test("A Quiz still failing after its two repairs throws with the last verdict and draft", async () => {
   const ambiguous = { pass: false, failedChecks: ["single_correct_answer"], reasons: ["Item 2 has two right options."] };
-  const { generator } = scriptedGenerator(authored());
+  const { generator, calls } = scriptedGenerator(authored());
   const { judge } = scriptedJudge(ambiguous);
   const error = await createQuizGenerator({ generator, judge }).generate(INPUT).catch((caught: unknown) => caught);
 
   assert.ok(error instanceof QuizFailedError);
+  assert.equal(calls.length, 3, "One draft and two repairs.");
   assert.deepEqual(error.judge?.failedChecks, ["single_correct_answer"]);
   assert.equal(error.lesson?.body.items.length, 6);
 });
