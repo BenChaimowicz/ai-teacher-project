@@ -13,7 +13,8 @@
     "./starting-level": "./src/starting-level.ts",
     "./blueprint": "./src/blueprint.ts",
     "./lesson-checkpoint": "./src/lesson-checkpoint.ts",
-    "./publication": "./src/publication.ts"
+    "./publication": "./src/publication.ts",
+    "./generation-job": "./src/generation-job.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",

@@ -18,6 +18,9 @@ export type DiagnosticView = {
   confirmation: GapConfirmation | null;
 };
 
+/** What the Waiting screen sees of a generation job. */
+export type { GenerationView } from "@senoy/db/generation-job";
+
 /** What Learner review sees of a Course Blueprint: titles and Lesson goals, and the Sequence mode pick. */
 export type BlueprintView = {
   blueprint: LearnerBlueprint;
@@ -42,6 +45,7 @@ export function courseRequestStatusLabel(status: string): string {
     case "generating": return "Generating your Course";
     case "published": return "Course published";
     case "generation_failed": return "Course generation failed";
+    case "generation_cancelled": return "Course generation cancelled";
     default: return status.replaceAll("_", " ");
   }
 }

@@ -64,6 +64,10 @@ _Avoid_: Character, chatbot, chat transcript, Generator (when meaning this voice
 The system-validated and Learner-approved design of a Course, fixing its Module and Lesson sequence, Lesson goals, objectives, teaching methods, and quiz checkpoints before Lesson content is generated. Learner approval reviews titles and Lesson goals for relevance rather than editing the structure directly.
 _Avoid_: Course outline, curriculum plan
 
+**Generation job**:
+The durable record of one approved Course Request being generated: its status, the stage and Lesson it is on, and which worker holds it. One per Course Request. The Learner can Cancel it and Resume it; neither discards finished Lessons.
+_Avoid_: Pipeline Event (when meaning this record), task, run
+
 **Course coherence**:
 The continuity of terminology, prerequisites, explanations, and progression across Lessons and Modules toward the Learning Goal.
 _Avoid_: Normalization, stylistic consistency

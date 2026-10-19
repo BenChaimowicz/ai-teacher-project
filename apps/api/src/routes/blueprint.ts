@@ -1,18 +1,24 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import {
+  blueprintSlots,
   courseBlueprints,
   courseRequests,
+  generationJobs,
   learnerBlueprint,
   publishedCourses,
   resolveTeachingProfile,
   startingLevelDiagnostics,
   TEACHING_PROFILE_VERSION,
+  unpublishedLessons,
   type CourseRequestStatus,
+  type Database,
+  type GenerationJobStatus,
+  type GenerationView,
   type SequenceMode,
 } from "@senoy/db";
 import { BlueprintFailedError, createBlueprintBuilder, type BlueprintBuilder } from "../lib/blueprint.ts";
-import { createCourseGeneration, type CourseGeneration } from "../lib/course-generation.ts";
+import { enqueueGeneration } from "../lib/generation-job.ts";
 import { studyLinksByCourseId } from "../lib/study.ts";
 
 /** Learner-facing Request fields; ownership is never exposed. */
@@ -28,8 +34,8 @@ const requestFields = {
   failureReason: courseRequests.failureReason,
 };
 
-/** Injectable builder and generation; persistence and HTTP semantics stay in these routes. */
-type BlueprintOptions = { blueprintBuilder?: BlueprintBuilder; courseGeneration?: CourseGeneration };
+/** Injectable builder; persistence and HTTP semantics stay in these routes. Generation runs in the worker. */
+type BlueprintOptions = { blueprintBuilder?: BlueprintBuilder };
 
 /** Route parameters for one Request. */
 type RequestParams = { Params: { requestId: string } };
@@ -61,10 +67,39 @@ function sequenceModeField(body: unknown): SequenceMode | null {
   return sequenceMode === "linear" || sequenceMode === "free_jump" ? sequenceMode : null;
 }
 
-/** Prepares, shows, and approves the Course Blueprint for a Learner-owned Course Request. */
+/** Where Resume can pick a job up, and the Request status each leaves the Request in. */
+const RESUMABLE: Partial<Record<GenerationJobStatus, CourseRequestStatus>> = {
+  cancelled: "generation_cancelled",
+  interrupted: "generation_failed",
+};
+
+/**
+ * What the Waiting screen shows of a Request's job: stage, current Lesson, and N of M, never a draft or its Sources.
+ * @param db - Database
+ * @param requestId - The Request
+ * @param blueprint - Its stored Blueprint
+ * @returns The view, or null before Approve
+ */
+async function generationView(db: Database, requestId: string, blueprint: BlueprintRow | null): Promise<GenerationView | null> {
+  const [job] = await db.select().from(generationJobs).where(eq(generationJobs.courseRequestId, requestId)).limit(1);
+  if (!job || !blueprint?.approved) return null;
+  const slots = blueprintSlots(blueprint.approved.blueprint);
+  const finished = await db.select({ slotId: unpublishedLessons.slotId }).from(unpublishedLessons)
+    .where(eq(unpublishedLessons.courseRequestId, requestId));
+  const index = job.status === "running" && job.stage === "lesson" ? slots.findIndex((slot) => slot.id === job.currentSlotId) : -1;
+  return {
+    status: job.status,
+    stage: job.status === "running" ? job.stage : null,
+    lessonNumber: index >= 0 ? index + 1 : null,
+    lessonTitle: index >= 0 ? slots[index]!.title : null,
+    finishedLessons: finished.length,
+    totalLessons: slots.length,
+  };
+}
+
+/** Prepares, shows, and approves the Course Blueprint for a Learner-owned Course Request; cancels and resumes its job. */
 export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOptions = {}) {
   const builder = options.blueprintBuilder ?? createBlueprintBuilder();
-  const generation = options.courseGeneration ?? createCourseGeneration();
 
   /** Reads a private Request, never leaking another Learner's history. */
   async function ownedRequest(id: string, learnerId: string, reply: FastifyReply) {
@@ -116,7 +151,8 @@ export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOp
       if (!row) return reply;
       const blueprint = await blueprintOf(row.id);
       const course = row.status === "published" ? await publishedCourseOf(row.id, learnerId) : null;
-      return { courseRequest: row, blueprint: blueprint ? learnerView(blueprint) : null, course };
+      const generation = await generationView(app.db, row.id, blueprint);
+      return { courseRequest: row, blueprint: blueprint ? learnerView(blueprint) : null, course, generation };
     } catch (error) {
       return fail(reply, request.log, "get", request.params.requestId, error, "Failed to load the Course Blueprint.");
     }
@@ -201,19 +237,87 @@ export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOp
       if (!current) throw new Error("Reviewing Request has no Course Blueprint.");
       const approvedAt = new Date();
       const approved = { blueprint: current.draft, sequenceMode, approvedAt: approvedAt.toISOString() };
-      const [saved] = await app.db.update(courseBlueprints).set({ sequenceMode, approved, approvedAt })
-        .where(and(eq(courseBlueprints.id, current.id), isNull(courseBlueprints.approved))).returning();
-      if (!saved) return reply.code(409).send({ error: "This Blueprint changed. Reload it before continuing." });
-      const generating = await transition(row.id, learnerId, "blueprint_review", "generating");
-      if (!generating) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
-      // In-process happy path; the Learner sees the waiting screen while it runs. Durable jobs come later (spec §5.1).
-      void generation.start({ db: app.db, courseRequestId: row.id, learnerId, approved }).catch((error: unknown) => {
-        const detail = error instanceof Error ? error.message : String(error);
-        request.log.error(`[blueprint.ts: approve] Course generation failed || requestId=${row.id} || ${detail}`);
+      // The snapshot, the status, and the queued job land together; the worker claims the job (spec §5.1).
+      const outcome = await app.db.transaction(async (transaction) => {
+        const [saved] = await transaction.update(courseBlueprints).set({ sequenceMode, approved, approvedAt })
+          .where(and(eq(courseBlueprints.id, current.id), isNull(courseBlueprints.approved))).returning();
+        if (!saved) return { error: "This Blueprint changed. Reload it before continuing." } as const;
+        const [generating] = await transaction.update(courseRequests).set({ status: "generating" }).where(and(
+          eq(courseRequests.id, row.id), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, "blueprint_review"),
+        )).returning(requestFields);
+        if (!generating) throw new RequestChangedError();
+        await enqueueGeneration(transaction, { courseRequestId: row.id, learnerId });
+        return { saved, generating } as const;
+      }).catch((error: unknown) => {
+        if (error instanceof RequestChangedError) return { error: "This Request changed. Reload it before continuing." } as const;
+        throw error;
       });
-      return { courseRequest: generating, blueprint: learnerView(saved) };
+      if ("error" in outcome) return reply.code(409).send({ error: outcome.error });
+      const generation = await generationView(app.db, row.id, outcome.saved);
+      return { courseRequest: outcome.generating, blueprint: learnerView(outcome.saved), generation };
     } catch (error) {
       return fail(reply, request.log, "approve", request.params.requestId, error, "Failed to approve the Course Blueprint.");
     }
   });
+
+  app.post<RequestParams>("/api/course-requests/:requestId/generation/cancel", async (request, reply) => {
+    try {
+      const learnerId = request.currentLearner.id;
+      const row = await ownedRequest(request.params.requestId, learnerId, reply);
+      if (!row) return reply;
+      // The worker notices at its next stage and saves nothing more; finished checkpoints stay (spec §5.1). The job row
+      // is locked before the Request, in the order the worker's own writes take them.
+      const cancelled = await app.db.transaction(async (transaction) => {
+        await transaction.update(generationJobs).set({ status: "cancelled", claimToken: null, leaseExpiresAt: null, updatedAt: new Date() })
+          .where(eq(generationJobs.courseRequestId, row.id)).returning({ id: generationJobs.id });
+        const [moved] = await transaction.update(courseRequests).set({ status: "generation_cancelled" }).where(and(
+          eq(courseRequests.id, row.id), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, "generating"),
+        )).returning(requestFields);
+        if (!moved) throw new RequestChangedError();
+        return moved;
+      }).catch((error: unknown) => {
+        if (error instanceof RequestChangedError) return null;
+        throw error;
+      });
+      if (!cancelled) return reply.code(409).send({ error: "This Course is not being generated." });
+      const generation = await generationView(app.db, row.id, await blueprintOf(row.id));
+      return { courseRequest: cancelled, generation };
+    } catch (error) {
+      return fail(reply, request.log, "cancel", request.params.requestId, error, "Failed to cancel generation.");
+    }
+  });
+
+  app.post<RequestParams>("/api/course-requests/:requestId/generation/resume", async (request, reply) => {
+    try {
+      const learnerId = request.currentLearner.id;
+      const row = await ownedRequest(request.params.requestId, learnerId, reply);
+      if (!row) return reply;
+      const [job] = await app.db.select({ id: generationJobs.id, status: generationJobs.status }).from(generationJobs)
+        .where(eq(generationJobs.courseRequestId, row.id)).limit(1);
+      const from = job ? RESUMABLE[job.status] : undefined;
+      if (!job || from !== row.status) return reply.code(409).send({ error: "This Course cannot be resumed." });
+      // Same job, same approved Blueprint; the next claim continues from the next unfinished Lesson.
+      const resumed = await app.db.transaction(async (transaction) => {
+        const [queued] = await transaction.update(generationJobs).set({ status: "queued", stage: null, currentSlotId: null, updatedAt: new Date() })
+          .where(and(eq(generationJobs.id, job.id), eq(generationJobs.status, job.status))).returning({ id: generationJobs.id });
+        if (!queued) throw new RequestChangedError();
+        const [moved] = await transaction.update(courseRequests).set({ status: "generating", failureReason: null }).where(and(
+          eq(courseRequests.id, row.id), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, from),
+        )).returning(requestFields);
+        if (!moved) throw new RequestChangedError();
+        return moved;
+      }).catch((error: unknown) => {
+        if (error instanceof RequestChangedError) return null;
+        throw error;
+      });
+      if (!resumed) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+      const generation = await generationView(app.db, row.id, await blueprintOf(row.id));
+      return { courseRequest: resumed, generation };
+    } catch (error) {
+      return fail(reply, request.log, "resume", request.params.requestId, error, "Failed to resume generation.");
+    }
+  });
 }
+
+/** Rolls back a transaction whose Request moved on before it committed. */
+class RequestChangedError extends Error {}
