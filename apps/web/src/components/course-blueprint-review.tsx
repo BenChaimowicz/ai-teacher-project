@@ -1,13 +1,19 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import type { SequenceMode } from "@senoy/db/sequence-mode";
 import { Button } from "@/components/ui/button.tsx";
 import { ChoiceCard } from "@/components/choice-card.tsx";
 import type { BlueprintView, CourseRequestRecord } from "@/lib/course-request-types.ts";
 
 /** Statuses this component owns on the Course Request screen. */
-export const BLUEPRINT_STATUSES = new Set(["starting_level_confirmed", "blueprint_preparing", "blueprint_review", "generating"]);
+export const BLUEPRINT_STATUSES = new Set([
+  "starting_level_confirmed", "blueprint_preparing", "blueprint_review", "generating", "published", "generation_failed",
+]);
 
-/** How often the page checks whether a Blueprint that is being designed is ready. */
+/** Statuses that move on by themselves, so the page checks again. */
+const WORKING_STATUSES = new Set(["blueprint_preparing", "generating"]);
+
+/** How often the page checks whether a Blueprint being designed, or a Course being generated, is ready. */
 const POLL_MS = 3000;
 
 /** Learner-facing names for a slot's Teaching method. */
@@ -18,9 +24,13 @@ type Props = {
   onRecord: (record: CourseRequestRecord) => void;
 };
 
-/** The Course Blueprint on the Course Request screen: design it, review titles and Lesson goals, pick Sequence mode, Approve. */
+/**
+ * The Course Blueprint on the Course Request screen: design it, review titles and Lesson goals, pick Sequence mode,
+ * Approve, then wait for the Course to publish or for the reason it could not.
+ */
 export function CourseBlueprintReview({ record, onRecord }: Props) {
   const [view, setView] = useState<BlueprintView | null>(null);
+  const [courseHref, setCourseHref] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -34,19 +44,23 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
     if (record.status === "starting_level_confirmed") return;
     let cancelled = false;
     let timer: number | undefined;
-    /** Loads the saved Blueprint; while it is being designed, checks again shortly. */
+    /** Loads the saved Blueprint; while it is being designed or its Course generated, checks again shortly. */
     async function load() {
       try {
         const response = await fetch(`/api/course-requests/${record.id}/blueprint`);
-        const body = await response.json() as { courseRequest?: CourseRequestRecord; blueprint?: BlueprintView | null; error?: string };
+        const body = await response.json() as {
+          courseRequest?: CourseRequestRecord; blueprint?: BlueprintView | null; course?: { href: string | null } | null; error?: string;
+        };
         if (!response.ok || !body.courseRequest) throw new Error(body.error ?? "Could not load your Course Blueprint.");
         if (cancelled) return;
-        if (body.courseRequest.status !== record.status) onRecord(body.courseRequest);
-        if (body.courseRequest.status === "blueprint_preparing") {
-          timer = window.setTimeout(() => void load(), POLL_MS);
+        if (body.courseRequest.status !== record.status) {
+          onRecord(body.courseRequest);
           return;
         }
+        if (WORKING_STATUSES.has(body.courseRequest.status)) timer = window.setTimeout(() => void load(), POLL_MS);
+        if (body.courseRequest.status === "blueprint_preparing") return;
         setView(body.blueprint ?? null);
+        setCourseHref(body.course?.href ?? null);
       } catch (caught: unknown) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : "Could not load your Course Blueprint.");
       }
@@ -158,6 +172,15 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
           <p className="mt-4 text-sm">Lesson order: {view.sequenceMode === "free_jump" ? "free jump" : "linear"}.</p>
           {record.status === "generating" ? (
             <p role="status" className="mt-4 text-sm">Your Course is being generated. It opens in Study once every Lesson is ready; you can close this page.</p>
+          ) : null}
+          {record.status === "published" ? (
+            <div className="mt-4">
+              <p role="status" className="text-sm">Your Course is ready. It's on Home with your other Courses.</p>
+              {courseHref ? <Button asChild className="mt-4"><Link to={courseHref}>Open in Study</Link></Button> : null}
+            </div>
+          ) : null}
+          {record.status === "generation_failed" ? (
+            <p role="alert" className="mt-4 whitespace-pre-wrap break-words text-sm">{record.failureReason ?? "Your Course could not be generated."}</p>
           ) : null}
         </>
       )}

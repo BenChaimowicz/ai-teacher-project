@@ -5,7 +5,10 @@ import {
   courseRequests,
   learners,
   parseTeachingProfileAnswers,
+  publishedCourses,
   publishedLessons,
+  publishedModules,
+  startingLevelDiagnostics,
   TEACHING_PROFILE_VERSION,
   unpublishedLessons,
   type ApprovedBlueprint,
@@ -13,7 +16,8 @@ import {
 } from "@senoy/db";
 import type { SourcePack } from "@senoy/research";
 import { fakeDb } from "../routes/fake-db.ts";
-import { createCourseGeneration } from "./course-generation.ts";
+import type { CourseJudge, CourseOutline } from "./course-judge.ts";
+import { createCourseGeneration, CourseFailedError } from "./course-generation.ts";
 import { QuizFailedError, type QuizGenerator, type QuizInput } from "./quiz-generation.ts";
 import { ReadingFailedError, type ReadingGenerator, type ReadingInput } from "./reading-generation.ts";
 
@@ -92,9 +96,29 @@ function recordingQuizGenerator(fail = false) {
   return { quizGenerator, inputs };
 }
 
-/** Runs generation for one approved Request on in-memory storage. */
-async function run(fail: "reading" | "quiz" | null = null) {
-  const { db, rows } = fakeDb([courseRequests, learners, unpublishedLessons, publishedLessons]);
+/** Whole-Course Judge recording each outline it reads; `fail` names a Lesson. */
+function recordingCourseJudge(fail = false) {
+  const outlines: CourseOutline[] = [];
+  const courseJudge: CourseJudge = {
+    async judge(outline) {
+      outlines.push(outline);
+      return fail
+        ? { pass: false, failedChecks: ["lesson_coherence"], reasons: ["Lesson 2 assesses something Lesson 1 does not commit to."] }
+        : { pass: true, failedChecks: [], reasons: [] };
+    },
+  };
+  return { courseJudge, outlines };
+}
+
+type Failure = "reading" | "quiz" | "course" | null;
+
+/**
+ * Runs generation for one approved Request on in-memory storage.
+ * @param fail - Which stage fails its checks
+ * @param courseJudgeOverride - Replaces the recording whole-Course Judge
+ */
+async function run(fail: Failure = null, courseJudgeOverride?: (tables: ReturnType<typeof fakeDb>["rows"]) => CourseJudge) {
+  const { db, rows } = fakeDb([courseRequests, learners, startingLevelDiagnostics, unpublishedLessons, publishedCourses, publishedModules, publishedLessons]);
   const [learner] = await db.insert(learners).values({
     id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION,
     teachingProfileAnswers: parseTeachingProfileAnswers({ contentScope: { status: "selected", value: "compact" } }),
@@ -102,12 +126,33 @@ async function run(fail: "reading" | "quiz" | null = null) {
   const [request] = await db.insert(courseRequests).values({
     learnerId: learner!.id, subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world", status: "generating",
   }).returning();
+  await db.insert(startingLevelDiagnostics).values({
+    courseRequestId: request!.id, learnerId: learner!.id, confirmation: "looks_right",
+    startingLevel: {
+      learningGoal: "Explain the Norse picture of the world", probedCapabilities: [], coverageNote: "Note.", extremity: "mixed",
+      remainingGapStatement: "Your Course would start at the World Tree.",
+    },
+  });
   const topics: string[] = [];
   const { readingGenerator, inputs } = recordingGenerator(fail === "reading");
   const { quizGenerator, inputs: quizInputs } = recordingQuizGenerator(fail === "quiz");
-  const generation = createCourseGeneration({ readingGenerator, quizGenerator, research: async (topic) => { topics.push(topic); return PACKS; } });
+  const { courseJudge, outlines } = recordingCourseJudge(fail === "course");
+  /** Published rows when the Quiz was generated: nothing may be playable mid-generation. */
+  const publishedDuringGeneration: number[] = [];
+  const quizGeneratorSpy: QuizGenerator = {
+    async generate(input) {
+      publishedDuringGeneration.push(rows.get(publishedCourses)!.length + rows.get(publishedLessons)!.length);
+      return quizGenerator.generate(input);
+    },
+  };
+  const generation = createCourseGeneration({
+    readingGenerator, quizGenerator: quizGeneratorSpy, courseJudge: courseJudgeOverride?.(rows) ?? courseJudge,
+    research: async (topic) => { topics.push(topic); return PACKS; },
+  });
   const started = generation.start({ db: db as unknown as Database, courseRequestId: request!.id, learnerId: learner!.id, approved: APPROVED });
-  return { started, rows, topics, inputs, quizInputs, requestId: request!.id };
+  /** The stored Request. */
+  const stored = () => (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
+  return { started, rows, topics, inputs, quizInputs, outlines, publishedDuringGeneration, stored, requestId: request!.id, learnerId: learner!.id };
 }
 
 test("The approved Reading slot is researched, generated, and saved as one unpublished checkpoint", async () => {
@@ -133,14 +178,31 @@ test("The approved Reading slot is researched, generated, and saved as one unpub
   assert.deepEqual(saved[0]!.sourcePacks, PACKS);
   assert.equal(saved[0]!.rejectedSources[0]!.reason, "A shop's blog.");
   assert.equal(saved[0]!.judge.pass, true);
-  assert.equal(rows.get(publishedLessons)!.length, 0, "A checkpoint is not playable before atomic publication.");
 });
 
-test("A Lesson that fails its checks is not saved, and no Quiz is generated without its Reading", async () => {
-  const { started, rows, quizInputs } = await run("reading");
+test("A Lesson that fails its checks is not saved, no Quiz is generated without its Reading, and the Request fails", async () => {
+  const { started, rows, quizInputs, stored } = await run("reading");
   await assert.rejects(started, ReadingFailedError);
   assert.equal(rows.get(unpublishedLessons)!.length, 0);
   assert.equal(quizInputs.length, 0);
+  assert.equal(stored().status, "generation_failed");
+  assert.match(stored().failureReason!, /couldn't write the Lesson “The World Tree” so that it passed our quality checks/);
+  assert.equal(rows.get(publishedCourses)!.length, 0);
+});
+
+test("A provider error is told as an interruption", async () => {
+  const { db, rows } = fakeDb([courseRequests, learners, startingLevelDiagnostics, unpublishedLessons, publishedCourses, publishedModules, publishedLessons]);
+  const [learner] = await db.insert(learners).values({
+    id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
+  }).returning();
+  const [request] = await db.insert(courseRequests).values({
+    learnerId: learner!.id, subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world", status: "generating",
+  }).returning();
+  const generation = createCourseGeneration({ research: async () => { throw new Error("vendor down"); } });
+  await assert.rejects(generation.start({ db, courseRequestId: request!.id, learnerId: learner!.id, approved: APPROVED }), /vendor down/);
+  const stored = (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
+  assert.equal(stored.status, "generation_failed");
+  assert.match(stored.failureReason!, /^Generation was interrupted while writing the Lesson “The World Tree”\. You can start a new Course Request from Home\.$/);
 });
 
 test("The Quiz is generated from the checkpointed Reading and saved as its own checkpoint", async () => {
@@ -163,11 +225,84 @@ test("The Quiz is generated from the checkpointed Reading and saved as its own c
   assert.equal((quiz.body as { items: unknown[] }).items.length, 6);
   assert.deepEqual([quiz.sources, quiz.citations, quiz.sourcePacks, quiz.rejectedSources, quiz.lineage], [[], [], [], [], null]);
   assert.equal(quiz.judge.pass, true);
-  assert.equal(rows.get(publishedLessons)!.length, 0, "A checkpoint is not playable before atomic publication.");
 });
 
-test("A Quiz that fails its checks is not saved; the Reading checkpoint stays", async () => {
-  const { started, rows } = await run("quiz");
+test("A Quiz that fails its checks is not saved; the Reading checkpoint stays and the Request fails", async () => {
+  const { started, rows, stored } = await run("quiz");
   await assert.rejects(started, QuizFailedError);
   assert.deepEqual((rows.get(unpublishedLessons)! as (typeof unpublishedLessons.$inferSelect)[]).map((row) => row.slotId), ["slot1"]);
+  assert.equal(stored().status, "generation_failed");
+  assert.match(stored().failureReason!, /“Check: the World Tree”/);
+  assert.equal(rows.get(publishedCourses)!.length, 0);
+});
+
+test("Nothing is playable while generation runs; the Course publishes only at the end", async () => {
+  const { started, publishedDuringGeneration } = await run();
+  await started;
+  assert.deepEqual(publishedDuringGeneration, [0]);
+});
+
+test("The whole-Course Judge reads one outline of titles, goals, objectives, and commitments, never a Lesson body", async () => {
+  const { started, outlines } = await run();
+  await started;
+
+  assert.equal(outlines.length, 1, "One pass over the whole Course.");
+  assert.deepEqual(outlines[0], {
+    courseTitle: "Norse cosmology",
+    learningGoal: "Explain the Norse picture of the world",
+    startingLevel: "Your Course would start at the World Tree.",
+    modules: [{
+      title: "The world tree",
+      lessons: [
+        { n: 1, method: "reading", title: "The World Tree", lessonGoal: "Describe how Yggdrasil connects the Nine Worlds.", objectives: ["Describe Yggdrasil"], commitments: ["A tree"] },
+        { n: 2, method: "quiz", title: "Check: the World Tree", lessonGoal: "Recall how Yggdrasil connects the worlds.", objectives: ["Describe Yggdrasil"], commitments: ["Describe Yggdrasil"] },
+      ],
+    }],
+  });
+  assert.doesNotMatch(JSON.stringify(outlines[0]), /Yggdrasil \[1\]|Question 1/, "No Lesson body reaches the Judge.");
+});
+
+test("A passing Course publishes atomically: Course, Module, both Lessons, and the published status", async () => {
+  const { started, rows, stored, requestId, learnerId } = await run();
+  await started;
+
+  const [course] = rows.get(publishedCourses)! as (typeof publishedCourses.$inferSelect)[];
+  assert.deepEqual([course!.learnerId, course!.courseRequestId, course!.title, course!.subject, course!.sequenceMode],
+    [learnerId, requestId, "Norse cosmology", "Norse mythology", "linear"]);
+  const modules = rows.get(publishedModules)! as (typeof publishedModules.$inferSelect)[];
+  assert.deepEqual(modules.map((row) => [row.publishedCourseId, row.title, row.position]), [[course!.id, "The world tree", 0]]);
+  const lessons = rows.get(publishedLessons)! as (typeof publishedLessons.$inferSelect)[];
+  assert.deepEqual(lessons.map((row) => [row.moduleId, row.position, row.teachingMethod, row.title]), [
+    [modules[0]!.id, 0, "reading", "The World Tree"],
+    [modules[0]!.id, 1, "quiz", "Check: the World Tree"],
+  ]);
+  assert.deepEqual(lessons[1]!.assessedLessonIds, [lessons[0]!.id], "The Quiz assesses the published Reading.");
+  assert.equal(stored().status, "published");
+  assert.equal(stored().failureReason, null);
+  assert.equal(rows.get(unpublishedLessons)!.length, 2, "Checkpoints stay after publish.");
+});
+
+test("A failed whole-Course Judge publishes nothing, keeps the checkpoints, and fails the Request", async () => {
+  const { started, rows, stored } = await run("course");
+  await assert.rejects(started, CourseFailedError);
+  assert.equal(rows.get(publishedCourses)!.length, 0);
+  assert.equal(rows.get(publishedLessons)!.length, 0);
+  assert.equal(rows.get(unpublishedLessons)!.length, 2);
+  assert.equal(stored().status, "generation_failed");
+  assert.match(stored().failureReason!, /didn't fit together well enough to publish/);
+});
+
+test("Publish is all or nothing: a Request that stopped generating leaves no published rows", async () => {
+  const { started, rows, stored } = await run(null, (tables) => ({
+    async judge() {
+      // Something else moved the Request on (a later Cancel) before publish.
+      (tables.get(courseRequests)![0] as { status: string }).status = "blueprint_review";
+      return { pass: true, failedChecks: [], reasons: [] };
+    },
+  }));
+  await assert.rejects(started, /no longer generating/);
+  assert.equal(rows.get(publishedCourses)!.length, 0);
+  assert.equal(rows.get(publishedModules)!.length, 0);
+  assert.equal(rows.get(publishedLessons)!.length, 0);
+  assert.equal(stored().status, "blueprint_review", "A failure never overwrites a status that moved on.");
 });

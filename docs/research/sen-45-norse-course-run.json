@@ -1,0 +1,444 @@
+{
+  "ticket": "SEN-45",
+  "what": "One non-fixture Course generated from a real Request through the app on hosted Supabase, published atomically, and completed in Study to 2/2.",
+  "generatorModel": "deepseek/deepseek-v4-pro",
+  "judgeModel": "openai/gpt-6-luna",
+  "earlierAttemptsOnThisRequest": [
+    "Validity: OpenRouter returned an invalid structured response once; Check request again passed.",
+    "Starting Level check: one invalid structured response, then one attempt whose item 8 still failed its rewrite rounds (key stood out as longest); the third attempt was ready.",
+    "Blueprint: the first draft failed the Blueprint Judge on coverage (Nine Worlds beyond Asgard and Midgard); the second passed."
+  ],
+  "diagnosticAnswers": "I don't know on all eight items",
+  "approveToPublishMs": 567445,
+  "request": {
+    "id": "721a8efc-cba3-4f68-96d9-1a6401472603",
+    "subject": "Norse mythology",
+    "learning_goal": "Explain how the Norse sources picture the world: Yggdrasil and the Nine Worlds it connects.",
+    "status": "published",
+    "failure_reason": null,
+    "created_at": "2026-10-19T03:49:55.684237+00:00"
+  },
+  "approvedAt": "2026-10-19T04:01:35.513+00:00",
+  "approved": {
+    "blueprint": {
+      "modules": [
+        {
+          "slots": [
+            {
+              "id": "slot1",
+              "title": "The World-Tree and Its Worlds",
+              "method": "reading",
+              "topicTags": [
+                "yggdrasil",
+                "nine-worlds",
+                "midgard",
+                "asgard",
+                "ratatosk"
+              ],
+              "lessonGoal": "Understand how the Norse sources describe Yggdrasil and the Nine Worlds it connects.",
+              "objectives": [
+                "Recognize Yggdrasil as the central ash tree in Norse cosmology.",
+                "Recall that Midgard is the world of humans.",
+                "Match Asgard with the gods and Midgard with the humans.",
+                "Identify the three primary roots of Yggdrasil as described by Snorri Sturluson.",
+                "Describe the role of the squirrel Ratatosk as a messenger of insults between the eagle and Nidhogg.",
+                "Locate Valhalla within Asgard and explain its narrative significance as the hall of fallen warriors.",
+                "List the Nine Worlds commonly associated with Yggdrasil.",
+                "Interpret the world-tree as a symbol of interconnectedness and cosmic order.",
+                "Apply knowledge of Yggdrasil’s roots and wells to a mythic journey example."
+              ],
+              "assessesSlotIds": []
+            },
+            {
+              "id": "slot2",
+              "title": "Check Your Knowledge: Yggdrasil",
+              "method": "quiz",
+              "topicTags": [
+                "yggdrasil",
+                "nine-worlds",
+                "valhalla",
+                "norse-cosmology"
+              ],
+              "lessonGoal": "Demonstrate understanding of Yggdrasil and the Nine Worlds by recalling key facts and applying them to mythological scenarios.",
+              "objectives": [
+                "Recognize Yggdrasil as the central ash tree.",
+                "Recall that humans live in Midgard.",
+                "Match Asgard with the gods and Midgard with the humans.",
+                "Identify the number of Yggdrasil’s roots as three.",
+                "Explain the role of Ratatosk.",
+                "Apply the location of Valhalla to a narrative situation.",
+                "Interpret the image of the world-tree as a symbol of connection.",
+                "Apply knowledge of Yggdrasil’s roots and wells to a mythic journey."
+              ],
+              "assessesSlotIds": [
+                "slot1"
+              ]
+            }
+          ],
+          "title": "The Cosmic Tree"
+        }
+      ],
+      "courseTitle": "Norse Mythology: Yggdrasil and the Nine Worlds"
+    },
+    "approvedAt": "2026-10-19T04:01:35.513Z",
+    "sequenceMode": "linear"
+  },
+  "startingLevel": "Your course will begin with the very basics of Norse mythology, introducing Yggdrasil as the central ash tree and the worlds it connects. From there, you'll build up your understanding step by step until you can explain how the Norse sources picture this interconnected cosmos.",
+  "checkpoints": [
+    {
+      "slot_id": "slot1",
+      "position": 0,
+      "teaching_method": "reading",
+      "title": "The World-Tree and Its Worlds",
+      "judge": {
+        "pass": true,
+        "reasons": [],
+        "failedChecks": []
+      },
+      "rejected_sources": [
+        {
+          "url": "https://norse-mythology.org/cosmology",
+          "reason": "Independent mythology site tied to an author’s commercial book; not a scholarly or institutional reference source.",
+          "sourceId": "src_bbd4626e8f"
+        },
+        {
+          "url": "https://hrafn-wikinger.com/en/mythology/worlds/yggdrasil/",
+          "reason": "Viking-themed commercial site; this mythology article appears to be promotional blog content rather than an authoritative reference.",
+          "sourceId": "src_9ec6cd1503"
+        },
+        {
+          "url": "https://www.talesbytrees.com/yggdrasil-the-norse-world-tree/",
+          "reason": "Generic, lightly sourced blog-style article with no clear scholarly or educational authority.",
+          "sourceId": "src_94744787e5"
+        },
+        {
+          "url": "https://www.mythic-harmonies.com/norse-mythology/yggdrasil-world-tree-nine-realms/",
+          "reason": "SEO-style explanatory article on a site with no clear scholarly or institutional authority.",
+          "sourceId": "src_afdad0e405"
+        },
+        {
+          "url": "https://spokenpast.com/articles/ratatoskr-squirrel-yggdrasil/",
+          "reason": "Independent blog interpretation with no clear scholarly or institutional authority; not a strong source to cite as evidence.",
+          "sourceId": "src_88e96c113e"
+        }
+      ],
+      "finalized_at": "2026-10-19T04:07:16.528957+00:00",
+      "citations": 7
+    },
+    {
+      "slot_id": "slot2",
+      "position": 1,
+      "teaching_method": "quiz",
+      "title": "Check Your Knowledge: Yggdrasil",
+      "judge": {
+        "pass": true,
+        "reasons": [],
+        "failedChecks": []
+      },
+      "rejected_sources": [],
+      "finalized_at": "2026-10-19T04:10:52.965276+00:00",
+      "citations": 0
+    }
+  ],
+  "publishedCourse": {
+    "id": "4e063305-0a03-4a86-99e0-35dd8459e313",
+    "title": "Norse Mythology: Yggdrasil and the Nine Worlds",
+    "sequence_mode": "linear",
+    "published_at": "2026-10-19T04:11:02.958589+00:00"
+  },
+  "publishedLessons": [
+    {
+      "id": "a2fdc502-5703-4f9c-aa4d-a6f4b2c75ac9",
+      "position": 0,
+      "teaching_method": "reading",
+      "title": "The World-Tree and Its Worlds",
+      "assessed_lesson_ids": [],
+      "body": {
+        "sections": [
+          {
+            "blocks": [
+              {
+                "kind": "prose",
+                "text": "In Norse mythology, Yggdrasil is the world‑tree—a giant ash that supports the entire universe [1]. The oldest poems say that nine worlds surround this immense tree [2]. The ancient sources never list them clearly. However, scholar Henry Adams Bellows proposed a list: Asgard (the gods’ realm), Vanaheim, Alfheim, Midgard (humans’ realm), Jotunheim (giants), Muspelheim (fire realm), Svartalfheim (dark elves), Niflheim (mist and the dead), and perhaps Nidavellir (dwarves) [2]. Yggdrasil is an axis mundi, a cosmic axis that links the heavens, the earth, and the underworld, making it a powerful symbol of interconnectedness and the order of the Norse cosmos [3]. It was believed that when the tree trembled, Ragnarök—the final battle—would begin [4]."
+              }
+            ],
+            "heading": "Yggdrasil and the Nine Worlds"
+          },
+          {
+            "blocks": [
+              {
+                "kind": "prose",
+                "text": "Asgard is the dwelling of the Æsir gods, and Midgard is the world of humans [1]. Inside Asgard stands Valhalla, the hall of slain warriors chosen by Odin [5]. Valhalla is a splendid palace roofed with shields; the warriors feast every night and fight each other by day, training until Ragnarök, when they will march out to battle alongside Odin [5]. This afterlife inspired Viking warriors, because only the brave who fell in combat were summoned to Odin’s hall [5]."
+              }
+            ],
+            "heading": "The Realms of Gods and Men"
+          },
+          {
+            "blocks": [
+              {
+                "kind": "prose",
+                "text": "According to the 13th‑century writer Snorri Sturluson, Yggdrasil has three mighty roots: one among the gods, one among the frost‑giants, and one over Niflheim [6]. Beneath the root that reaches the frost‑giants lies Mimir’s Well, a source of wisdom; Odin once journeyed there and sacrificed one of his eyes for a single drink [6]. The root over Niflheim is gnawed by the dragon Nidhogg [6]. High in the branches perches an eagle, and between them runs the squirrel Ratatosk. Ratatosk carries envious, insulting words up and down the tree, stirring the eagle and the dragon against each other [7][6]. If a mythic hero sought hidden knowledge, like Odin, the path would lead to Mimir’s Well beneath the root among the frost‑giants—a journey woven into the very structure of Yggdrasil."
+              }
+            ],
+            "heading": "The Roots, Wells, and the Messenger Squirrel"
+          }
+        ]
+      }
+    },
+    {
+      "id": "1c9d4ad7-b2e6-4a24-9d47-0984264c5dc7",
+      "position": 1,
+      "teaching_method": "quiz",
+      "title": "Check Your Knowledge: Yggdrasil",
+      "assessed_lesson_ids": [
+        "a2fdc502-5703-4f9c-aa4d-a6f4b2c75ac9"
+      ],
+      "body": {
+        "items": [
+          {
+            "id": "item1",
+            "prompt": "Yggdrasil is described as what kind of tree?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Ash"
+              },
+              {
+                "id": "b",
+                "text": "Oak"
+              },
+              {
+                "id": "c",
+                "text": "Pine"
+              },
+              {
+                "id": "d",
+                "text": "Elm"
+              }
+            ],
+            "explanations": {
+              "brief": "Yggdrasil is described as a giant ash tree in the Norse sources.",
+              "detailed": "The lessons begin by stating that Yggdrasil is \"a giant ash\" tree. “Oak” is another type of tree, not specified as Yggdrasil; “Pine” and “Elm” are also incorrect because the sources identify it specifically as an ash.",
+              "standard": "According to the oldest sources, Yggdrasil is the world‑tree, specifically a giant ash that supports the universe. No other tree type is mentioned for it."
+            },
+            "correctOptionId": "a"
+          },
+          {
+            "id": "item2",
+            "prompt": "According to Norse mythology, humans dwell in which realm?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Asgard"
+              },
+              {
+                "id": "b",
+                "text": "Jotunheim"
+              },
+              {
+                "id": "c",
+                "text": "Niflheim"
+              },
+              {
+                "id": "d",
+                "text": "Midgard"
+              }
+            ],
+            "explanations": {
+              "brief": "Humans dwell in Midgard.",
+              "detailed": "The lessons state that \"Midgard is the world of humans.\" “Asgard” is the realm of the gods, “Jotunheim” belongs to the giants, and “Niflheim” is the misty realm of the dead. None of these is where humans live.",
+              "standard": "According to the sources, Midgard is the world of humans. Asgard is for the gods, Jotunheim for giants, and Niflheim for the dead."
+            },
+            "correctOptionId": "d"
+          },
+          {
+            "id": "item3",
+            "prompt": "Which realm is home to the Æsir gods?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Midgard"
+              },
+              {
+                "id": "b",
+                "text": "Asgard"
+              },
+              {
+                "id": "c",
+                "text": "Jotunheim"
+              },
+              {
+                "id": "d",
+                "text": "Niflheim"
+              }
+            ],
+            "explanations": {
+              "brief": "Asgard is the home of the gods.",
+              "detailed": "The lesson on realms states that \"Asgard is the dwelling of the Æsir gods.\" “Midgard” is the human world, “Jotunheim” belongs to the giants, and “Niflheim” is the land of mist and the dead. None of these is inhabited by the gods.",
+              "standard": "The sources clearly place the Æsir gods in Asgard. Midgard is for humans, Jotunheim for giants, and Niflheim for the dead."
+            },
+            "correctOptionId": "b"
+          },
+          {
+            "id": "item4",
+            "prompt": "How many roots does Yggdrasil have, according to Snorri Sturluson?",
+            "options": [
+              {
+                "id": "a",
+                "text": "One"
+              },
+              {
+                "id": "b",
+                "text": "Three"
+              },
+              {
+                "id": "c",
+                "text": "Two"
+              },
+              {
+                "id": "d",
+                "text": "Four"
+              }
+            ],
+            "explanations": {
+              "brief": "Snorri Sturluson states that Yggdrasil has three roots.",
+              "detailed": "The lesson reports that \"Yggdrasil has three mighty roots.\" “One”, “Two”, and “Four” are numbers that contradict the specific count given by Snorri. The sources do not mention one, two, or four roots.",
+              "standard": "According to the 13th‑century writer Snorri Sturluson, Yggdrasil has exactly three mighty roots: one among the gods, one among the frost‑giants, and one over Niflheim."
+            },
+            "correctOptionId": "b"
+          },
+          {
+            "id": "item5",
+            "prompt": "What is Ratatosk’s role in the mythology of Yggdrasil?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Gnawing the root over Niflheim"
+              },
+              {
+                "id": "b",
+                "text": "Guarding the well of Mimir"
+              },
+              {
+                "id": "c",
+                "text": "Carrying insulting words between the eagle and the dragon Nidhogg"
+              },
+              {
+                "id": "d",
+                "text": "Bringing Odin’s wisdom to the gods"
+              }
+            ],
+            "explanations": {
+              "brief": "Ratatosk carries insulting words between the eagle and Nidhogg.",
+              "detailed": "The lesson explains that Ratatosk is a squirrel that \"carries envious, insulting words up and down the tree, stirring the eagle and the dragon against each other.\" “Gnawing the root over Niflheim” describes gnawing the root, which is the dragon Nidhogg’s action, not Ratatosk’s. “Guarding the well of Mimir” is guarding the well, a role not assigned to any creature in the lesson. “Bringing Odin’s wisdom to the gods” is not mentioned at all.",
+              "standard": "Ratatosk is the squirrel that runs between the eagle at the top and the dragon Nidhogg at the root, bearing insulting messages to stir animosity between them."
+            },
+            "correctOptionId": "c"
+          },
+          {
+            "id": "item6",
+            "prompt": "A Viking warrior dies in battle and is chosen by Odin. Where does this warrior go after death?",
+            "options": [
+              {
+                "id": "a",
+                "text": "A longhouse in Midgard"
+              },
+              {
+                "id": "b",
+                "text": "A hall in Niflheim"
+              },
+              {
+                "id": "c",
+                "text": "A cave in Jotunheim"
+              },
+              {
+                "id": "d",
+                "text": "Valhalla in Asgard"
+              }
+            ],
+            "explanations": {
+              "brief": "The chosen warrior goes to Valhalla in Asgard.",
+              "detailed": "The sources state that Valhalla is \"the hall of slain warriors chosen by Odin\" and that it stands inside Asgard. “A longhouse in Midgard” is the world of living humans, not an afterlife for chosen warriors. “A hall in Niflheim” names Niflheim, a realm of mist and the dead, but the lesson does not describe it as the destination for Odin’s chosen. “A cave in Jotunheim” is the giants’ realm, not the hall for honored warriors.",
+              "standard": "Odin’s chosen fallen warriors are taken to Valhalla, a splendid hall located within Asgard, where they feast and train until Ragnarök."
+            },
+            "correctOptionId": "d"
+          },
+          {
+            "id": "item7",
+            "prompt": "Why is Yggdrasil often interpreted as a symbol of connection?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Because it connects Asgard, Midgard, and Jotunheim into one realm"
+              },
+              {
+                "id": "b",
+                "text": "Because it is the source of all wisdom in the nine worlds"
+              },
+              {
+                "id": "c",
+                "text": "Because it holds the sun and moon in its branches"
+              },
+              {
+                "id": "d",
+                "text": "Because it links the heavens, earth, and underworld as a cosmic axis"
+              }
+            ],
+            "explanations": {
+              "brief": "The world‑tree links the heavens, earth, and underworld.",
+              "detailed": "The lesson calls Yggdrasil an axis mundi, \"a cosmic axis that links the heavens, the earth, and the underworld, making it a powerful symbol of interconnectedness.\" “Because it connects Asgard, Midgard, and Jotunheim into one realm” is wrong because the tree does not merge realms into one. “Because it is the source of all wisdom in the nine worlds” incorrectly claims it is the source of all wisdom—only Mimir’s Well is a wisdom source. “Because it holds the sun and moon in its branches” is not a claim found in the lessons; the sources describe Yggdrasil as linking worlds, not as holding celestial bodies.",
+              "standard": "As an axis mundi, Yggdrasil connects the heavens, earth, and underworld, which is why it is interpreted as a symbol of connection and cosmic order."
+            },
+            "correctOptionId": "d"
+          },
+          {
+            "id": "item8",
+            "prompt": "A hero wants to gain hidden knowledge like Odin. According to the sources, where must this hero go?",
+            "options": [
+              {
+                "id": "a",
+                "text": "To Mimir’s Well beneath the root among the frost‑giants"
+              },
+              {
+                "id": "b",
+                "text": "To the top of Yggdrasil to ask the eagle"
+              },
+              {
+                "id": "c",
+                "text": "To the root over Niflheim to speak with Nidhogg"
+              },
+              {
+                "id": "d",
+                "text": "To the well under the root among the gods"
+              }
+            ],
+            "explanations": {
+              "brief": "To gain hidden knowledge, one must go to Mimir’s Well beneath the frost‑giants’ root.",
+              "detailed": "The lesson explicitly says, \"If a mythic hero sought hidden knowledge, like Odin, the path would lead to Mimir’s Well beneath the root among the frost‑giants.\" “To the top of Yggdrasil to ask the eagle” refers to the eagle at the top, which is not a source of hidden knowledge. “To the root over Niflheim to speak with Nidhogg” points to Nidhogg, who gnaws the root, not a keeper of wisdom. “To the well under the root among the gods” is a well under the gods’ root, which is not mentioned in the sources.",
+              "standard": "Following Odin’s example, a hero seeking hidden wisdom must journey to Mimir’s Well, which lies beneath the root of Yggdrasil that extends among the frost‑giants."
+            },
+            "correctOptionId": "a"
+          }
+        ]
+      }
+    }
+  ],
+  "progress": [
+    {
+      "lesson_id": "a2fdc502-5703-4f9c-aa4d-a6f4b2c75ac9",
+      "completed_at": "2026-10-19T04:12:10.507989+00:00"
+    },
+    {
+      "lesson_id": "1c9d4ad7-b2e6-4a24-9d47-0984264c5dc7",
+      "completed_at": "2026-10-19T04:13:29.456148+00:00"
+    }
+  ],
+  "quizAttempts": [
+    {
+      "status": "submitted",
+      "correct": 8,
+      "total": 8,
+      "submitted_at": "2026-10-19T04:13:27.34+00:00"
+    }
+  ]
+}

@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { createDb, learners, SEEDED_QUIZ_BODY, TEACHING_PROFILE_VERSION } from "@senoy/db";
+import {
+  courseRequests,
+  createDb,
+  learners,
+  SEEDED_LEARNER_ID,
+  SEEDED_QUIZ_BODY,
+  startingLevelDiagnostics,
+  TEACHING_PROFILE_VERSION,
+  type StartingLevel,
+} from "@senoy/db";
 import { seedLearner, seedPublishedCourse } from "@senoy/db/seed-fixture";
 import { parseTeachingProfileAnswers } from "@senoy/db/teaching-profile";
 import type { Page } from "@playwright/test";
@@ -12,7 +21,7 @@ const db = createDb(process.env.DATABASE_URL!, { max: 1 });
  */
 export async function resetFixture(answers: Record<string, unknown> = {}) {
   await db.execute(
-    sql`truncate course_blueprints, starting_level_diagnostics, quiz_attempts, lesson_completions, published_lessons, published_modules, published_courses, course_requests, learners cascade`,
+    sql`truncate unpublished_lessons, course_blueprints, starting_level_diagnostics, quiz_attempts, lesson_completions, published_lessons, published_modules, published_courses, course_requests, learners cascade`,
   );
   const learner = await seedLearner(db);
   await seedPublishedCourse(db);
@@ -25,6 +34,31 @@ export async function resetFixture(answers: Record<string, unknown> = {}) {
       teachingProfileUpdatedAt: new Date(),
     })
     .where(sql`${learners.id} = ${learner.id}`);
+}
+
+/** Capabilities 1–3 evidenced; the gap starts at Fixture capability 4. */
+const startingLevel: StartingLevel = {
+  learningGoal: "Play Iris by the Goo Goo Dolls",
+  probedCapabilities: Array.from({ length: 8 }, (_, i) => ({
+    id: `cap${i + 1}`, statement: `Fixture capability ${i + 1}`, itemId: `item${i + 1}`, span: i + 1,
+    status: i < 3 ? "correct" as const : "dont_know" as const, expandedByLearner: false,
+  })),
+  remainingGapStatement: "Your Course would start at Fixture capability 4.",
+  coverageNote: "Fixture coverage note.",
+  extremity: "mixed",
+};
+
+/** Resets the database and saves a Request whose Starting Level is confirmed. Returns its URL. */
+export async function confirmedRequest() {
+  await resetFixture();
+  const [row] = await db.insert(courseRequests).values({
+    learnerId: SEEDED_LEARNER_ID, subject: "Drum kit", learningGoal: "Play Iris by the Goo Goo Dolls", status: "starting_level_confirmed",
+  }).returning();
+  await db.insert(startingLevelDiagnostics).values({
+    courseRequestId: row!.id, learnerId: SEEDED_LEARNER_ID, startingLevel, confirmation: "looks_right",
+    readyAt: new Date(), submittedAt: new Date(), confirmedAt: new Date(),
+  });
+  return `/course-requests/${row!.id}`;
 }
 
 /**

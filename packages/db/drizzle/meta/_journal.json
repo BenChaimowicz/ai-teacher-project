@@ -64,6 +64,13 @@
       "when": 1791920583913,
       "tag": "0008_tan_sleeper",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792355412929,
+      "tag": "0009_sloppy_archangel",
+      "breakpoints": true
     }
   ]
 }

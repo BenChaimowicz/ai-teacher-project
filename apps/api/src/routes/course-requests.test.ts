@@ -39,6 +39,7 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
   const columnKeys = {
     id: "id", learner_id: "learnerId", subject: "subject", learning_goal: "learningGoal", status: "status",
     created_at: "createdAt", validity: "validity", clarification: "clarification", revised_from_id: "revisedFromId",
+    failure_reason: "failureReason",
   } as const;
   /** Projects precisely the selected columns, as Postgres does. */
   function project(row: CourseRequest, fields?: Record<string, PgColumn>) {
@@ -62,7 +63,7 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
       values: (values: typeof courseRequests.$inferInsert) => ({
         returning: async (fields?: Record<string, PgColumn>) => {
           if (failWrites) throw new Error("Database unavailable");
-          const row = { id: randomUUID(), createdAt: new Date(), validity: null, clarification: null, revisedFromId: null, ...values } as CourseRequest;
+          const row = { id: randomUUID(), createdAt: new Date(), validity: null, clarification: null, revisedFromId: null, failureReason: null, ...values } as CourseRequest;
           rows.push(row);
           return [project(row, fields)];
         },

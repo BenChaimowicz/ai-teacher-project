@@ -7,8 +7,9 @@ import type { Database } from "@senoy/db";
 type Row = Record<string, unknown>;
 
 /**
- * In-memory stand-in for the Drizzle calls routes make: insert (awaited or with returning), select/where/orderBy (newest first only)/limit,
- * and conditional update/returning. Evaluates only equality and `is null` predicates.
+ * In-memory stand-in for the Drizzle calls routes make: insert of one row or many (awaited or with returning),
+ * select/where/orderBy (newest first only)/limit, conditional update/returning, and a transaction that restores every
+ * table if its callback throws. Evaluates only equality and `is null` predicates.
  * @param tables - Tables the routes under test touch
  */
 export function fakeDb(tables: PgTable[]) {
@@ -59,16 +60,18 @@ export function fakeDb(tables: PgTable[]) {
 
   const db = {
     insert: (table: PgTable) => ({
-      values: (values: Row) => {
-        /** Stores the row with database defaults. */
+      values: (values: Row | Row[]) => {
+        /** Stores each row with database defaults. */
         function insert() {
-          const row = withDefaults(table, values);
-          rows.get(table)!.push(row);
-          inserts.push({ table, values });
-          return row;
+          return (Array.isArray(values) ? values : [values]).map((value) => {
+            const row = withDefaults(table, value);
+            rows.get(table)!.push(row);
+            inserts.push({ table, values: value });
+            return row;
+          });
         }
         return {
-          returning: async (fields?: Record<string, PgColumn>) => [project(table, insert(), fields)],
+          returning: async (fields?: Record<string, PgColumn>) => insert().map((row) => project(table, row, fields)),
           then: (resolve: (value: unknown) => unknown) => resolve((insert(), undefined)),
         };
       },
@@ -100,6 +103,16 @@ export function fakeDb(tables: PgTable[]) {
         }),
       }),
     }),
+    /** Runs the callback on this store; a throw restores every table to its state before the call. */
+    transaction: async <T>(callback: (transaction: unknown) => Promise<T>) => {
+      const saved = new Map([...rows].map(([table, list]) => [table, list.map((row) => ({ ...row }))]));
+      try {
+        return await callback(db);
+      } catch (error) {
+        for (const [table, list] of saved) rows.set(table, list);
+        throw error;
+      }
+    },
   };
   return { db: db as unknown as Database, rows, inserts };
 }

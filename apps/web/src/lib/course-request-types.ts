@@ -40,6 +40,8 @@ export function courseRequestStatusLabel(status: string): string {
     case "blueprint_preparing": return "Designing your Course Blueprint";
     case "blueprint_review": return "Review your Course Blueprint";
     case "generating": return "Generating your Course";
+    case "published": return "Course published";
+    case "generation_failed": return "Course generation failed";
     default: return status.replaceAll("_", " ");
   }
 }

@@ -12,7 +12,8 @@
     "./course-request": "./src/course-request.ts",
     "./starting-level": "./src/starting-level.ts",
     "./blueprint": "./src/blueprint.ts",
-    "./lesson-checkpoint": "./src/lesson-checkpoint.ts"
+    "./lesson-checkpoint": "./src/lesson-checkpoint.ts",
+    "./publication": "./src/publication.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",
