@@ -3,11 +3,12 @@ import { Link } from "react-router-dom";
 import type { SequenceMode } from "@senoy/db/sequence-mode";
 import { Button } from "@/components/ui/button.tsx";
 import { ChoiceCard } from "@/components/choice-card.tsx";
-import type { BlueprintView, CourseRequestRecord } from "@/lib/course-request-types.ts";
+import type { BlueprintView, CourseRequestRecord, GenerationView } from "@/lib/course-request-types.ts";
 
 /** Statuses this component owns on the Course Request screen. */
 export const BLUEPRINT_STATUSES = new Set([
   "starting_level_confirmed", "blueprint_preparing", "blueprint_review", "generating", "published", "generation_failed",
+  "generation_cancelled",
 ]);
 
 /** Statuses that move on by themselves, so the page checks again. */
@@ -15,6 +16,19 @@ const WORKING_STATUSES = new Set(["blueprint_preparing", "generating"]);
 
 /** How often the page checks whether a Blueprint being designed, or a Course being generated, is ready. */
 const POLL_MS = 3000;
+
+/**
+ * One line on what generation is doing: the current Lesson and N of M, or the publish stage. Never a draft or Sources.
+ * @param generation - The job's Waiting view
+ */
+function waitingLine(generation: GenerationView | null) {
+  if (!generation || generation.status === "queued") return "Your Course is queued to be generated.";
+  if (generation.stage === "publish") return `All ${generation.totalLessons} Lessons are written. Checking that they fit together, then publishing.`;
+  if (generation.lessonNumber && generation.lessonTitle) {
+    return `Writing Lesson ${generation.lessonNumber} of ${generation.totalLessons}: “${generation.lessonTitle}”.`;
+  }
+  return `${generation.finishedLessons} of ${generation.totalLessons} Lessons written.`;
+}
 
 /** Learner-facing names for a slot's Teaching method. */
 const METHOD_LABELS: Record<string, string> = { reading: "Reading", quiz: "Quiz" };
@@ -31,6 +45,7 @@ type Props = {
 export function CourseBlueprintReview({ record, onRecord }: Props) {
   const [view, setView] = useState<BlueprintView | null>(null);
   const [courseHref, setCourseHref] = useState<string | null>(null);
+  const [generation, setGeneration] = useState<GenerationView | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -49,7 +64,8 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
       try {
         const response = await fetch(`/api/course-requests/${record.id}/blueprint`);
         const body = await response.json() as {
-          courseRequest?: CourseRequestRecord; blueprint?: BlueprintView | null; course?: { href: string | null } | null; error?: string;
+          courseRequest?: CourseRequestRecord; blueprint?: BlueprintView | null; course?: { href: string | null } | null;
+          generation?: GenerationView | null; error?: string;
         };
         if (!response.ok || !body.courseRequest) throw new Error(body.error ?? "Could not load your Course Blueprint.");
         if (cancelled) return;
@@ -61,6 +77,7 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
         if (body.courseRequest.status === "blueprint_preparing") return;
         setView(body.blueprint ?? null);
         setCourseHref(body.course?.href ?? null);
+        setGeneration(body.generation ?? null);
       } catch (caught: unknown) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : "Could not load your Course Blueprint.");
       }
@@ -69,20 +86,26 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [record.id, record.status, onRecord]);
 
-  /** Sends one Blueprint action and applies the returned Request and Blueprint. Returns whether it succeeded. */
+  /**
+   * Sends one Blueprint or generation action and applies the returned Request, Blueprint, and job. Returns whether it
+   * succeeded.
+   */
   async function send(method: "POST" | "PUT", path: string, payload: unknown = {}) {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/course-requests/${record.id}/blueprint${path}`, {
+      const response = await fetch(`/api/course-requests/${record.id}${path}`, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const body = await response.json() as { courseRequest?: CourseRequestRecord; blueprint?: BlueprintView; error?: string };
+      const body = await response.json() as {
+        courseRequest?: CourseRequestRecord; blueprint?: BlueprintView; generation?: GenerationView | null; error?: string;
+      };
       if (!response.ok || !body.courseRequest) throw new Error(body.error ?? "Something went wrong. Please try again.");
       if (!mounted.current) return true;
       if (body.blueprint) setView(body.blueprint);
+      if (body.generation !== undefined) setGeneration(body.generation);
       if (body.courseRequest.status !== record.status) onRecord(body.courseRequest);
       return true;
     } catch (caught: unknown) {
@@ -98,7 +121,7 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
     if (!view || view.sequenceMode === sequenceMode) return;
     const previous = view;
     setView({ ...view, sequenceMode });
-    if (!await send("PUT", "/sequence-mode", { sequenceMode }) && mounted.current) setView(previous);
+    if (!await send("PUT", "/blueprint/sequence-mode", { sequenceMode }) && mounted.current) setView(previous);
   }
 
   const errorLine = error ? <p role="alert" className="mt-4 whitespace-pre-wrap break-words text-sm text-red-400">{error}</p> : null;
@@ -114,7 +137,7 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
         {preparing ? (
           <p role="status" className="mt-4 text-sm">Designing your Course Blueprint… This can take a few minutes.</p>
         ) : (
-          <Button type="button" className="mt-4" onClick={() => void send("POST", "")}>Design my Course Blueprint</Button>
+          <Button type="button" className="mt-4" onClick={() => void send("POST", "/blueprint")}>Design my Course Blueprint</Button>
         )}
         {errorLine}
       </section>
@@ -163,7 +186,7 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
               <p className="text-sm text-muted-foreground">Once you approve with free jump, you can't switch this Course back to linear order.</p>
             ) : null}
           </fieldset>
-          <Button type="button" className="mt-6" disabled={busy} onClick={() => void send("POST", "/approve", { sequenceMode: view.sequenceMode })}>
+          <Button type="button" className="mt-6" disabled={busy} onClick={() => void send("POST", "/blueprint/approve", { sequenceMode: view.sequenceMode })}>
             {busy ? "Approving…" : "Approve"}
           </Button>
         </>
@@ -171,7 +194,25 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
         <>
           <p className="mt-4 text-sm">Lesson order: {view.sequenceMode === "free_jump" ? "free jump" : "linear"}.</p>
           {record.status === "generating" ? (
-            <p role="status" className="mt-4 text-sm">Your Course is being generated. It opens in Study once every Lesson is ready; you can close this page.</p>
+            <div className="mt-4">
+              <p role="status" className="text-sm">
+                Your Course is being generated. It opens in Study once every Lesson is ready; you can close this page.
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{waitingLine(generation)}</p>
+              <Button type="button" variant="outline" className="mt-4" disabled={busy} onClick={() => void send("POST", "/generation/cancel")}>
+                Cancel generation
+              </Button>
+            </div>
+          ) : null}
+          {record.status === "generation_cancelled" ? (
+            <div className="mt-4">
+              <p role="status" className="text-sm">
+                Generation is cancelled. {generation?.finishedLessons
+                  ? `The ${generation.finishedLessons} of ${generation.totalLessons} Lessons already written are kept, and Resume continues from the next one.`
+                  : "Resume starts it again from the first Lesson."}
+              </p>
+              <Button type="button" className="mt-4" disabled={busy} onClick={() => void send("POST", "/generation/resume")}>Resume</Button>
+            </div>
           ) : null}
           {record.status === "published" ? (
             <div className="mt-4">
@@ -180,7 +221,12 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
             </div>
           ) : null}
           {record.status === "generation_failed" ? (
-            <p role="alert" className="mt-4 whitespace-pre-wrap break-words text-sm">{record.failureReason ?? "Your Course could not be generated."}</p>
+            <div className="mt-4">
+              <p role="alert" className="whitespace-pre-wrap break-words text-sm">{record.failureReason ?? "Your Course could not be generated."}</p>
+              {generation?.status === "interrupted" ? (
+                <Button type="button" className="mt-4" disabled={busy} onClick={() => void send("POST", "/generation/resume")}>Resume</Button>
+              ) : null}
+            </div>
           ) : null}
         </>
       )}

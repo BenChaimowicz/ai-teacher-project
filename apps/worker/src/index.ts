@@ -1,11 +1,16 @@
+import { createServer } from "node:http";
+import { sql } from "drizzle-orm";
 import pino from "pino";
-import { createDb, learners, loadRootEnv } from "@senoy/db";
+import { createDb, loadRootEnv } from "@senoy/db";
+import { createCourseGeneration } from "@senoy/api/course-generation";
+import { createFixtureCourseGeneration } from "@senoy/api/course-generation-fixture";
+import { createGenerationWorker } from "@senoy/api/generation-worker";
 
 const log = pino({ name: "worker" });
 
 /**
- * Connects to hosted Postgres, confirms the seeded Learner, then waits.
- * Course-generation claiming lands in a later ticket.
+ * Connects to hosted Postgres, then claims Course-generation jobs until stopped.
+ * `WORKER_PORT`, when set, serves `GET /health` so a supervisor (or the browser tests) can tell the worker is up.
  */
 async function startWorker() {
   try {
@@ -16,18 +21,41 @@ async function startWorker() {
       throw new Error("DATABASE_URL is missing. Copy .env.example to .env.");
     }
 
-    const db = createDb(url, { max: 1 });
-    const rows = await db.select({ id: learners.id }).from(learners).limit(1);
+    const db = createDb(url, { max: 2 });
+    await db.execute(sql`select 1`);
 
-    if (rows.length === 0 || !rows[0]) {
-      throw new Error("Worker found no Learner. Run pnpm db:seed.");
-    }
-
-    log.info(`worker ready; connected as Learner ${rows[0].id}; idle`);
-
-    await new Promise(() => {
-      /* stay alive until the process is stopped */
+    // Browser tests run the real pipeline and publish with fixed research, Generators, and Judge; never set
+    // DIAGNOSTIC_FIXTURE in a deployed service.
+    const generation = process.env.DIAGNOSTIC_FIXTURE === "1"
+      ? createFixtureCourseGeneration(Number(process.env.FIXTURE_LESSON_DELAY_MS ?? 0))
+      : createCourseGeneration();
+    const worker = createGenerationWorker({
+      db,
+      generation,
+      log,
+      leaseMs: process.env.GENERATION_LEASE_MS ? Number(process.env.GENERATION_LEASE_MS) : undefined,
     });
+
+    const port = process.env.WORKER_PORT;
+    const health = port
+      ? createServer((request, response) => {
+          response.writeHead(request.url === "/health" ? 200 : 404, { "Content-Type": "application/json" });
+          response.end(JSON.stringify({ ok: request.url === "/health" }));
+        }).listen(Number(port), "127.0.0.1")
+      : null;
+
+    /** Hands a job in progress back to the queue, then exits. */
+    const shutdown = async () => {
+      log.info("worker stopping");
+      await worker.stop();
+      health?.close();
+      process.exit(0);
+    };
+    process.once("SIGINT", () => void shutdown());
+    process.once("SIGTERM", () => void shutdown());
+
+    log.info("worker ready; claiming generation jobs");
+    await worker.run();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     log.error(`[index.ts: startWorker] Worker failed to start || ${message}`);

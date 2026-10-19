@@ -16,7 +16,8 @@ export type ValidityClarification = {
 /**
  * Every Course Request status, in lifecycle order. `assessment_*` through `starting_level_confirmed` belong to the
  * Starting Level diagnostic; `blueprint_*` to the Course Blueprint; `generating` starts after Approve and ends in
- * `published` (the Course is playable) or `generation_failed` (with a plain-language reason).
+ * `published` (the Course is playable) or `generation_failed` (with a plain-language reason). The Learner's Cancel moves
+ * `generating` to `generation_cancelled`; Resume moves it back.
  */
 export const COURSE_REQUEST_STATUSES = [
   "draft",
@@ -33,6 +34,7 @@ export const COURSE_REQUEST_STATUSES = [
   "generating",
   "published",
   "generation_failed",
+  "generation_cancelled",
 ] as const;
 
 /** One Course Request status. */

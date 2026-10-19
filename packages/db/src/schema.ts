@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
 import { COURSE_REQUEST_STATUSES, type ValidityClarification, type ValidityResult } from "./course-request.ts";
+import { GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
 import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
@@ -91,6 +92,42 @@ export const courseBlueprints = pgTable("course_blueprints", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
 });
+
+/** Where a generation job is in its lifecycle. */
+export const generationJobStatus = pgEnum("generation_job_status", GENERATION_JOB_STATUSES);
+
+/** What a running generation job is doing. */
+export const generationStage = pgEnum("generation_stage", GENERATION_STAGES);
+
+/**
+ * The durable job that generates and publishes the Course for one approved Blueprint (spec §5.1); one per Request.
+ * A worker holds a `running` job through `claimToken` until `leaseExpiresAt`; a lapsed lease (the worker crashed) lets
+ * another claim continue from the next unfinished Lesson. Every write the job makes checks it still holds the lease.
+ */
+export const generationJobs = pgTable(
+  "generation_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    courseRequestId: uuid("course_request_id")
+      .notNull()
+      .unique()
+      .references(() => courseRequests.id),
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => learners.id),
+    status: generationJobStatus("status").notNull().default("queued"),
+    stage: generationStage("stage"),
+    /** The Blueprint slot being written while the stage is `lesson`. */
+    currentSlotId: text("current_slot_id"),
+    claimToken: uuid("claim_token"),
+    leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+    /** How many times a worker has claimed the job. */
+    claims: integer("claims").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("generation_jobs_claimable").on(table.status, table.createdAt)],
+);
 
 /**
  * A finalized, unpublished Lesson checkpoint for one approved Blueprint slot (spec §5.1). Study and reuse read only

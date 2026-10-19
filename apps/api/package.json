@@ -2,6 +2,11 @@
   "name": "@senoy/api",
   "private": true,
   "type": "module",
+  "exports": {
+    "./generation-worker": "./src/lib/generation-worker.ts",
+    "./course-generation": "./src/lib/course-generation.ts",
+    "./course-generation-fixture": "./src/lib/course-generation-fixture.ts"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.build.json",

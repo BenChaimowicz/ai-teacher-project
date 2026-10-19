@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from "node:timers/promises";
 import { createCourseGeneration, type CourseGeneration } from "./course-generation.ts";
 
 /** A passing Judge verdict. */
@@ -13,12 +14,14 @@ export const FIXTURE_QUIZ_ITEMS = 5;
  * Deterministic Course generation for browser tests (`DIAGNOSTIC_FIXTURE=1`): no research or provider calls. The real
  * pipeline runs — checkpoints, whole-Course Code checks, and atomic publish — with fixed research, Generators, and Judge.
  * Each Quiz item's correct option reads "Right answer n"; the others read "Wrong answer n…".
+ * @param lessonDelayMs - How long each Lesson takes, so browser tests can see a job mid-run
  */
-export function createFixtureCourseGeneration(): CourseGeneration {
+export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGeneration {
   return createCourseGeneration({
     research: async () => [],
     readingGenerator: {
       async generate({ slot }) {
+        await sleep(lessonDelayMs);
         return {
           judge: PASS,
           repairs: 0,
@@ -38,6 +41,7 @@ export function createFixtureCourseGeneration(): CourseGeneration {
     },
     quizGenerator: {
       async generate({ slot }) {
+        await sleep(lessonDelayMs);
         return {
           judge: PASS,
           repairs: 0,

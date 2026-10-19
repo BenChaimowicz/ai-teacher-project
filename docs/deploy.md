@@ -19,7 +19,7 @@ pnpm db:seed
 pnpm run apps
 ```
 
-`pnpm run apps` starts the Vite frontend, the Fastify API, and the idle worker together. Vite proxies `/api` and `/media` to the API. In production those paths are served by Fastify directly — still two processes, not three hosts.
+`pnpm run apps` starts the Vite frontend, the Fastify API, and the generation worker together. Vite proxies `/api` and `/media` to the API. In production those paths are served by Fastify directly — still two processes, not three hosts.
 
 ## Railway (later)
 
@@ -27,5 +27,5 @@ This prototype does not have to be pushed. When it is:
 
 1. Create one Railway project with two services from this repo.
 2. **web:** build `pnpm --filter @senoy/web build && pnpm --filter @senoy/api build`, start `pnpm --filter @senoy/api start`. Root directory is the repo root so Fastify can find `apps/web/dist`.
-3. **worker:** start `pnpm --filter @senoy/worker start` (build `pnpm --filter @senoy/worker build` first if you compile).
+3. **worker:** start `pnpm --filter @senoy/worker start` (build `pnpm --filter @senoy/worker build` first if you compile). It claims generation jobs from Postgres. Railway's SIGTERM on redeploy hands a job in progress back to the queue; a hard kill is picked up once the lease lapses (60 s; `GENERATION_LEASE_MS` overrides it).
 4. Copy the same env into both services. Do not add a third frontend service; do not point this app at Vercel.

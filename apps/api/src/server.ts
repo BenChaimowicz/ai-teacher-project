@@ -9,7 +9,6 @@ import { courseRequestRoutes } from "./routes/course-requests.ts";
 import { startingLevelRoutes } from "./routes/starting-level.ts";
 import { createFixtureDiagnosticBuilder } from "./lib/diagnostic-fixture.ts";
 import { blueprintRoutes } from "./routes/blueprint.ts";
-import { createFixtureCourseGeneration } from "./lib/course-generation-fixture.ts";
 import { createFixtureBlueprintBuilder } from "./lib/blueprint-fixture.ts";
 import { libraryRoutes } from "./routes/library.ts";
 import { mediaRoutes } from "./routes/media.ts";
@@ -37,8 +36,6 @@ async function start() {
     });
     await app.register(blueprintRoutes, {
       blueprintBuilder: fixtures ? createFixtureBlueprintBuilder() : undefined,
-      // Browser tests run the real pipeline and publish with fixed research, Generators, and Judge.
-      courseGeneration: fixtures ? createFixtureCourseGeneration() : undefined,
     });
     await app.register(studyRoutes);
     await app.register(teachingProfileRoutes);

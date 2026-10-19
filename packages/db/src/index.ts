@@ -5,6 +5,9 @@ import * as schema from "./schema.ts";
 /** Drizzle client bound to this package's schema. */
 export type Database = ReturnType<typeof createDb>;
 
+/** The handle a `Database.transaction` callback receives. */
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
 /**
  * Opens a Postgres connection for Drizzle. `prepare` is off so Supabase's pooler works.
  * @param url - `DATABASE_URL`
@@ -39,3 +42,4 @@ export * from "./starting-level.ts";
 export * from "./blueprint.ts";
 export * from "./lesson-checkpoint.ts";
 export * from "./publication.ts";
+export * from "./generation-job.ts";
