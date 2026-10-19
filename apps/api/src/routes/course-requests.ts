@@ -13,6 +13,7 @@ const requestFields = {
   validity: courseRequests.validity,
   clarification: courseRequests.clarification,
   revisedFromId: courseRequests.revisedFromId,
+  failureReason: courseRequests.failureReason,
 };
 
 /** Injectable domain gate; persistence and HTTP semantics remain in these routes. */

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
-import type { CourseRequestStatus, ValidityClarification, ValidityResult } from "./course-request.ts";
+import { COURSE_REQUEST_STATUSES, type ValidityClarification, type ValidityResult } from "./course-request.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
 import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
@@ -19,7 +19,10 @@ export const learners = pgTable("learners", {
   teachingProfileUpdatedAt: timestamp("teaching_profile_updated_at", { withTimezone: true }),
 });
 
-/** Unpublished Course Request owned by a Learner. Home lists these in the Library. */
+/** Where a Course Request is in its lifecycle. */
+export const courseRequestStatus = pgEnum("course_request_status", COURSE_REQUEST_STATUSES);
+
+/** A Course Request owned by a Learner. Home lists it in the Library until its Course publishes. */
 export const courseRequests = pgTable("course_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
   learnerId: uuid("learner_id")
@@ -27,10 +30,12 @@ export const courseRequests = pgTable("course_requests", {
     .references(() => learners.id),
   subject: text("subject").notNull(),
   learningGoal: text("learning_goal").notNull(),
-  status: text("status").$type<CourseRequestStatus>().notNull(),
+  status: courseRequestStatus("status").notNull(),
   validity: jsonb("validity").$type<ValidityResult>(),
   clarification: jsonb("clarification").$type<ValidityClarification>(),
   revisedFromId: uuid("revised_from_id").references((): AnyPgColumn => courseRequests.id),
+  /** Plain-language reason, set only when the status is `generation_failed`. */
+  failureReason: text("failure_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

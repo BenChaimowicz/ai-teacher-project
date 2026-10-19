@@ -1,0 +1,3 @@
+CREATE TYPE "public"."course_request_status" AS ENUM('draft', 'awaiting_validity', 'awaiting_clarification', 'rejected', 'validity_passed', 'assessment_preparing', 'assessment_ready', 'awaiting_gap_confirmation', 'starting_level_confirmed', 'blueprint_preparing', 'blueprint_review', 'generating', 'published', 'generation_failed');--> statement-breakpoint
+ALTER TABLE "course_requests" ALTER COLUMN "status" SET DATA TYPE "public"."course_request_status" USING "status"::"public"."course_request_status";--> statement-breakpoint
+ALTER TABLE "course_requests" ADD COLUMN "failure_reason" text;

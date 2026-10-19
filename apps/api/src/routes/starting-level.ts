@@ -26,6 +26,7 @@ const requestFields = {
   validity: courseRequests.validity,
   clarification: courseRequests.clarification,
   revisedFromId: courseRequests.revisedFromId,
+  failureReason: courseRequests.failureReason,
 };
 
 /** Injectable diagnostic builder; persistence and HTTP semantics stay in these routes. */

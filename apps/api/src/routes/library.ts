@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { courseRequests, publishedCourses } from "@senoy/db";
 import { studyLinksByCourseId } from "../lib/study.ts";
@@ -20,7 +20,8 @@ export async function libraryRoutes(app: FastifyInstance) {
           status: courseRequests.status,
         })
         .from(courseRequests)
-        .where(eq(courseRequests.learnerId, learnerId));
+        // A published Request is listed as its Course.
+        .where(and(eq(courseRequests.learnerId, learnerId), ne(courseRequests.status, "published")));
 
       const courses = await app.db
         .select({
@@ -75,7 +76,8 @@ export async function libraryRoutes(app: FastifyInstance) {
           status: courseRequests.status,
         })
         .from(courseRequests)
-        .where(eq(courseRequests.learnerId, learnerId));
+        // A published Request is listed as its Course.
+        .where(and(eq(courseRequests.learnerId, learnerId), ne(courseRequests.status, "published")));
 
       const courses = await app.db
         .select({

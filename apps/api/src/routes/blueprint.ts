@@ -4,6 +4,7 @@ import {
   courseBlueprints,
   courseRequests,
   learnerBlueprint,
+  publishedCourses,
   resolveTeachingProfile,
   startingLevelDiagnostics,
   TEACHING_PROFILE_VERSION,
@@ -12,6 +13,7 @@ import {
 } from "@senoy/db";
 import { BlueprintFailedError, createBlueprintBuilder, type BlueprintBuilder } from "../lib/blueprint.ts";
 import { createCourseGeneration, type CourseGeneration } from "../lib/course-generation.ts";
+import { studyLinksByCourseId } from "../lib/study.ts";
 
 /** Learner-facing Request fields; ownership is never exposed. */
 const requestFields = {
@@ -23,6 +25,7 @@ const requestFields = {
   validity: courseRequests.validity,
   clarification: courseRequests.clarification,
   revisedFromId: courseRequests.revisedFromId,
+  failureReason: courseRequests.failureReason,
 };
 
 /** Injectable builder and generation; persistence and HTTP semantics stay in these routes. */
@@ -97,12 +100,23 @@ export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOp
     return reply.code(500).send({ error: message });
   }
 
+  /** Where a published Request's Course opens in Study; null until it publishes. */
+  async function publishedCourseOf(requestId: string, learnerId: string) {
+    const [course] = await app.db.select({ id: publishedCourses.id }).from(publishedCourses)
+      .where(and(eq(publishedCourses.courseRequestId, requestId), eq(publishedCourses.learnerId, learnerId))).limit(1);
+    if (!course) return null;
+    const links = await studyLinksByCourseId(app.db, learnerId, [course.id]);
+    return { href: links.get(course.id)?.href ?? null };
+  }
+
   app.get<RequestParams>("/api/course-requests/:requestId/blueprint", async (request, reply) => {
     try {
-      const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
+      const learnerId = request.currentLearner.id;
+      const row = await ownedRequest(request.params.requestId, learnerId, reply);
       if (!row) return reply;
       const blueprint = await blueprintOf(row.id);
-      return { courseRequest: row, blueprint: blueprint ? learnerView(blueprint) : null };
+      const course = row.status === "published" ? await publishedCourseOf(row.id, learnerId) : null;
+      return { courseRequest: row, blueprint: blueprint ? learnerView(blueprint) : null, course };
     } catch (error) {
       return fail(reply, request.log, "get", request.params.requestId, error, "Failed to load the Course Blueprint.");
     }
