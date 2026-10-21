@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   courseRequests,
   learners,
+  lessonResearch,
   parseTeachingProfileAnswers,
   publishedCourses,
   publishedLessons,
@@ -42,6 +43,9 @@ const APPROVED: ApprovedBlueprint = {
     }],
   },
 };
+
+/** Every table a generation run touches. */
+const TABLES = [courseRequests, learners, startingLevelDiagnostics, lessonResearch, unpublishedLessons, publishedCourses, publishedModules, publishedLessons];
 
 const PACKS = [{ slot: "primary", sources: [] }, { slot: "secondary", sources: [] }] as unknown as SourcePack[];
 
@@ -140,8 +144,10 @@ async function run(
   fail: Failure = null,
   courseJudgeOverride?: (tables: ReturnType<typeof fakeDb>["rows"]) => CourseJudge,
   before?: (db: Database, requestId: string) => Promise<void>,
+  approved: ApprovedBlueprint = APPROVED,
+  research: (topic: string) => Promise<SourcePack[]> = async () => PACKS,
 ) {
-  const { db, rows } = fakeDb([courseRequests, learners, startingLevelDiagnostics, unpublishedLessons, publishedCourses, publishedModules, publishedLessons]);
+  const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
     id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION,
     teachingProfileAnswers: parseTeachingProfileAnswers({ contentScope: { status: "selected", value: "compact" } }),
@@ -171,11 +177,11 @@ async function run(
   };
   const generation = createCourseGeneration({
     readingGenerator, quizGenerator: quizGeneratorSpy, courseJudge: courseJudgeOverride?.(rows) ?? courseJudge,
-    research: async (topic) => { topics.push(topic); return PACKS; },
+    research: async (topic) => { topics.push(topic); return research(topic); },
   });
   const job = recordingControl();
   const started = generation.start({
-    db: db as unknown as Database, courseRequestId: request!.id, learnerId: learner!.id, approved: APPROVED, control: job.control,
+    db: db as unknown as Database, courseRequestId: request!.id, learnerId: learner!.id, approved, control: job.control,
   });
   /** The stored Request. */
   const stored = () => (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
@@ -184,7 +190,7 @@ async function run(
   };
 }
 
-test("The approved Reading slot is researched, generated, and saved as one unpublished checkpoint", async () => {
+test("The approved Reading slot is researched, its packs stored, then generated and saved as one unpublished checkpoint", async () => {
   const { started, rows, topics, inputs, requestId } = await run();
   await started;
 
@@ -192,7 +198,7 @@ test("The approved Reading slot is researched, generated, and saved as one unpub
   assert.match(topics[0]!, /The World Tree \(Norse mythology\)\. Describe how Yggdrasil connects the Nine Worlds\./);
   assert.equal(inputs[0]!.slot.id, "slot1");
   assert.equal(inputs[0]!.courseTitle, "Norse cosmology");
-  assert.equal(inputs[0]!.packs, PACKS);
+  assert.deepEqual(inputs[0]!.packs, PACKS);
   assert.deepEqual(Object.keys(inputs[0]!.profile).sort(), ["contentScope", "explanationOrder", "instructionLanguage", "requiredReadingSupports"]);
   assert.equal(inputs[0]!.profile.contentScope, "compact");
 
@@ -204,7 +210,8 @@ test("The approved Reading slot is researched, generated, and saved as one unpub
   assert.equal(saved[0]!.teachingMethod, "reading");
   assert.equal(saved[0]!.citations[0]!.n, 1);
   assert.equal(saved[0]!.sources[0]!.sourceId, "src_aaaaaaaaaa");
-  assert.deepEqual(saved[0]!.sourcePacks, PACKS);
+  const research = rows.get(lessonResearch)! as (typeof lessonResearch.$inferSelect)[];
+  assert.deepEqual(research.map((row) => [row.courseRequestId, row.slotId, row.sourcePacks]), [[requestId, "slot1", PACKS]]);
   assert.equal(saved[0]!.rejectedSources[0]!.reason, "A shop's blog.");
   assert.equal(saved[0]!.judge.pass, true);
 });
@@ -221,7 +228,7 @@ test("A Lesson that fails its checks is not saved, no Quiz is generated without 
 });
 
 test("A provider error is told as an interruption", async () => {
-  const { db, rows } = fakeDb([courseRequests, learners, startingLevelDiagnostics, unpublishedLessons, publishedCourses, publishedModules, publishedLessons]);
+  const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
     id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
   }).returning();
@@ -233,7 +240,7 @@ test("A provider error is told as an interruption", async () => {
   await assert.rejects(generation.start({ db, courseRequestId: request!.id, learnerId: learner!.id, approved: APPROVED, control }), /vendor down/);
   const stored = (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
   assert.equal(stored.status, "generation_failed");
-  assert.match(stored.failureReason!, /^Generation was interrupted while writing the Lesson “The World Tree”\. Resume continues from the next unfinished Lesson\.$/);
+  assert.match(stored.failureReason!, /^Generation was interrupted while researching your Lessons\. Resume continues from the next unfinished Lesson\.$/);
   assert.deepEqual(settled, ["interrupted"], "Resume can pick an interrupted job up.");
 });
 
@@ -255,7 +262,7 @@ test("The Quiz is generated from the checkpointed Reading and saved as its own c
   const quiz = saved[1]!;
   assert.equal(quiz.courseRequestId, requestId);
   assert.equal((quiz.body as { items: unknown[] }).items.length, 6);
-  assert.deepEqual([quiz.sources, quiz.citations, quiz.sourcePacks, quiz.rejectedSources, quiz.lineage], [[], [], [], [], null]);
+  assert.deepEqual([quiz.sources, quiz.citations, quiz.rejectedSources, quiz.lineage], [[], [], [], null]);
   assert.equal(quiz.judge.pass, true);
 });
 
@@ -340,10 +347,10 @@ test("Publish is all or nothing: a Request that stopped generating leaves no pub
   assert.equal(stored().status, "blueprint_review", "A failure never overwrites a status that moved on.");
 });
 
-test("Each stage is reported for the Waiting screen: every Lesson in order, then publish", async () => {
+test("Each stage is reported for the Waiting screen: research, every Lesson in order, then publish", async () => {
   const { started, job } = await run();
   await started;
-  assert.deepEqual(job.progress, ["lesson:slot1", "lesson:slot2", "publish"]);
+  assert.deepEqual(job.progress, ["research", "lesson:slot1", "lesson:slot2", "publish"]);
 });
 
 /** A Reading checkpoint an earlier run saved for slot1, with a heading later Lessons carry forward. */
@@ -351,7 +358,7 @@ async function savedReading(db: Database, requestId: string) {
   await db.insert(unpublishedLessons).values({
     courseRequestId: requestId, slotId: "slot1", position: 0, teachingMethod: "reading", title: "The World Tree",
     lessonGoal: "Describe how Yggdrasil connects the Nine Worlds.", objectives: ["Describe Yggdrasil"], topicTags: ["yggdrasil"],
-    lineage: null, sources: [], citations: [], sourcePacks: PACKS, judge: { pass: true, failedChecks: [], reasons: [] },
+    lineage: null, sources: [], citations: [], judge: { pass: true, failedChecks: [], reasons: [] },
     body: { sections: [{ heading: "Saved before the crash", blocks: [{ kind: "prose", text: "Yggdrasil [1]." }] }] },
   });
 }
@@ -369,7 +376,7 @@ test("A resumed job continues from the next unfinished Lesson: a checkpointed Re
 });
 
 test("A cancelled run stops at its next stage: the Lesson in flight is not saved and nothing is recorded", async () => {
-  const { db, rows } = fakeDb([courseRequests, learners, startingLevelDiagnostics, unpublishedLessons, publishedCourses, publishedModules, publishedLessons]);
+  const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
     id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
   }).returning();
@@ -387,6 +394,7 @@ test("A cancelled run stops at its next stage: the Lesson in flight is not saved
 
   await assert.rejects(generation.start({ db, courseRequestId: request!.id, learnerId: learner!.id, approved: APPROVED, control }), LeaseLostError);
   assert.equal(rows.get(unpublishedLessons)!.length, 0);
+  assert.equal(rows.get(lessonResearch)!.length, 0, "Research that finished after Cancel is not stored.");
   assert.equal(quizInputs.length, 0);
   assert.deepEqual(settled, []);
   const stored = (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
@@ -398,4 +406,116 @@ test("A whole-Course failure fails the job; nothing publishes", async () => {
   const { started, job } = await run("course");
   await assert.rejects(started, CourseFailedError);
   assert.deepEqual(job.settled, ["failed"]);
+});
+
+/** A Reading slot for the longer Course. */
+function readingSlot(n: number) {
+  return {
+    id: `slot${n}`, method: "reading" as const, title: `Reading ${n}`, lessonGoal: `Explain idea ${n}.`,
+    objectives: [`Explain idea ${n}`], topicTags: ["norse", `idea-${n}`], assessesSlotIds: [],
+  };
+}
+
+/** A Quiz slot for the longer Course. */
+function quizSlot(n: number, assesses: number[]) {
+  return {
+    id: `slot${n}`, method: "quiz" as const, title: `Quiz ${n}`, lessonGoal: `Show ideas ${assesses.join(" and ")}.`,
+    objectives: assesses.map((number) => `Explain idea ${number}`), topicTags: ["norse", "quiz"], assessesSlotIds: assesses.map((number) => `slot${number}`),
+  };
+}
+
+/** Six Lessons: two Readings and a Quiz, twice, as the default Quiz cadence places them. */
+const LONG: ApprovedBlueprint = {
+  sequenceMode: "linear",
+  approvedAt: "2026-10-21T10:00:00.000Z",
+  blueprint: {
+    courseTitle: "Norse cosmology",
+    modules: [{ title: "The Nine Worlds", slots: [readingSlot(1), readingSlot(2), quizSlot(3, [1, 2]), readingSlot(4), readingSlot(5), quizSlot(6, [4, 5])] }],
+  },
+};
+
+/** Packs tagged with the topic they were researched for, so a test can tell which slot's packs a Reading got. */
+function packsFor(topic: string) {
+  return [{ slot: "primary", topic, sources: [] }, { slot: "secondary", topic, sources: [] }] as unknown as SourcePack[];
+}
+
+test("Every Reading is researched at once before any Lesson is written, and each is written from its stored packs", async () => {
+  let inFlight = 0;
+  let peak = 0;
+  const { started, rows, topics, inputs, job } = await run(null, undefined, undefined, LONG, async (topic) => {
+    inFlight += 1;
+    peak = Math.max(peak, inFlight);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    inFlight -= 1;
+    return packsFor(topic);
+  });
+  await started;
+
+  assert.equal(topics.length, 4, "Only the four Readings are researched.");
+  assert.equal(peak, 4, "All four research calls run at the same time.");
+  assert.equal(job.progress[0], "research");
+  const research = rows.get(lessonResearch)! as (typeof lessonResearch.$inferSelect)[];
+  assert.deepEqual(research.map((row) => row.slotId).sort(), ["slot1", "slot2", "slot4", "slot5"]);
+  for (const input of inputs) {
+    const stored = research.find((row) => row.slotId === input.slot.id)!;
+    assert.deepEqual(input.packs, stored.sourcePacks, `${input.slot.id} is written from its own stored packs.`);
+    assert.match((input.packs[0] as { topic: string }).topic, new RegExp(`^${input.slot.title} `));
+  }
+});
+
+test("A longer Course is written one Lesson at a time in Blueprint order, carrying earlier Readings forward", async () => {
+  const { started, inputs, quizInputs, job } = await run(null, undefined, undefined, LONG);
+  await started;
+
+  assert.deepEqual(job.progress, ["research", "lesson:slot1", "lesson:slot2", "lesson:slot3", "lesson:slot4", "lesson:slot5", "lesson:slot6", "publish"]);
+  assert.deepEqual(inputs.map((input) => [input.slot.id, input.priorLessons.map((lesson) => lesson.title)]), [
+    ["slot1", []],
+    ["slot2", ["Reading 1"]],
+    ["slot4", ["Reading 1", "Reading 2"]],
+    ["slot5", ["Reading 1", "Reading 2", "Reading 4"]],
+  ]);
+  assert.deepEqual(quizInputs.map((input) => [input.slot.id, input.assessed.map((lesson) => lesson.slotId)]), [
+    ["slot3", ["slot1", "slot2"]],
+    ["slot6", ["slot4", "slot5"]],
+  ]);
+});
+
+test("A longer Course publishes every Lesson, each Quiz assessing its own Readings", async () => {
+  const { started, rows, outlines, stored } = await run(null, undefined, undefined, LONG);
+  await started;
+
+  assert.equal(stored().status, "published");
+  assert.deepEqual(outlines[0]!.modules[0]!.lessons.map((lesson) => [lesson.n, lesson.method]), [
+    [1, "reading"], [2, "reading"], [3, "quiz"], [4, "reading"], [5, "reading"], [6, "quiz"],
+  ]);
+  const lessons = rows.get(publishedLessons)! as (typeof publishedLessons.$inferSelect)[];
+  assert.deepEqual(lessons.map((row) => [row.position, row.teachingMethod]), [
+    [0, "reading"], [1, "reading"], [2, "quiz"], [3, "reading"], [4, "reading"], [5, "quiz"],
+  ]);
+  assert.deepEqual(lessons[2]!.assessedLessonIds, [lessons[0]!.id, lessons[1]!.id]);
+  assert.deepEqual(lessons[5]!.assessedLessonIds, [lessons[3]!.id, lessons[4]!.id]);
+});
+
+test("A research call that fails keeps the research that finished; Resume researches only what is missing", async () => {
+  const first = await run(null, undefined, undefined, LONG, async (topic) => {
+    if (topic.startsWith("Reading 4 ")) throw new Error("vendor down");
+    return packsFor(topic);
+  });
+  await assert.rejects(first.started, /vendor down/);
+  assert.deepEqual(first.job.settled, ["interrupted"]);
+  assert.match(first.stored().failureReason!, /interrupted while researching your Lessons/);
+  const kept = first.rows.get(lessonResearch)! as (typeof lessonResearch.$inferSelect)[];
+  assert.deepEqual(kept.map((row) => row.slotId).sort(), ["slot1", "slot2", "slot5"]);
+  assert.equal(first.rows.get(unpublishedLessons)!.length, 0, "No Lesson is written until every Reading is researched.");
+
+  // Resume: slot1 was already written and slot2 researched before the interruption.
+  const resumed = await run(null, undefined, async (db, requestId) => {
+    await savedReading(db, requestId);
+    await db.insert(lessonResearch).values({ courseRequestId: requestId, slotId: "slot2", sourcePacks: packsFor("stored for slot2") });
+  }, LONG, async (topic) => packsFor(topic));
+  await resumed.started;
+  assert.deepEqual(resumed.topics.map((topic) => topic.split(" (")[0]), ["Reading 4", "Reading 5"], "Finished research is not re-run.");
+  assert.deepEqual(resumed.inputs.map((input) => input.slot.id), ["slot2", "slot4", "slot5"]);
+  assert.deepEqual(resumed.inputs[0]!.packs, packsFor("stored for slot2"));
+  assert.equal(resumed.stored().status, "published");
 });

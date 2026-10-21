@@ -42,7 +42,15 @@ This opt-in check creates temporary Learners inside a transaction and rolls back
 
 Course Requests can be saved with a subject and Learning Goal, then reopened from Home or Open items. **Check request** runs validity before Assessment, without research search. The outcome passes, asks one targeted clarification, or rejects with a reason and safe reframe. **Revise request** creates an editable new draft; the rejected original stays in history. Provider errors leave the Request unchanged.
 
-Once the Starting Level is confirmed, **Design my Course Blueprint** designs one Reading followed by one Quiz for the remaining gap, runs the Code checks and an independent Judge, and shows the Learner titles and Lesson goals with a Sequence mode choice. Closing and returning keeps the review. **Approve** stores the approved snapshot, moves the Request to generating, and queues its generation job. The worker claims the job from Postgres, writes each Lesson, and publishes the Course. The Request screen shows the current Lesson and N of M. **Cancel** stops the job and keeps the finished Lessons. **Resume** continues from the next unfinished Lesson, as does a restarted worker after a crash.
+Once the Starting Level is confirmed, **Design my Course Blueprint** designs a Course of 3–6 Lessons for the remaining gap: Readings, with Quizzes placed by the Teaching Profile's Quiz cadence, each Quiz naming the Readings it assesses. The Code checks and an independent Judge run before the Learner sees titles and Lesson goals with a Sequence mode choice. Closing and returning keeps the review. **Approve** stores the approved snapshot, moves the Request to generating, and queues its generation job.
+
+The worker claims the job from Postgres and generates the Course in three steps:
+
+1. **Research.** Every Reading is researched at once (Parallel Pro and You.com per Reading), and each Reading's Source packs are stored in `lesson_research` as soon as they return.
+2. **Writing.** Lessons are written one at a time in Blueprint order. Each Reading is written from its stored packs and carries earlier Readings forward, and each Quiz is written from the checkpointed Readings it assesses. Every finished Lesson is saved as an unpublished checkpoint.
+3. **Publishing.** The whole-Course Code checks and Judge run, then the Course publishes atomically.
+
+The Request screen shows the stage, the current Lesson, and N of M. **Cancel** stops the job and keeps finished research and Lessons. **Resume** continues from the next unfinished Lesson without re-running finished research, as does a restarted worker after a crash.
 
 To design one real Blueprint against OpenRouter and the configured Supabase database (after `pnpm db:migrate`):
 

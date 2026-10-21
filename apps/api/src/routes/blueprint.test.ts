@@ -89,7 +89,7 @@ test("Preparing designs from the confirmed gap and write-time Profile, then show
     assert.equal(blueprint.sequenceMode, "linear");
     assert.equal(blueprint.approved, false);
     const slots = blueprint.blueprint.modules[0].slots;
-    assert.deepEqual(slots.map((slot: { method: string }) => slot.method), ["reading", "quiz"]);
+    assert.deepEqual(slots.map((slot: { method: string }) => slot.method), ["reading", "reading", "quiz"]);
     assert.deepEqual(Object.keys(slots[0]).sort(), ["id", "lessonGoal", "method", "title"]);
     assert.ok(!/objectives|topicTags|assessesSlotIds|judge/.test(response.body));
 
@@ -137,7 +137,7 @@ test("Closing and returning keeps the review and the Sequence mode pick", async 
     const reopened = await app.inject({ method: "GET", url });
     assert.equal(reopened.json().courseRequest.status, "blueprint_review");
     assert.equal(reopened.json().blueprint.sequenceMode, "free_jump");
-    assert.equal(reopened.json().blueprint.blueprint.modules[0].slots.length, 2);
+    assert.equal(reopened.json().blueprint.blueprint.modules[0].slots.length, 3);
     assert.equal((await app.inject({ method: "PUT", url: `${url}/sequence-mode`, payload: { sequenceMode: "random" } })).statusCode, 400);
   } finally {
     await app.close();

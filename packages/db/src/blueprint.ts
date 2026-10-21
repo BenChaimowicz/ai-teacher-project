@@ -1,5 +1,6 @@
 import { QUIZ_METHOD_ID, READING_METHOD_ID } from "./reading-lesson.ts";
 import type { SequenceMode } from "./sequence-mode.ts";
+import type { QuizCadence } from "./teaching-profile.ts";
 
 /** Teaching methods a Blueprint slot may name. */
 export const REGISTERED_METHODS = [READING_METHOD_ID, QUIZ_METHOD_ID] as const;
@@ -13,6 +14,17 @@ export const MAX_TOPIC_TAGS = 5;
 
 /** Objectives a Quiz slot may list (spec §6.2); more is structural. */
 export const MAX_QUIZ_OBJECTIVES = 10;
+
+/** Lessons a Course may hold. The cap keeps one generation run to about half an hour (SEN-82). */
+export const MIN_COURSE_LESSONS = 3;
+export const MAX_COURSE_LESSONS = 6;
+
+/** How many Readings each Quiz cadence puts before a Quiz, within one Module (spec §4.1 Q6). */
+export const CADENCE_READINGS: Record<QuizCadence, { min: number; max: number } | "module"> = {
+  every_reading: { min: 1, max: 1 },
+  every_2_to_3_readings: { min: 2, max: 3 },
+  module_end: "module",
+};
 
 /**
  * One Lesson-to-be. `assessesSlotIds` is empty except on a Quiz, where it names the Reading slots it assesses.
@@ -84,11 +96,47 @@ export function blueprintSlots(blueprint: CourseBlueprint): BlueprintSlot[] {
 const TOPIC_TAG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
- * Deterministic Blueprint checks (spec §6.2 Code), plus this prototype's shape: one Reading followed by one Quiz.
+ * Quiz-placement problems: every Module ends on a Quiz, every Reading is assessed by the next Quiz after it, and the
+ * Readings before each Quiz follow the Learner's Quiz cadence.
  * @param blueprint - Blueprint to check
+ * @param cadence - The Learner's resolved Quiz cadence
+ */
+function cadenceFailures(blueprint: CourseBlueprint, cadence: QuizCadence): string[] {
+  const failures: string[] = [];
+  const rule = CADENCE_READINGS[cadence];
+  for (const [moduleIndex, module] of blueprint.modules.entries()) {
+    const label = `Module ${moduleIndex + 1}`;
+    if (module.slots.at(-1)?.method !== QUIZ_METHOD_ID) failures.push(`${label} must end with a Quiz so every Reading is assessed.`);
+    let readings: BlueprintSlot[] = [];
+    let quizzes = 0;
+    for (const slot of module.slots) {
+      if (slot.method === READING_METHOD_ID) {
+        readings.push(slot);
+        continue;
+      }
+      if (slot.method !== QUIZ_METHOD_ID) continue;
+      quizzes += 1;
+      const unassessed = readings.filter((reading) => !slot.assessesSlotIds.includes(reading.id));
+      if (unassessed.length) failures.push(`“${slot.title}” must assess every Reading since the previous Quiz.`);
+      if (rule !== "module" && (readings.length < rule.min || readings.length > rule.max)) {
+        const span = rule.min === rule.max ? `${rule.min}` : `${rule.min}–${rule.max}`;
+        failures.push(`“${slot.title}” follows ${readings.length} Readings; the Quiz cadence asks for ${span}.`);
+      }
+      readings = [];
+    }
+    if (rule === "module" && quizzes !== 1) failures.push(`${label} has ${quizzes} Quizzes; the Quiz cadence asks for one, at Module end.`);
+  }
+  return failures;
+}
+
+/**
+ * Deterministic Blueprint checks (spec §6.2 Code), plus this prototype's shape: 3–6 Lessons with Quizzes placed by the
+ * Learner's Quiz cadence.
+ * @param blueprint - Blueprint to check
+ * @param cadence - The Learner's resolved Quiz cadence
  * @returns Each problem found; empty when the Blueprint passes
  */
-export function blueprintCodeFailures(blueprint: CourseBlueprint): string[] {
+export function blueprintCodeFailures(blueprint: CourseBlueprint, cadence: QuizCadence): string[] {
   const failures: string[] = [];
   const slots = blueprintSlots(blueprint);
   if (!blueprint.courseTitle.trim()) failures.push("The Course needs a title.");
@@ -96,6 +144,9 @@ export function blueprintCodeFailures(blueprint: CourseBlueprint): string[] {
     failures.push("Every Module needs a title and at least one slot.");
   }
   if (new Set(slots.map((slot) => slot.id)).size !== slots.length) failures.push("Slot ids must be unique.");
+  if (slots.length < MIN_COURSE_LESSONS || slots.length > MAX_COURSE_LESSONS) {
+    failures.push(`A Course has ${MIN_COURSE_LESSONS}–${MAX_COURSE_LESSONS} Lessons, not ${slots.length}.`);
+  }
 
   slots.forEach((slot, index) => {
     const label = `Slot ${index + 1}`;
@@ -130,8 +181,6 @@ export function blueprintCodeFailures(blueprint: CourseBlueprint): string[] {
   if (!slots.some((slot) => slot.method === READING_METHOD_ID) || !slots.some((slot) => slot.method === QUIZ_METHOD_ID)) {
     failures.push("The Blueprint needs at least one Reading and one Quiz.");
   }
-  if (slots.length !== 2 || slots[0]?.method !== READING_METHOD_ID || slots[1]?.method !== QUIZ_METHOD_ID) {
-    failures.push("This prototype's Blueprint is exactly one Reading followed by one Quiz.");
-  }
+  failures.push(...cadenceFailures(blueprint, cadence));
   return failures;
 }

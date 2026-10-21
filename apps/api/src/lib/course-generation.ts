@@ -4,6 +4,7 @@ import {
   courseCodeFailures,
   courseRequests,
   learners,
+  lessonResearch,
   publicationRows,
   publishedCourses,
   publishedLessons,
@@ -14,6 +15,7 @@ import {
   type Database,
   type ReadingBody,
   type ResolvedTeachingProfile,
+  type Transaction,
 } from "@senoy/db";
 import { researchAdaptersFromEnv, runResearch, type SourcePack } from "@senoy/research";
 import { quizPlugin } from "../teaching-methods/quiz.ts";
@@ -63,7 +65,7 @@ export class CourseFailedError extends Error {
 }
 
 /** Where generation stopped, so its failure can be told in plain language. */
-type Stage = { kind: "lesson"; title: string } | { kind: "course" };
+type Stage = { kind: "research" } | { kind: "lesson"; title: string } | { kind: "course" };
 
 /** What the Learner can do after a failed check, until Retry and Revise exist (SEN-57). */
 const NEXT_STEP = "You can start a new Course Request from Home.";
@@ -86,6 +88,7 @@ export function failedCheck(error: unknown): boolean {
  * @param error - What stopped it
  */
 export function failureReason(stage: Stage, error: unknown): string {
+  if (stage.kind === "research") return `Generation was interrupted while researching your Lessons. ${RESUME_STEP}`;
   if (stage.kind === "lesson") {
     return failedCheck(error)
       ? `We couldn't write the Lesson “${stage.title}” so that it passed our quality checks. ${NEXT_STEP}`
@@ -118,13 +121,16 @@ export function writeTimeProfile(plugin: TeachingMethodPlugin, profile: Resolved
 const researchFromEnv: LessonResearch = (topic) => runResearch(topic, { ...researchAdaptersFromEnv(process.env), env: process.env });
 
 /**
- * Generates each Reading slot in Blueprint order, then each Quiz from its checkpointed Readings (spec §5.2.3), saving
- * each as an unpublished checkpoint. Then the whole-Course Code checks and one Judge pass over the outline (spec §6.5),
- * and atomic publish: the Course snapshot, the `published` status, and the job's success in one transaction.
+ * Researches every Reading slot at once and stores each slot's Source packs as it finishes, so one slow research call
+ * no longer delays every Reading in turn. Then writes each Lesson in Blueprint order, carrying earlier Readings forward:
+ * a Reading from its stored packs, a Quiz from its checkpointed Readings (spec §5.2.3), saving each as an unpublished
+ * checkpoint. Then the whole-Course Code checks and one Judge pass over the outline (spec §6.5), and atomic publish:
+ * the Course snapshot, the `published` status, and the job's success in one transaction.
  *
- * A slot that already has a checkpoint is not generated again, so a resumed or reclaimed job continues from the next
- * unfinished Lesson; earlier Readings reach later ones from their checkpoints. Every write first proves the run still
- * holds its job, so after Cancel or a lapsed lease the run stops at its next stage and saves nothing.
+ * A slot that already has stored research is not researched again, and one that has a checkpoint is not generated
+ * again, so a resumed or reclaimed job continues from the next unfinished Lesson; earlier Readings reach later ones
+ * from their checkpoints. Every write first proves the run still holds its job, so after Cancel or a lapsed lease the
+ * run stops at its next stage and saves nothing.
  *
  * Any failure publishes nothing and keeps the checkpoints. A failed check fails the job; an interruption leaves it
  * `interrupted` for Resume. Either moves the Request to `generation_failed` with a plain-language reason. Repair of a
@@ -146,55 +152,73 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         const research = options.research ?? researchFromEnv;
         const generator = options.readingGenerator ?? createReadingGenerator();
         const priorLessons: PriorLesson[] = [];
-        /** Saves one finished Lesson, only while this run still holds the job. */
-        const saveCheckpoint = (values: typeof unpublishedLessons.$inferInsert) => db.transaction(async (transaction) => {
+        /** Runs one write only while this run still holds the job. */
+        const holding = (write: (transaction: Transaction) => Promise<unknown>) => db.transaction(async (transaction) => {
           await control.hold(transaction);
-          await transaction.insert(unpublishedLessons).values(values);
+          await write(transaction);
         });
         const finished = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
         const finishedSlotIds = new Set(finished.map((row) => row.slotId));
-
         const slots = blueprintSlots(approved.blueprint);
+
+        const stored = await db.select().from(lessonResearch).where(eq(lessonResearch.courseRequestId, courseRequestId));
+        const packsBySlot = new Map(stored.map((row) => [row.slotId, row.sourcePacks as SourcePack[]]));
+        const unresearched = slots.filter((slot) => slot.method === readingPlugin.id && !finishedSlotIds.has(slot.id) && !packsBySlot.has(slot.id));
+        if (unresearched.length) {
+          stage = { kind: "research" };
+          await control.progress("research", null);
+          // Every call runs to the end, even after one fails, so each finished slot is stored and Resume skips it.
+          const outcomes = await Promise.allSettled(unresearched.map(async (slot) => {
+            const packs = await research(lessonResearchTopic(request.subject, slot));
+            await holding((transaction) => transaction.insert(lessonResearch).values({ courseRequestId, slotId: slot.id, sourcePacks: packs }));
+            packsBySlot.set(slot.id, packs);
+          }));
+          const failed = outcomes.find((outcome) => outcome.status === "rejected");
+          if (failed) {
+            const lost = outcomes.find((outcome) => outcome.status === "rejected" && outcome.reason instanceof LeaseLostError);
+            throw ((lost ?? failed) as PromiseRejectedResult).reason;
+          }
+        }
+
+        // Lessons are written one at a time in Blueprint order. A Quiz reads its Readings from their checkpoints, not
+        // this run's memory, so it assesses exactly what was saved; every Reading it assesses precedes it.
+        const quizGenerator = options.quizGenerator ?? createQuizGenerator();
         for (const [position, slot] of slots.entries()) {
-          if (slot.method !== readingPlugin.id) continue;
           const saved = finished.find((row) => row.slotId === slot.id);
-          if (saved) {
+          if (slot.method === readingPlugin.id && saved) {
             priorLessons.push({
               title: saved.title,
               lessonGoal: saved.lessonGoal,
               objectives: saved.objectives,
               headings: (saved.body as ReadingBody).sections.map((section) => section.heading),
             });
+          }
+          if (saved) continue;
+          stage = { kind: "lesson", title: slot.title };
+          await control.progress("lesson", slot.id);
+
+          if (slot.method === readingPlugin.id) {
+            const packs = packsBySlot.get(slot.id);
+            if (!packs) throw new Error(`[course-generation: lesson] Reading slot has no stored research || slotId=${slot.id}`);
+            const { lesson, judge, rejectedSources } = await generator.generate({
+              courseTitle: approved.blueprint.courseTitle,
+              learningGoal: request.learningGoal,
+              slot,
+              priorLessons: [...priorLessons],
+              profile,
+              packs,
+            });
+            await holding((transaction) => transaction.insert(unpublishedLessons).values({ ...lesson, courseRequestId, position, rejectedSources, judge }));
+            priorLessons.push({
+              title: lesson.title,
+              lessonGoal: lesson.lessonGoal,
+              objectives: lesson.objectives,
+              headings: lesson.body.sections.map((section) => section.heading),
+            });
             continue;
           }
-          stage = { kind: "lesson", title: slot.title };
-          await control.progress("lesson", slot.id);
-          const packs = await research(lessonResearchTopic(request.subject, slot));
-          const { lesson, judge, rejectedSources } = await generator.generate({
-            courseTitle: approved.blueprint.courseTitle,
-            learningGoal: request.learningGoal,
-            slot,
-            priorLessons,
-            profile,
-            packs,
-          });
-          await saveCheckpoint({ ...lesson, courseRequestId, position, sourcePacks: packs, rejectedSources, judge });
-          priorLessons.push({
-            title: lesson.title,
-            lessonGoal: lesson.lessonGoal,
-            objectives: lesson.objectives,
-            headings: lesson.body.sections.map((section) => section.heading),
-          });
-        }
 
-        // Quizzes follow every instructional Lesson and read the checkpoints, not this run's memory, so they assess
-        // exactly what was saved.
-        const quizGenerator = options.quizGenerator ?? createQuizGenerator();
-        const readings = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
-        for (const [position, slot] of slots.entries()) {
-          if (slot.method !== quizPlugin.id || finishedSlotIds.has(slot.id)) continue;
-          stage = { kind: "lesson", title: slot.title };
-          await control.progress("lesson", slot.id);
+          const readings = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
           const assessed = slot.assessesSlotIds.flatMap((slotId) => {
             const checkpoint = readings.find((row) => row.slotId === slotId && row.teachingMethod === readingPlugin.id);
             return checkpoint ? [{ ...checkpoint, body: checkpoint.body as ReadingBody }] : [];
@@ -207,7 +231,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
             assessed,
             profile: writeTimeProfile(quizPlugin, resolved),
           });
-          await saveCheckpoint({ ...lesson, courseRequestId, position, sourcePacks: [], rejectedSources: [], judge });
+          await holding((transaction) => transaction.insert(unpublishedLessons).values({ ...lesson, courseRequestId, position, rejectedSources: [], judge }));
         }
 
         stage = { kind: "course" };
