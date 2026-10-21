@@ -21,7 +21,7 @@ const db = createDb(process.env.DATABASE_URL!, { max: 1 });
  */
 export async function resetFixture(answers: Record<string, unknown> = {}) {
   await db.execute(
-    sql`truncate generation_jobs, unpublished_lessons, course_blueprints, starting_level_diagnostics, quiz_attempts, lesson_completions, published_lessons, published_modules, published_courses, course_requests, learners cascade`,
+    sql`truncate generation_jobs, unpublished_lessons, course_blueprints, starting_level_diagnostics, quiz_attempts, lesson_completions, course_completions, published_lessons, published_modules, published_courses, course_requests, learners cascade`,
   );
   const learner = await seedLearner(db);
   await seedPublishedCourse(db);

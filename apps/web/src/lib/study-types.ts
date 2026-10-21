@@ -27,7 +27,8 @@ export type StudyModule = {
 
 /** Published Course payload for Study chrome. */
 export type StudyPayload = {
-  course: { id: string; title: string; sequenceMode: SequenceMode };
+  /** `completedAt` is set once every Lesson is complete. */
+  course: { id: string; title: string; sequenceMode: SequenceMode; completedAt: string | null };
   progress: { completed: number; total: number };
   currentLessonId: string;
   modules: StudyModule[];
@@ -55,4 +56,15 @@ export type QuizAnswerKey = {
   itemId: string;
   correctOptionId: string;
   explanation: string;
+};
+
+/** What the Course-complete screen shows. */
+export type CourseSummary = {
+  course: { id: string; title: string; learningGoal: string; completedAt: string };
+  modules: {
+    id: string;
+    title: string;
+    lessons: { id: string; title: string; lessonGoal: string; teachingMethod: string }[];
+  }[];
+  quizzes: { lessonId: string; title: string; best: QuizScore | null }[];
 };

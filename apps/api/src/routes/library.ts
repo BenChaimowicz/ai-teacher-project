@@ -39,13 +39,17 @@ export async function libraryRoutes(app: FastifyInstance) {
 
       return {
         items: [
-          ...courses.map((course) => ({
-            id: course.id,
-            kind: "course" as const,
-            title: course.title,
-            status: "Published",
-            href: links.get(course.id)?.href ?? null,
-          })),
+          ...courses.map((course) => {
+            const link = links.get(course.id);
+            return {
+              id: course.id,
+              kind: "course" as const,
+              title: course.title,
+              status: link?.courseCompleted ? "Completed" : "Published",
+              href: link?.href ?? null,
+              progress: { completed: link?.completed ?? 0, total: link?.total ?? 0 },
+            };
+          }),
           ...requests.map((row) => ({
             id: row.id,
             kind: "course_request" as const,
@@ -95,8 +99,7 @@ export async function libraryRoutes(app: FastifyInstance) {
 
       const courseItems = courses.flatMap((course) => {
         const link = links.get(course.id);
-        if (!link?.href) return [];
-        if (link.total > 0 && link.completed >= link.total) return [];
+        if (!link?.href || link.courseCompleted) return [];
         return [
           {
             id: course.id,

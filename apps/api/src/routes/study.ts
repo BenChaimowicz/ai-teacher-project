@@ -9,7 +9,7 @@ import {
   submitQuiz,
   type QuizRequest,
 } from "../lib/quiz-play.ts";
-import { completeLesson, loadStudyCourse, switchSequenceMode } from "../lib/study.ts";
+import { completeLesson, loadCourseSummary, loadStudyCourse, switchSequenceMode } from "../lib/study.ts";
 import { drizzleStudyStore, type StudyStore } from "../lib/study-store.ts";
 
 /** Options for Study routes. Tests pass an in-memory store. */
@@ -73,7 +73,7 @@ async function send<T extends { ok: boolean }>(
 }
 
 /**
- * Study payload, Lesson complete, Sequence mode, and Quiz play for a published Course.
+ * Study payload, Lesson complete, Course summary, Sequence mode, and Quiz play for a published Course.
  * @param app - Fastify app
  * @param options - Optional store override
  */
@@ -95,6 +95,13 @@ export async function studyRoutes(app: FastifyInstance, options: StudyRoutesOpti
       );
       return reply.code(500).send({ error: "Failed to load Study." });
     }
+  });
+
+  app.get("/api/courses/:courseId/summary", (request, reply) => {
+    const { courseId } = request.params as { courseId: string };
+    return send(request, reply, "load Course summary", () =>
+      loadCourseSummary(store, request.currentLearner.id, courseId),
+    );
   });
 
   app.post("/api/courses/:courseId/lessons/:lessonId/complete", (request, reply) => {
