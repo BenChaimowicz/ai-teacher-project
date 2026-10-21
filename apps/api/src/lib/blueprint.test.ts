@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { StartingLevel } from "@senoy/db/starting-level";
-import { BlueprintFailedError, createBlueprintBuilder, type BlueprintInput } from "./blueprint.ts";
+import { BlueprintFailedError, createBlueprintBuilder, slugTag, type BlueprintInput } from "./blueprint.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createModelPorts, type Generator, type Judge, type StructuredRequest } from "./model-ports.ts";
 import type { StructuredTransport } from "./openrouter.ts";
@@ -149,4 +149,8 @@ test("Author and Judge share one OpenRouter transport; the Judge runs at high ef
     { modelId: config.generatorModel, schemaName: "course_blueprint", effort: undefined },
     { modelId: config.judgeModel, schemaName: "course_blueprint_review", effort: "high" },
   ]);
+});
+
+test("Authored Topic tags become slugs: accents dropped, lowercased, spaces as hyphens", () => {
+  assert.deepEqual(["Ragnarök", "Nine Worlds", "ginnunga_gap", "æsir"].map(slugTag), ["ragnarok", "nine-worlds", "ginnunga-gap", "æsir"]);
 });

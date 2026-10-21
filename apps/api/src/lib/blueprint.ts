@@ -135,6 +135,15 @@ function texts(value: unknown): string[] {
 }
 
 /**
+ * A Topic tag as a slug: accents dropped ("ragnarök" → "ragnarok"), lowercased, spaces and underscores as hyphens.
+ * Anything still not a slug is left for the Code checks.
+ * @param tag - Tag as the author wrote it
+ */
+export function slugTag(tag: string): string {
+  return tag.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().trim().replace(/[\s_]+/g, "-");
+}
+
+/**
  * Parses an authored Blueprint into one Module of slots with stable ids. Shape rules are left to the Code checks.
  * @param raw - Model output
  */
@@ -152,7 +161,7 @@ export function parseAuthoredBlueprint(raw: unknown): CourseBlueprint {
       title: text(lesson.title),
       lessonGoal: text(lesson.lessonGoal),
       objectives: texts(lesson.objectives),
-      topicTags: texts(lesson.topicTags).map((tag) => tag.toLowerCase()),
+      topicTags: texts(lesson.topicTags).map(slugTag),
       assessesSlotIds: [...new Set(assessed as number[])].map((number) => `slot${number}`),
     };
   });
