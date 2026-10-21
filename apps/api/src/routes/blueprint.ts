@@ -7,7 +7,6 @@ import {
   generationJobs,
   learnerBlueprint,
   publishedCourses,
-  resolveTeachingProfile,
   startingLevelDiagnostics,
   TEACHING_PROFILE_VERSION,
   unpublishedLessons,
@@ -17,8 +16,7 @@ import {
   type GenerationView,
   type SequenceMode,
 } from "@senoy/db";
-import { BlueprintFailedError, createBlueprintBuilder, type BlueprintBuilder } from "../lib/blueprint.ts";
-import { enqueueGeneration } from "../lib/generation-job.ts";
+import { enqueueJob } from "../lib/generation-job.ts";
 import { studyLinksByCourseId } from "../lib/study.ts";
 
 /** Learner-facing Request fields; ownership is never exposed. */
@@ -33,9 +31,6 @@ const requestFields = {
   revisedFromId: courseRequests.revisedFromId,
   failureReason: courseRequests.failureReason,
 };
-
-/** Injectable builder; persistence and HTTP semantics stay in these routes. Generation runs in the worker. */
-type BlueprintOptions = { blueprintBuilder?: BlueprintBuilder };
 
 /** Route parameters for one Request. */
 type RequestParams = { Params: { requestId: string } };
@@ -73,15 +68,20 @@ const RESUMABLE: Partial<Record<GenerationJobStatus, CourseRequestStatus>> = {
   interrupted: "generation_failed",
 };
 
+/** Matches a Request's Course-generation job, never its Blueprint job. */
+function courseJobOf(requestId: string) {
+  return and(eq(generationJobs.courseRequestId, requestId), eq(generationJobs.kind, "course"));
+}
+
 /**
- * What the Waiting screen shows of a Request's job: stage, current Lesson, and N of M, never a draft or its Sources.
+ * What the Waiting screen shows of a Request's Course job: stage, current Lesson, and N of M, never a draft or its Sources.
  * @param db - Database
  * @param requestId - The Request
  * @param blueprint - Its stored Blueprint
  * @returns The view, or null before Approve
  */
 async function generationView(db: Database, requestId: string, blueprint: BlueprintRow | null): Promise<GenerationView | null> {
-  const [job] = await db.select().from(generationJobs).where(eq(generationJobs.courseRequestId, requestId)).limit(1);
+  const [job] = await db.select().from(generationJobs).where(courseJobOf(requestId)).limit(1);
   if (!job || !blueprint?.approved) return null;
   const slots = blueprintSlots(blueprint.approved.blueprint);
   const finished = await db.select({ slotId: unpublishedLessons.slotId }).from(unpublishedLessons)
@@ -97,10 +97,11 @@ async function generationView(db: Database, requestId: string, blueprint: Bluepr
   };
 }
 
-/** Prepares, shows, and approves the Course Blueprint for a Learner-owned Course Request; cancels and resumes its job. */
-export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOptions = {}) {
-  const builder = options.blueprintBuilder ?? createBlueprintBuilder();
-
+/**
+ * Queues, shows, and approves the Course Blueprint for a Learner-owned Course Request; cancels and resumes its Course
+ * job. The worker designs the Blueprint and generates the Course.
+ */
+export async function blueprintRoutes(app: FastifyInstance) {
   /** Reads a private Request, never leaking another Learner's history. */
   async function ownedRequest(id: string, learnerId: string, reply: FastifyReply) {
     if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(id)) {
@@ -118,14 +119,6 @@ export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOp
   async function blueprintOf(requestId: string) {
     const [row] = await app.db.select().from(courseBlueprints).where(eq(courseBlueprints.courseRequestId, requestId)).limit(1);
     return row ?? null;
-  }
-
-  /** Moves a Request between statuses only if nothing else moved it first. */
-  async function transition(requestId: string, learnerId: string, from: CourseRequestStatus, to: CourseRequestStatus) {
-    const [updated] = await app.db.update(courseRequests).set({ status: to }).where(and(
-      eq(courseRequests.id, requestId), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, from),
-    )).returning(requestFields);
-    return updated ?? null;
   }
 
   /** Logs and reports an unexpected failure. */
@@ -171,39 +164,20 @@ export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOp
         .where(eq(startingLevelDiagnostics.courseRequestId, row.id))
         .orderBy(desc(startingLevelDiagnostics.createdAt)).limit(1);
       if (!attempt?.startingLevel || !attempt.confirmation) throw new Error("Confirmed Request has no confirmed Starting Level.");
-      const preparing = await transition(row.id, learner.id, "starting_level_confirmed", "blueprint_preparing");
+      // The status and the queued job land together, so a restart mid-design leaves a job the worker picks up (spec §5.1).
+      const preparing = await app.db.transaction(async (transaction) => {
+        const [moved] = await transaction.update(courseRequests).set({ status: "blueprint_preparing", failureReason: null }).where(and(
+          eq(courseRequests.id, row.id), eq(courseRequests.learnerId, learner.id), eq(courseRequests.status, "starting_level_confirmed"),
+        )).returning(requestFields);
+        if (!moved) throw new RequestChangedError();
+        await enqueueJob(transaction, { courseRequestId: row.id, learnerId: learner.id, kind: "blueprint" });
+        return moved;
+      }).catch((error: unknown) => {
+        if (error instanceof RequestChangedError) return null;
+        throw error;
+      });
       if (!preparing) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
-
-      const profile = resolveTeachingProfile(learner.teachingProfileAnswers);
-      let checked;
-      try {
-        checked = await builder.build({
-          subject: row.subject,
-          learningGoal: row.learningGoal,
-          startingLevel: attempt.startingLevel,
-          confirmation: attempt.confirmation,
-          profile: {
-            instructionLanguage: profile.instructionLanguage.value,
-            quizCadence: profile.quizCadence.value,
-            explanationOrder: profile.explanationOrder.value,
-          },
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        request.log.error(`[blueprint.ts: prepare] Blueprint preparation failed || requestId=${row.id} || ${message}`);
-        await transition(row.id, learner.id, "blueprint_preparing", "starting_level_confirmed");
-        const copy = error instanceof BlueprintFailedError
-          ? "The Course Blueprint we designed did not pass our checks. Your Request is unchanged; try again."
-          : "We couldn't design your Course Blueprint. Your Request is unchanged; try again.";
-        return reply.code(502).send({ error: copy });
-      }
-      const [saved] = await app.db.insert(courseBlueprints).values({
-        courseRequestId: row.id, learnerId: learner.id, draft: checked.blueprint, judge: checked.judge,
-      }).returning();
-      if (!saved) throw new Error("Course Blueprint was not saved.");
-      const ready = await transition(row.id, learner.id, "blueprint_preparing", "blueprint_review");
-      if (!ready) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
-      return { courseRequest: ready, blueprint: learnerView(saved) };
+      return reply.code(202).send({ courseRequest: preparing });
     } catch (error) {
       return fail(reply, request.log, "prepare", request.params.requestId, error, "Failed to prepare the Course Blueprint.");
     }
@@ -246,7 +220,7 @@ export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOp
           eq(courseRequests.id, row.id), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, "blueprint_review"),
         )).returning(requestFields);
         if (!generating) throw new RequestChangedError();
-        await enqueueGeneration(transaction, { courseRequestId: row.id, learnerId });
+        await enqueueJob(transaction, { courseRequestId: row.id, learnerId, kind: "course" });
         return { saved, generating } as const;
       }).catch((error: unknown) => {
         if (error instanceof RequestChangedError) return { error: "This Request changed. Reload it before continuing." } as const;
@@ -269,7 +243,7 @@ export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOp
       // is locked before the Request, in the order the worker's own writes take them.
       const cancelled = await app.db.transaction(async (transaction) => {
         await transaction.update(generationJobs).set({ status: "cancelled", claimToken: null, leaseExpiresAt: null, updatedAt: new Date() })
-          .where(eq(generationJobs.courseRequestId, row.id)).returning({ id: generationJobs.id });
+          .where(courseJobOf(row.id)).returning({ id: generationJobs.id });
         const [moved] = await transaction.update(courseRequests).set({ status: "generation_cancelled" }).where(and(
           eq(courseRequests.id, row.id), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, "generating"),
         )).returning(requestFields);
@@ -293,7 +267,7 @@ export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOp
       const row = await ownedRequest(request.params.requestId, learnerId, reply);
       if (!row) return reply;
       const [job] = await app.db.select({ id: generationJobs.id, status: generationJobs.status }).from(generationJobs)
-        .where(eq(generationJobs.courseRequestId, row.id)).limit(1);
+        .where(courseJobOf(row.id)).limit(1);
       const from = job ? RESUMABLE[job.status] : undefined;
       if (!job || from !== row.status) return reply.code(409).send({ error: "This Course cannot be resumed." });
       // Same job, same approved Blueprint; the next claim continues from the next unfinished Lesson.

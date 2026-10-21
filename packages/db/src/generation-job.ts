@@ -1,10 +1,20 @@
 /**
+ * What a job produces: the Course Blueprint before Learner review, or the whole Course after Approve (spec §5.1). A
+ * Request has at most one job of each kind.
+ */
+export const GENERATION_JOB_KINDS = ["blueprint", "course"] as const;
+
+/** One generation job kind. */
+export type GenerationJobKind = (typeof GENERATION_JOB_KINDS)[number];
+
+/**
  * Where a generation job is in its lifecycle (spec §5.1). `queued` waits for a worker; `running` is held by one
  * worker's lease; `cancelled` and `interrupted` keep their checkpoints and wait for the Learner's Resume; `failed`
  * (checks did not pass) and `succeeded` (published) are final.
  *
- * The Request's status moves in the same transaction as the job's: the Request is `generating` exactly while the job
- * is `queued` or `running`.
+ * The Request's status moves in the same transaction as the job's: the Request is `blueprint_preparing` exactly while
+ * its Blueprint job is `queued` or `running`, and `generating` exactly while its Course job is. A Blueprint job ends
+ * `succeeded` or `failed`; it is never cancelled or interrupted.
  */
 export const GENERATION_JOB_STATUSES = ["queued", "running", "cancelled", "interrupted", "failed", "succeeded"] as const;
 

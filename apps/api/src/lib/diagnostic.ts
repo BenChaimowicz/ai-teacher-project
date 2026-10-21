@@ -7,7 +7,7 @@ import type {
   ProbedCapability,
 } from "@senoy/db/starting-level";
 import { createFactChecker } from "./fact-check.ts";
-import { createModelPorts, type Generator, type Judge } from "./model-ports.ts";
+import { createModelPorts, retryMalformedOnce, type Generator, type Judge } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
 
 /** Eight items: a coarse capability map, not a reliable score (spec §4.3). */
@@ -48,7 +48,10 @@ export type DiagnosticDraft = {
   factCheckVendor: string | null;
 };
 
-/** The item set still had failing items after the last rewrite round. SEN-57 owns the fallback. */
+/**
+ * The item set still had failing items after the last rewrite round. `build` throws it only once the fallback
+ * Generator's set has failed too; the Request is then assessment-failed (spec §4.3).
+ */
 export class DiagnosticFailedError extends Error {
   public readonly failedItemIds: string[];
 
@@ -72,6 +75,7 @@ export type GapStatementInput = {
 
 /** Prepares Starting Level diagnostics and writes remaining-gap statements. */
 export interface DiagnosticBuilder {
+  /** Writes and checks a set, then once more with the fallback Generator if it still fails its checks. */
   build(input: { subject: string; learningGoal: string }): Promise<DiagnosticDraft>;
   writeGapStatement(input: GapStatementInput): Promise<string>;
 }
@@ -324,8 +328,11 @@ function judgeFailures(verdict: JudgeVerdict, keyIndex: number): string[] {
 /** Statements that would claim the goal is already met. */
 const GOAL_MET = /\b(already (meet|met|achieved?|master(ed)?|know (it|this|everything)|can do (it|this|the goal))|nothing (left|more) to learn|no (remaining )?gap)\b/i;
 
-/** Dependencies of the builder; omitted ports are created lazily from config. */
-export type DiagnosticBuilderOptions = { generator?: Generator; judge?: Judge; factChecker?: FactChecker };
+/**
+ * Dependencies of the builder; omitted ports are created lazily from config. When tests inject `generator` and
+ * `judge`, there is no fallback unless they inject `fallbackGenerator` too.
+ */
+export type DiagnosticBuilderOptions = { generator?: Generator; fallbackGenerator?: Generator; judge?: Judge; factChecker?: FactChecker };
 
 /**
  * Creates a lazy builder; composing routes does not need provider credentials.
@@ -335,124 +342,141 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
   /** Resolves ports on first use. */
   function ports() {
     const created = options.generator && options.judge ? null : createModelPorts();
-    return { generator: options.generator ?? created!.generator, judge: options.judge ?? created!.judge };
+    return {
+      generator: options.generator ?? created!.generator,
+      fallbackGenerator: options.fallbackGenerator ?? created?.fallbackGenerator ?? null,
+      judge: options.judge ?? created!.judge,
+    };
+  }
+
+  /**
+   * Writes one set with `generator`, then reviews and rewrites failing items for the bounded rounds.
+   * @throws DiagnosticFailedError when items still fail after the last round
+   */
+  async function buildWith(generator: Generator, judge: Judge, input: { subject: string; learningGoal: string }): Promise<DiagnosticDraft> {
+    if (generator.modelId.trim() === judge.modelId.trim()) {
+      throw new Error("[diagnostic: build] Judge must use a different model from the author");
+    }
+    const set = await retryMalformedOnce(() => generator.generateStructured({
+      systemPrompt: AUTHOR_PROMPT,
+      input: { subject: input.subject, learningGoal: input.learningGoal },
+      schemaName: "starting_level_diagnostic_items",
+      timeoutMs: AUTHOR_TIMEOUT_MS,
+      reasoningMaxTokens: AUTHOR_REASONING_TOKENS,
+      schema: SET_SCHEMA,
+      parse: parseSet,
+    }));
+    const ordered = [...set.probes].sort((a, b) => a.span - b.span);
+    const capabilities: CapabilityPlan[] = ordered.map((probe, index) => ({
+      id: `cap${index + 1}`, statement: probe.capability, itemId: `item${index + 1}`, span: probe.span,
+    }));
+    const items: DiagnosticItem[] = ordered.map(({ capability: _capability, span: _span, ...item }, index) => ({
+      id: `item${index + 1}`, capabilityId: `cap${index + 1}`, ...item,
+    }));
+    const reviews: ItemReview[] = [];
+    let factCheckVendor: string | null = null;
+    let pending = items.map((item) => item.id);
+
+    for (let round = 0; ; round++) {
+      const problems = new Map<string, string[]>();
+      const roundReviews = new Map<string, ItemReview>();
+      for (const id of pending) {
+        const item = items.find((candidate) => candidate.id === id)!;
+        const codeFailures = itemWritingFailures(item);
+        roundReviews.set(id, { itemId: id, round, stem: item.stem, codeFailures, judge: null, factCheck: null, passed: false });
+        if (codeFailures.length) problems.set(id, codeFailures);
+      }
+      const toJudge = pending.filter((id) => !problems.has(id));
+      if (toJudge.length) {
+        const verdicts = await retryMalformedOnce(() => judge.judge({
+          systemPrompt: JUDGE_PROMPT,
+          input: {
+            learningGoal: input.learningGoal,
+            items: toJudge.map((id) => {
+              const item = items.find((candidate) => candidate.id === id)!;
+              return { itemId: item.id, stem: item.stem, options: item.options };
+            }),
+            otherItems: items.filter((item) => !toJudge.includes(item.id)).map((item) => ({ stem: item.stem, options: item.options })),
+          },
+          schemaName: "starting_level_diagnostic_review",
+          schema: REVIEW_SCHEMA,
+          parse: reviewParser(toJudge),
+          authorModelId: generator.modelId,
+        }));
+        const claims: FactCheckClaim[] = [];
+        for (const verdict of verdicts) {
+          const item = items.find((candidate) => candidate.id === verdict.itemId)!;
+          const review = roundReviews.get(item.id)!;
+          review.judge = { defensibleOptions: verdict.defensibleOptions, flaws: verdict.flaws, externalFactualClaim: verdict.externalFactualClaim };
+          const failures = judgeFailures(verdict, item.keyIndex);
+          if (failures.length) problems.set(item.id, failures);
+          else if (verdict.externalFactualClaim) claims.push({ itemId: item.id, question: item.stem, answer: item.options[item.keyIndex]! });
+        }
+        if (claims.length) {
+          const factChecker = options.factChecker ?? createFactChecker({ judge, authorModelId: generator.modelId });
+          factCheckVendor = factChecker.vendor;
+          const results = await factChecker.check(claims);
+          for (const claim of claims) {
+            const result = results.find((candidate) => candidate.itemId === claim.itemId);
+            roundReviews.get(claim.itemId)!.factCheck = result
+              ? { confirmed: result.confirmed, reason: result.reason, sourceUrls: result.sourceUrls }
+              : { confirmed: false, reason: "No fact-check result returned.", sourceUrls: [] };
+            if (!result?.confirmed) problems.set(claim.itemId, [`The keyed answer could not be confirmed: ${result?.reason ?? "no result"}`]);
+          }
+        }
+      }
+      for (const review of roundReviews.values()) {
+        review.passed = !problems.has(review.itemId);
+        reviews.push(review);
+      }
+      if (problems.size === 0) break;
+      pending = [...problems.keys()];
+      if (round >= MAX_REWRITE_ROUNDS) throw new DiagnosticFailedError(Object.fromEntries(problems));
+
+      const capabilityIds = pending.map((id) => items.find((item) => item.id === id)!.capabilityId);
+      const rewritten = await retryMalformedOnce(() => generator.generateStructured({
+        systemPrompt: REWRITE_PROMPT,
+        input: {
+          subject: input.subject,
+          learningGoal: input.learningGoal,
+          rewrite: pending.map((id) => {
+            const item = items.find((candidate) => candidate.id === id)!;
+            const capability = capabilities.find((candidate) => candidate.id === item.capabilityId)!;
+            return { capabilityId: capability.id, capability: capability.statement, span: capability.span, kind: item.kind, previousStem: item.stem, problems: problems.get(id) };
+          }),
+          keep: items.filter((item) => !pending.includes(item.id)).map((item) => item.stem),
+        },
+        schemaName: "starting_level_diagnostic_rewrites",
+        timeoutMs: AUTHOR_TIMEOUT_MS,
+        reasoningMaxTokens: AUTHOR_REASONING_TOKENS,
+        schema: REWRITE_SCHEMA,
+        parse: rewriteParser(capabilityIds),
+      }));
+      for (const { capabilityId, ...fields } of rewritten) {
+        const index = items.findIndex((item) => item.capabilityId === capabilityId);
+        items[index] = { ...items[index]!, ...fields };
+      }
+      if (items.filter((item) => item.kind === "application").length < 2) throw new ModelError("invalid_output");
+    }
+
+    return { capabilities, items, reviews, coverageNote: set.coverageNote, authorModelId: generator.modelId, judgeModelId: judge.modelId, factCheckVendor };
   }
 
   return {
     async build(input) {
-      const { generator, judge } = ports();
-      if (generator.modelId.trim() === judge.modelId.trim()) {
-        throw new Error("[diagnostic: build] Judge must use a different model from the author");
+      const { generator, fallbackGenerator, judge } = ports();
+      try {
+        return await buildWith(generator, judge, input);
+      } catch (error) {
+        if (!(error instanceof DiagnosticFailedError) || !fallbackGenerator) throw error;
+        return buildWith(fallbackGenerator, judge, input);
       }
-      const set = await generator.generateStructured({
-        systemPrompt: AUTHOR_PROMPT,
-        input: { subject: input.subject, learningGoal: input.learningGoal },
-        schemaName: "starting_level_diagnostic_items",
-        timeoutMs: AUTHOR_TIMEOUT_MS,
-        reasoningMaxTokens: AUTHOR_REASONING_TOKENS,
-        schema: SET_SCHEMA,
-        parse: parseSet,
-      });
-      const ordered = [...set.probes].sort((a, b) => a.span - b.span);
-      const capabilities: CapabilityPlan[] = ordered.map((probe, index) => ({
-        id: `cap${index + 1}`, statement: probe.capability, itemId: `item${index + 1}`, span: probe.span,
-      }));
-      const items: DiagnosticItem[] = ordered.map(({ capability: _capability, span: _span, ...item }, index) => ({
-        id: `item${index + 1}`, capabilityId: `cap${index + 1}`, ...item,
-      }));
-      const reviews: ItemReview[] = [];
-      let factCheckVendor: string | null = null;
-      let pending = items.map((item) => item.id);
-
-      for (let round = 0; ; round++) {
-        const problems = new Map<string, string[]>();
-        const roundReviews = new Map<string, ItemReview>();
-        for (const id of pending) {
-          const item = items.find((candidate) => candidate.id === id)!;
-          const codeFailures = itemWritingFailures(item);
-          roundReviews.set(id, { itemId: id, round, stem: item.stem, codeFailures, judge: null, factCheck: null, passed: false });
-          if (codeFailures.length) problems.set(id, codeFailures);
-        }
-        const toJudge = pending.filter((id) => !problems.has(id));
-        if (toJudge.length) {
-          const verdicts = await judge.judge({
-            systemPrompt: JUDGE_PROMPT,
-            input: {
-              learningGoal: input.learningGoal,
-              items: toJudge.map((id) => {
-                const item = items.find((candidate) => candidate.id === id)!;
-                return { itemId: item.id, stem: item.stem, options: item.options };
-              }),
-              otherItems: items.filter((item) => !toJudge.includes(item.id)).map((item) => ({ stem: item.stem, options: item.options })),
-            },
-            schemaName: "starting_level_diagnostic_review",
-            schema: REVIEW_SCHEMA,
-            parse: reviewParser(toJudge),
-            authorModelId: generator.modelId,
-          });
-          const claims: FactCheckClaim[] = [];
-          for (const verdict of verdicts) {
-            const item = items.find((candidate) => candidate.id === verdict.itemId)!;
-            const review = roundReviews.get(item.id)!;
-            review.judge = { defensibleOptions: verdict.defensibleOptions, flaws: verdict.flaws, externalFactualClaim: verdict.externalFactualClaim };
-            const failures = judgeFailures(verdict, item.keyIndex);
-            if (failures.length) problems.set(item.id, failures);
-            else if (verdict.externalFactualClaim) claims.push({ itemId: item.id, question: item.stem, answer: item.options[item.keyIndex]! });
-          }
-          if (claims.length) {
-            const factChecker = options.factChecker ?? createFactChecker({ judge, authorModelId: generator.modelId });
-            factCheckVendor = factChecker.vendor;
-            const results = await factChecker.check(claims);
-            for (const claim of claims) {
-              const result = results.find((candidate) => candidate.itemId === claim.itemId);
-              roundReviews.get(claim.itemId)!.factCheck = result
-                ? { confirmed: result.confirmed, reason: result.reason, sourceUrls: result.sourceUrls }
-                : { confirmed: false, reason: "No fact-check result returned.", sourceUrls: [] };
-              if (!result?.confirmed) problems.set(claim.itemId, [`The keyed answer could not be confirmed: ${result?.reason ?? "no result"}`]);
-            }
-          }
-        }
-        for (const review of roundReviews.values()) {
-          review.passed = !problems.has(review.itemId);
-          reviews.push(review);
-        }
-        if (problems.size === 0) break;
-        pending = [...problems.keys()];
-        if (round >= MAX_REWRITE_ROUNDS) throw new DiagnosticFailedError(Object.fromEntries(problems));
-
-        const capabilityIds = pending.map((id) => items.find((item) => item.id === id)!.capabilityId);
-        const rewritten = await generator.generateStructured({
-          systemPrompt: REWRITE_PROMPT,
-          input: {
-            subject: input.subject,
-            learningGoal: input.learningGoal,
-            rewrite: pending.map((id) => {
-              const item = items.find((candidate) => candidate.id === id)!;
-              const capability = capabilities.find((candidate) => candidate.id === item.capabilityId)!;
-              return { capabilityId: capability.id, capability: capability.statement, span: capability.span, kind: item.kind, previousStem: item.stem, problems: problems.get(id) };
-            }),
-            keep: items.filter((item) => !pending.includes(item.id)).map((item) => item.stem),
-          },
-          schemaName: "starting_level_diagnostic_rewrites",
-          timeoutMs: AUTHOR_TIMEOUT_MS,
-          reasoningMaxTokens: AUTHOR_REASONING_TOKENS,
-          schema: REWRITE_SCHEMA,
-          parse: rewriteParser(capabilityIds),
-        });
-        for (const { capabilityId, ...fields } of rewritten) {
-          const index = items.findIndex((item) => item.capabilityId === capabilityId);
-          items[index] = { ...items[index]!, ...fields };
-        }
-        if (items.filter((item) => item.kind === "application").length < 2) throw new ModelError("invalid_output");
-      }
-
-      return { capabilities, items, reviews, coverageNote: set.coverageNote, authorModelId: generator.modelId, judgeModelId: judge.modelId, factCheckVendor };
     },
 
     async writeGapStatement(input) {
       const { generator } = ports();
       for (let attempt = 0; attempt < 2; attempt++) {
-        const { remainingGapStatement } = await generator.generateStructured({
+        const { remainingGapStatement } = await retryMalformedOnce(() => generator.generateStructured({
           systemPrompt: GAP_PROMPT,
           input: {
             subject: input.subject,
@@ -468,7 +492,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
           schemaName: "starting_level_gap_statement",
           schema: GAP_SCHEMA,
           parse: (raw) => ({ remainingGapStatement: text(record(raw).remainingGapStatement) }),
-        });
+        }));
         if (!GOAL_MET.test(remainingGapStatement)) return remainingGapStatement;
       }
       throw new ModelError("invalid_output");

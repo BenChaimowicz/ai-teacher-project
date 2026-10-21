@@ -10,7 +10,7 @@ import {
 import { isEvidenced, type GapConfirmation, type StartingLevel } from "@senoy/db/starting-level";
 import type { ExplanationOrder, QuizCadence } from "@senoy/db/teaching-profile";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
-import { createModelPorts, type Generator, type Judge } from "./model-ports.ts";
+import { createModelPorts, retryMalformedOnce, type Generator, type Judge } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
 
 /** Designing a Blueprint with reasoning can take the author model past the transport's 60 s default. */
@@ -29,10 +29,13 @@ export type BlueprintInput = {
   profile: { instructionLanguage: "en"; quizCadence: QuizCadence; explanationOrder: ExplanationOrder };
 };
 
+/** Revisions after the first design fails its checks (spec §6.2): initial design + two revisions, like a Lesson's repairs. */
+export const MAX_BLUEPRINT_REVISIONS = 2;
+
 /** A Blueprint that passed the Code checks and the Judge. */
 export type CheckedBlueprint = { blueprint: CourseBlueprint; judge: JudgeResult };
 
-/** The Blueprint failed system validation. Revising and re-checking is SEN-57's loop. */
+/** The Blueprint still failed system validation after its last revision. */
 export class BlueprintFailedError extends Error {
   /**
    * @param codeFailures - Code check problems; empty when only the Judge failed
@@ -47,6 +50,7 @@ export class BlueprintFailedError extends Error {
 
 /** Designs and system-validates a Course Blueprint before Learner review. */
 export interface BlueprintBuilder {
+  /** Designs, checks, and revises a failing design up to `MAX_BLUEPRINT_REVISIONS` times. */
   build(input: BlueprintInput): Promise<CheckedBlueprint>;
 }
 
@@ -70,6 +74,10 @@ For each Lesson:
 If the Learning Goal names a song, book, film, or other work, teach the generic skills it needs; titles and Lesson goals may name the work as the destination, but no Lesson reproduces it.
 "quizCadence" and "explanationOrder" are the Learner's stated preferences; follow them where this two-Lesson shape allows.
 courseTitle names the Course; moduleTitle names its one Module.`;
+
+const REVISE_PROMPT = `${AUTHOR_PROMPT}
+
+You are revising a Course Blueprint that failed our system checks. "previousBlueprint" is the failed design and "problems" lists why it failed. Return a complete Blueprint that fixes every problem; keep what the problems do not mention.`;
 
 const JUDGE_PROMPT = `You independently review a Course Blueprint before the Learner sees it. You did not write it.
 "inPlace" capabilities are already evidenced for this Learner; "remainingGap" capabilities are not. Fail a check only for a clear problem, not for style.
@@ -150,6 +158,26 @@ export function parseAuthoredBlueprint(raw: unknown): CourseBlueprint {
   return { courseTitle: text(row.courseTitle), modules: [{ title: text(row.moduleTitle), slots }] };
 }
 
+/**
+ * A Blueprint in the shape the author writes, so a revision sees its own draft.
+ * @param blueprint - Parsed Blueprint
+ */
+function authoredShape(blueprint: CourseBlueprint) {
+  const module = blueprint.modules[0]!;
+  return {
+    courseTitle: blueprint.courseTitle,
+    moduleTitle: module.title,
+    lessons: module.slots.map((slot) => ({
+      method: slot.method,
+      title: slot.title,
+      lessonGoal: slot.lessonGoal,
+      objectives: slot.objectives,
+      topicTags: slot.topicTags,
+      assessesLessonNumbers: slot.assessesSlotIds.map((id) => module.slots.findIndex((candidate) => candidate.id === id) + 1),
+    })),
+  };
+}
+
 /** The Starting Level as both roles see it: evidenced capabilities in place, the rest in the remaining gap. */
 function gapView(level: StartingLevel) {
   const ordered = [...level.probedCapabilities].sort((a, b) => a.span - b.span);
@@ -182,36 +210,41 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
         throw new Error("[blueprint: build] Judge must use a different model from the author");
       }
       const startingLevel = gapView(input.startingLevel);
-      const blueprint = await generator.generateStructured({
-        systemPrompt: AUTHOR_PROMPT,
-        input: {
-          subject: input.subject,
-          learningGoal: input.learningGoal,
-          ...startingLevel,
-          shortCourse: input.confirmation === "short_course",
-          instructionLanguage: input.profile.instructionLanguage,
-          quizCadence: input.profile.quizCadence,
-          explanationOrder: input.profile.explanationOrder,
-        },
-        schemaName: "course_blueprint",
-        timeoutMs: AUTHOR_TIMEOUT_MS,
-        reasoningMaxTokens: AUTHOR_REASONING_TOKENS,
-        schema: BLUEPRINT_SCHEMA,
-        parse: parseAuthoredBlueprint,
-      });
-      const codeFailures = blueprintCodeFailures(blueprint);
-      if (codeFailures.length) throw new BlueprintFailedError(codeFailures, null);
+      const authorInput = {
+        subject: input.subject,
+        learningGoal: input.learningGoal,
+        ...startingLevel,
+        shortCourse: input.confirmation === "short_course",
+        instructionLanguage: input.profile.instructionLanguage,
+        quizCadence: input.profile.quizCadence,
+        explanationOrder: input.profile.explanationOrder,
+      };
+      const author = { schemaName: "course_blueprint", timeoutMs: AUTHOR_TIMEOUT_MS, reasoningMaxTokens: AUTHOR_REASONING_TOKENS, schema: BLUEPRINT_SCHEMA, parse: parseAuthoredBlueprint };
+      let blueprint = await retryMalformedOnce(() => generator.generateStructured({ ...author, systemPrompt: AUTHOR_PROMPT, input: authorInput }));
 
-      const verdict = await judge.judge({
-        systemPrompt: JUDGE_PROMPT,
-        input: { subject: input.subject, learningGoal: input.learningGoal, ...startingLevel, blueprint },
-        schemaName: "course_blueprint_review",
-        schema: judgeSchema(BLUEPRINT_JUDGE_CHECKS),
-        parse: judgeParser(BLUEPRINT_JUDGE_CHECKS),
-        authorModelId: generator.modelId,
-      });
-      if (!verdict.pass) throw new BlueprintFailedError([], verdict);
-      return { blueprint, judge: verdict };
+      // A fail is a Blueprint revision, then the checks again (spec §6.2).
+      for (let revision = 0; ; revision++) {
+        const codeFailures = blueprintCodeFailures(blueprint);
+        let verdict: JudgeResult | null = null;
+        if (!codeFailures.length) {
+          const checked = blueprint;
+          verdict = await retryMalformedOnce(() => judge.judge({
+            systemPrompt: JUDGE_PROMPT,
+            input: { subject: input.subject, learningGoal: input.learningGoal, ...startingLevel, blueprint: checked },
+            schemaName: "course_blueprint_review",
+            schema: judgeSchema(BLUEPRINT_JUDGE_CHECKS),
+            parse: judgeParser(BLUEPRINT_JUDGE_CHECKS),
+            authorModelId: generator.modelId,
+          }));
+          if (verdict.pass) return { blueprint, judge: verdict };
+        }
+        if (revision >= MAX_BLUEPRINT_REVISIONS) throw new BlueprintFailedError(codeFailures, verdict);
+        const previousBlueprint = authoredShape(blueprint);
+        const problems = codeFailures.length ? codeFailures : [...verdict!.failedChecks.map((check) => `Failed check: ${check}`), ...verdict!.reasons];
+        blueprint = await retryMalformedOnce(() => generator.generateStructured({
+          ...author, systemPrompt: REVISE_PROMPT, input: { ...authorInput, previousBlueprint, problems },
+        }));
+      }
     },
   };
 }

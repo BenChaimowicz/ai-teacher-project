@@ -190,3 +190,63 @@ test("Provider refusals and errors propagate instead of becoming a validity deci
       (error: unknown) => error instanceof ModelError && error.code === code);
   }
 });
+
+/** Replies with each scripted evidence in turn and counts the calls. */
+function queuedGenerator(...replies: unknown[]) {
+  let calls = 0;
+  const generator: Generator = {
+    modelId: "fixture/author",
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
+      calls++;
+      return request.parse(replies.shift());
+    },
+  };
+  return { generator, calls: () => calls };
+}
+
+test("A malformed reply is asked once more before an error shows", async () => {
+  const input = { subject: "Norse mythology", learningGoal: "Explain the nine worlds." };
+  const recovered = queuedGenerator({ verdict: "pass" }, evidence());
+  assert.equal((await createValidityGate(recovered.generator).evaluate(input)).outcome, "pass");
+  assert.equal(recovered.calls(), 2);
+
+  // Evidence that contradicts the stage is malformed too, and shares the same one retry.
+  const contradicting = queuedGenerator(evidence({ clarificationResolved: true }), evidence());
+  assert.equal((await createValidityGate(contradicting.generator).evaluate(input)).outcome, "pass");
+  assert.equal(contradicting.calls(), 2);
+
+  const twice = queuedGenerator({ verdict: "pass" }, { verdict: "pass" }, evidence());
+  await assert.rejects(createValidityGate(twice.generator).evaluate(input), (error) => error instanceof ModelError && error.code === "invalid_output");
+  assert.equal(twice.calls(), 2, "Only one retry.");
+});
+
+test("A reject or a clarify is a real decision and is never re-asked", async () => {
+  const rejecting = queuedGenerator(evidence({ outcomes: [{ category: "weapon_construction", mode: "operational" }] }), evidence());
+  assert.equal((await createValidityGate(rejecting.generator).evaluate({ subject: "Guns", learningGoal: "Build one." })).outcome, "reject");
+  assert.equal(rejecting.calls(), 1);
+
+  const clarifying = queuedGenerator(evidence({ learnability: "ambiguous", question: "Mythology or real animals?" }), evidence());
+  assert.equal((await createValidityGate(clarifying.generator).evaluate({ subject: "Unicorns", learningGoal: "Feed unicorns." })).outcome, "clarify");
+  assert.equal(clarifying.calls(), 1);
+});
+
+test("A provider error is not retried", async () => {
+  let calls = 0;
+  const generator: Generator = {
+    modelId: "fixture/author",
+    async generateStructured<T>(): Promise<T> {
+      calls++;
+      throw new ModelError("timeout");
+    },
+  };
+  await assert.rejects(createValidityGate(generator).evaluate({ subject: "Runes", learningGoal: "Read runes." }), ModelError);
+  assert.equal(calls, 1);
+});
+
+test("A prohibited outcome rejects even without a question, and is not retried as malformed", async () => {
+  const { generator, calls } = queuedGenerator(evidence({
+    outcomes: [{ category: "violence", mode: "operational" }, { category: "ordinary", mode: "ambiguous" }], question: null,
+  }), evidence());
+  assert.equal((await createValidityGate(generator).evaluate({ subject: "Fighting", learningGoal: "Hurt someone." })).outcome, "reject");
+  assert.equal(calls(), 1);
+});

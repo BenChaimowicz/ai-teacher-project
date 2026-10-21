@@ -7,8 +7,11 @@ import type { CourseRequestRecord, DiagnosticView } from "@/lib/course-request-t
 
 /** Statuses this component owns on the Course Request screen. */
 export const DIAGNOSTIC_STATUSES = new Set([
-  "validity_passed", "assessment_preparing", "assessment_ready", "awaiting_gap_confirmation", "starting_level_confirmed",
+  "validity_passed", "assessment_preparing", "assessment_failed", "assessment_ready", "awaiting_gap_confirmation", "starting_level_confirmed",
 ]);
+
+/** Statuses where the check is not prepared yet, so the Learner starts it, retries it, or waits for it. */
+const PREPARE_STATUSES = new Set(["validity_passed", "assessment_preparing", "assessment_failed"]);
 
 /** How often the page checks whether a check that is being prepared is ready. */
 const POLL_MS = 3000;
@@ -63,7 +66,7 @@ export function StartingLevelDiagnostic({ record, onRecord }: Props) {
   }, []);
 
   useEffect(() => {
-    if (record.status === "validity_passed") return;
+    if (record.status === "validity_passed" || record.status === "assessment_failed") return;
     let cancelled = false;
     let timer: number | undefined;
     /** Loads the latest attempt; while it is being prepared, checks again shortly. */
@@ -138,8 +141,10 @@ export function StartingLevelDiagnostic({ record, onRecord }: Props) {
 
   const errorLine = error ? <p role="alert" className="mt-4 whitespace-pre-wrap break-words text-sm text-red-400">{error}</p> : null;
 
-  if (record.status === "validity_passed" || record.status === "assessment_preparing") {
+  if (PREPARE_STATUSES.has(record.status)) {
     const preparing = busy || record.status === "assessment_preparing";
+    // Assessment-failed offers Retry diagnostic only (spec §4.3); any other saved failure offers Try again.
+    const label = record.status === "assessment_failed" ? "Retry diagnostic" : record.failureReason ? "Try again" : "Start the check";
     return (
       <section className="mt-6" aria-labelledby="diagnostic-heading">
         <h2 id="diagnostic-heading" className="font-medium">Starting Level check</h2>
@@ -147,10 +152,13 @@ export function StartingLevelDiagnostic({ record, onRecord }: Props) {
         {preparing ? (
           <p role="status" className="mt-4 text-sm">Preparing your check… This can take a few minutes.</p>
         ) : (
-          <Button type="button" className="mt-4" onClick={async () => {
-            const updated = await post("");
-            if (updated) onRecord(updated);
-          }}>Start the check</Button>
+          <>
+            {record.failureReason ? <p role="alert" className="mt-4 whitespace-pre-wrap break-words text-sm">{record.failureReason}</p> : null}
+            <Button type="button" className="mt-4" onClick={async () => {
+              const updated = await post("");
+              if (updated) onRecord(updated);
+            }}>{label}</Button>
+          </>
         )}
         {errorLine}
       </section>

@@ -1,9 +1,10 @@
 import { and, eq, sql } from "drizzle-orm";
-import { generationJobs, type Database, type GenerationJobStatus, type GenerationStage, type Transaction } from "@senoy/db";
+import { generationJobs, type Database, type GenerationJobKind, type GenerationJobStatus, type GenerationStage, type Transaction } from "@senoy/db";
 
 /** One worker's hold on one running job; every write the job makes is checked against `claimToken`. */
 export type JobLease = {
   jobId: string;
+  kind: GenerationJobKind;
   courseRequestId: string;
   learnerId: string;
   claimToken: string;
@@ -35,13 +36,17 @@ export interface GenerationControl {
 }
 
 /**
- * Queues the generation job for a just-approved Request. Call it in the transaction that moves the Request to
- * `generating`, so the two never disagree.
- * @param transaction - The approving transaction
- * @param job - The Request and its Learner
+ * Queues a Request's job of one kind: a fresh row, or its finished row again (Try again after a failed Blueprint).
+ * Call it in the transaction that moves the Request to `blueprint_preparing` or `generating`, so the two never disagree.
+ * @param transaction - The transaction moving the Request
+ * @param job - The Request, its Learner, and what the job produces
  */
-export async function enqueueGeneration(transaction: Transaction, job: { courseRequestId: string; learnerId: string }) {
-  await transaction.insert(generationJobs).values({ ...job, status: "queued" });
+export async function enqueueJob(transaction: Transaction, job: { courseRequestId: string; learnerId: string; kind: GenerationJobKind }) {
+  const [requeued] = await transaction.update(generationJobs)
+    .set({ status: "queued", stage: null, currentSlotId: null, claimToken: null, leaseExpiresAt: null, updatedAt: new Date() })
+    .where(and(eq(generationJobs.courseRequestId, job.courseRequestId), eq(generationJobs.kind, job.kind)))
+    .returning({ id: generationJobs.id });
+  if (!requeued) await transaction.insert(generationJobs).values({ ...job, status: "queued" });
 }
 
 /**
@@ -67,6 +72,7 @@ export async function claimGenerationJob(db: Database, leaseMs: number): Promise
     updatedAt: sql`now()`,
   }).where(eq(generationJobs.id, next)).returning({
     jobId: generationJobs.id,
+    kind: generationJobs.kind,
     courseRequestId: generationJobs.courseRequestId,
     learnerId: generationJobs.learnerId,
     claimToken: generationJobs.claimToken,

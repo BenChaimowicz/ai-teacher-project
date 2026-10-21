@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
 import { COURSE_REQUEST_STATUSES, type ValidityClarification, type ValidityResult } from "./course-request.ts";
-import { GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
+import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
 import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
@@ -35,7 +35,7 @@ export const courseRequests = pgTable("course_requests", {
   validity: jsonb("validity").$type<ValidityResult>(),
   clarification: jsonb("clarification").$type<ValidityClarification>(),
   revisedFromId: uuid("revised_from_id").references((): AnyPgColumn => courseRequests.id),
-  /** Plain-language reason, set only when the status is `generation_failed`. */
+  /** Plain-language reason the last step failed, with its next step; cleared when the Learner tries again. */
   failureReason: text("failure_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -93,6 +93,9 @@ export const courseBlueprints = pgTable("course_blueprints", {
   approvedAt: timestamp("approved_at", { withTimezone: true }),
 });
 
+/** What a generation job produces. */
+export const generationJobKind = pgEnum("generation_job_kind", GENERATION_JOB_KINDS);
+
 /** Where a generation job is in its lifecycle. */
 export const generationJobStatus = pgEnum("generation_job_status", GENERATION_JOB_STATUSES);
 
@@ -100,7 +103,8 @@ export const generationJobStatus = pgEnum("generation_job_status", GENERATION_JO
 export const generationStage = pgEnum("generation_stage", GENERATION_STAGES);
 
 /**
- * The durable job that generates and publishes the Course for one approved Blueprint (spec §5.1); one per Request.
+ * A durable job (spec §5.1): `blueprint` designs and checks the Course Blueprint; `course` generates and publishes the
+ * Course for the approved Blueprint. At most one of each kind per Request.
  * A worker holds a `running` job through `claimToken` until `leaseExpiresAt`; a lapsed lease (the worker crashed) lets
  * another claim continue from the next unfinished Lesson. Every write the job makes checks it still holds the lease.
  */
@@ -110,11 +114,11 @@ export const generationJobs = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     courseRequestId: uuid("course_request_id")
       .notNull()
-      .unique()
       .references(() => courseRequests.id),
     learnerId: uuid("learner_id")
       .notNull()
       .references(() => learners.id),
+    kind: generationJobKind("kind").notNull().default("course"),
     status: generationJobStatus("status").notNull().default("queued"),
     stage: generationStage("stage"),
     /** The Blueprint slot being written while the stage is `lesson`. */
@@ -126,7 +130,10 @@ export const generationJobs = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("generation_jobs_claimable").on(table.status, table.createdAt)],
+  (table) => [
+    unique("generation_jobs_request_kind").on(table.courseRequestId, table.kind),
+    index("generation_jobs_claimable").on(table.status, table.createdAt),
+  ],
 );
 
 /**

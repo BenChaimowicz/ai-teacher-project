@@ -4,6 +4,8 @@
   "type": "module",
   "exports": {
     "./generation-worker": "./src/lib/generation-worker.ts",
+    "./blueprint-job": "./src/lib/blueprint-job.ts",
+    "./blueprint-fixture": "./src/lib/blueprint-fixture.ts",
     "./course-generation": "./src/lib/course-generation.ts",
     "./course-generation-fixture": "./src/lib/course-generation-fixture.ts"
   },

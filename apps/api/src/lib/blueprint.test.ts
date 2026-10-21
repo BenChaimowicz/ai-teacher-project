@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { StartingLevel } from "@senoy/db/starting-level";
-import { BlueprintFailedError, createBlueprintBuilder, type BlueprintInput } from "./blueprint.ts";
+import { BlueprintFailedError, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, type BlueprintInput } from "./blueprint.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createModelPorts, type Generator, type Judge, type StructuredRequest } from "./model-ports.ts";
-import type { StructuredTransport } from "./openrouter.ts";
+import { ModelError, type StructuredTransport } from "./openrouter.ts";
 
 /** Capabilities 1–3 evidenced (one later widened by Too easy), 4–8 not. */
 const startingLevel: StartingLevel = {
@@ -131,4 +131,72 @@ test("Author and Judge share one OpenRouter transport; the Judge runs at high ef
     { modelId: config.generatorModel, schemaName: "course_blueprint", effort: undefined },
     { modelId: config.judgeModel, schemaName: "course_blueprint_review", effort: "high" },
   ]);
+});
+
+/** An author that replies with each scripted output in turn; records what it was told. */
+function queuedGenerator(...outputs: unknown[]) {
+  const calls: { systemPrompt: string; input: Record<string, unknown> }[] = [];
+  const generator: Generator = {
+    modelId: "fixture/author",
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
+      calls.push({ systemPrompt: request.systemPrompt, input: request.input as Record<string, unknown> });
+      return request.parse(outputs.length > 1 ? outputs.shift() : outputs[0]);
+    },
+  };
+  return { generator, calls };
+}
+
+/** A Judge that returns each scripted verdict in turn, repeating the last. */
+function queuedJudge(...verdicts: unknown[]) {
+  let calls = 0;
+  const judge: Judge = {
+    modelId: "fixture/judge",
+    async judge<T>(request: StructuredRequest<T> & { authorModelId: string }): Promise<T> {
+      calls++;
+      return request.parse(verdicts.length > 1 ? verdicts.shift() : verdicts[0]);
+    },
+  };
+  return { judge, calls: () => calls };
+}
+
+const PASS = { pass: true, failedChecks: [], reasons: [] };
+const COVERAGE_FAIL = { pass: false, failedChecks: ["coverage"], reasons: ["Misses counting."] };
+
+test("A failing Blueprint is revised from its own draft and problems, then checked again", async () => {
+  const broken = authored({ quiz: { assessesLessonNumbers: [2] } });
+  const { generator, calls } = queuedGenerator(broken, authored(), authored());
+  const verdicts = queuedJudge(COVERAGE_FAIL, PASS);
+  const checked = await createBlueprintBuilder({ generator, judge: verdicts.judge }).build(INPUT);
+  assert.equal(checked.judge.pass, true);
+  assert.equal(calls.length, 3, "The first design and two revisions.");
+  assert.equal(verdicts.calls(), 2, "The Code fail never reached the Judge.");
+
+  const codeRevision = calls[1]!;
+  assert.match(codeRevision.systemPrompt, /revising a Course Blueprint that failed/);
+  const previous = codeRevision.input.previousBlueprint as ReturnType<typeof authored>;
+  assert.deepEqual([previous.courseTitle, previous.moduleTitle, previous.lessons.map((lesson) => lesson.assessesLessonNumbers)],
+    [broken.courseTitle, broken.moduleTitle, [[], [2]]], "The revision sees the draft in the shape it wrote.");
+  assert.ok((codeRevision.input.problems as string[]).some((problem) => problem.includes("precede")));
+  assert.equal(codeRevision.input.learningGoal, INPUT.learningGoal);
+  assert.deepEqual(calls[2]!.input.problems, ["Failed check: coverage", "Misses counting."]);
+});
+
+test("A Blueprint still failing after two revisions fails with its last verdict; each Judge fail is a revision, never a re-ask", async () => {
+  const { generator, calls } = queuedGenerator(authored());
+  const verdicts = queuedJudge(COVERAGE_FAIL);
+  await assert.rejects(createBlueprintBuilder({ generator, judge: verdicts.judge }).build(INPUT), (error: unknown) =>
+    error instanceof BlueprintFailedError && error.judge?.failedChecks[0] === "coverage");
+  assert.deepEqual([calls.length, verdicts.calls()], [1 + MAX_BLUEPRINT_REVISIONS, 1 + MAX_BLUEPRINT_REVISIONS]);
+});
+
+test("A malformed author or Judge reply is asked once more; a second malformed reply is an error", async () => {
+  const author = queuedGenerator({ lessons: "two" }, authored());
+  const verdicts = queuedJudge({ verdict: "fine" }, PASS);
+  assert.equal((await createBlueprintBuilder({ generator: author.generator, judge: verdicts.judge }).build(INPUT)).judge.pass, true);
+  assert.deepEqual([author.calls.length, verdicts.calls()], [2, 2]);
+
+  const garbage = queuedGenerator({ lessons: "two" });
+  await assert.rejects(createBlueprintBuilder({ generator: garbage.generator, judge: queuedJudge(PASS).judge }).build(INPUT),
+    (error: unknown) => error instanceof ModelError && error.code === "invalid_output");
+  assert.equal(garbage.calls.length, 2);
 });
