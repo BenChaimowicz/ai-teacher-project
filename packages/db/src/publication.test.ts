@@ -29,7 +29,7 @@ const PASS = { pass: true, failedChecks: [], reasons: [] };
 /** One checkpoint per approved slot, both passing. */
 function checkpoints(): LessonCheckpoint[] {
   const base = {
-    courseRequestId: "request1", lineage: null, sourcePacks: [], rejectedSources: [], judge: PASS, finalizedAt: new Date(),
+    courseRequestId: "request1", lineage: null, rejectedSources: [], judge: PASS, finalizedAt: new Date(),
   };
   return [
     {

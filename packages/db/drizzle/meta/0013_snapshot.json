@@ -1,5 +1,5 @@
 {
-  "id": "4bc479df-2e29-4bba-b039-7d80187b0ea3",
+  "id": "3de039b8-bb58-43d6-b759-9a75a08cb21d",
   "prevId": "021e664c-067f-476a-8e11-97f413dee483",
   "version": "7",
   "dialect": "postgresql",
@@ -302,14 +302,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "kind": {
-          "name": "kind",
-          "type": "generation_job_kind",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'course'"
-        },
         "status": {
           "name": "status",
           "type": "generation_job_status",
@@ -418,12 +410,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "generation_jobs_request_kind": {
-          "name": "generation_jobs_request_kind",
+        "generation_jobs_course_request_id_unique": {
+          "name": "generation_jobs_course_request_id_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "course_request_id",
-            "kind"
+            "course_request_id"
           ]
         }
       },
@@ -545,6 +536,74 @@
         }
       },
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.lesson_research": {
+      "name": "lesson_research",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "course_request_id": {
+          "name": "course_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot_id": {
+          "name": "slot_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_packs": {
+          "name": "source_packs",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "researched_at": {
+          "name": "researched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "lesson_research_course_request_id_course_requests_id_fk": {
+          "name": "lesson_research_course_request_id_course_requests_id_fk",
+          "tableFrom": "lesson_research",
+          "tableTo": "course_requests",
+          "columnsFrom": [
+            "course_request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "lesson_research_request_slot": {
+          "name": "lesson_research_request_slot",
+          "nullsNotDistinct": false,
+          "columns": [
+            "course_request_id",
+            "slot_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1234,12 +1293,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "source_packs": {
-          "name": "source_packs",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
         "rejected_sources": {
           "name": "rejected_sources",
           "type": "jsonb",
@@ -1305,7 +1358,6 @@
         "validity_passed",
         "assessment_preparing",
         "assessment_ready",
-        "assessment_failed",
         "awaiting_gap_confirmation",
         "starting_level_confirmed",
         "blueprint_preparing",
@@ -1314,14 +1366,6 @@
         "published",
         "generation_failed",
         "generation_cancelled"
-      ]
-    },
-    "public.generation_job_kind": {
-      "name": "generation_job_kind",
-      "schema": "public",
-      "values": [
-        "blueprint",
-        "course"
       ]
     },
     "public.generation_job_status": {
@@ -1340,6 +1384,7 @@
       "name": "generation_stage",
       "schema": "public",
       "values": [
+        "research",
         "lesson",
         "publish"
       ]

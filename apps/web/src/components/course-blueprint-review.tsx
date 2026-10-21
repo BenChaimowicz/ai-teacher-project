@@ -18,11 +18,13 @@ const WORKING_STATUSES = new Set(["blueprint_preparing", "generating"]);
 const POLL_MS = 3000;
 
 /**
- * One line on what generation is doing: the current Lesson and N of M, or the publish stage. Never a draft or Sources.
+ * One line on what generation is doing: research, the current Lesson and N of M, or the publish stage. Never a draft
+ * or Sources.
  * @param generation - The job's Waiting view
  */
 function waitingLine(generation: GenerationView | null) {
   if (!generation || generation.status === "queued") return "Your Course is queued to be generated.";
+  if (generation.stage === "research") return "Researching Sources for every Reading before writing starts.";
   if (generation.stage === "publish") return `All ${generation.totalLessons} Lessons are written. Checking that they fit together, then publishing.`;
   if (generation.lessonNumber && generation.lessonTitle) {
     return `Writing Lesson ${generation.lessonNumber} of ${generation.totalLessons}: “${generation.lessonTitle}”.`;

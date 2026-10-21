@@ -137,9 +137,28 @@ export const generationJobs = pgTable(
 );
 
 /**
+ * The Source packs researched for one Reading slot of an approved Blueprint: Primary and Secondary, exactly as research
+ * returned them. Every Reading is researched at once after Approve and stored here before writing starts; the writer
+ * reads its packs from this row, and they stay the retrieval set its Code and Judge checks ran against (ADR 0009).
+ */
+export const lessonResearch = pgTable(
+  "lesson_research",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    courseRequestId: uuid("course_request_id")
+      .notNull()
+      .references(() => courseRequests.id),
+    slotId: text("slot_id").notNull(),
+    sourcePacks: jsonb("source_packs").$type<unknown[]>().notNull(),
+    researchedAt: timestamp("researched_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique("lesson_research_request_slot").on(table.courseRequestId, table.slotId)],
+);
+
+/**
  * A finalized, unpublished Lesson checkpoint for one approved Blueprint slot (spec §5.1). Study and reuse read only
  * published tables, so a checkpoint is not playable or reusable until the Course publishes atomically.
- * `sourcePacks` is the Lesson's retrieval set as research returned it; the Code and Judge checks ran against it (ADR 0009).
+ * A Reading's retrieval set is its `lesson_research` row (ADR 0009).
  */
 export const unpublishedLessons = pgTable(
   "unpublished_lessons",
@@ -159,8 +178,6 @@ export const unpublishedLessons = pgTable(
     sources: jsonb("sources").$type<LessonSource[]>().notNull(),
     citations: jsonb("citations").$type<NumberedSource[]>().notNull(),
     body: jsonb("body").$type<ReadingBody | QuizBody>().notNull(),
-    /** The Reading's Source packs; a Quiz is generated from its assessed Lessons and has none. */
-    sourcePacks: jsonb("source_packs").$type<unknown[]>().notNull(),
     /** Retrieved Sources the Judge model vetted out before writing, with reasons. */
     rejectedSources: jsonb("rejected_sources").$type<{ sourceId: string; url: string; reason: string }[]>().notNull().default([]),
     judge: jsonb("judge").$type<JudgeResult>().notNull(),

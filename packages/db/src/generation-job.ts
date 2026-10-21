@@ -21,8 +21,11 @@ export const GENERATION_JOB_STATUSES = ["queued", "running", "cancelled", "inter
 /** One generation job status. */
 export type GenerationJobStatus = (typeof GENERATION_JOB_STATUSES)[number];
 
-/** What a running job is doing: writing one Lesson, or checking and publishing the whole Course. */
-export const GENERATION_STAGES = ["lesson", "publish"] as const;
+/**
+ * What a running job is doing: researching every Reading at once, writing one Lesson, or checking and publishing the
+ * whole Course.
+ */
+export const GENERATION_STAGES = ["research", "lesson", "publish"] as const;
 
 /** One generation stage. */
 export type GenerationStage = (typeof GENERATION_STAGES)[number];
