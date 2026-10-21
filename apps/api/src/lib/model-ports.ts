@@ -1,5 +1,5 @@
 import { loadModelConfig, type ModelConfig } from "./model-config.ts";
-import { createOpenRouterTransport, type StructuredRequest, type StructuredTransport } from "./openrouter.ts";
+import { createOpenRouterTransport, ModelError, type StructuredRequest, type StructuredTransport } from "./openrouter.ts";
 
 export type { StructuredRequest } from "./openrouter.ts";
 
@@ -26,8 +26,25 @@ export type ModelPortsOptions = {
 /** Every Judge call reasons at high effort unless the request sets its own (ADR 0010). */
 const JUDGE_REASONING_EFFORT = "high" as const;
 
-/** Creates two small domain ports backed by one transport, without making provider calls. */
-export function createModelPorts(options: ModelPortsOptions = {}): { generator: Generator; judge: Judge } {
+/**
+ * Runs one model step, and once more if its reply was malformed (`invalid_output`). Anything the step returns, such as
+ * a reject, a clarify, or a Judge fail, is a real decision and is never re-asked; other errors are not retried either.
+ * @param step - One model call, with any checks that turn its reply into a value
+ */
+export async function retryMalformedOnce<T>(step: () => Promise<T>): Promise<T> {
+  try {
+    return await step();
+  } catch (error) {
+    if (!(error instanceof ModelError) || error.code !== "invalid_output") throw error;
+    return step();
+  }
+}
+
+/**
+ * Creates the domain ports backed by one transport, without making provider calls. `fallbackGenerator` is the
+ * configured second author, for steps the spec retries with another model.
+ */
+export function createModelPorts(options: ModelPortsOptions = {}): { generator: Generator; fallbackGenerator: Generator; judge: Judge } {
   const config = options.config ?? loadModelConfig();
   const transport = options.transport ?? createOpenRouterTransport();
   return {
@@ -36,6 +53,13 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
       /** Sends structured authoring work through the shared transport. */
       generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
         return transport.complete(config.generatorModel, request, config.generatorProviderOrder);
+      },
+    },
+    fallbackGenerator: {
+      modelId: config.generatorFallbackModel,
+      /** The provider order names the primary author's hosts, so the fallback uses default routing. */
+      generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
+        return transport.complete(config.generatorFallbackModel, request);
       },
     },
     judge: {

@@ -5,7 +5,9 @@ test("Review shows titles and Lesson goals, keeps the Sequence mode pick across 
   await page.goto(await confirmedRequest());
   await page.getByRole("button", { name: "Design my Course Blueprint" }).click();
 
-  await expect(page.getByRole("heading", { name: "Review your Course Blueprint" })).toBeVisible();
+  // The worker designs the Blueprint as a job; the page checks back until it is ready.
+  await expect(page.getByText("Designing your Course Blueprint…")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Review your Course Blueprint" })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Lesson 1 · Reading")).toBeVisible();
   await expect(page.getByText("Reading: Fixture capability 4")).toBeVisible();
   await expect(page.getByText("Use Fixture capability 4 toward your goal.")).toBeVisible();

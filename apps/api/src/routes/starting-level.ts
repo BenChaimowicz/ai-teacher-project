@@ -14,7 +14,7 @@ import {
   type GapConfirmation,
   type StartingLevel,
 } from "@senoy/db";
-import { createDiagnosticBuilder, type DiagnosticBuilder } from "../lib/diagnostic.ts";
+import { createDiagnosticBuilder, DiagnosticFailedError, type DiagnosticBuilder } from "../lib/diagnostic.ts";
 
 /** Learner-facing Request fields; ownership is never exposed. */
 const requestFields = {
@@ -57,6 +57,16 @@ function learnerView(attempt: Attempt) {
   };
 }
 
+/** Shown when both Generators' item sets failed their checks; only Retry diagnostic follows (spec §4.3). */
+export const ASSESSMENT_FAILED_REASON =
+  "We couldn't write a Starting Level check for this goal that passed our quality checks. Retry diagnostic to try a fresh set.";
+
+/** Shown when preparation stopped for any other reason, such as a provider outage. */
+export const PREPARE_FAILED_REASON = "We couldn't prepare your Starting Level check. Try again.";
+
+/** Shown when the API restarted while a check was being prepared. */
+export const PREPARE_INTERRUPTED_REASON = "Preparing your Starting Level check was interrupted. Try again.";
+
 /** Accepts only an object body. */
 function bodyFields(body: unknown): Record<string, unknown> {
   return body && typeof body === "object" && !Array.isArray(body) ? body as Record<string, unknown> : {};
@@ -65,6 +75,11 @@ function bodyFields(body: unknown): Record<string, unknown> {
 /** Runs, scores, widens, and confirms the Starting Level diagnostic for a Learner-owned Course Request. */
 export async function startingLevelRoutes(app: FastifyInstance, options: StartingLevelOptions = {}) {
   const builder = options.diagnosticBuilder ?? createDiagnosticBuilder();
+  /**
+   * Requests this process is preparing a check for. Preparation runs inside the request, so `assessment_preparing`
+   * with no entry here means a restart lost it. The API runs as one process (docs/deploy.md).
+   */
+  const preparing = new Set<string>();
 
   /** Reads a private Request, never leaking another Learner's history. */
   async function ownedRequest(id: string, learnerId: string, reply: FastifyReply) {
@@ -87,9 +102,9 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
     return attempt ?? null;
   }
 
-  /** Moves a Request between statuses only if nothing else moved it first. */
-  async function transition(requestId: string, learnerId: string, from: CourseRequestStatus, to: CourseRequestStatus) {
-    const [updated] = await app.db.update(courseRequests).set({ status: to }).where(and(
+  /** Moves a Request between statuses only if nothing else moved it first, setting or clearing its failure reason. */
+  async function transition(requestId: string, learnerId: string, from: CourseRequestStatus, to: CourseRequestStatus, failureReason: string | null = null) {
+    const [updated] = await app.db.update(courseRequests).set({ status: to, failureReason }).where(and(
       eq(courseRequests.id, requestId), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, from),
     )).returning(requestFields);
     return updated ?? null;
@@ -112,8 +127,12 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
 
   app.get<RequestParams>("/api/course-requests/:requestId/diagnostic", async (request, reply) => {
     try {
-      const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
-      if (!row) return reply;
+      const found = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
+      if (!found) return reply;
+      const lost = found.status === "assessment_preparing" && !preparing.has(found.id);
+      const row = lost
+        ? await transition(found.id, request.currentLearner.id, "assessment_preparing", "validity_passed", PREPARE_INTERRUPTED_REASON) ?? found
+        : found;
       const attempt = await latestAttempt(row.id);
       return { courseRequest: row, diagnostic: attempt && attempt.readyAt ? learnerView(attempt) : null };
     } catch (error) {
@@ -125,17 +144,27 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
     try {
       const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
       if (!row) return reply;
-      if (row.status !== "validity_passed") return reply.code(409).send({ error: "This Request is not ready for a Starting Level check." });
-      const preparing = await transition(row.id, request.currentLearner.id, "validity_passed", "assessment_preparing");
-      if (!preparing) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+      // Assessment-failed offers only Retry diagnostic, which starts here too.
+      const from = row.status;
+      if (from !== "validity_passed" && from !== "assessment_failed") return reply.code(409).send({ error: "This Request is not ready for a Starting Level check." });
+      if (!await transition(row.id, request.currentLearner.id, from, "assessment_preparing")) {
+        return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+      }
+      preparing.add(row.id);
       let draft;
       try {
         draft = await builder.build({ subject: row.subject, learningGoal: row.learningGoal });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         request.log.error(`[starting-level.ts: prepare] Diagnostic preparation failed || requestId=${row.id} || ${message}`);
-        await transition(row.id, request.currentLearner.id, "assessment_preparing", "validity_passed");
-        return reply.code(502).send({ error: "We couldn't prepare your Starting Level check. Your Request is unchanged; try again." });
+        // The failure is saved on the Request with its next step, so it reads the same after a reload.
+        const failed = error instanceof DiagnosticFailedError
+          ? await transition(row.id, request.currentLearner.id, "assessment_preparing", "assessment_failed", ASSESSMENT_FAILED_REASON)
+          : await transition(row.id, request.currentLearner.id, "assessment_preparing", from, PREPARE_FAILED_REASON);
+        if (!failed) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+        return { courseRequest: failed, diagnostic: null };
+      } finally {
+        preparing.delete(row.id);
       }
       const [attempt] = await app.db.insert(startingLevelDiagnostics).values({
         courseRequestId: row.id, learnerId: request.currentLearner.id, ...draft, readyAt: new Date(),

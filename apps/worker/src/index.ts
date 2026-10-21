@@ -2,6 +2,8 @@ import { createServer } from "node:http";
 import { sql } from "drizzle-orm";
 import pino from "pino";
 import { createDb, loadRootEnv } from "@senoy/db";
+import { createFixtureBlueprintBuilder } from "@senoy/api/blueprint-fixture";
+import { createBlueprintJob } from "@senoy/api/blueprint-job";
 import { createCourseGeneration } from "@senoy/api/course-generation";
 import { createFixtureCourseGeneration } from "@senoy/api/course-generation-fixture";
 import { createGenerationWorker } from "@senoy/api/generation-worker";
@@ -9,7 +11,7 @@ import { createGenerationWorker } from "@senoy/api/generation-worker";
 const log = pino({ name: "worker" });
 
 /**
- * Connects to hosted Postgres, then claims Course-generation jobs until stopped.
+ * Connects to hosted Postgres, then claims Blueprint and Course-generation jobs until stopped.
  * `WORKER_PORT`, when set, serves `GET /health` so a supervisor (or the browser tests) can tell the worker is up.
  */
 async function startWorker() {
@@ -26,11 +28,14 @@ async function startWorker() {
 
     // Browser tests run the real pipeline and publish with fixed research, Generators, and Judge; never set
     // DIAGNOSTIC_FIXTURE in a deployed service.
-    const generation = process.env.DIAGNOSTIC_FIXTURE === "1"
+    const fixtures = process.env.DIAGNOSTIC_FIXTURE === "1";
+    const blueprint = createBlueprintJob(fixtures ? createFixtureBlueprintBuilder() : undefined);
+    const generation = fixtures
       ? createFixtureCourseGeneration(Number(process.env.FIXTURE_LESSON_DELAY_MS ?? 0))
       : createCourseGeneration();
     const worker = createGenerationWorker({
       db,
+      blueprint,
       generation,
       log,
       leaseMs: process.env.GENERATION_LEASE_MS ? Number(process.env.GENERATION_LEASE_MS) : undefined,
@@ -54,7 +59,7 @@ async function startWorker() {
     process.once("SIGINT", () => void shutdown());
     process.once("SIGTERM", () => void shutdown());
 
-    log.info("worker ready; claiming generation jobs");
+    log.info("worker ready; claiming Blueprint and generation jobs");
     await worker.run();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

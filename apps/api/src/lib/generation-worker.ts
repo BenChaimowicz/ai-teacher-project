@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { eq } from "drizzle-orm";
 import { courseBlueprints, type Database } from "@senoy/db";
+import type { BlueprintJob } from "./blueprint-job.ts";
 import type { CourseGeneration } from "./course-generation.ts";
 import { claimGenerationJob, LeaseLostError, postgresControl, releaseLease, renewLease, type JobLease } from "./generation-job.ts";
 
@@ -10,6 +11,9 @@ export type WorkerLog = { info(message: string): void; error(message: string): v
 /** Worker timing; a crashed worker's job is reclaimed once its lease lapses. */
 export type GenerationWorkerOptions = {
   db: Database;
+  /** Runs `blueprint` jobs. */
+  blueprint: BlueprintJob;
+  /** Runs `course` jobs. */
   generation: CourseGeneration;
   log: WorkerLog;
   /** How long to wait before looking again when no job is queued. */
@@ -33,11 +37,12 @@ const POLL_MS = 2_000;
 const LEASE_MS = 60_000;
 
 /**
- * The Node worker's job loop (spec §2, §5.1): claims one generation job from Postgres, keeps its lease alive, and runs
- * full-Course generation against the stored approved Blueprint. The browser never talks to it.
- * @param options - Database, generation, log, and timing
+ * The Node worker's job loop (spec §2, §5.1): claims one job from Postgres, keeps its lease alive, and runs it: Blueprint
+ * design for a `blueprint` job, full-Course generation against the stored approved Blueprint for a `course` job. The
+ * browser never talks to it.
+ * @param options - Database, job runners, log, and timing
  */
-export function createGenerationWorker({ db, generation, log, pollMs = POLL_MS, leaseMs = LEASE_MS }: GenerationWorkerOptions): GenerationWorker {
+export function createGenerationWorker({ db, blueprint, generation, log, pollMs = POLL_MS, leaseMs = LEASE_MS }: GenerationWorkerOptions): GenerationWorker {
   let stopping = false;
   let current: JobLease | null = null;
   const wake = new AbortController();
@@ -50,13 +55,17 @@ export function createGenerationWorker({ db, generation, log, pollMs = POLL_MS, 
       }).catch((error: unknown) => log.error(`[generation-worker: heartbeat] Lease renewal failed || jobId=${lease.jobId} || ${describe(error)}`));
     }, Math.max(1, Math.floor(leaseMs / 3)));
     try {
-      const [blueprint] = await db.select({ approved: courseBlueprints.approved }).from(courseBlueprints)
+      log.info(`${lease.kind} job ${lease.jobId} claimed for Request ${lease.courseRequestId}`);
+      const run = { db, courseRequestId: lease.courseRequestId, learnerId: lease.learnerId, control: postgresControl(db, lease) };
+      if (lease.kind === "blueprint") {
+        await blueprint.start(run);
+        log.info(`job ${lease.jobId} saved its Course Blueprint for review`);
+        return;
+      }
+      const [stored] = await db.select({ approved: courseBlueprints.approved }).from(courseBlueprints)
         .where(eq(courseBlueprints.courseRequestId, lease.courseRequestId)).limit(1);
-      if (!blueprint?.approved) throw new Error(`[generation-worker: run] Request has no approved Blueprint || requestId=${lease.courseRequestId}`);
-      log.info(`job ${lease.jobId} claimed for Request ${lease.courseRequestId}`);
-      await generation.start({
-        db, courseRequestId: lease.courseRequestId, learnerId: lease.learnerId, approved: blueprint.approved, control: postgresControl(db, lease),
-      });
+      if (!stored?.approved) throw new Error(`[generation-worker: run] Request has no approved Blueprint || requestId=${lease.courseRequestId}`);
+      await generation.start({ ...run, approved: stored.approved });
       log.info(`job ${lease.jobId} published its Course`);
     } catch (error) {
       if (error instanceof LeaseLostError) log.info(`job ${lease.jobId} stopped: cancelled or claimed elsewhere`);

@@ -65,7 +65,7 @@ The system-validated and Learner-approved design of a Course, fixing its Module 
 _Avoid_: Course outline, curriculum plan
 
 **Generation job**:
-The durable record of one approved Course Request being generated: its status, the stage and Lesson it is on, and which worker holds it. One per Course Request. The Learner can Cancel it and Resume it; neither discards finished Lessons.
+The durable record of one Course Request's Course Blueprint being designed, or of its approved Course being generated: its status, the stage and Lesson it is on, and which worker holds it. At most one of each per Course Request. The Learner can Cancel and Resume Course generation; neither discards finished Lessons.
 _Avoid_: Pipeline Event (when meaning this record), task, run
 
 **Course coherence**:

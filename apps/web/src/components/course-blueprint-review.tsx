@@ -137,9 +137,14 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
           The Blueprint lists the Lessons your Course would have, starting where your check left off. You review it before anything is generated.
         </p>
         {preparing ? (
-          <p role="status" className="mt-4 text-sm">Designing your Course Blueprint… This can take a few minutes.</p>
+          <p role="status" className="mt-4 text-sm">Designing your Course Blueprint… This can take a few minutes; you can close this page.</p>
         ) : (
-          <Button type="button" className="mt-4" onClick={() => void send("POST", "/blueprint")}>Design my Course Blueprint</Button>
+          <>
+            {record.failureReason ? <p role="alert" className="mt-4 whitespace-pre-wrap break-words text-sm">{record.failureReason}</p> : null}
+            <Button type="button" className="mt-4" onClick={() => void send("POST", "/blueprint")}>
+              {record.failureReason ? "Try again" : "Design my Course Blueprint"}
+            </Button>
+          </>
         )}
         {errorLine}
       </section>
