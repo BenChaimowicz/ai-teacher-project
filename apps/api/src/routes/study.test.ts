@@ -30,11 +30,12 @@ import { studyRoutes } from "./study.ts";
 function memoryStore(quizBody: QuizBody): StudyStore {
   let sequenceMode: string = SEEDED_COURSE.sequenceMode;
   const completions = new Set<string>();
+  let courseCompletedAt: Date | null = null;
   const attempts: (QuizAttemptRow & { lessonId: string })[] = [];
   return {
     async findCourse(learnerId, courseId) {
       if (learnerId !== SEEDED_LEARNER_ID || courseId !== SEEDED_COURSE_ID) return null;
-      return { id: SEEDED_COURSE_ID, title: SEEDED_COURSE.title, sequenceMode };
+      return { id: SEEDED_COURSE_ID, title: SEEDED_COURSE.title, learningGoal: SEEDED_COURSE.learningGoal, sequenceMode };
     },
     async listModules() {
       return [{ id: SEEDED_MODULE.id, title: SEEDED_MODULE.title, position: SEEDED_MODULE.position }];
@@ -50,6 +51,12 @@ function memoryStore(quizBody: QuizBody): StudyStore {
     },
     async setSequenceMode(_courseId, mode) {
       sequenceMode = mode;
+    },
+    async courseCompletedAt() {
+      return courseCompletedAt;
+    },
+    async insertCourseCompletion() {
+      courseCompletedAt ??= new Date();
     },
     async listQuizAttempts(_learnerId, lessonId) {
       return attempts.filter((row) => row.lessonId === lessonId).map((row) => ({ ...row }));
@@ -117,6 +124,7 @@ async function testApp(answers: Record<string, unknown> = {}, quizBody: QuizBody
     submit: () => call("POST", `${quiz}/submit`),
     retake: () => call("POST", `${quiz}/retake`),
     complete: (lessonId: string) => call("POST", `${base}/lessons/${lessonId}/complete`),
+    summary: () => call("GET", `${base}/summary`),
     sequenceMode: (mode: string) => call("PUT", `${base}/sequence-mode`, { mode }),
   };
 }
@@ -339,6 +347,50 @@ test("A generated Quiz plays through the Quiz plugin: attempts, best score, and 
     assert.equal(passed.body.quiz.passed, true);
     assert.deepEqual(passed.body.quiz.best, { correct: 5, total: 6 });
     assert.equal(lessonIn(passed.body.study, SEEDED_QUIZ_LESSON_ID).completed, true);
+  } finally {
+    await t.app.close();
+  }
+});
+
+test("Completing the last Lesson stores Course completion once; the summary shows what was covered and Quiz results", async () => {
+  const t = await testApp();
+  try {
+    assert.equal((await t.summary()).status, 409, "No summary before the Course is complete.");
+
+    const read = await t.complete(SEEDED_READING_LESSON_ID);
+    assert.equal(read.body.course.completedAt, null);
+
+    await answerAll(t, 3, true);
+    await t.submit();
+    await t.retake();
+    await answerAll(t, 5, true);
+    const passed = await t.submit();
+    assert.equal(passed.body.study.course.completedAt, null, "One Lesson is still left.");
+
+    const last = await t.complete(SEEDED_FOLLOW_UP_LESSON_ID);
+    assert.equal(last.status, 200);
+    assert.deepEqual(last.body.progress, { completed: 3, total: 3 });
+    const completedAt = last.body.course.completedAt;
+    assert.ok(completedAt, "Course completion is stored with the last Lesson.");
+
+    const again = await t.complete(SEEDED_FOLLOW_UP_LESSON_ID);
+    assert.equal(again.body.course.completedAt, completedAt, "The first completion time is kept.");
+
+    const summary = await t.summary();
+    assert.equal(summary.status, 200);
+    assert.deepEqual(summary.body.course, {
+      id: SEEDED_COURSE_ID,
+      title: SEEDED_COURSE.title,
+      learningGoal: SEEDED_COURSE.learningGoal,
+      completedAt,
+    });
+    assert.deepEqual(
+      summary.body.modules.flatMap((module: { lessons: { id: string }[] }) => module.lessons.map((row) => row.id)),
+      SEEDED_LESSONS.map((lesson) => lesson.id),
+    );
+    assert.deepEqual(summary.body.quizzes, [
+      { lessonId: SEEDED_QUIZ_LESSON_ID, title: SEEDED_LESSONS[1]!.title, best: { correct: 5, total: 5 } },
+    ]);
   } finally {
     await t.app.close();
   }

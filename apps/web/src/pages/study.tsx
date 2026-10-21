@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, NavLink, useParams } from "react-router-dom";
+import { courseCompletePath, nextLessonId, studyPath } from "@senoy/db/progress";
 import { Lock, MoreHorizontal } from "lucide-react";
 import { ConfirmDialog } from "@/components/confirm-dialog.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -58,6 +59,14 @@ export function StudyPage() {
   const lessons = useMemo(() => (payload ? allLessons(payload.modules) : []), [payload]);
   const visible = lessons.find((row) => row.id === lessonId) ?? null;
   const Play = visible ? renderForTeachingMethod(visible.teachingMethod) : null;
+  const nextId =
+    visible && payload
+      ? nextLessonId(
+          lessons.map((row) => row.id),
+          new Set(lessons.filter((row) => row.completed).map((row) => row.id)),
+          visible.id,
+        )
+      : null;
 
   /**
    * One-way switch to free jump. Linear cannot be restored.
@@ -224,6 +233,19 @@ export function StudyPage() {
           ) : (
             <p className="mt-8 text-sm text-muted-foreground">This teaching method cannot be shown yet.</p>
           )}
+          {visible.completed ? (
+            <div className="mt-8 border-t border-border pt-6">
+              {payload.course.completedAt && !nextId ? (
+                <Button asChild>
+                  <Link to={courseCompletePath(courseId)}>Finish Course</Link>
+                </Button>
+              ) : nextId ? (
+                <Button asChild>
+                  <Link to={studyPath(courseId, nextId)}>Next Lesson</Link>
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </main>
       </div>
     </div>

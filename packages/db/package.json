@@ -7,6 +7,7 @@
     "./teaching-profile": "./src/teaching-profile.ts",
     "./reading-lesson": "./src/reading-lesson.ts",
     "./quiz": "./src/quiz.ts",
+    "./progress": "./src/progress.ts",
     "./sequence-mode": "./src/sequence-mode.ts",
     "./seed-fixture": "./src/seed-fixture.ts",
     "./course-request": "./src/course-request.ts",

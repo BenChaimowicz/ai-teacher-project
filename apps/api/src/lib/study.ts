@@ -1,18 +1,25 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import {
+  bestQuizScore,
   canSwitchSequenceMode,
+  courseCompletePath,
+  courseCompletions,
   currentLessonId,
+  isCourseComplete,
   lessonCompletions,
   lockedLessonIds,
   parseNumberedSources,
   parseSequenceMode,
   publishedLessons,
+  QUIZ_METHOD_ID,
   studyPath,
   type Database,
   type NumberedSource,
+  type QuizScore,
   type SequenceMode,
 } from "@senoy/db";
 import { teachingMethodPlugin } from "../teaching-methods/index.ts";
+import { submittedScores } from "../teaching-methods/quiz.ts";
 import type { CourseRow, LessonRow, ModuleRow, StudyStore } from "./study-store.ts";
 
 /** One Lesson in the Study list. */
@@ -40,7 +47,8 @@ export type StudyModule = {
 
 /** Published Course payload for Study chrome. */
 export type StudyCoursePayload = {
-  course: { id: string; title: string; sequenceMode: SequenceMode };
+  /** `completedAt` is set once every Lesson is complete. */
+  course: { id: string; title: string; sequenceMode: SequenceMode; completedAt: string | null };
   progress: { completed: number; total: number };
   currentLessonId: string;
   modules: StudyModule[];
@@ -54,6 +62,8 @@ export type CourseContext = {
   lessons: LessonRow[];
   completedIds: Set<string>;
   lockedIds: Set<string>;
+  /** When this Learner completed the Course, or null. */
+  completedAt: Date | null;
 };
 
 /**
@@ -79,7 +89,8 @@ export async function loadCourseContext(
     );
     const sequenceMode = parseSequenceMode(course.sequenceMode);
     const lockedIds = lockedLessonIds(lessons, completedIds, sequenceMode);
-    return { course, sequenceMode, modules, lessons, completedIds, lockedIds };
+    const completedAt = await store.courseCompletedAt(learnerId, courseId);
+    return { course, sequenceMode, modules, lessons, completedIds, lockedIds, completedAt };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
@@ -94,7 +105,7 @@ export async function loadCourseContext(
  * @returns Study payload, or null when the Course has no Lessons
  */
 export function studyPayload(context: CourseContext): StudyCoursePayload | null {
-  const { course, modules, lessons, completedIds, lockedIds, sequenceMode } = context;
+  const { course, modules, lessons, completedIds, lockedIds, sequenceMode, completedAt } = context;
   const current = currentLessonId(
     lessons.map((row) => row.id),
     completedIds,
@@ -121,7 +132,7 @@ export function studyPayload(context: CourseContext): StudyCoursePayload | null 
   }
 
   return {
-    course: { id: course.id, title: course.title, sequenceMode },
+    course: { id: course.id, title: course.title, sequenceMode, completedAt: completedAt?.toISOString() ?? null },
     progress: { completed: completedIds.size, total: lessons.length },
     currentLessonId: current,
     modules: modules.map((row) => ({
@@ -149,11 +160,101 @@ export async function loadStudyCourse(
   return context ? studyPayload(context) : null;
 }
 
-/** Library/Open items pointer into Study. */
+/**
+ * Records Course completion once every Lesson is complete. Call after a Lesson completion lands.
+ * @param store - Study store
+ * @param learnerId - Current Learner
+ * @param courseId - Published Course id
+ */
+export async function recordCourseCompletion(store: StudyStore, learnerId: string, courseId: string): Promise<void> {
+  try {
+    if (await store.courseCompletedAt(learnerId, courseId)) return;
+    const lessonIds = (await store.listLessons(courseId)).map((row) => row.id);
+    const completedIds = await store.completedLessonIds(learnerId, lessonIds);
+    if (isCourseComplete(lessonIds, completedIds)) await store.insertCourseCompletion(learnerId, courseId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `[study.ts: recordCourseCompletion] Failed to record Course completion || courseId=${courseId} || ${message}`,
+    );
+  }
+}
+
+/** One Quiz's result on the Course-complete screen. */
+export type CourseSummaryQuiz = { lessonId: string; title: string; best: QuizScore | null };
+
+/** What the Course-complete screen shows. */
+export type CourseSummary = {
+  course: { id: string; title: string; learningGoal: string; completedAt: string };
+  modules: {
+    id: string;
+    title: string;
+    lessons: { id: string; title: string; lessonGoal: string; teachingMethod: string }[];
+  }[];
+  quizzes: CourseSummaryQuiz[];
+};
+
+/** Result of loading the Course-complete screen. */
+export type CourseSummaryResult =
+  | { ok: true; payload: CourseSummary }
+  | { ok: false; status: 404 | 409; error: string };
+
+/**
+ * What a completed Course covered and the best score on each Quiz.
+ * @param store - Study store
+ * @param learnerId - Current Learner
+ * @param courseId - Published Course id
+ */
+export async function loadCourseSummary(
+  store: StudyStore,
+  learnerId: string,
+  courseId: string,
+): Promise<CourseSummaryResult> {
+  try {
+    const context = await loadCourseContext(store, learnerId, courseId);
+    if (!context) return { ok: false, status: 404, error: "Published Course not found." };
+    const { course, modules, lessons, completedAt } = context;
+    if (!completedAt) return { ok: false, status: 409, error: "This Course is not complete yet." };
+
+    const quizzes: CourseSummaryQuiz[] = [];
+    for (const row of lessons) {
+      if (row.teachingMethod !== QUIZ_METHOD_ID) continue;
+      const best = bestQuizScore(submittedScores(await store.listQuizAttempts(learnerId, row.id)));
+      quizzes.push({ lessonId: row.id, title: row.title, best });
+    }
+
+    return {
+      ok: true,
+      payload: {
+        course: {
+          id: course.id,
+          title: course.title,
+          learningGoal: course.learningGoal,
+          completedAt: completedAt.toISOString(),
+        },
+        modules: modules.map((module) => ({
+          id: module.id,
+          title: module.title,
+          lessons: lessons
+            .filter((row) => row.moduleId === module.id)
+            .map(({ id, title, lessonGoal, teachingMethod }) => ({ id, title, lessonGoal, teachingMethod })),
+        })),
+        quizzes,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`[study.ts: loadCourseSummary] Failed to load Course summary || courseId=${courseId} || ${message}`);
+  }
+}
+
+/** Library/Open items pointer into Study, or to the Course-complete screen once complete. */
 export type CourseStudyLink = {
   href: string | null;
   completed: number;
   total: number;
+  /** Stored Course completion; never derived from the counts. */
+  courseCompleted: boolean;
 };
 
 /**
@@ -170,7 +271,7 @@ export async function studyLinksByCourseId(
   try {
     const links = new Map<string, CourseStudyLink>();
     for (const courseId of courseIds) {
-      links.set(courseId, { href: null, completed: 0, total: 0 });
+      links.set(courseId, { href: null, completed: 0, total: 0, courseCompleted: false });
     }
     if (courseIds.length === 0) return links;
 
@@ -194,6 +295,12 @@ export async function studyLinksByCourseId(
             .where(and(eq(lessonCompletions.learnerId, learnerId), inArray(lessonCompletions.lessonId, lessonIds)));
     const completedIds = new Set(completedRows.map((row) => row.lessonId));
 
+    const courseCompletionRows = await db
+      .select({ courseId: courseCompletions.publishedCourseId })
+      .from(courseCompletions)
+      .where(and(eq(courseCompletions.learnerId, learnerId), inArray(courseCompletions.publishedCourseId, courseIds)));
+    const completedCourseIds = new Set(courseCompletionRows.map((row) => row.courseId));
+
     const lessonsByCourse = new Map<string, string[]>();
     for (const row of lessonRows) {
       const list = lessonsByCourse.get(row.publishedCourseId) ?? [];
@@ -205,10 +312,12 @@ export async function studyLinksByCourseId(
       const ordered = lessonsByCourse.get(courseId) ?? [];
       const completed = ordered.filter((id) => completedIds.has(id)).length;
       const current = currentLessonId(ordered, completedIds);
+      const courseCompleted = completedCourseIds.has(courseId);
       links.set(courseId, {
-        href: current ? studyPath(courseId, current) : null,
+        href: courseCompleted ? courseCompletePath(courseId) : current ? studyPath(courseId, current) : null,
         completed,
         total: ordered.length,
+        courseCompleted,
       });
     }
 
@@ -228,7 +337,8 @@ export type StudyWriteResult =
 export const LOCKED_LESSON_ERROR = "This Lesson is locked until you pass the Quiz before it.";
 
 /**
- * Marks a Lesson complete through its Teaching-method plugin. Locked Lessons cannot complete. Progress never drops.
+ * Marks a Lesson complete through its Teaching-method plugin, and the Course once its last Lesson completes.
+ * Locked Lessons cannot complete. Progress never drops.
  * @param store - Study store
  * @param learnerId - Current Learner
  * @param courseId - Published Course id
@@ -255,6 +365,7 @@ export async function completeLesson(
 
     const outcome = await plugin.complete(store, learnerId, lesson);
     if (!outcome.ok) return outcome;
+    await recordCourseCompletion(store, learnerId, courseId);
 
     const payload = await loadStudyCourse(store, learnerId, courseId);
     if (!payload) return { ok: false, status: 404, error: "Published Course not found." };

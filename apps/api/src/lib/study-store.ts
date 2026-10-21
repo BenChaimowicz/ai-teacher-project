@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import {
+  courseCompletions,
   lessonCompletions,
   publishedCourses,
   publishedLessons,
@@ -13,7 +14,7 @@ import {
 } from "@senoy/db";
 
 /** Published Course fields Study needs. */
-export type CourseRow = { id: string; title: string; sequenceMode: string };
+export type CourseRow = { id: string; title: string; learningGoal: string; sequenceMode: string };
 
 /** Published Module fields Study needs. */
 export type ModuleRow = { id: string; title: string; position: number };
@@ -59,6 +60,10 @@ export type StudyStore = {
   /** Idempotent: Progress never drops and never double-counts. */
   insertCompletion(learnerId: string, lessonId: string): Promise<void>;
   setSequenceMode(courseId: string, mode: SequenceMode): Promise<void>;
+  /** When this Learner completed the Course, or null. */
+  courseCompletedAt(learnerId: string, courseId: string): Promise<Date | null>;
+  /** Idempotent: the first completion time is kept. */
+  insertCourseCompletion(learnerId: string, courseId: string): Promise<void>;
   /** Attempts oldest first. */
   listQuizAttempts(learnerId: string, lessonId: string): Promise<QuizAttemptRow[]>;
   insertQuizAttempt(
@@ -91,6 +96,7 @@ export function drizzleStudyStore(db: Database): StudyStore {
         .select({
           id: publishedCourses.id,
           title: publishedCourses.title,
+          learningGoal: publishedCourses.learningGoal,
           sequenceMode: publishedCourses.sequenceMode,
         })
         .from(publishedCourses)
@@ -139,6 +145,19 @@ export function drizzleStudyStore(db: Database): StudyStore {
 
     async setSequenceMode(courseId, mode) {
       await db.update(publishedCourses).set({ sequenceMode: mode }).where(eq(publishedCourses.id, courseId));
+    },
+
+    async courseCompletedAt(learnerId, courseId) {
+      const [row] = await db
+        .select({ completedAt: courseCompletions.completedAt })
+        .from(courseCompletions)
+        .where(and(eq(courseCompletions.learnerId, learnerId), eq(courseCompletions.publishedCourseId, courseId)))
+        .limit(1);
+      return row?.completedAt ?? null;
+    },
+
+    async insertCourseCompletion(learnerId, courseId) {
+      await db.insert(courseCompletions).values({ learnerId, publishedCourseId: courseId }).onConflictDoNothing();
     },
 
     async listQuizAttempts(learnerId, lessonId) {

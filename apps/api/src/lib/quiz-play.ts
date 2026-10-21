@@ -16,7 +16,13 @@ import {
   type ResolvedTeachingProfile,
 } from "@senoy/db";
 import { quizPlugin, submittedScores } from "../teaching-methods/quiz.ts";
-import { LOCKED_LESSON_ERROR, loadCourseContext, studyPayload, type StudyCoursePayload } from "./study.ts";
+import {
+  LOCKED_LESSON_ERROR,
+  loadCourseContext,
+  recordCourseCompletion,
+  studyPayload,
+  type StudyCoursePayload,
+} from "./study.ts";
 import type { LessonRow, QuizAttemptRow, StudyStore } from "./study-store.ts";
 
 /** The attempt Study shows: the open draft, or the last submitted one. */
@@ -254,6 +260,7 @@ export function submitQuiz(store: StudyStore, request: QuizRequest): Promise<Qui
 
     const outcome = await quizPlugin.complete(store, request.learnerId, quiz.lesson);
     if (!outcome.ok && isPassingScore(score)) throw new Error(outcome.error);
+    if (outcome.ok) await recordCourseCompletion(store, request.learnerId, request.courseId);
 
     const next = await reload(store, request);
     if (!next.ok) return next;
