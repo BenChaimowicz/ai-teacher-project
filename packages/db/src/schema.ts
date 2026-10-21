@@ -232,6 +232,24 @@ export const lessonCompletions = pgTable(
 );
 
 /**
+ * Learner runtime: a published Course whose every Lesson is complete. Written once, when the last
+ * completion lands; it is not re-derived on read and does not edit the snapshot (ADR 0013).
+ */
+export const courseCompletions = pgTable(
+  "course_completions",
+  {
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => learners.id),
+    publishedCourseId: uuid("published_course_id")
+      .notNull()
+      .references(() => publishedCourses.id),
+    completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.learnerId, table.publishedCourseId] })],
+);
+
+/**
  * Learner runtime: one Quiz attempt. A draft until Submit, then scored. Best score is derived across submitted rows.
  * `feedbackTiming` is the Teaching Profile value when the attempt started; it holds for the whole attempt.
  */

@@ -11,6 +11,8 @@ type LibraryItem = {
   status: string;
   href: string | null;
   learningGoal?: string;
+  /** Published Courses only: completed / total Lessons. */
+  progress?: { completed: number; total: number };
 };
 
 /**
@@ -23,6 +25,11 @@ function LibraryCard({ item }: { item: LibraryItem }) {
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.kind === "course_request" ? courseRequestStatusLabel(item.status) : item.status}</p>
       <p className="mt-1 break-words font-medium">{item.title}</p>
       {item.kind === "course_request" && item.learningGoal ? <p className="mt-2 break-words text-sm text-muted-foreground">{item.learningGoal}</p> : null}
+      {item.kind === "course" && item.progress ? (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Progress {item.progress.completed} / {item.progress.total} Lessons
+        </p>
+      ) : null}
     </>
   );
 
@@ -71,7 +78,12 @@ export function HomePage() {
     <div className="mx-auto max-w-3xl">
       <p className="text-sm text-muted-foreground">Home</p>
       <h1 className="mt-1 text-3xl font-semibold tracking-tight">Library</h1>
-      <p className="mt-2 text-muted-foreground">Published Courses and unpublished Course Requests live here.</p>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-muted-foreground">Published Courses and unpublished Course Requests live here.</p>
+        {items && items.length > 0 ? (
+          <CourseRequestControl variant="button">New Course Request</CourseRequestControl>
+        ) : null}
+      </div>
 
       {error ? <p className="mt-10 text-sm text-red-400">{error}</p> : null}
 

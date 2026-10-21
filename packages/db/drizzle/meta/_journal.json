@@ -78,6 +78,13 @@
       "when": 1792436579926,
       "tag": "0010_solid_galactus",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792587289144,
+      "tag": "0011_crazy_molly_hayes",
+      "breakpoints": true
     }
   ]
 }
