@@ -9,3 +9,9 @@ Excerpts are the vendor's passages, labelled `excerptOrigin: "vendor"`. Fetching
 Neither vendor reports cost in its response, so each pack records `estimatedCostUsd` from a configured price table. An empty pack records why it is empty: the vendor returned nothing, or Host policy dropped everything. Rewriting the query and retrying needs a model, so it belongs to Lesson generation.
 
 Rejected: a `source_packs` table now (no owner to key it to); passing the Preference list and Denylist as vendor domain filters (spec §5.3 makes Host policy app-owned, and adapters would duplicate it); running You.com only when Parallel fails (drops cross-index coverage for a saving of about 5¢ per Lesson).
+
+## Update (SEN-82): research runs up front and is stored per slot
+
+Research no longer runs just before each Reading is written. After Approve, the generation job researches every Reading slot at once. Each slot's two packs are stored in a `lesson_research` row as soon as they return, before any Lesson is written. With 3–6 Lessons, a slow Parallel Pro call (4 min 32 s in one run) now costs that time once per Course instead of once per Reading.
+
+The storage this ADR deferred is settled in ADR 0009: one `lesson_research` row per Course Request and slot. The packs are written unchanged, and the writer reads them from that row. A slot's research is stored independently of the others, so a failed or cancelled run keeps every slot that finished, and Resume researches only the slots still missing. The rows are keyed by slot, not by run, so research for one slot can also be read on its own when Lessons are later written one segment at a time (SEN-79).

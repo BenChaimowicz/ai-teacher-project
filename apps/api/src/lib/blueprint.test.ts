@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { StartingLevel } from "@senoy/db/starting-level";
-import { BlueprintFailedError, createBlueprintBuilder, type BlueprintInput } from "./blueprint.ts";
+import { BlueprintFailedError, createBlueprintBuilder, slugTag, type BlueprintInput } from "./blueprint.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createModelPorts, type Generator, type Judge, type StructuredRequest } from "./model-ports.ts";
 import type { StructuredTransport } from "./openrouter.ts";
@@ -26,7 +26,7 @@ const INPUT: BlueprintInput = {
   profile: { instructionLanguage: "en", quizCadence: "every_reading", explanationOrder: "topic_appropriate" },
 };
 
-/** A clean authored Blueprint: one Reading, then a Quiz that assesses it. */
+/** A clean authored Blueprint for the every-reading cadence: Reading, Quiz, Reading, Quiz. */
 function authored(overrides: { quiz?: Record<string, unknown> } = {}) {
   return {
     courseTitle: "Toward Iris",
@@ -40,6 +40,14 @@ function authored(overrides: { quiz?: Record<string, unknown> } = {}) {
         method: "quiz", title: "Check: 6/8", lessonGoal: "Show you can recognise and count 6/8.",
         objectives: ["Explain compound meter"], topicTags: ["compound-meter", "counting"], assessesLessonNumbers: [1],
         ...overrides.quiz,
+      },
+      {
+        method: "reading", title: "The Iris groove", lessonGoal: "Play the Iris verse groove at a slow tempo.",
+        objectives: ["Play the verse groove"], topicTags: ["groove", "6-8-time"], assessesLessonNumbers: [],
+      },
+      {
+        method: "quiz", title: "Check: the groove", lessonGoal: "Name the parts of the Iris verse groove.",
+        objectives: ["Play the verse groove"], topicTags: ["groove", "counting"], assessesLessonNumbers: [3],
       },
     ],
   };
@@ -71,14 +79,15 @@ function scriptedJudge(verdict: unknown = { pass: true, failedChecks: [], reason
   return { judge, calls };
 }
 
-test("A Blueprint passing Code checks and the Judge comes back as one Reading then a Quiz that assesses it", async () => {
+test("A Blueprint passing Code checks and the Judge comes back with each Quiz assessing the Reading before it", async () => {
   const { generator, calls } = scriptedGenerator(authored());
   const { judge, calls: judgeCalls } = scriptedJudge();
   const { blueprint, judge: verdict } = await createBlueprintBuilder({ generator, judge }).build(INPUT);
-  const [reading, quiz] = blueprint.modules[0]!.slots;
-  assert.equal(reading!.method, "reading");
-  assert.deepEqual(reading!.topicTags, ["compound-meter", "6-8-time"]);
-  assert.deepEqual(quiz!.assessesSlotIds, [reading!.id]);
+  const slots = blueprint.modules[0]!.slots;
+  assert.deepEqual(slots.map((slot) => [slot.id, slot.method]), [["slot1", "reading"], ["slot2", "quiz"], ["slot3", "reading"], ["slot4", "quiz"]]);
+  assert.deepEqual(slots[0]!.topicTags, ["compound-meter", "6-8-time"]);
+  assert.deepEqual(slots[1]!.assessesSlotIds, ["slot1"]);
+  assert.deepEqual(slots[3]!.assessesSlotIds, ["slot3"]);
   assert.equal(verdict.pass, true);
   assert.equal(judgeCalls.length, 1);
   assert.equal(judgeCalls[0]!.authorModelId, "fixture/author");
@@ -110,6 +119,15 @@ test("A Judge fail fails the Blueprint, and a failed check overrides pass: true"
   }
 });
 
+test("A Blueprint off the Learner's Quiz cadence fails the Code checks", async () => {
+  const { generator } = scriptedGenerator(authored());
+  const { judge, calls } = scriptedJudge();
+  const input: BlueprintInput = { ...INPUT, profile: { ...INPUT.profile, quizCadence: "module_end" } };
+  await assert.rejects(createBlueprintBuilder({ generator, judge }).build(input), (error: unknown) =>
+    error instanceof BlueprintFailedError && error.codeFailures.some((failure) => failure.includes("has 2 Quizzes")));
+  assert.equal(calls.length, 0);
+});
+
 test("The author is never its own Judge", async () => {
   const { generator, calls } = scriptedGenerator(authored(), "same/model");
   const { judge } = scriptedJudge(undefined, "same/model");
@@ -131,4 +149,8 @@ test("Author and Judge share one OpenRouter transport; the Judge runs at high ef
     { modelId: config.generatorModel, schemaName: "course_blueprint", effort: undefined },
     { modelId: config.judgeModel, schemaName: "course_blueprint_review", effort: "high" },
   ]);
+});
+
+test("Authored Topic tags become slugs: accents dropped, lowercased, spaces as hyphens", () => {
+  assert.deepEqual(["Ragnarök", "Nine Worlds", "ginnunga_gap", "æsir"].map(slugTag), ["ragnarok", "nine-worlds", "ginnunga-gap", "æsir"]);
 });

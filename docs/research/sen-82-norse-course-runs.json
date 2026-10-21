@@ -1,0 +1,369 @@
+{
+  "ticket": "SEN-82",
+  "what": "Two live runs of a 6-Lesson Norse Course (every_reading Quiz cadence: three Readings, each followed by a Quiz) through the API and worker on hosted Supabase, after migration 0011. Both researched every Reading at once before writing. Neither published: each stopped when a Reading failed its Judge after its single repair (SEN-57 owns the full repair budget and Retry).",
+  "generatorModel": "deepseek/deepseek-v4-pro",
+  "judgeModel": "openai/gpt-6-luna",
+  "teachingProfile": {
+    "quizCadence": "every_reading",
+    "contentScope": "compact",
+    "explanationOrder": "principle_first"
+  },
+  "diagnosticAnswers": "I don't know on all eight items; gap confirmed as Looks right",
+  "summary": {
+    "parallelResearch": "Every Reading's packs were stored before Lesson 1 started. Research for three Readings took 2 min 13 s (run 1) and 3 min 27 s (run 2) from Approve, bounded by the slowest Parallel Pro call (128 s, 200 s). Researched one Reading at a time, the same calls would have taken at least 4 min 16 s and 4 min 53 s.",
+    "readingMs": {
+      "run2Slot1": 141000
+    },
+    "quizMs": {
+      "run2Slot2": 137000
+    },
+    "publish": "Not reached in either run."
+  },
+  "runs": [
+    {
+      "request": {
+        "id": "50822661-ccd7-4a51-80e5-3cca791a0741",
+        "subject": "Norse mythology",
+        "learning_goal": "Explain how the Norse sources picture the cosmos, from creation out of Ginnungagap through Yggdrasil and the Nine Worlds to Ragnarök.",
+        "status": "generation_failed",
+        "failure_reason": "We couldn't write the Lesson “The Primordial Void and the First Being” so that it passed our quality checks. You can start a new Course Request from Home."
+      },
+      "stepsBeforeApprove": [
+        {
+          "step": "validity",
+          "ms": 15349,
+          "result": "pass"
+        },
+        {
+          "step": "starting level check",
+          "ms": 129483,
+          "result": "ready"
+        },
+        {
+          "step": "blueprint attempt 1",
+          "ms": 40522,
+          "result": "Code check: slots 5 and 6 Topic tags not lowercase slugs (accented 'ragnarök'); fixed afterwards by normalising authored tags (slugTag)"
+        },
+        {
+          "step": "blueprint attempt 2",
+          "ms": 57190,
+          "result": "Judge factual_error: placed Baldr's death within Ragnarök"
+        },
+        {
+          "step": "blueprint attempt 3",
+          "ms": 45420,
+          "result": "pass"
+        }
+      ],
+      "approvedAt": "2026-10-21T13:27:19.500Z",
+      "blueprint": [
+        {
+          "id": "slot1",
+          "method": "reading",
+          "title": "The Primordial Void and the First Being",
+          "assessesSlotIds": []
+        },
+        {
+          "id": "slot2",
+          "method": "quiz",
+          "title": "Ginnungagap and Ymir Check",
+          "assessesSlotIds": [
+            "slot1"
+          ]
+        },
+        {
+          "id": "slot3",
+          "method": "reading",
+          "title": "The World Tree and the Nine Realms",
+          "assessesSlotIds": []
+        },
+        {
+          "id": "slot4",
+          "method": "quiz",
+          "title": "Realms and the Rainbow Bridge Check",
+          "assessesSlotIds": [
+            "slot3"
+          ]
+        },
+        {
+          "id": "slot5",
+          "method": "reading",
+          "title": "Ragnarök and the Cycle of Rebirth",
+          "assessesSlotIds": []
+        },
+        {
+          "id": "slot6",
+          "method": "quiz",
+          "title": "Ragnarök and Cycle Overview Check",
+          "assessesSlotIds": [
+            "slot5"
+          ]
+        }
+      ],
+      "research": [
+        {
+          "slotId": "slot1",
+          "storedAt": "2026-10-21T13:28:09.011Z",
+          "packs": [
+            {
+              "adapter": "parallel-pro",
+              "status": "ok",
+              "latencyMs": 44394,
+              "sources": 3,
+              "estimatedCostUsd": 0.1
+            },
+            {
+              "adapter": "you-research",
+              "status": "ok",
+              "latencyMs": 13592,
+              "sources": 6,
+              "estimatedCostUsd": 0.05
+            }
+          ]
+        },
+        {
+          "slotId": "slot3",
+          "storedAt": "2026-10-21T13:28:48.506Z",
+          "packs": [
+            {
+              "adapter": "parallel-pro",
+              "status": "ok",
+              "latencyMs": 84134,
+              "sources": 4,
+              "estimatedCostUsd": 0.1
+            },
+            {
+              "adapter": "you-research",
+              "status": "ok",
+              "latencyMs": 8098,
+              "sources": 4,
+              "estimatedCostUsd": 0.05
+            }
+          ]
+        },
+        {
+          "slotId": "slot5",
+          "storedAt": "2026-10-21T13:29:32.576Z",
+          "packs": [
+            {
+              "adapter": "parallel-pro",
+              "status": "ok",
+              "latencyMs": 127969,
+              "sources": 9,
+              "estimatedCostUsd": 0.1
+            },
+            {
+              "adapter": "you-research",
+              "status": "ok",
+              "latencyMs": 11760,
+              "sources": 7,
+              "estimatedCostUsd": 0.05
+            }
+          ]
+        }
+      ],
+      "researchDoneMsAfterApprove": 133076,
+      "checkpoints": [],
+      "stopped": {
+        "at": "2026-10-21T13:33:25.471Z",
+        "lesson": "slot1 (Reading 1)",
+        "msAfterResearch": 232895,
+        "reason": "Reading failed Judge after 1 repair: claim_support (Midgard 'safe from giants' not supported by cited excerpts)"
+      },
+      "job": {
+        "status": "failed",
+        "claims": 1,
+        "created_at": "2026-10-21T13:27:19.897Z",
+        "updated_at": "2026-10-21T13:33:25.471Z"
+      }
+    },
+    {
+      "request": {
+        "id": "5480168a-101d-4e77-baaf-51edbe815c0f",
+        "subject": "Norse mythology",
+        "learning_goal": "Explain how the Norse sources picture the cosmos, from creation out of Ginnungagap through Yggdrasil and the Nine Worlds to Ragnarök.",
+        "status": "generation_failed",
+        "failure_reason": "We couldn't write the Lesson “Yggdrasil and the Nine Worlds” so that it passed our quality checks. You can start a new Course Request from Home."
+      },
+      "stepsBeforeApprove": [
+        {
+          "step": "validity",
+          "ms": 10405,
+          "result": "pass"
+        },
+        {
+          "step": "starting level check attempt 1",
+          "ms": 220434,
+          "result": "invalid_output from OpenRouter (now in SEN-57)"
+        },
+        {
+          "step": "starting level check attempt 2",
+          "ms": 251110,
+          "result": "items 6-8 still failing after 2 rewrite rounds"
+        },
+        {
+          "step": "starting level check attempt 3",
+          "ms": 145339,
+          "result": "ready"
+        },
+        {
+          "step": "blueprint attempt 1",
+          "ms": 45743,
+          "result": "pass"
+        }
+      ],
+      "approvedAt": "2026-10-21T14:21:20.052Z",
+      "blueprint": [
+        {
+          "id": "slot1",
+          "method": "reading",
+          "title": "The Primordial Void and the First Beings",
+          "assessesSlotIds": []
+        },
+        {
+          "id": "slot2",
+          "method": "quiz",
+          "title": "Quiz: Creation and the Primordial Void",
+          "assessesSlotIds": [
+            "slot1"
+          ]
+        },
+        {
+          "id": "slot3",
+          "method": "reading",
+          "title": "Yggdrasil and the Nine Worlds",
+          "assessesSlotIds": []
+        },
+        {
+          "id": "slot4",
+          "method": "quiz",
+          "title": "Quiz: Yggdrasil and the Nine Worlds",
+          "assessesSlotIds": [
+            "slot3"
+          ]
+        },
+        {
+          "id": "slot5",
+          "method": "reading",
+          "title": "Ragnarök and the Cosmic Cycle",
+          "assessesSlotIds": []
+        },
+        {
+          "id": "slot6",
+          "method": "quiz",
+          "title": "Quiz: Ragnarök and the Cycle of the Cosmos",
+          "assessesSlotIds": [
+            "slot5",
+            "slot1",
+            "slot3"
+          ]
+        }
+      ],
+      "research": [
+        {
+          "slotId": "slot3",
+          "storedAt": "2026-10-21T14:22:07.116Z",
+          "packs": [
+            {
+              "adapter": "parallel-pro",
+              "status": "ok",
+              "latencyMs": 40361,
+              "sources": 6,
+              "estimatedCostUsd": 0.1
+            },
+            {
+              "adapter": "you-research",
+              "status": "ok",
+              "latencyMs": 15551,
+              "sources": 8,
+              "estimatedCostUsd": 0.05
+            }
+          ]
+        },
+        {
+          "slotId": "slot1",
+          "storedAt": "2026-10-21T14:22:19.424Z",
+          "packs": [
+            {
+              "adapter": "parallel-pro",
+              "status": "ok",
+              "latencyMs": 52343,
+              "sources": 2,
+              "estimatedCostUsd": 0.1
+            },
+            {
+              "adapter": "you-research",
+              "status": "ok",
+              "latencyMs": 24157,
+              "sources": 3,
+              "estimatedCostUsd": 0.05
+            }
+          ]
+        },
+        {
+          "slotId": "slot5",
+          "storedAt": "2026-10-21T14:24:47.388Z",
+          "packs": [
+            {
+              "adapter": "parallel-pro",
+              "status": "ok",
+              "latencyMs": 200336,
+              "sources": 9,
+              "estimatedCostUsd": 0.1
+            },
+            {
+              "adapter": "you-research",
+              "status": "ok",
+              "latencyMs": 15228,
+              "sources": 8,
+              "estimatedCostUsd": 0.05
+            }
+          ]
+        }
+      ],
+      "researchDoneMsAfterApprove": 207336,
+      "checkpoints": [
+        {
+          "slotId": "slot1",
+          "method": "reading",
+          "title": "The Primordial Void and the First Beings",
+          "finalizedAt": "2026-10-21T14:27:08.079Z"
+        },
+        {
+          "slotId": "slot2",
+          "method": "quiz",
+          "title": "Quiz: Creation and the Primordial Void",
+          "finalizedAt": "2026-10-21T14:29:24.871Z"
+        }
+      ],
+      "lessonTimingsMs": [
+        {
+          "slotId": "slot1",
+          "method": "reading",
+          "ms": 140691
+        },
+        {
+          "slotId": "slot2",
+          "method": "quiz",
+          "ms": 136792
+        }
+      ],
+      "stopped": {
+        "at": "2026-10-21T14:35:57.632Z",
+        "lesson": "slot3 (Reading 2)",
+        "msAfterPreviousCheckpoint": 392761,
+        "reason": "Reading failed Judge after 1 repair: claim_support (Thor as one of the Aesir not in cited excerpts) and unreliable_source (a popular mythology blog cited)"
+      },
+      "job": {
+        "status": "failed",
+        "claims": 1,
+        "created_at": "2026-10-21T14:21:20.696Z",
+        "updated_at": "2026-10-21T14:35:57.632Z"
+      }
+    }
+  ],
+  "followUps": [
+    "SEN-57: two repairs for Readings and Retry on the same approved Blueprint would have let both runs continue; then record a published 4-6 Lesson run.",
+    "SEN-57: invalid structured responses (diagnosable cause, single-call retry with fallback, count failures into repair)."
+  ]
+}

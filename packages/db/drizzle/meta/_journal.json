@@ -92,6 +92,13 @@
       "when": 1792588457333,
       "tag": "0012_backfill_course_completions",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792588850445,
+      "tag": "0013_amazing_longshot",
+      "breakpoints": true
     }
   ]
 }

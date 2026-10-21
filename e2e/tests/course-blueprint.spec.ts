@@ -9,8 +9,10 @@ test("Review shows titles and Lesson goals, keeps the Sequence mode pick across 
   await expect(page.getByText("Lesson 1 · Reading")).toBeVisible();
   await expect(page.getByText("Reading: Fixture capability 4")).toBeVisible();
   await expect(page.getByText("Use Fixture capability 4 toward your goal.")).toBeVisible();
-  await expect(page.getByText("Lesson 2 · Quiz")).toBeVisible();
-  await expect(page.getByText("Show you can use Fixture capability 4.")).toBeVisible();
+  await expect(page.getByText("Lesson 2 · Reading")).toBeVisible();
+  await expect(page.getByText("Reading: Fixture capability 5")).toBeVisible();
+  await expect(page.getByText("Lesson 3 · Quiz")).toBeVisible();
+  await expect(page.getByText("Show you can use Fixture capability 4 and Fixture capability 5.")).toBeVisible();
   await expect(page.getByText(/Explain Fixture capability/)).toHaveCount(0);
   await expect(page.getByRole("radio", { name: /Linear/ })).toBeChecked();
 
