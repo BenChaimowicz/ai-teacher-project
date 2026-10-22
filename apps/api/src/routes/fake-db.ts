@@ -8,7 +8,7 @@ type Row = Record<string, unknown>;
 
 /**
  * In-memory stand-in for the Drizzle calls routes make: insert of one row or many (awaited or with returning),
- * select/where/orderBy (newest first only)/limit, conditional update/returning, and a transaction that restores every
+ * select/where/orderBy (newest first only)/limit, conditional update/returning, conditional delete, and a transaction that restores every
  * table if its callback throws. Evaluates only equality and `is null` predicates.
  * @param tables - Tables the routes under test touch
  */
@@ -102,6 +102,11 @@ export function fakeDb(tables: PgTable[]) {
             }),
         }),
       }),
+    }),
+    delete: (table: PgTable) => ({
+      where: async (condition: SQL) => {
+        rows.set(table, rows.get(table)!.filter((row) => !matches(table, row, condition)));
+      },
     }),
     /** Runs the callback on this store; a throw restores every table to its state before the call. */
     transaction: async <T>(callback: (transaction: unknown) => Promise<T>) => {

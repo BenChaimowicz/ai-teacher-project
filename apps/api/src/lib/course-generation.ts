@@ -23,8 +23,16 @@ import { readingPlugin } from "../teaching-methods/reading.ts";
 import type { TeachingMethodPlugin } from "../teaching-methods/types.ts";
 import { courseOutline, createCourseJudge, type CourseJudge } from "./course-judge.ts";
 import { LeaseLostError, type GenerationControl } from "./generation-job.ts";
+import { loadModelConfig } from "./model-config.ts";
 import { createQuizGenerator, QuizFailedError, type QuizGenerator } from "./quiz-generation.ts";
-import { createReadingGenerator, ReadingFailedError, type PriorLesson, type ReadingGenerator } from "./reading-generation.ts";
+import {
+  createReadingGenerator,
+  lessonEvidence,
+  LessonUnresearchableError,
+  ReadingFailedError,
+  type PriorLesson,
+  type ReadingGenerator,
+} from "./reading-generation.ts";
 
 /** What one run of a claimed generation job receives. */
 export type GenerationStart = {
@@ -67,19 +75,20 @@ export class CourseFailedError extends Error {
 /** Where generation stopped, so its failure can be told in plain language. */
 type Stage = { kind: "research" } | { kind: "lesson"; title: string } | { kind: "course" };
 
-/** What the Learner can do after a failed check, until Retry and Revise exist (SEN-57). */
-const NEXT_STEP = "You can start a new Course Request from Home.";
+/** What the Learner can do after a failed check: a fresh attempt at the failed step (spec §5.1). */
+const RETRY_STEP = "Retry tries again from there, keeping the Lessons already written.";
 
-/** What the Learner can do after an interruption. */
-const RESUME_STEP = "Resume continues from the next unfinished Lesson.";
+/** What the Learner can do after an interruption: for a transient failure, Retry is Resume (spec §5.1). */
+const RESUME_STEP = "Retry continues from the next unfinished Lesson.";
 
 /**
- * Whether generation stopped on a failed check (final until SEN-57's Retry) rather than an interruption (a provider
- * error, timeout, or crash) that Resume continues (spec §5.1).
+ * Whether generation stopped on a failed check rather than an interruption (a provider error, timeout, or crash).
+ * Both are retried; a failed check is terminal until the Learner does (spec §5.1).
  * @param error - What stopped generation
  */
 export function failedCheck(error: unknown): boolean {
-  return error instanceof ReadingFailedError || error instanceof QuizFailedError || error instanceof CourseFailedError;
+  return error instanceof ReadingFailedError || error instanceof QuizFailedError || error instanceof CourseFailedError ||
+    error instanceof LessonUnresearchableError;
 }
 
 /**
@@ -90,12 +99,15 @@ export function failedCheck(error: unknown): boolean {
 export function failureReason(stage: Stage, error: unknown): string {
   if (stage.kind === "research") return `Generation was interrupted while researching your Lessons. ${RESUME_STEP}`;
   if (stage.kind === "lesson") {
+    if (error instanceof LessonUnresearchableError) {
+      return `We couldn't find reliable Sources for the Lesson “${stage.title}”. Retry searches for it again, keeping the Lessons already written.`;
+    }
     return failedCheck(error)
-      ? `We couldn't write the Lesson “${stage.title}” so that it passed our quality checks. ${NEXT_STEP}`
+      ? `We couldn't write the Lesson “${stage.title}” so that it passed our quality checks. ${RETRY_STEP}`
       : `Generation was interrupted while writing the Lesson “${stage.title}”. ${RESUME_STEP}`;
   }
   return failedCheck(error)
-    ? `The finished Lessons didn't fit together well enough to publish as one Course. ${NEXT_STEP}`
+    ? `The finished Lessons didn't fit together well enough to publish as one Course. Retry checks them again.`
     : `Generation was interrupted while publishing your Course. ${RESUME_STEP}`;
 }
 
@@ -132,9 +144,10 @@ const researchFromEnv: LessonResearch = (topic) => runResearch(topic, { ...resea
  * from their checkpoints. Every write first proves the run still holds its job, so after Cancel or a lapsed lease the
  * run stops at its next stage and saves nothing.
  *
- * Any failure publishes nothing and keeps the checkpoints. A failed check fails the job; an interruption leaves it
- * `interrupted` for Resume. Either moves the Request to `generation_failed` with a plain-language reason. Repair of a
- * failed whole-Course check is SEN-57's.
+ * Any failure publishes nothing and keeps the checkpoints. A failed check fails the job and an interruption leaves it
+ * `interrupted`; either moves the Request to `generation_failed` with a plain-language reason, and Retry queues the
+ * job again (spec §5.1). A Reading with no usable Source also discards its research, so Retry searches again.
+ * Targeted repair of a failed whole-Course check is not built; Retry judges the Course again.
  * @param options - Injected research, Generators, and Judge; tests pass fixtures
  */
 export function createCourseGeneration(options: CourseGenerationOptions = {}): CourseGeneration {
@@ -179,6 +192,13 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
             throw ((lost ?? failed) as PromiseRejectedResult).reason;
           }
         }
+        // A Reading with nothing to ground it fails the Course before any more is written (spec §5.9).
+        const unresearchable = slots.find((slot) => slot.method === readingPlugin.id && !finishedSlotIds.has(slot.id) &&
+          lessonEvidence(packsBySlot.get(slot.id) ?? []).size === 0);
+        if (unresearchable) {
+          stage = { kind: "lesson", title: unresearchable.title };
+          throw new LessonUnresearchableError(unresearchable.id);
+        }
 
         // Lessons are written one at a time in Blueprint order. A Quiz reads its Readings from their checkpoints, not
         // this run's memory, so it assesses exactly what was saved; every Reading it assesses precedes it.
@@ -200,7 +220,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
           if (slot.method === readingPlugin.id) {
             const packs = packsBySlot.get(slot.id);
             if (!packs) throw new Error(`[course-generation: lesson] Reading slot has no stored research || slotId=${slot.id}`);
-            const { lesson, judge, rejectedSources } = await generator.generate({
+            const { lesson, judge, rejectedSources, authorModelIds, judgeModelId } = await generator.generate({
               courseTitle: approved.blueprint.courseTitle,
               learningGoal: request.learningGoal,
               slot,
@@ -208,7 +228,9 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
               profile,
               packs,
             });
-            await holding((transaction) => transaction.insert(unpublishedLessons).values({ ...lesson, courseRequestId, position, rejectedSources, judge }));
+            await holding((transaction) => transaction.insert(unpublishedLessons).values({
+              ...lesson, courseRequestId, position, rejectedSources, judge, authorModelIds, judgeModelId,
+            }));
             priorLessons.push({
               title: lesson.title,
               lessonGoal: lesson.lessonGoal,
@@ -223,7 +245,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
             const checkpoint = readings.find((row) => row.slotId === slotId && row.teachingMethod === readingPlugin.id);
             return checkpoint ? [{ ...checkpoint, body: checkpoint.body as ReadingBody }] : [];
           });
-          const { lesson, judge } = await quizGenerator.generate({
+          const { lesson, judge, authorModelIds, judgeModelId } = await quizGenerator.generate({
             courseTitle: approved.blueprint.courseTitle,
             learningGoal: request.learningGoal,
             slot,
@@ -231,7 +253,9 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
             assessed,
             profile: writeTimeProfile(quizPlugin, resolved),
           });
-          await holding((transaction) => transaction.insert(unpublishedLessons).values({ ...lesson, courseRequestId, position, rejectedSources: [], judge }));
+          await holding((transaction) => transaction.insert(unpublishedLessons).values({
+            ...lesson, courseRequestId, position, rejectedSources: [], judge, authorModelIds, judgeModelId,
+          }));
         }
 
         stage = { kind: "course" };
@@ -244,7 +268,11 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
           .orderBy(desc(startingLevelDiagnostics.createdAt)).limit(1);
         if (!diagnostic?.startingLevel) throw new Error(`[course-generation: publish] Request has no Starting Level || requestId=${courseRequestId}`);
         const courseJudge = options.courseJudge ?? createCourseJudge();
-        const verdict = await courseJudge.judge(courseOutline(approved, checkpoints, request.learningGoal, diagnostic.startingLevel.remainingGapStatement));
+        // A checkpoint from before SEN-57 names no author; the primary Generator wrote it.
+        const authors = new Set(checkpoints.flatMap((checkpoint) =>
+          checkpoint.authorModelIds.length ? checkpoint.authorModelIds : [loadModelConfig().generatorModel]));
+        const outline = courseOutline(approved, checkpoints, request.learningGoal, diagnostic.startingLevel.remainingGapStatement);
+        const verdict = await courseJudge.judge(outline, [...authors]);
         if (!verdict.pass) throw new CourseFailedError([], verdict);
 
         const rows = publicationRows({
@@ -266,6 +294,10 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         try {
           await db.transaction(async (transaction) => {
             await control.settle(transaction, failedCheck(error) ? "failed" : "interrupted");
+            if (error instanceof LessonUnresearchableError) {
+              await transaction.delete(lessonResearch)
+                .where(and(eq(lessonResearch.courseRequestId, courseRequestId), eq(lessonResearch.slotId, error.slotId)));
+            }
             await transaction.update(courseRequests).set({ status: "generation_failed", failureReason: failureReason(stage, error) })
               .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "generating"))).returning({ id: courseRequests.id });
           });

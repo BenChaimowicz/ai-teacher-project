@@ -319,3 +319,26 @@ test("An interrupted job resumes and clears the failure reason; a failed check d
     await app.close();
   }
 });
+
+test("Retry queues a failed job again on the same Blueprint and clears the reason; a cancelled job is resumed, not retried", async () => {
+  const { app, jobs, requestRow, generationUrl } = await generatingApp("failed");
+  try {
+    Object.assign(requestRow, { status: "generation_failed", failureReason: "We couldn't write the Lesson “The World Tree”." });
+    const retried = await app.inject({ method: "POST", url: `${generationUrl}/retry` });
+    assert.equal(retried.statusCode, 200);
+    assert.equal(retried.json().courseRequest.status, "generating");
+    assert.equal(jobs().length, 1, "The same job runs again.");
+    assert.deepEqual([requestRow.status, requestRow.failureReason, jobs()[0]!.status, jobs()[0]!.stage], ["generating", null, "queued", null]);
+    assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/retry` })).statusCode, 409, "A queued job is not retried.");
+
+    Object.assign(requestRow, { status: "generation_failed", failureReason: "Generation was interrupted." });
+    Object.assign(jobs()[0]!, { status: "interrupted" });
+    assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/retry` })).statusCode, 200, "For an interruption, Retry is Resume.");
+
+    Object.assign(requestRow, { status: "generation_cancelled", failureReason: null });
+    Object.assign(jobs()[0]!, { status: "cancelled" });
+    assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/retry` })).statusCode, 409);
+  } finally {
+    await app.close();
+  }
+});

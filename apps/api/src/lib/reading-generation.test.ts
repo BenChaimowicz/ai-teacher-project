@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { BlueprintSlot } from "@senoy/db/blueprint";
 import type { PackSource, SourcePack } from "@senoy/research";
-import type { Generator, Judge, StructuredRequest } from "./model-ports.ts";
-import { createReadingGenerator, ReadingFailedError, type ReadingInput } from "./reading-generation.ts";
+import type { Generator, Judge, StructuredRequest, ModelReply } from "./model-ports.ts";
+import { createReadingGenerator, LessonUnresearchableError, ReadingFailedError, type ReadingInput } from "./reading-generation.ts";
 
 /** A Source with the given excerpts. */
 function source(sourceId: string, url: string, excerpts: string[]): PackSource {
@@ -53,9 +53,9 @@ function scriptedGenerator(output: unknown, modelId = "fixture/author", ...later
   const calls: { input: unknown }[] = [];
   const generator: Generator = {
     modelId,
-    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
       calls.push({ input: request.input });
-      return request.parse(outputs[Math.min(calls.length, outputs.length) - 1]);
+      return { value: request.parse(outputs[Math.min(calls.length, outputs.length) - 1]), modelId: modelId };
     },
   };
   return { generator, calls };
@@ -69,18 +69,18 @@ const PASS = { pass: true, failedChecks: [], reasons: [] };
  */
 function scriptedJudge(verdict: unknown = PASS, modelId = "fixture/judge", ...later: unknown[]) {
   const verdicts = [verdict, ...later];
-  const calls: { input: unknown; authorModelId: string }[] = [];
+  const calls: { input: unknown; authorModelIds: readonly string[] }[] = [];
   const vettings: { input: unknown }[] = [];
   const rejected: string[] = [];
   const judge: Judge = {
     modelId,
-    async judge<T>(request: StructuredRequest<T> & { authorModelId: string }): Promise<T> {
+    async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
       if (request.schemaName === "source_vetting") {
         vettings.push({ input: request.input });
-        return request.parse({ rejected: rejected.map((sourceId) => ({ sourceId, reason: "A shop's blog." })) });
+        return { value: request.parse({ rejected: rejected.map((sourceId) => ({ sourceId, reason: "A shop's blog." })) }), modelId: modelId };
       }
-      calls.push({ input: request.input, authorModelId: request.authorModelId });
-      return request.parse(verdicts[Math.min(calls.length, verdicts.length) - 1]);
+      calls.push({ input: request.input, authorModelIds: request.authorModelIds });
+      return { value: request.parse(verdicts[Math.min(calls.length, verdicts.length) - 1]), modelId: modelId };
     },
   };
   return { judge, calls, vettings, rejected };
@@ -107,7 +107,7 @@ test("A cited reading becomes numbered Citations in order of first use, with the
     { n: 1, sourceId: WIKI.sourceId, publisher: "en.wikipedia.org", usedAs: "paraphrase" },
     { n: 2, sourceId: BRIT.sourceId, publisher: "www.britannica.com", usedAs: "paraphrase" },
   ]);
-  assert.equal(calls[0]!.authorModelId, "fixture/author");
+  assert.deepEqual(calls[0]!.authorModelIds, ["fixture/author"]);
 });
 
 test("The author sees each Source once with every excerpt, and never a vendor summary or an excerpt-less Source", async () => {
@@ -150,17 +150,17 @@ test("A Citation to a Source ID outside the packs fails the Code checks, is repa
   const { judge, calls: judgeCalls } = scriptedJudge();
   await assert.rejects(createReadingGenerator({ generator, judge }).generate(INPUT), (error: unknown) =>
     error instanceof ReadingFailedError && error.codeFailures.some((failure) => failure.includes("Source ID")) && error.lesson !== null);
-  assert.equal(calls.length, 2, "One initial attempt and one repair.");
+  assert.equal(calls.length, 3, "One initial attempt and two repairs (spec §6.1).");
   assert.ok((calls[1]!.input as { revision: { problems: string[] } }).revision.problems.some((problem) => problem.includes("Source ID")));
   assert.equal(judgeCalls.length, 0);
 });
 
-test("A Lesson the Judge fails again after its repair fails, whatever pass says", async () => {
+test("A Lesson the Judge still fails after its two repairs fails, whatever pass says", async () => {
   const { generator, calls } = scriptedGenerator(authored());
   const { judge } = scriptedJudge({ pass: true, failedChecks: ["claim_support", "claim_support"], reasons: ["Unsupported root count."] });
   await assert.rejects(createReadingGenerator({ generator, judge }).generate(INPUT), (error: unknown) =>
     error instanceof ReadingFailedError && error.codeFailures.length === 0 && error.judge?.failedChecks.join() === "claim_support");
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
 });
 
 test("Sources the Judge model vets out never reach the author; preferred hosts are never vetted", async () => {
@@ -193,12 +193,33 @@ test("A Citation to a shop or marketing page is a Judge failure", async () => {
     error instanceof ReadingFailedError && error.judge?.failedChecks.join() === "unreliable_source");
 });
 
-test("Packs with no excerpts fail before any model call", async () => {
+test("Packs with no excerpts are unresearchable, before any model call", async () => {
   const { generator, calls } = scriptedGenerator(authored());
   const { judge } = scriptedJudge();
   await assert.rejects(createReadingGenerator({ generator, judge }).generate({ ...INPUT, packs: [pack("primary", [EMPTY])] }),
-    ReadingFailedError);
+    (error: unknown) => error instanceof LessonUnresearchableError && error.slotId === INPUT.slot.id);
   assert.equal(calls.length, 0);
+});
+
+test("Vetting out every Source is unresearchable, and says which were vetted out", async () => {
+  const { generator, calls } = scriptedGenerator(authored());
+  const { judge, rejected } = scriptedJudge();
+  rejected.push(BRIT.sourceId);
+  await assert.rejects(createReadingGenerator({ generator, judge }).generate({ ...INPUT, packs: [pack("primary", [BRIT])] }),
+    (error: unknown) => error instanceof LessonUnresearchableError && error.rejectedSources.length === 1);
+  assert.equal(calls.length, 0);
+});
+
+test("A repair written by the fallback model is judged by a model that wrote neither draft", async () => {
+  const { generator } = scriptedGenerator(authored());
+  const authoredBy = ["fixture/author", "fixture/fallback"];
+  const write = generator.generateStructured.bind(generator);
+  generator.generateStructured = async (request) => ({ ...(await write(request)), modelId: authoredBy.shift() ?? "fixture/fallback" });
+  const { judge, calls } = scriptedJudge(UNSUPPORTED, "fixture/judge", PASS);
+  const checked = await createReadingGenerator({ generator, judge }).generate(INPUT);
+  assert.deepEqual(calls.map((call) => call.authorModelIds), [["fixture/author"], ["fixture/author", "fixture/fallback"]]);
+  assert.deepEqual(checked.authorModelIds, ["fixture/author", "fixture/fallback"]);
+  assert.equal(checked.judgeModelId, "fixture/judge");
 });
 
 test("The author never judges its own Lesson", async () => {

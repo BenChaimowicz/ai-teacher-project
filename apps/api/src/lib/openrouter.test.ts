@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { loadModelConfig } from "./model-config.ts";
 import { createModelPorts } from "./model-ports.ts";
-import { createOpenRouterTransport, ModelError, type StructuredRequest } from "./openrouter.ts";
+import { createOpenRouterTransport, ModelError, rejectedOutput, type StructuredRequest, type StructuredTransport } from "./openrouter.ts";
 
 /** Validates a small consumer contract rather than trusting JSON syntax or the provider schema. */
 function parseScore(raw: unknown): number {
@@ -142,12 +142,12 @@ test("The Judge rejects its author before provider spend, including configured s
       return new Response(JSON.stringify(completion('{"score":0.8}')), { status: 200 });
     },
   });
-  const config = { ...loadModelConfig({}), generatorModel: "fixture/shared", judgeModel: "fixture/shared" };
+  const config = { ...loadModelConfig({}), generatorModel: "fixture/shared", judgeModel: "fixture/shared", judgeFallbackModel: "fixture/shared" };
   const { generator, judge } = createModelPorts({ config, transport });
   await generator.generateStructured(REQUEST);
-  await assert.rejects(judge.judge({ ...REQUEST, authorModelId: generator.modelId }), /different model/);
-  await assert.rejects(judge.judge({ ...REQUEST, authorModelId: ` ${generator.modelId} ` }), /different model/);
-  await assert.rejects(judge.judge({ ...REQUEST, authorModelId: " " }), /different model/);
+  await assert.rejects(judge.judge({ ...REQUEST, authorModelIds: [generator.modelId] }), /different model/);
+  await assert.rejects(judge.judge({ ...REQUEST, authorModelIds: [` ${generator.modelId} `] }), /different model/);
+  await assert.rejects(judge.judge({ ...REQUEST, authorModelIds: [" "] }), /different model/);
   assert.equal(calls, 1);
 });
 
@@ -160,8 +160,8 @@ test("Independent same-vendor models accept standard empty optional response fie
     const transport = createOpenRouterTransport({ apiKey: "fixture-key", fetch: providerFetch(completion('{"score":0.8}', "stop", optionalFields)) });
     const config = { ...loadModelConfig({}), generatorModel: "fixture/author", judgeModel: "fixture/judge" };
     const { generator, judge } = createModelPorts({ config, transport });
-    const score = await judge.judge({ ...REQUEST, authorModelId: generator.modelId });
-    assert.equal(score, 0.8);
+    const score = await judge.judge({ ...REQUEST, authorModelIds: [generator.modelId] });
+    assert.deepEqual(score, { value: 0.8, modelId: "fixture/judge" });
   }
 });
 
@@ -178,7 +178,7 @@ test("Author calls prefer the configured hosts with fallback; Judge calls use de
   const config = loadModelConfig({ GENERATOR_MODEL: "fixture/author", JUDGE_MODEL: "fixture/judge", GENERATOR_PROVIDER_ORDER: " alibaba, baidu " });
   const { generator, judge } = createModelPorts({ config, transport });
   await generator.generateStructured(REQUEST);
-  await judge.judge({ ...REQUEST, authorModelId: generator.modelId });
+  await judge.judge({ ...REQUEST, authorModelIds: [generator.modelId] });
   assert.deepEqual(sent.map((body) => body.provider), [
     { require_parameters: true, order: ["alibaba", "baidu"], allow_fallbacks: true },
     { require_parameters: true },
@@ -219,4 +219,91 @@ test("A request's reasoning effort, else its reasoning budget, reaches the provi
   await transport.complete("fixture/model", { ...REQUEST, reasoningMaxTokens: 1500, reasoningEffort: "none" });
   await transport.complete("fixture/model", REQUEST);
   assert.deepEqual(sent.map((body) => body.reasoning), [{ max_tokens: 1500 }, { effort: "none" }, undefined]);
+});
+
+test("An invalid structured response records whether it was unparseable, off-schema, or rejected by our own checks", async () => {
+  const checked: StructuredRequest<number> = { ...REQUEST, parse: (raw) => {
+    const score = parseScore(raw);
+    if (score === 0) throw rejectedOutput();
+    return score;
+  } };
+  for (const [content, cause] of [["not JSON", "unparseable"], ["  ", "unparseable"], ['{"score":"1"}', "schema"], ['{"score":0}', "check"]] as const) {
+    const raw = { id: "gen-123", provider: "Alibaba", ...(completion(content) as object) };
+    const transport = createOpenRouterTransport({ apiKey: "fixture-key", fetch: providerFetch(raw) });
+    await assert.rejects(transport.complete("fixture/model", checked), (error: unknown) => {
+      assert.ok(error instanceof ModelError);
+      assert.equal(error.code, "invalid_output");
+      assert.equal(error.invalidCause, cause, content);
+      assert.equal(error.provider, "Alibaba");
+      assert.equal(error.responseId, "gen-123");
+      assert.match(error.message, new RegExp(`invalidCause=${cause} \\|\\| provider=Alibaba \\|\\| responseId=gen-123`));
+      return true;
+    });
+  }
+});
+
+/** Transport answering from a script of outcomes, one per call, recording which model each call went to. */
+function scriptedTransport(...outcomes: (ModelError | number)[]) {
+  const models: string[] = [];
+  const transport: StructuredTransport = {
+    async complete<T>(modelId: string, request: StructuredRequest<T>) {
+      models.push(modelId);
+      const outcome = outcomes.shift();
+      if (outcome instanceof ModelError) throw outcome;
+      return request.parse({ score: outcome ?? 1 });
+    },
+  };
+  return { transport, models };
+}
+
+const PORTS_CONFIG = { generatorModel: "fixture/author", generatorFallbackModel: "fixture/fallback", generatorProviderOrder: [],
+  judgeModel: "fixture/judge", judgeFallbackModel: "fixture/fallback" };
+const quiet = { warn: () => {} };
+
+test("One bad reply is retried once on the same model, then once on the fallback, which the reply names", async () => {
+  const bad = new ModelError("invalid_output", { invalidCause: "unparseable" });
+  for (const [outcomes, models] of [
+    [[0.5], ["fixture/author"]],
+    [[bad, 0.5], ["fixture/author", "fixture/author"]],
+    [[new ModelError("incomplete"), bad, 0.5], ["fixture/author", "fixture/author", "fixture/fallback"]],
+  ] as const) {
+    const { transport, models: sent } = scriptedTransport(...outcomes);
+    const warnings: string[] = [];
+    const { generator } = createModelPorts({ config: PORTS_CONFIG, transport, log: { warn: (message) => warnings.push(message) } });
+    assert.deepEqual(await generator.generateStructured(REQUEST), { value: 0.5, modelId: models.at(-1) });
+    assert.deepEqual(sent, models);
+    assert.equal(warnings.length, models.length - 1, "Each retried failure is logged.");
+  }
+});
+
+test("A third bad reply, a timeout, or an HTTP failure is not retried further", async () => {
+  const bad = () => new ModelError("invalid_output", { invalidCause: "schema" });
+  for (const [outcomes, calls, code] of [
+    [[bad(), bad(), bad()], 3, "invalid_output"],
+    [[new ModelError("timeout")], 1, "timeout"],
+    [[new ModelError("http", { status: 500 })], 1, "http"],
+    [[new ModelError("refusal")], 1, "refusal"],
+  ] as const) {
+    const { transport, models } = scriptedTransport(...outcomes);
+    const { generator } = createModelPorts({ config: PORTS_CONFIG, transport, log: quiet });
+    await assert.rejects(generator.generateStructured(REQUEST), (error: unknown) => error instanceof ModelError && error.code === code);
+    assert.equal(models.length, calls);
+  }
+});
+
+test("The Judge never falls back to a model that wrote the artifact, and uses its fallback when its primary did", async () => {
+  const bad = () => new ModelError("invalid_output", { invalidCause: "unparseable" });
+  const failing = scriptedTransport(bad(), bad(), 0.5);
+  const { judge } = createModelPorts({ config: PORTS_CONFIG, transport: failing.transport, log: quiet });
+  await assert.rejects(judge.judge({ ...REQUEST, authorModelIds: ["fixture/author", "fixture/fallback"] }), ModelError);
+  assert.deepEqual(failing.models, ["fixture/judge", "fixture/judge"], "The fallback wrote part of it, so it may not judge.");
+
+  const recovering = scriptedTransport(bad(), bad(), 0.5);
+  const ports = createModelPorts({ config: PORTS_CONFIG, transport: recovering.transport, log: quiet });
+  assert.deepEqual(await ports.judge.judge({ ...REQUEST, authorModelIds: ["fixture/author"] }), { value: 0.5, modelId: "fixture/fallback" });
+
+  const primaryWrote = scriptedTransport(0.5);
+  const reviewer = createModelPorts({ config: PORTS_CONFIG, transport: primaryWrote.transport, log: quiet }).judge;
+  assert.deepEqual(await reviewer.judge({ ...REQUEST, authorModelIds: ["fixture/judge"] }), { value: 0.5, modelId: "fixture/fallback" });
+  assert.deepEqual(primaryWrote.models, ["fixture/fallback"]);
 });

@@ -68,6 +68,6 @@ pnpm check:validity:live
 
 This opt-in check makes billable model calls for corpus study, named-song skills, descriptive versus operational harm, protected copies, and an unsupported premise with clarification. Temporary Learners and Requests are rolled back, including on failure; existing data is untouched.
 
-Generator and Judge share one native-fetch OpenRouter transport. Defaults live in `apps/api/src/lib/model-config.ts`; optional server-only overrides are listed in `.env.example`. Judge calls require a different author model ID. Research vendors remain direct; validity makes no research calls. Validity does not automatically retry or switch models. Provider schemas are also checked in application code, including stage-specific clarification invariants.
+Generator and Judge share one native-fetch OpenRouter transport. Defaults live in `apps/api/src/lib/model-config.ts`; optional server-only overrides are listed in `.env.example`. Judge calls require a different author model ID. Research vendors remain direct; validity makes no research calls. A reply that is invalid or cut off is retried once on the same model, then once on the configured fallback, and each reply names the model that wrote it so the Judge never judges its own author's work (ADR 0015). Provider schemas are also checked in application code, including stage-specific clarification invariants.
 
 Deploy notes: [`docs/deploy.md`](docs/deploy.md).

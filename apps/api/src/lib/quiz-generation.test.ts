@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { BlueprintSlot } from "@senoy/db/blueprint";
 import { parseQuizBody } from "@senoy/db/quiz";
-import type { Generator, Judge, StructuredRequest } from "./model-ports.ts";
+import type { Generator, Judge, StructuredRequest, ModelReply } from "./model-ports.ts";
 import { createQuizGenerator, QuizFailedError, type AssessedLesson, type QuizInput } from "./quiz-generation.ts";
 
 const READING_SLOT: BlueprintSlot = {
@@ -52,9 +52,9 @@ function scriptedGenerator(...outputs: unknown[]) {
   const calls: StructuredRequest<unknown>[] = [];
   const generator: Generator = {
     modelId: "fixture/author",
-    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
       calls.push(request as StructuredRequest<unknown>);
-      return request.parse(outputs[Math.min(calls.length, outputs.length) - 1]);
+      return { value: request.parse(outputs[Math.min(calls.length, outputs.length) - 1]), modelId: "fixture/author" };
     },
   };
   return { generator, calls };
@@ -64,12 +64,12 @@ const PASS = { pass: true, failedChecks: [], reasons: [] };
 
 /** Scripted Judge: one verdict per call, repeating the last; records what it was shown. */
 function scriptedJudge(...verdicts: unknown[]) {
-  const calls: (StructuredRequest<unknown> & { authorModelId: string })[] = [];
+  const calls: (StructuredRequest<unknown> & { authorModelIds: readonly string[] })[] = [];
   const judge: Judge = {
     modelId: "fixture/judge",
-    async judge<T>(request: StructuredRequest<T> & { authorModelId: string }): Promise<T> {
-      calls.push(request as StructuredRequest<unknown> & { authorModelId: string });
-      return request.parse(verdicts.length ? verdicts[Math.min(calls.length, verdicts.length) - 1] : PASS);
+    async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
+      calls.push(request as StructuredRequest<unknown> & { authorModelIds: readonly string[] });
+      return { value: request.parse(verdicts.length ? verdicts[Math.min(calls.length, verdicts.length) - 1] : PASS), modelId: "fixture/judge" };
     },
   };
   return { judge, calls };
@@ -96,7 +96,7 @@ test("Authored items become a Quiz body the Quiz plugin accepts, each with one k
   }
   // The answer's position follows the question, not the author's habit of writing it first.
   assert.ok(new Set(lesson.body.items.map((quizItem) => quizItem.correctOptionId)).size > 1);
-  assert.equal(calls[0]!.authorModelId, "fixture/author");
+  assert.deepEqual(calls[0]!.authorModelIds, ["fixture/author"]);
 });
 
 test("The author and Judge read the assessed Lesson without Citation markers; the Judge sees each key", async () => {

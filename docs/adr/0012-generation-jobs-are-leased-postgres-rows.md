@@ -4,7 +4,7 @@ Approve inserts one `generation_jobs` row in the transaction that moves the Requ
 
 The job never holds a cursor. Resume works from the checkpoints: generation skips any slot that already has an `unpublished_lessons` row and carries earlier Readings forward from those rows. Every write the job makes (a checkpoint, the publish transaction, the failure record) first locks the job row and checks that its `claim_token` is still current and the job is still `running`. Cancel clears the token, so a run in flight saves nothing more. A worker that lost its lease to a takeover is stopped the same way.
 
-The Request status and the job status always move together in one transaction: the Request is `generating` exactly while the job is `queued` or `running`. Cancel moves the Request to `generation_cancelled`. An interruption (a provider error or timeout) leaves the job `interrupted` and the Request `generation_failed` with a reason that offers Resume. A failed check leaves the job `failed`; its Retry is SEN-57's.
+The Request status and the job status always move together in one transaction: the Request is `generating` exactly while the job is `queued` or `running`. Cancel moves the Request to `generation_cancelled`. An interruption (a provider error or timeout) leaves the job `interrupted` and the Request `generation_failed` with a reason that offers Retry. A failed check leaves the job `failed`. Retry queues a `failed` or `interrupted` job again; the new run has a fresh repair budget and skips finished checkpoints (SEN-57).
 
 The generation code stays in the API package, and the worker imports it through package exports (`@senoy/api/generation-worker`, `@senoy/api/course-generation`). The API no longer runs generation itself.
 

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { StartingLevel } from "@senoy/db/starting-level";
 import { BlueprintFailedError, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, slugTag, type BlueprintInput } from "./blueprint.ts";
 import { loadModelConfig } from "./model-config.ts";
-import { createModelPorts, type Generator, type Judge, type StructuredRequest } from "./model-ports.ts";
+import { createModelPorts, type Generator, type Judge, type StructuredRequest, type ModelReply } from "./model-ports.ts";
 import { ModelError, type StructuredTransport } from "./openrouter.ts";
 
 /** Capabilities 1–3 evidenced (one later widened by Too easy), 4–8 not. */
@@ -58,9 +58,9 @@ function scriptedGenerator(output: unknown, modelId = "fixture/author") {
   const calls: { input: unknown }[] = [];
   const generator: Generator = {
     modelId,
-    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
       calls.push({ input: request.input });
-      return request.parse(output);
+      return { value: request.parse(output), modelId: modelId };
     },
   };
   return { generator, calls };
@@ -68,12 +68,12 @@ function scriptedGenerator(output: unknown, modelId = "fixture/author") {
 
 /** Scripted Judge; records what it was shown and who it was told wrote it. */
 function scriptedJudge(verdict: unknown = { pass: true, failedChecks: [], reasons: [] }, modelId = "fixture/judge") {
-  const calls: { input: unknown; authorModelId: string }[] = [];
+  const calls: { input: unknown; authorModelIds: readonly string[] }[] = [];
   const judge: Judge = {
     modelId,
-    async judge<T>(request: StructuredRequest<T> & { authorModelId: string }): Promise<T> {
-      calls.push({ input: request.input, authorModelId: request.authorModelId });
-      return request.parse(verdict);
+    async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
+      calls.push({ input: request.input, authorModelIds: request.authorModelIds });
+      return { value: request.parse(verdict), modelId: modelId };
     },
   };
   return { judge, calls };
@@ -90,7 +90,7 @@ test("A Blueprint passing Code checks and the Judge comes back with each Quiz as
   assert.deepEqual(slots[3]!.assessesSlotIds, ["slot3"]);
   assert.equal(verdict.pass, true);
   assert.equal(judgeCalls.length, 1);
-  assert.equal(judgeCalls[0]!.authorModelId, "fixture/author");
+  assert.deepEqual(judgeCalls[0]!.authorModelIds, ["fixture/author"]);
 
   const told = calls[0]!.input as { inPlace: string[]; remainingGap: string[]; quizCadence: string };
   assert.deepEqual(told.inPlace, ["Capability 2", "Capability 3"], "Too easy moved Capability 1 into the gap.");
@@ -160,9 +160,9 @@ function queuedGenerator(...outputs: unknown[]) {
   const calls: { systemPrompt: string; input: Record<string, unknown> }[] = [];
   const generator: Generator = {
     modelId: "fixture/author",
-    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
       calls.push({ systemPrompt: request.systemPrompt, input: request.input as Record<string, unknown> });
-      return request.parse(outputs.length > 1 ? outputs.shift() : outputs[0]);
+      return { value: request.parse(outputs.length > 1 ? outputs.shift() : outputs[0]), modelId: "fixture/author" };
     },
   };
   return { generator, calls };
@@ -173,9 +173,9 @@ function queuedJudge(...verdicts: unknown[]) {
   let calls = 0;
   const judge: Judge = {
     modelId: "fixture/judge",
-    async judge<T>(request: StructuredRequest<T> & { authorModelId: string }): Promise<T> {
+    async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
       calls++;
-      return request.parse(verdicts.length > 1 ? verdicts.shift() : verdicts[0]);
+      return { value: request.parse(verdicts.length > 1 ? verdicts.shift() : verdicts[0]), modelId: "fixture/judge" };
     },
   };
   return { judge, calls: () => calls };
@@ -211,14 +211,29 @@ test("A Blueprint still failing after two revisions fails with its last verdict;
   assert.deepEqual([calls.length, verdicts.calls()], [1 + MAX_BLUEPRINT_REVISIONS, 1 + MAX_BLUEPRINT_REVISIONS]);
 });
 
-test("A malformed author or Judge reply is asked once more; a second malformed reply is an error", async () => {
-  const author = queuedGenerator({ lessons: "two" }, authored());
-  const verdicts = queuedJudge({ verdict: "fine" }, PASS);
-  assert.equal((await createBlueprintBuilder({ generator: author.generator, judge: verdicts.judge }).build(INPUT)).judge.pass, true);
-  assert.deepEqual([author.calls.length, verdicts.calls()], [2, 2]);
+test("A malformed author or Judge reply is asked once more by the ports; a reply malformed on every model is an error", async () => {
+  const config = loadModelConfig({});
+  /** Replies with each scripted output per schema in turn, recording which model was asked. */
+  function scripted(replies: Record<string, unknown[]>) {
+    const asked: string[] = [];
+    const transport: StructuredTransport = {
+      async complete<T>(modelId: string, request: StructuredRequest<T>): Promise<T> {
+        asked.push(`${request.schemaName}:${modelId}`);
+        const queue = replies[request.schemaName]!;
+        return request.parse(queue.length > 1 ? queue.shift() : queue[0]);
+      },
+    };
+    return { ports: createModelPorts({ config, transport, log: { warn() {} } }), asked };
+  }
+  const recovered = scripted({ course_blueprint: [{ lessons: "two" }, authored()], course_blueprint_review: [{ verdict: "fine" }, PASS] });
+  assert.equal((await createBlueprintBuilder(recovered.ports).build(INPUT)).judge.pass, true);
+  assert.deepEqual(recovered.asked, [
+    `course_blueprint:${config.generatorModel}`, `course_blueprint:${config.generatorModel}`,
+    `course_blueprint_review:${config.judgeModel}`, `course_blueprint_review:${config.judgeModel}`,
+  ]);
 
-  const garbage = queuedGenerator({ lessons: "two" });
-  await assert.rejects(createBlueprintBuilder({ generator: garbage.generator, judge: queuedJudge(PASS).judge }).build(INPUT),
+  const garbage = scripted({ course_blueprint: [{ lessons: "two" }], course_blueprint_review: [PASS] });
+  await assert.rejects(createBlueprintBuilder(garbage.ports).build(INPUT),
     (error: unknown) => error instanceof ModelError && error.code === "invalid_output");
-  assert.equal(garbage.calls.length, 2);
+  assert.equal(garbage.asked.length, 3, "The primary twice, then the fallback once (ADR 0015).");
 });

@@ -1,14 +1,14 @@
 import { blueprintSlots, type ApprovedBlueprint, type JudgeResult } from "@senoy/db/blueprint";
 import { lessonCommitments, type LessonCheckpoint } from "@senoy/db/publication";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
-import { createModelPorts, type Generator, type Judge } from "./model-ports.ts";
+import { createModelPorts, type Judge } from "./model-ports.ts";
 
 /** The Judge reads one short outline, but reasons at high effort over the whole sequence. */
 const JUDGE_TIMEOUT_MS = 3 * 60 * 1000;
 
 /**
  * Whole-Course Judge checks (spec §6.5). `lesson_coherence` names a Lesson, which is a targeted repair;
- * `sequence_reaches_goal` names the sequence, which is a structural return. SEN-57 acts on the difference.
+ * `sequence_reaches_goal` names the sequence, which is a structural return (SEN-85). Neither is built: Retry judges again.
  */
 export const COURSE_JUDGE_CHECKS = ["lesson_coherence", "sequence_reaches_goal"] as const;
 
@@ -31,9 +31,9 @@ export type CourseOutline = {
   modules: { title: string; lessons: CourseOutlineLesson[] }[];
 };
 
-/** One Judge pass over the assembled Course before atomic publish. */
+/** One Judge pass over the assembled Course before atomic publish, by a model that wrote none of its Lessons. */
 export interface CourseJudge {
-  judge(outline: CourseOutline): Promise<JudgeResult>;
+  judge(outline: CourseOutline, authorModelIds: readonly string[]): Promise<JudgeResult>;
 }
 
 // Prompts name no subject; Course specifics come only through the user JSON (ADR 0011).
@@ -76,32 +76,27 @@ export function courseOutline(approved: ApprovedBlueprint, checkpoints: readonly
   };
 }
 
-/** Dependencies of the Judge; omitted ports are created lazily from config. */
-export type CourseJudgeOptions = { generator?: Generator; judge?: Judge };
+/** Dependencies of the Judge; an omitted port is created lazily from config. */
+export type CourseJudgeOptions = { judge?: Judge };
 
 /**
- * Creates the whole-Course Judge. The Lessons were written by the Generator, so the Judge must be a different model.
- * @param options - Injected ports; tests pass fixtures
+ * Creates the whole-Course Judge. It must be a different model from every one that wrote a Lesson.
+ * @param options - Injected port; tests pass fixtures
  */
 export function createCourseJudge(options: CourseJudgeOptions = {}): CourseJudge {
-  /** Resolves ports on first use. */
-  function ports() {
-    const created = options.generator && options.judge ? null : createModelPorts();
-    return { generator: options.generator ?? created!.generator, judge: options.judge ?? created!.judge };
-  }
-
   return {
-    async judge(outline) {
-      const { generator, judge } = ports();
-      return judge.judge({
+    async judge(outline, authorModelIds) {
+      const judge = options.judge ?? createModelPorts().judge;
+      const { value } = await judge.judge({
         systemPrompt: JUDGE_PROMPT,
         input: outline,
         schemaName: "course_review",
         timeoutMs: JUDGE_TIMEOUT_MS,
         schema: judgeSchema(COURSE_JUDGE_CHECKS),
         parse: judgeParser(COURSE_JUDGE_CHECKS),
-        authorModelId: generator.modelId,
+        authorModelIds,
       });
+      return value;
     },
   };
 }

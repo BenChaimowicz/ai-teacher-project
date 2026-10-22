@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Generator, StructuredRequest } from "./model-ports.ts";
-import { ModelError } from "./openrouter.ts";
+import { loadModelConfig } from "./model-config.ts";
+import { createModelPorts, type Generator, type StructuredRequest, type ModelReply } from "./model-ports.ts";
+import { ModelError, type StructuredTransport } from "./openrouter.ts";
 import { createValidityGate, type ValidityExtraction, type ValidityInput } from "./validity.ts";
 
 /** Supplies semantic evidence at the same parser seam as the real Generator. */
@@ -9,8 +10,8 @@ function fixtureGenerator(evidence: unknown): Generator {
   return {
     modelId: "fixture/author",
     /** Validates fixtures as unknown model output rather than trusting test types. */
-    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
-      return request.parse(evidence);
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
+      return { value: request.parse(evidence), modelId: "fixture/author" };
     },
   };
 }
@@ -182,7 +183,7 @@ test("Provider refusals and errors propagate instead of becoming a validity deci
     const generator: Generator = {
       modelId: "fixture/failed-author",
       /** Simulates a failed provider at the domain seam. */
-      async generateStructured<T>(): Promise<T> {
+      async generateStructured<T>(): Promise<ModelReply<T>> {
         throw new ModelError(code);
       },
     };
@@ -191,20 +192,20 @@ test("Provider refusals and errors propagate instead of becoming a validity deci
   }
 });
 
-/** Replies with each scripted evidence in turn and counts the calls. */
+/** A real Generator port whose transport replies with each scripted evidence in turn, counting the calls. */
 function queuedGenerator(...replies: unknown[]) {
   let calls = 0;
-  const generator: Generator = {
-    modelId: "fixture/author",
-    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
+  const transport: StructuredTransport = {
+    async complete<T>(_modelId: string, request: StructuredRequest<T>): Promise<T> {
       calls++;
       return request.parse(replies.shift());
     },
   };
+  const { generator } = createModelPorts({ config: loadModelConfig({}), transport, log: { warn() {} } });
   return { generator, calls: () => calls };
 }
 
-test("A malformed reply is asked once more before an error shows", async () => {
+test("A malformed reply is asked again by the port before an error shows", async () => {
   const input = { subject: "Norse mythology", learningGoal: "Explain the nine worlds." };
   const recovered = queuedGenerator({ verdict: "pass" }, evidence());
   assert.equal((await createValidityGate(recovered.generator).evaluate(input)).outcome, "pass");
@@ -215,9 +216,9 @@ test("A malformed reply is asked once more before an error shows", async () => {
   assert.equal((await createValidityGate(contradicting.generator).evaluate(input)).outcome, "pass");
   assert.equal(contradicting.calls(), 2);
 
-  const twice = queuedGenerator({ verdict: "pass" }, { verdict: "pass" }, evidence());
-  await assert.rejects(createValidityGate(twice.generator).evaluate(input), (error) => error instanceof ModelError && error.code === "invalid_output");
-  assert.equal(twice.calls(), 2, "Only one retry.");
+  const always = queuedGenerator({ verdict: "pass" }, { verdict: "pass" }, { verdict: "pass" }, evidence());
+  await assert.rejects(createValidityGate(always.generator).evaluate(input), (error) => error instanceof ModelError && error.code === "invalid_output");
+  assert.equal(always.calls(), 3, "The primary twice, then the fallback once (ADR 0015).");
 });
 
 test("A reject or a clarify is a real decision and is never re-asked", async () => {
@@ -234,7 +235,7 @@ test("A provider error is not retried", async () => {
   let calls = 0;
   const generator: Generator = {
     modelId: "fixture/author",
-    async generateStructured<T>(): Promise<T> {
+    async generateStructured<T>(): Promise<ModelReply<T>> {
       calls++;
       throw new ModelError("timeout");
     },

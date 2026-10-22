@@ -1,6 +1,6 @@
 import type { ValidityClarification, ValidityResult } from "@senoy/db/course-request";
-import { createModelPorts, retryMalformedOnce, type Generator } from "./model-ports.ts";
-import { ModelError } from "./openrouter.ts";
+import { createModelPorts, type Generator } from "./model-ports.ts";
+import { ModelError, rejectedOutput } from "./openrouter.ts";
 
 /** Version persisted with every decision; change it when application policy changes. */
 export const VALIDITY_POLICY_VERSION = 1;
@@ -204,26 +204,26 @@ export function createValidityGate(generator?: Generator): ValidityGate {
     async evaluate(input: ValidityInput): Promise<ValidityResult> {
       try {
         const model = generator ?? createModelPorts().generator;
-        // Evidence that contradicts the stage is as malformed as unparseable JSON, so it shares the one retry.
-        const extraction = await retryMalformedOnce(async () => {
-          const extracted = await model.generateStructured({
-            systemPrompt: SYSTEM_PROMPT,
-            input: { subject: input.subject, learningGoal: input.learningGoal, clarification: input.clarification ?? null },
-            schemaName: "course_request_validity_evidence",
-            schema: input.clarification ? CLARIFIED_EXTRACTION_SCHEMA : INITIAL_EXTRACTION_SCHEMA,
-            parse: parseValidityExtraction,
-          });
-          if (input.clarification) {
-            if (extracted.clarificationResolved === null || (extracted.confirmedUnsupportedPremise !== null &&
-                !input.clarification.answer.includes(extracted.confirmedUnsupportedPremise))) throw new ModelError("invalid_output");
-          } else if (extracted.clarificationResolved !== null || extracted.confirmedUnsupportedPremise !== null) {
-            throw new ModelError("invalid_output");
-          }
-          // A clarify needs a question to ask; a prohibition rejects first, so it needs none.
-          const prohibited = extracted.outcomes.some((outcome) => outcome.category !== "ordinary" && outcome.mode === "operational");
-          const needsClarification = extracted.learnability !== "learnable" || extracted.outcomes.some((outcome) => outcome.mode === "ambiguous");
-          if (!prohibited && needsClarification && !input.clarification && !extracted.question) throw new ModelError("invalid_output");
-          return extracted;
+        // Evidence that contradicts the stage is as malformed as unparseable JSON, so the port retries it (ADR 0015).
+        const { value: extraction } = await model.generateStructured({
+          systemPrompt: SYSTEM_PROMPT,
+          input: { subject: input.subject, learningGoal: input.learningGoal, clarification: input.clarification ?? null },
+          schemaName: "course_request_validity_evidence",
+          schema: input.clarification ? CLARIFIED_EXTRACTION_SCHEMA : INITIAL_EXTRACTION_SCHEMA,
+          parse: (raw) => {
+            const extracted = parseValidityExtraction(raw);
+            if (input.clarification) {
+              if (extracted.clarificationResolved === null || (extracted.confirmedUnsupportedPremise !== null &&
+                  !input.clarification.answer.includes(extracted.confirmedUnsupportedPremise))) throw rejectedOutput();
+            } else if (extracted.clarificationResolved !== null || extracted.confirmedUnsupportedPremise !== null) {
+              throw rejectedOutput();
+            }
+            // A clarify needs a question to ask; a prohibition rejects first, so it needs none.
+            const prohibited = extracted.outcomes.some((outcome) => outcome.category !== "ordinary" && outcome.mode === "operational");
+            const needsClarification = extracted.learnability !== "learnable" || extracted.outcomes.some((outcome) => outcome.mode === "ambiguous");
+            if (!prohibited && needsClarification && !input.clarification && !extracted.question) throw rejectedOutput();
+            return extracted;
+          },
         });
         const prohibited = extraction.outcomes.find((outcome) => outcome.category !== "ordinary" && outcome.mode === "operational");
         if (prohibited && prohibited.category !== "ordinary") {
@@ -249,7 +249,7 @@ export function createValidityGate(generator?: Generator): ValidityGate {
         const needsClarification = extraction.learnability !== "learnable" || extraction.outcomes.some((outcome) => outcome.mode === "ambiguous");
         if (needsClarification) {
           const question = input.clarification?.question ?? extraction.question;
-          if (!question) throw new ModelError("invalid_output");
+          if (!question) throw rejectedOutput();
           return {
             policyVersion: VALIDITY_POLICY_VERSION, outcome: "clarify",
             reason: "The goal needs one clarification to distinguish a learnable framing from an unsupported premise or prohibited outcome.",

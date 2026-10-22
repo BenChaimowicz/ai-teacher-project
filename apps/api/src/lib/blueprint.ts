@@ -12,7 +12,7 @@ import {
 import { isEvidenced, type GapConfirmation, type StartingLevel } from "@senoy/db/starting-level";
 import type { ExplanationOrder, QuizCadence } from "@senoy/db/teaching-profile";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
-import { createModelPorts, retryMalformedOnce, type Generator, type Judge } from "./model-ports.ts";
+import { createModelPorts, type Generator, type Judge } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
 
 /** Designing a Blueprint with reasoning can take the author model past the transport's 60 s default. */
@@ -238,7 +238,10 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
         explanationOrder: input.profile.explanationOrder,
       };
       const author = { schemaName: "course_blueprint", timeoutMs: AUTHOR_TIMEOUT_MS, reasoningMaxTokens: AUTHOR_REASONING_TOKENS, schema: BLUEPRINT_SCHEMA, parse: parseAuthoredBlueprint };
-      let blueprint = await retryMalformedOnce(() => generator.generateStructured({ ...author, systemPrompt: AUTHOR_PROMPT, input: authorInput }));
+      const first = await generator.generateStructured({ ...author, systemPrompt: AUTHOR_PROMPT, input: authorInput });
+      let blueprint = first.value;
+      // A revision keeps what the problems do not mention, so every model that wrote a draft is an author (ADR 0015).
+      const authors = new Set([first.modelId]);
 
       // A fail is a Blueprint revision, then the checks again (spec §6.2).
       for (let revision = 0; ; revision++) {
@@ -246,22 +249,24 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
         let verdict: JudgeResult | null = null;
         if (!codeFailures.length) {
           const checked = blueprint;
-          verdict = await retryMalformedOnce(() => judge.judge({
+          ({ value: verdict } = await judge.judge({
             systemPrompt: JUDGE_PROMPT,
             input: { subject: input.subject, learningGoal: input.learningGoal, ...startingLevel, blueprint: checked },
             schemaName: "course_blueprint_review",
             schema: judgeSchema(BLUEPRINT_JUDGE_CHECKS),
             parse: judgeParser(BLUEPRINT_JUDGE_CHECKS),
-            authorModelId: generator.modelId,
+            authorModelIds: [...authors],
           }));
           if (verdict.pass) return { blueprint, judge: verdict };
         }
         if (revision >= MAX_BLUEPRINT_REVISIONS) throw new BlueprintFailedError(codeFailures, verdict);
         const previousBlueprint = authoredShape(blueprint);
         const problems = codeFailures.length ? codeFailures : [...verdict!.failedChecks.map((check) => `Failed check: ${check}`), ...verdict!.reasons];
-        blueprint = await retryMalformedOnce(() => generator.generateStructured({
+        const revised = await generator.generateStructured({
           ...author, systemPrompt: REVISE_PROMPT, input: { ...authorInput, previousBlueprint, problems },
-        }));
+        });
+        blueprint = revised.value;
+        authors.add(revised.modelId);
       }
     },
   };

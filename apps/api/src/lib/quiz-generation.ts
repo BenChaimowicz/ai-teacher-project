@@ -4,7 +4,7 @@ import { quizCodeFailures, type QuizLessonDraft } from "@senoy/db/lesson-checkpo
 import { QUIZ_MAX_ITEMS, QUIZ_MIN_ITEMS, QUIZ_OPTION_COUNT, type QuizItem } from "@senoy/db/quiz";
 import { QUIZ_METHOD_ID, type ReadingBody } from "@senoy/db/reading-lesson";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
-import { createModelPorts, type Generator, type Judge } from "./model-ports.ts";
+import { createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
 
 /** Writing items and three explanation levels with reasoning can run past the transport's 60 s default. */
@@ -16,7 +16,7 @@ const JUDGE_TIMEOUT_MS = 5 * 60 * 1000;
 /** Both roles reason at high effort, as for the reading (ADR 0010). */
 const REASONING_EFFORT = "high" as const;
 
-/** Regenerations after a failed Code check or Judge, each told what failed. SEN-57 owns the full budget. */
+/** Regenerations after a failed Code check or Judge, each told what failed: the full budget of spec §6.1. */
 const MAX_REPAIRS = 2;
 
 /** A checkpointed Reading Lesson the Quiz assesses. */
@@ -35,8 +35,8 @@ export type QuizInput = {
   profile: Record<string, unknown>;
 };
 
-/** A Quiz that passed the Code checks and the Judge, and how many repairs it took. */
-export type CheckedQuiz = { lesson: QuizLessonDraft; judge: JudgeResult; repairs: number };
+/** A Quiz that passed the Code checks and the Judge, how many repairs it took, and its models (ADR 0015). */
+export type CheckedQuiz = { lesson: QuizLessonDraft; judge: JudgeResult; repairs: number; authorModelIds: string[]; judgeModelId: string };
 
 /** The Quiz still failed system validation after its repairs. */
 export class QuizFailedError extends Error {
@@ -274,9 +274,11 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
       const checkpointed = new Set(input.assessed.map((lesson) => lesson.slotId));
       let revision: Revision | null = null;
       let failure: QuizFailedError | null = null;
+      // A repair keeps what was not criticised, so every model that wrote a draft is an author of the next.
+      const authors = new Set<string>();
 
       for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
-        const authored: AuthoredItem[] = await generator.generateStructured({
+        const { value: authored, modelId: author }: ModelReply<AuthoredItem[]> = await generator.generateStructured({
           systemPrompt: AUTHOR_PROMPT,
           input: {
             courseTitle: input.courseTitle,
@@ -292,6 +294,7 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
           schema: authorSchema(slot.objectives),
           parse: parseAuthoredItems,
         });
+        authors.add(author);
         const lesson: QuizLessonDraft = {
           slotId: slot.id,
           teachingMethod: QUIZ_METHOD_ID,
@@ -317,7 +320,7 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
           continue;
         }
 
-        const verdict = await judge.judge({
+        const { value: verdict, modelId: judgeModelId } = await judge.judge({
           systemPrompt: JUDGE_PROMPT,
           input: {
             slot: { lessonGoal: slot.lessonGoal, objectives: slot.objectives },
@@ -336,9 +339,9 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
           reasoningEffort: REASONING_EFFORT,
           schema: judgeSchema(QUIZ_JUDGE_CHECKS),
           parse: judgeParser(QUIZ_JUDGE_CHECKS),
-          authorModelId: generator.modelId,
+          authorModelIds: [...authors],
         });
-        if (verdict.pass) return { lesson, judge: verdict, repairs: attempt };
+        if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, authorModelIds: [...authors], judgeModelId };
         failure = new QuizFailedError([], verdict, lesson);
         revision = { previousDraft: authored, problems: verdict.reasons.length ? verdict.reasons : verdict.failedChecks };
       }
