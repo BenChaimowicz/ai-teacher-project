@@ -20,7 +20,8 @@ const CONFIRM_SCHEMA = {
 /** Dependencies of the fact-checker; tests pass fakes. */
 export type FactCheckerOptions = {
   judge: Judge;
-  authorModelId: string;
+  /** Every model that wrote the items; the Judge must be none of them. */
+  authorModelIds: readonly string[];
   adapter?: ResearchAdapter;
   env?: Record<string, string | undefined>;
   fetch?: typeof fetch;
@@ -49,7 +50,7 @@ export function createFactChecker(options: FactCheckerOptions): FactChecker {
           return { itemId: claim.itemId, confirmed: false, reason: "The fact-check search did not complete.", sourceUrls: [] };
         }
         if (sources.length === 0) return { itemId: claim.itemId, confirmed: false, reason: "The search returned no pages.", sourceUrls: [] };
-        const verdict = await options.judge.judge({
+        const { value: verdict, modelId: judgeModelId } = await options.judge.judge({
           systemPrompt: CONFIRM_PROMPT,
           input: {
             question: claim.question,
@@ -63,9 +64,9 @@ export function createFactChecker(options: FactCheckerOptions): FactChecker {
             if (!row || typeof row.confirmed !== "boolean" || typeof row.reason !== "string" || !row.reason.trim()) throw new ModelError("invalid_output");
             return { confirmed: row.confirmed, reason: row.reason.trim() };
           },
-          authorModelId: options.authorModelId,
+          authorModelIds: options.authorModelIds,
         });
-        return { itemId: claim.itemId, ...verdict, sourceUrls: sources.map((source) => source.url) };
+        return { itemId: claim.itemId, ...verdict, sourceUrls: sources.map((source) => source.url), judgeModelId };
       }));
     },
   };

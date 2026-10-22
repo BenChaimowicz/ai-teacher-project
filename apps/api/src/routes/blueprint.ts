@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import {
   blueprintSlots,
@@ -67,9 +67,21 @@ function sequenceModeField(body: unknown): SequenceMode | null {
   return sequenceMode === "linear" || sequenceMode === "free_jump" ? sequenceMode : null;
 }
 
-/** Where Resume can pick a job up, and the Request status each leaves the Request in. */
-const RESUMABLE: Partial<Record<GenerationJobStatus, CourseRequestStatus>> = {
+/** Where a Learner can queue a stopped job again, and the Request status each leaves the Request in. */
+type Requeueable = Partial<Record<GenerationJobStatus, CourseRequestStatus>>;
+
+/** Resume picks up a cancelled or interrupted job. */
+const RESUMABLE: Requeueable = {
   cancelled: "generation_cancelled",
+  interrupted: "generation_failed",
+};
+
+/**
+ * Retry re-attempts a failed job, or resumes an interrupted one (spec §5.1). A new run has a fresh repair budget, so
+ * the failed Lesson is written again; finished checkpoints are kept.
+ */
+const RETRYABLE: Requeueable = {
+  failed: "generation_failed",
   interrupted: "generation_failed",
 };
 
@@ -97,7 +109,7 @@ async function generationView(db: Database, requestId: string, blueprint: Bluepr
   };
 }
 
-/** Prepares, shows, and approves the Course Blueprint for a Learner-owned Course Request; cancels and resumes its job. */
+/** Prepares, shows, and approves the Course Blueprint for a Learner-owned Course Request; cancels, resumes, and retries its job. */
 export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOptions = {}) {
   const builder = options.blueprintBuilder ?? createBlueprintBuilder();
 
@@ -287,36 +299,46 @@ export async function blueprintRoutes(app: FastifyInstance, options: BlueprintOp
     }
   });
 
-  app.post<RequestParams>("/api/course-requests/:requestId/generation/resume", async (request, reply) => {
-    try {
-      const learnerId = request.currentLearner.id;
-      const row = await ownedRequest(request.params.requestId, learnerId, reply);
-      if (!row) return reply;
-      const [job] = await app.db.select({ id: generationJobs.id, status: generationJobs.status }).from(generationJobs)
-        .where(eq(generationJobs.courseRequestId, row.id)).limit(1);
-      const from = job ? RESUMABLE[job.status] : undefined;
-      if (!job || from !== row.status) return reply.code(409).send({ error: "This Course cannot be resumed." });
-      // Same job, same approved Blueprint; the next claim continues from the next unfinished Lesson.
-      const resumed = await app.db.transaction(async (transaction) => {
-        const [queued] = await transaction.update(generationJobs).set({ status: "queued", stage: null, currentSlotId: null, updatedAt: new Date() })
-          .where(and(eq(generationJobs.id, job.id), eq(generationJobs.status, job.status))).returning({ id: generationJobs.id });
-        if (!queued) throw new RequestChangedError();
-        const [moved] = await transaction.update(courseRequests).set({ status: "generating", failureReason: null }).where(and(
-          eq(courseRequests.id, row.id), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, from),
-        )).returning(requestFields);
-        if (!moved) throw new RequestChangedError();
-        return moved;
-      }).catch((error: unknown) => {
-        if (error instanceof RequestChangedError) return null;
-        throw error;
-      });
-      if (!resumed) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
-      const generation = await generationView(app.db, row.id, await blueprintOf(row.id));
-      return { courseRequest: resumed, generation };
-    } catch (error) {
-      return fail(reply, request.log, "resume", request.params.requestId, error, "Failed to resume generation.");
-    }
-  });
+  /**
+   * Queues the Request's stopped job again: same job, same approved Blueprint, and the next claim continues from the
+   * next unfinished Lesson.
+   * @param action - Route name, for errors and logs
+   * @param from - The job statuses this action accepts
+   */
+  function requeue(action: "resume" | "retry", from: Requeueable) {
+    return async (request: FastifyRequest<RequestParams>, reply: FastifyReply) => {
+      try {
+        const learnerId = request.currentLearner.id;
+        const row = await ownedRequest(request.params.requestId, learnerId, reply);
+        if (!row) return reply;
+        const [job] = await app.db.select({ id: generationJobs.id, status: generationJobs.status }).from(generationJobs)
+          .where(eq(generationJobs.courseRequestId, row.id)).limit(1);
+        const status = job ? from[job.status] : undefined;
+        if (!job || status !== row.status) return reply.code(409).send({ error: `This Course cannot be ${action === "resume" ? "resumed" : "retried"}.` });
+        const queued = await app.db.transaction(async (transaction) => {
+          const [requeued] = await transaction.update(generationJobs).set({ status: "queued", stage: null, currentSlotId: null, updatedAt: new Date() })
+            .where(and(eq(generationJobs.id, job.id), eq(generationJobs.status, job.status))).returning({ id: generationJobs.id });
+          if (!requeued) throw new RequestChangedError();
+          const [moved] = await transaction.update(courseRequests).set({ status: "generating", failureReason: null }).where(and(
+            eq(courseRequests.id, row.id), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, status),
+          )).returning(requestFields);
+          if (!moved) throw new RequestChangedError();
+          return moved;
+        }).catch((error: unknown) => {
+          if (error instanceof RequestChangedError) return null;
+          throw error;
+        });
+        if (!queued) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+        const generation = await generationView(app.db, row.id, await blueprintOf(row.id));
+        return { courseRequest: queued, generation };
+      } catch (error) {
+        return fail(reply, request.log, action, request.params.requestId, error, `Failed to ${action} generation.`);
+      }
+    };
+  }
+
+  app.post<RequestParams>("/api/course-requests/:requestId/generation/resume", requeue("resume", RESUMABLE));
+  app.post<RequestParams>("/api/course-requests/:requestId/generation/retry", requeue("retry", RETRYABLE));
 }
 
 /** Rolls back a transaction whose Request moved on before it committed. */

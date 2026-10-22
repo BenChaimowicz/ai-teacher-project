@@ -21,7 +21,8 @@ import type { CourseJudge, CourseOutline } from "./course-judge.ts";
 import { createCourseGeneration, CourseFailedError } from "./course-generation.ts";
 import { LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
 import { QuizFailedError, type QuizGenerator, type QuizInput } from "./quiz-generation.ts";
-import { ReadingFailedError, type ReadingGenerator, type ReadingInput } from "./reading-generation.ts";
+import { loadModelConfig } from "./model-config.ts";
+import { LessonUnresearchableError, ReadingFailedError, type ReadingGenerator, type ReadingInput } from "./reading-generation.ts";
 
 const APPROVED: ApprovedBlueprint = {
   sequenceMode: "linear",
@@ -47,7 +48,9 @@ const APPROVED: ApprovedBlueprint = {
 /** Every table a generation run touches. */
 const TABLES = [courseRequests, learners, startingLevelDiagnostics, lessonResearch, unpublishedLessons, publishedCourses, publishedModules, publishedLessons];
 
-const PACKS = [{ slot: "primary", sources: [] }, { slot: "secondary", sources: [] }] as unknown as SourcePack[];
+/** One grounded Source: research with nothing to cite fails the Course before writing (spec §5.9). */
+const SOURCE = { sourceId: "src_aaaaaaaaaa", url: "https://en.wikipedia.org/wiki/Yggdrasil", excerpts: [{ id: "e1", text: "Yggdrasil is the world tree." }] };
+const PACKS = [{ slot: "primary", sources: [SOURCE] }, { slot: "secondary", sources: [] }] as unknown as SourcePack[];
 
 /** Generator returning a fixed passing reading for whichever slot it is given; `fail` throws a Judge failure. */
 function recordingGenerator(fail = false) {
@@ -60,6 +63,8 @@ function recordingGenerator(fail = false) {
       return {
         judge: { pass: true, failedChecks: [], reasons: [] },
         repairs: 0,
+        authorModelIds: ["fixture/author"],
+        judgeModelId: "fixture/judge",
         rejectedSources: [{ sourceId: "src_bbbbbbbbbb", url: "https://shop.example/blog", reason: "A shop's blog." }],
         lesson: {
           slotId: input.slot.id, teachingMethod: "reading", title: input.slot.title, lessonGoal: input.slot.lessonGoal,
@@ -84,6 +89,8 @@ function recordingQuizGenerator(fail = false) {
       return {
         judge: { pass: true, failedChecks: [], reasons: [] },
         repairs: 0,
+        authorModelIds: ["fixture/author"],
+        judgeModelId: "fixture/judge",
         lesson: {
           slotId: input.slot.id, teachingMethod: "quiz", title: input.slot.title, lessonGoal: input.slot.lessonGoal,
           objectives: input.slot.objectives, topicTags: input.slot.topicTags, lineage: null, sources: [], citations: [],
@@ -101,18 +108,20 @@ function recordingQuizGenerator(fail = false) {
   return { quizGenerator, inputs };
 }
 
-/** Whole-Course Judge recording each outline it reads; `fail` names a Lesson. */
+/** Whole-Course Judge recording each outline it reads and who it was told wrote it; `fail` names a Lesson. */
 function recordingCourseJudge(fail = false) {
   const outlines: CourseOutline[] = [];
+  const authors: (readonly string[])[] = [];
   const courseJudge: CourseJudge = {
-    async judge(outline) {
+    async judge(outline, authorModelIds) {
       outlines.push(outline);
+      authors.push(authorModelIds);
       return fail
         ? { pass: false, failedChecks: ["lesson_coherence"], reasons: ["Lesson 2 assesses something Lesson 1 does not commit to."] }
         : { pass: true, failedChecks: [], reasons: [] };
     },
   };
-  return { courseJudge, outlines };
+  return { courseJudge, outlines, authors };
 }
 
 /**
@@ -166,7 +175,7 @@ async function run(
   const topics: string[] = [];
   const { readingGenerator, inputs } = recordingGenerator(fail === "reading");
   const { quizGenerator, inputs: quizInputs } = recordingQuizGenerator(fail === "quiz");
-  const { courseJudge, outlines } = recordingCourseJudge(fail === "course");
+  const { courseJudge, outlines, authors } = recordingCourseJudge(fail === "course");
   /** Published rows when the Quiz was generated: nothing may be playable mid-generation. */
   const publishedDuringGeneration: number[] = [];
   const quizGeneratorSpy: QuizGenerator = {
@@ -186,7 +195,7 @@ async function run(
   /** The stored Request. */
   const stored = () => (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
   return {
-    started, rows, topics, inputs, quizInputs, outlines, publishedDuringGeneration, stored, job, requestId: request!.id, learnerId: learner!.id,
+    started, rows, topics, inputs, quizInputs, outlines, authors, publishedDuringGeneration, stored, job, requestId: request!.id, learnerId: learner!.id,
   };
 }
 
@@ -214,6 +223,25 @@ test("The approved Reading slot is researched, its packs stored, then generated 
   assert.deepEqual(research.map((row) => [row.courseRequestId, row.slotId, row.sourcePacks]), [[requestId, "slot1", PACKS]]);
   assert.equal(saved[0]!.rejectedSources[0]!.reason, "A shop's blog.");
   assert.equal(saved[0]!.judge.pass, true);
+  assert.deepEqual(saved[0]!.authorModelIds, ["fixture/author"]);
+  assert.equal(saved[0]!.judgeModelId, "fixture/judge");
+});
+
+test("Research with no usable Source fails the Course before writing, and discards that research so Retry searches again", async () => {
+  const empty = [{ slot: "primary", sources: [{ ...SOURCE, excerpts: [] }] }, { slot: "secondary", sources: [] }] as unknown as SourcePack[];
+  const { started, rows, inputs, stored, job } = await run(null, undefined, undefined, APPROVED, async () => empty);
+  await assert.rejects(started, (error: unknown) => error instanceof LessonUnresearchableError && error.slotId === "slot1");
+  assert.equal(inputs.length, 0, "Nothing is written from empty research.");
+  assert.equal(stored().status, "generation_failed");
+  assert.match(stored().failureReason!, /^We couldn't find reliable Sources for the Lesson “The World Tree”\. Retry searches for it again/);
+  assert.deepEqual(job.settled, ["failed"]);
+  assert.equal(rows.get(lessonResearch)!.length, 0, "The empty research is discarded.");
+});
+
+test("The whole-Course Judge is told every model that wrote a Lesson; a checkpoint from before SEN-57 names the primary", async () => {
+  const { started, authors } = await run(null, undefined, savedReading);
+  await started;
+  assert.deepEqual(authors, [[loadModelConfig().generatorModel, "fixture/author"]]);
 });
 
 test("A Lesson that fails its checks is not saved, no Quiz is generated without its Reading, and the Request fails", async () => {
@@ -240,7 +268,7 @@ test("A provider error is told as an interruption", async () => {
   await assert.rejects(generation.start({ db, courseRequestId: request!.id, learnerId: learner!.id, approved: APPROVED, control }), /vendor down/);
   const stored = (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
   assert.equal(stored.status, "generation_failed");
-  assert.match(stored.failureReason!, /^Generation was interrupted while researching your Lessons\. Resume continues from the next unfinished Lesson\.$/);
+  assert.match(stored.failureReason!, /^Generation was interrupted while researching your Lessons\. Retry continues from the next unfinished Lesson\.$/);
   assert.deepEqual(settled, ["interrupted"], "Resume can pick an interrupted job up.");
 });
 
@@ -436,7 +464,7 @@ const LONG: ApprovedBlueprint = {
 
 /** Packs tagged with the topic they were researched for, so a test can tell which slot's packs a Reading got. */
 function packsFor(topic: string) {
-  return [{ slot: "primary", topic, sources: [] }, { slot: "secondary", topic, sources: [] }] as unknown as SourcePack[];
+  return [{ slot: "primary", topic, sources: [SOURCE] }, { slot: "secondary", topic, sources: [] }] as unknown as SourcePack[];
 }
 
 test("Every Reading is researched at once before any Lesson is written, and each is written from its stored packs", async () => {

@@ -1,0 +1,17 @@
+# One bad reply is retried, then falls back; every reply names its model
+
+This reverses the earlier rule that model calls never retry and that a configured fallback is configuration only (README; spec §2). On 2026-10-21 one malformed reply threw away 220 s of Starting Level preparation (SEN-57), and both SEN-82 Norse runs show a single bad reply can end a whole step.
+
+The two model ports (`model-ports.ts`) now make up to three calls. A reply that is `invalid_output` or `incomplete` is retried once on the same model, then once on the configured fallback (`GENERATOR_FALLBACK_MODEL`, `JUDGE_FALLBACK_MODEL`). Each retried failure is logged with its cause. A timeout, refusal, HTTP error, or missing key is not retried: a timeout has already cost minutes, and the others will not change on a second try. The transport itself still makes exactly one call.
+
+`invalid_output` now records why it happened. `unparseable` means the reply was empty or not JSON, `schema` means it did not match the schema, and `check` means it matched the schema but our own checks rejected it. It also records the OpenRouter `provider` and response `id`. The log can then show whether one host, malformed JSON, or our own checks cause most failures. A stage with a repair loop does not reject wrong counts in its parser. The diagnostic sends a set short of application items, or a rewrite that left out an item, into its rewrite rounds, and treats repeated spans as ties. Reading and Quiz already did this through their Code checks.
+
+Because a fallback can now write part of an artifact, the primary model ID no longer says who wrote it. Each reply returns `{ value, modelId }`, and a stage gathers every model that wrote any part of its artifact, including every repair draft, since a repair keeps what was not criticised. The Judge port is given that whole set and will not call a model in it. If its primary wrote part of the artifact, it goes straight to its fallback. If both did, it refuses, as before. This keeps spec §6.1's rule that Sol judges only what Sol did not write.
+
+The authors and Judge are stored so later checks and audits can see them. Lesson checkpoints gain `author_model_ids` and `judge_model_id`, extending ADR 0007 from diagnostic attempts to checkpoints; the whole-Course Judge reads the authors from there. Diagnostic attempts list each model, primary first, in their existing columns. A checkpoint saved before this change has no authors and is treated as written by the configured primary Generator.
+
+Rejected:
+- **OpenRouter's `models` fallback array.** OpenRouter would choose and switch models out of our sight. We could not tell which model wrote a reply, so we could not keep the Judge independent.
+- **Retrying inside the transport.** The transport cannot know who wrote an artifact, so it cannot rule a fallback out for judging.
+- **Retrying timeouts.** Author calls may run five minutes. Two more of them would triple the wait for a fault that is usually the host, and a timed-out Lesson already stops as an interruption that Retry resumes.
+- **Ruling out the Judge fallback whenever it matches the Generator fallback.** With today's defaults (both Sol) this would turn the Judge fallback off for good, even though the Generator rarely falls back.

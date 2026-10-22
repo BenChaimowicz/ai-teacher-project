@@ -48,11 +48,14 @@ const startingLevel: StartingLevel = {
   extremity: "mixed",
 };
 
-/** Resets the database and saves a Request whose Starting Level is confirmed. Returns its URL. */
-export async function confirmedRequest() {
+/**
+ * Resets the database and saves a Request whose Starting Level is confirmed. Returns its URL.
+ * @param learningGoal - The Request's Learning Goal; the fixture pipeline reads markers in it
+ */
+export async function confirmedRequest(learningGoal = "Play Iris by the Goo Goo Dolls") {
   await resetFixture();
   const [row] = await db.insert(courseRequests).values({
-    learnerId: SEEDED_LEARNER_ID, subject: "Drum kit", learningGoal: "Play Iris by the Goo Goo Dolls", status: "starting_level_confirmed",
+    learnerId: SEEDED_LEARNER_ID, subject: "Drum kit", learningGoal, status: "starting_level_confirmed",
   }).returning();
   await db.insert(startingLevelDiagnostics).values({
     courseRequestId: row!.id, learnerId: SEEDED_LEARNER_ID, startingLevel, confirmation: "looks_right",

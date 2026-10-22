@@ -174,6 +174,10 @@ export const unpublishedLessons = pgTable(
     /** Retrieved Sources the Judge model vetted out before writing, with reasons. */
     rejectedSources: jsonb("rejected_sources").$type<{ sourceId: string; url: string; reason: string }[]>().notNull().default([]),
     judge: jsonb("judge").$type<JudgeResult>().notNull(),
+    /** Every model that wrote a draft of this Lesson, so the whole-Course Judge is none of them (ADR 0014). Empty before SEN-57: the primary Generator. */
+    authorModelIds: jsonb("author_model_ids").$type<string[]>().notNull().default([]),
+    /** The model whose Judge pass let this Lesson checkpoint; null before SEN-57. */
+    judgeModelId: text("judge_model_id"),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique("unpublished_lessons_request_slot").on(table.courseRequestId, table.slotId)],

@@ -3,7 +3,7 @@ import { readingCodeFailures, type LessonSource, type ReadingLessonDraft } from 
 import { READING_METHOD_ID, type NumberedSource, type ReadingSection } from "@senoy/db/reading-lesson";
 import type { PackSource, SourcePack } from "@senoy/research";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
-import { createModelPorts, type Generator, type Judge } from "./model-ports.ts";
+import { createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
 
 /** Writing a cited reading with reasoning can take the author model well past the transport's 60 s default. */
@@ -15,11 +15,8 @@ const AUTHOR_TIMEOUT_MS = 5 * 60 * 1000;
  */
 const REASONING_EFFORT = "high" as const;
 
-/**
- * Regenerations after a failed Code check or Judge, each told what failed. Spec §6.1 allows two per slot; SEN-57 owns
- * the full budget, Retry, and the terminal state.
- */
-const MAX_REPAIRS = 1;
+/** Regenerations after a failed Code check or Judge, each told what failed: the full budget of spec §6.1. */
+export const MAX_REPAIRS = 2;
 
 /** The Judge reads the whole Lesson and every cited excerpt, then reasons over each claim. */
 const JUDGE_TIMEOUT_MS = 5 * 60 * 1000;
@@ -42,8 +39,18 @@ export type ReadingInput = {
 /** A retrieved Source the Judge model kept out of the Lesson's evidence before writing. */
 export type RejectedSource = { sourceId: string; url: string; reason: string };
 
-/** A reading Lesson that passed the Code checks and the Judge, how many repairs it took, and which Sources were vetted out. */
-export type CheckedReading = { lesson: ReadingLessonDraft; judge: JudgeResult; repairs: number; rejectedSources: RejectedSource[] };
+/**
+ * A reading Lesson that passed the Code checks and the Judge, how many repairs it took, which Sources were vetted out,
+ * every model that wrote a draft of it, and the model that passed it (ADR 0014).
+ */
+export type CheckedReading = {
+  lesson: ReadingLessonDraft;
+  judge: JudgeResult;
+  repairs: number;
+  rejectedSources: RejectedSource[];
+  authorModelIds: string[];
+  judgeModelId: string;
+};
 
 /** The reading still failed system validation after its repairs. */
 export class ReadingFailedError extends Error {
@@ -62,6 +69,21 @@ export class ReadingFailedError extends Error {
     const reasons = codeFailures.length ? codeFailures : [...(judge?.failedChecks ?? []), ...(judge?.reasons ?? [])];
     super(`[reading-generation: generate] Reading Lesson failed ${codeFailures.length ? "Code" : "Judge"} checks || ${reasons.join(" || ")}`);
     this.name = "ReadingFailedError";
+  }
+}
+
+/**
+ * Research left a Reading slot with no Source to ground it: every pack came back empty, or the Judge vetted out every
+ * page (spec §5.9). The Course fails and discards the slot's research, so Retry searches again.
+ */
+export class LessonUnresearchableError extends Error {
+  /**
+   * @param slotId - The Reading slot
+   * @param rejectedSources - Sources vetted out, when vetting emptied the evidence
+   */
+  constructor(public readonly slotId: string, public readonly rejectedSources: RejectedSource[] = []) {
+    super(`[reading-generation: generate] No usable Source for this Reading || slotId=${slotId} || vettedOut=${rejectedSources.length}`);
+    this.name = "LessonUnresearchableError";
   }
 }
 
@@ -269,7 +291,8 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
       // Host policy drops only a fixed Denylist; the Judge model vets the rest. Preferred hosts are never vetted out.
       const vetted = [...evidence.values()].filter(({ source }) => !source.preferred);
       const vettedIds = vetted.map(({ source }) => source.sourceId);
-      const rejections = vetted.length === 0 ? [] : await judge.judge({
+      // Vetting judges retrieved pages, which no model wrote; the primary author is ruled out as for any Judge call.
+      const rejections = vetted.length === 0 ? [] : (await judge.judge({
         systemPrompt: VETTING_PROMPT,
         input: { pages: vetted.map(({ source, excerpts }) => ({ sourceId: source.sourceId, url: source.url, host: source.host, title: source.title, openingExcerpt: excerpts[0]!.slice(0, 400) })) },
         schemaName: "source_vetting",
@@ -277,8 +300,8 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
         reasoningEffort: REASONING_EFFORT,
         schema: vettingSchema(vettedIds),
         parse: vettingParser(vettedIds),
-        authorModelId: generator.modelId,
-      });
+        authorModelIds: [generator.modelId],
+      })).value;
       const rejectedSources: RejectedSource[] = [];
       for (const { sourceId, reason } of rejections) {
         const entry = evidence.get(sourceId);
@@ -286,9 +309,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
         rejectedSources.push({ sourceId, url: entry.source.url, reason });
         evidence.delete(sourceId);
       }
-      if (evidence.size === 0) {
-        throw new ReadingFailedError(["No retrieved Source has an excerpt to ground this Lesson."], null, null, rejectedSources);
-      }
+      if (evidence.size === 0) throw new LessonUnresearchableError(input.slot.id, rejectedSources);
       const { slot } = input;
 
       const sources = [...evidence.values()].map(({ source, excerpts }) => ({
@@ -297,9 +318,11 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
       const retrievalUrls = new Set(input.packs.flatMap((pack) => pack.sources.map((source) => source.url)));
       let revision: Revision | null = null;
       let failure: ReadingFailedError | null = null;
+      // A repair keeps what was not criticised, so every model that wrote a draft is an author of the next.
+      const authors = new Set<string>();
 
       for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
-        const authored: AuthoredSection[] = await generator.generateStructured({
+        const { value: authored, modelId: author }: ModelReply<AuthoredSection[]> = await generator.generateStructured({
           systemPrompt: AUTHOR_PROMPT,
           input: {
             courseTitle: input.courseTitle,
@@ -316,6 +339,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
           schema: AUTHOR_SCHEMA,
           parse: parseAuthoredSections,
         });
+        authors.add(author);
         const lesson: ReadingLessonDraft = {
           slotId: slot.id,
           teachingMethod: READING_METHOD_ID,
@@ -335,7 +359,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
           continue;
         }
 
-        const verdict = await judge.judge({
+        const { value: verdict, modelId: judgeModelId } = await judge.judge({
           systemPrompt: JUDGE_PROMPT,
           input: {
             slot: { lessonGoal: slot.lessonGoal, objectives: slot.objectives },
@@ -351,9 +375,9 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
           reasoningEffort: REASONING_EFFORT,
           schema: judgeSchema(READING_JUDGE_CHECKS),
           parse: judgeParser(READING_JUDGE_CHECKS),
-          authorModelId: generator.modelId,
+          authorModelIds: [...authors],
         });
-        if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, rejectedSources };
+        if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, rejectedSources, authorModelIds: [...authors], judgeModelId };
         failure = new ReadingFailedError([], verdict, lesson, rejectedSources);
         revision = { previousDraft: authored, numberedSources, problems: verdict.reasons.length ? verdict.reasons : verdict.failedChecks };
       }

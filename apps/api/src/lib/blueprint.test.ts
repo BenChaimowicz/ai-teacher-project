@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { StartingLevel } from "@senoy/db/starting-level";
 import { BlueprintFailedError, createBlueprintBuilder, slugTag, type BlueprintInput } from "./blueprint.ts";
 import { loadModelConfig } from "./model-config.ts";
-import { createModelPorts, type Generator, type Judge, type StructuredRequest } from "./model-ports.ts";
+import { createModelPorts, type Generator, type Judge, type StructuredRequest, type ModelReply } from "./model-ports.ts";
 import type { StructuredTransport } from "./openrouter.ts";
 
 /** Capabilities 1–3 evidenced (one later widened by Too easy), 4–8 not. */
@@ -58,9 +58,9 @@ function scriptedGenerator(output: unknown, modelId = "fixture/author") {
   const calls: { input: unknown }[] = [];
   const generator: Generator = {
     modelId,
-    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
       calls.push({ input: request.input });
-      return request.parse(output);
+      return { value: request.parse(output), modelId: modelId };
     },
   };
   return { generator, calls };
@@ -68,12 +68,12 @@ function scriptedGenerator(output: unknown, modelId = "fixture/author") {
 
 /** Scripted Judge; records what it was shown and who it was told wrote it. */
 function scriptedJudge(verdict: unknown = { pass: true, failedChecks: [], reasons: [] }, modelId = "fixture/judge") {
-  const calls: { input: unknown; authorModelId: string }[] = [];
+  const calls: { input: unknown; authorModelIds: readonly string[] }[] = [];
   const judge: Judge = {
     modelId,
-    async judge<T>(request: StructuredRequest<T> & { authorModelId: string }): Promise<T> {
-      calls.push({ input: request.input, authorModelId: request.authorModelId });
-      return request.parse(verdict);
+    async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
+      calls.push({ input: request.input, authorModelIds: request.authorModelIds });
+      return { value: request.parse(verdict), modelId: modelId };
     },
   };
   return { judge, calls };
@@ -90,7 +90,7 @@ test("A Blueprint passing Code checks and the Judge comes back with each Quiz as
   assert.deepEqual(slots[3]!.assessesSlotIds, ["slot3"]);
   assert.equal(verdict.pass, true);
   assert.equal(judgeCalls.length, 1);
-  assert.equal(judgeCalls[0]!.authorModelId, "fixture/author");
+  assert.deepEqual(judgeCalls[0]!.authorModelIds, ["fixture/author"]);
 
   const told = calls[0]!.input as { inPlace: string[]; remainingGap: string[]; quizCadence: string };
   assert.deepEqual(told.inPlace, ["Capability 2", "Capability 3"], "Too easy moved Capability 1 into the gap.");

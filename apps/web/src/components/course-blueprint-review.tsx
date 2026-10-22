@@ -225,8 +225,8 @@ export function CourseBlueprintReview({ record, onRecord }: Props) {
           {record.status === "generation_failed" ? (
             <div className="mt-4">
               <p role="alert" className="whitespace-pre-wrap break-words text-sm">{record.failureReason ?? "Your Course could not be generated."}</p>
-              {generation?.status === "interrupted" ? (
-                <Button type="button" className="mt-4" disabled={busy} onClick={() => void send("POST", "/generation/resume")}>Resume</Button>
+              {generation?.status === "interrupted" || generation?.status === "failed" ? (
+                <Button type="button" className="mt-4" disabled={busy} onClick={() => void send("POST", "/generation/retry")}>Retry</Button>
               ) : null}
             </div>
           ) : null}

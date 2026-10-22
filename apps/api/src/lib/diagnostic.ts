@@ -8,7 +8,7 @@ import type {
 } from "@senoy/db/starting-level";
 import { createFactChecker } from "./fact-check.ts";
 import { createModelPorts, type Generator, type Judge } from "./model-ports.ts";
-import { ModelError } from "./openrouter.ts";
+import { ModelError, rejectedOutput } from "./openrouter.ts";
 
 /** Eight items: a coarse capability map, not a reliable score (spec §4.3). */
 export const DIAGNOSTIC_ITEM_COUNT = 8;
@@ -25,11 +25,17 @@ const AUTHOR_REASONING_TOKENS = 1500;
 /** Rewrite rounds after the first review; anything still failing fails the diagnostic. */
 export const MAX_REWRITE_ROUNDS = 2;
 
+/** A set needs at least this many application items; a shortfall is rewritten like any other failed check. */
+const MIN_APPLICATION_ITEMS = 2;
+
+/** The problem a knowledge item is given when the set is short of application items. */
+const APPLICATION_SHORTFALL = `The set needs at least ${MIN_APPLICATION_ITEMS} application items. Rewrite this as an application item: the Learner applies the capability to a situation described in words.`;
+
 /** One claim a fact-check must confirm: the item's question and its keyed answer. */
 export type FactCheckClaim = { itemId: string; question: string; answer: string };
 
-/** The verdict on one claim, with the pages that informed it. */
-export type FactCheckResult = { itemId: string; confirmed: boolean; reason: string; sourceUrls: string[] };
+/** The verdict on one claim, with the pages that informed it and the model that read them, when one did. */
+export type FactCheckResult = { itemId: string; confirmed: boolean; reason: string; sourceUrls: string[]; judgeModelId?: string };
 
 /** Bounded fact-check of keyed answers. Not Lesson Source retrieval: no Preference list, Citations, or stored Sources. */
 export interface FactChecker {
@@ -48,7 +54,7 @@ export type DiagnosticDraft = {
   factCheckVendor: string | null;
 };
 
-/** The item set still had failing items after the last rewrite round. SEN-57 owns the fallback. */
+/** The item set still had failing items after the last rewrite round. The Starting Level fallback is SEN-83's. */
 export class DiagnosticFailedError extends Error {
   public readonly failedItemIds: string[];
 
@@ -225,7 +231,10 @@ function parseItemFields(row: Record<string, unknown>): AuthoredItem {
   };
 }
 
-/** Parses an authored set, enforcing eight items, spans 1-8 each once, and at least two application items. */
+/**
+ * Parses an authored set of eight items. Spans are renumbered 1-8 in the author's order, so a repeated span is a tie,
+ * not a failure; the application-item minimum is checked in the rewrite loop.
+ */
 function parseSet(raw: unknown) {
   const row = record(raw);
   if (!Array.isArray(row.probes) || row.probes.length !== DIAGNOSTIC_ITEM_COUNT) throw new ModelError("invalid_output");
@@ -234,13 +243,14 @@ function parseSet(raw: unknown) {
     if (!Number.isInteger(probe.span)) throw new ModelError("invalid_output");
     return { capability: text(probe.capability), span: probe.span as number, ...parseItemFields(probe) };
   });
-  const spans = new Set(probes.map((probe) => probe.span));
-  if (spans.size !== DIAGNOSTIC_ITEM_COUNT || [...spans].some((span) => span < 1 || span > DIAGNOSTIC_ITEM_COUNT) ||
-      probes.filter((probe) => probe.kind === "application").length < 2) throw new ModelError("invalid_output");
-  return { coverageNote: text(row.coverageNote), probes };
+  const ordered = probes.map((probe, index) => ({ probe, index })).sort((a, b) => a.probe.span - b.probe.span || a.index - b.index);
+  return { coverageNote: text(row.coverageNote), probes: ordered.map(({ probe }, index) => ({ ...probe, span: index + 1 })) };
 }
 
-/** Parses rewrites, requiring exactly the requested capabilities. */
+/**
+ * Parses rewrites, keeping the first one for each requested capability. A capability left out keeps its item, which
+ * the next round reviews again.
+ */
 function rewriteParser(capabilityIds: string[]) {
   return (raw: unknown) => {
     const row = record(raw);
@@ -249,13 +259,12 @@ function rewriteParser(capabilityIds: string[]) {
       const item = record(value);
       return { capabilityId: text(item.capabilityId), ...parseItemFields(item) };
     });
-    const returned = items.map((item) => item.capabilityId).sort();
-    if (JSON.stringify(returned) !== JSON.stringify([...capabilityIds].sort())) throw new ModelError("invalid_output");
-    return items;
+    return items.filter((item, index) => capabilityIds.includes(item.capabilityId) &&
+      items.findIndex((other) => other.capabilityId === item.capabilityId) === index);
   };
 }
 
-/** Parses Judge verdicts, requiring exactly one per reviewed item. */
+/** Parses Judge verdicts, keeping the first one for each reviewed item; an item left out has no verdict. */
 function reviewParser(itemIds: string[]) {
   return (raw: unknown): JudgeVerdict[] => {
     const row = record(raw);
@@ -268,8 +277,8 @@ function reviewParser(itemIds: string[]) {
           typeof performanceDemand !== "boolean" || typeof externalFactualClaim !== "boolean") throw new ModelError("invalid_output");
       return { itemId: text(review.itemId), defensibleOptions: [...new Set(defensibleOptions as number[])], flaws: flaws as string[], performanceDemand, externalFactualClaim };
     });
-    if (JSON.stringify(reviews.map((review) => review.itemId).sort()) !== JSON.stringify([...itemIds].sort())) throw new ModelError("invalid_output");
-    return reviews;
+    return reviews.filter((review, index) => itemIds.includes(review.itemId) &&
+      reviews.findIndex((other) => other.itemId === review.itemId) === index);
   };
 }
 
@@ -344,7 +353,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
       if (generator.modelId.trim() === judge.modelId.trim()) {
         throw new Error("[diagnostic: build] Judge must use a different model from the author");
       }
-      const set = await generator.generateStructured({
+      const { value: set, modelId: setAuthor } = await generator.generateStructured({
         systemPrompt: AUTHOR_PROMPT,
         input: { subject: input.subject, learningGoal: input.learningGoal },
         schemaName: "starting_level_diagnostic_items",
@@ -353,29 +362,37 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
         schema: SET_SCHEMA,
         parse: parseSet,
       });
-      const ordered = [...set.probes].sort((a, b) => a.span - b.span);
-      const capabilities: CapabilityPlan[] = ordered.map((probe, index) => ({
+      // Every model that wrote an item, and every model that judged one (ADR 0014).
+      const authors = new Set([setAuthor]);
+      const judges = new Set<string>();
+      const capabilities: CapabilityPlan[] = set.probes.map((probe, index) => ({
         id: `cap${index + 1}`, statement: probe.capability, itemId: `item${index + 1}`, span: probe.span,
       }));
-      const items: DiagnosticItem[] = ordered.map(({ capability: _capability, span: _span, ...item }, index) => ({
+      const items: DiagnosticItem[] = set.probes.map(({ capability: _capability, span: _span, ...item }, index) => ({
         id: `item${index + 1}`, capabilityId: `cap${index + 1}`, ...item,
       }));
       const reviews: ItemReview[] = [];
       let factCheckVendor: string | null = null;
       let pending = items.map((item) => item.id);
+      const spanOf = (item: DiagnosticItem) => capabilities.find((capability) => capability.id === item.capabilityId)!.span;
 
       for (let round = 0; ; round++) {
         const problems = new Map<string, string[]>();
         const roundReviews = new Map<string, ItemReview>();
+        // A set short of application items rewrites its nearest-goal knowledge items as application items.
+        const shortfall = MIN_APPLICATION_ITEMS - items.filter((item) => item.kind === "application").length;
+        const toApplication = new Set(items.filter((item) => item.kind === "knowledge")
+          .sort((a, b) => spanOf(b) - spanOf(a)).slice(0, Math.max(0, shortfall)).map((item) => item.id));
+        pending = [...new Set([...pending, ...toApplication])];
         for (const id of pending) {
           const item = items.find((candidate) => candidate.id === id)!;
-          const codeFailures = itemWritingFailures(item);
+          const codeFailures = [...itemWritingFailures(item), ...(toApplication.has(id) ? [APPLICATION_SHORTFALL] : [])];
           roundReviews.set(id, { itemId: id, round, stem: item.stem, codeFailures, judge: null, factCheck: null, passed: false });
           if (codeFailures.length) problems.set(id, codeFailures);
         }
         const toJudge = pending.filter((id) => !problems.has(id));
         if (toJudge.length) {
-          const verdicts = await judge.judge({
+          const { value: verdicts, modelId: reviewer } = await judge.judge({
             systemPrompt: JUDGE_PROMPT,
             input: {
               learningGoal: input.learningGoal,
@@ -388,9 +405,13 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
             schemaName: "starting_level_diagnostic_review",
             schema: REVIEW_SCHEMA,
             parse: reviewParser(toJudge),
-            authorModelId: generator.modelId,
+            authorModelIds: [...authors],
           });
+          judges.add(reviewer);
           const claims: FactCheckClaim[] = [];
+          for (const id of toJudge.filter((id) => !verdicts.some((verdict) => verdict.itemId === id))) {
+            problems.set(id, ["The reviewer returned no verdict for this item."]);
+          }
           for (const verdict of verdicts) {
             const item = items.find((candidate) => candidate.id === verdict.itemId)!;
             const review = roundReviews.get(item.id)!;
@@ -400,9 +421,10 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
             else if (verdict.externalFactualClaim) claims.push({ itemId: item.id, question: item.stem, answer: item.options[item.keyIndex]! });
           }
           if (claims.length) {
-            const factChecker = options.factChecker ?? createFactChecker({ judge, authorModelId: generator.modelId });
+            const factChecker = options.factChecker ?? createFactChecker({ judge, authorModelIds: [...authors] });
             factCheckVendor = factChecker.vendor;
             const results = await factChecker.check(claims);
+            for (const result of results) if (result.judgeModelId) judges.add(result.judgeModelId);
             for (const claim of claims) {
               const result = results.find((candidate) => candidate.itemId === claim.itemId);
               roundReviews.get(claim.itemId)!.factCheck = result
@@ -421,7 +443,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
         if (round >= MAX_REWRITE_ROUNDS) throw new DiagnosticFailedError(Object.fromEntries(problems));
 
         const capabilityIds = pending.map((id) => items.find((item) => item.id === id)!.capabilityId);
-        const rewritten = await generator.generateStructured({
+        const { value: rewritten, modelId: rewriter } = await generator.generateStructured({
           systemPrompt: REWRITE_PROMPT,
           input: {
             subject: input.subject,
@@ -429,7 +451,10 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
             rewrite: pending.map((id) => {
               const item = items.find((candidate) => candidate.id === id)!;
               const capability = capabilities.find((candidate) => candidate.id === item.capabilityId)!;
-              return { capabilityId: capability.id, capability: capability.statement, span: capability.span, kind: item.kind, previousStem: item.stem, problems: problems.get(id) };
+              return {
+                capabilityId: capability.id, capability: capability.statement, span: capability.span,
+                kind: toApplication.has(id) ? "application" : item.kind, previousStem: item.stem, problems: problems.get(id),
+              };
             }),
             keep: items.filter((item) => !pending.includes(item.id)).map((item) => item.stem),
           },
@@ -439,20 +464,24 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
           schema: REWRITE_SCHEMA,
           parse: rewriteParser(capabilityIds),
         });
+        authors.add(rewriter);
         for (const { capabilityId, ...fields } of rewritten) {
           const index = items.findIndex((item) => item.capabilityId === capabilityId);
           items[index] = { ...items[index]!, ...fields };
         }
-        if (items.filter((item) => item.kind === "application").length < 2) throw new ModelError("invalid_output");
       }
 
-      return { capabilities, items, reviews, coverageNote: set.coverageNote, authorModelId: generator.modelId, judgeModelId: judge.modelId, factCheckVendor };
+      // Usually one model each; a fallback adds a second, listed after the primary.
+      return {
+        capabilities, items, reviews, coverageNote: set.coverageNote,
+        authorModelId: [...authors].join(", "), judgeModelId: [...judges].join(", "), factCheckVendor,
+      };
     },
 
     async writeGapStatement(input) {
       const { generator } = ports();
       for (let attempt = 0; attempt < 2; attempt++) {
-        const { remainingGapStatement } = await generator.generateStructured({
+        const { value: { remainingGapStatement } } = await generator.generateStructured({
           systemPrompt: GAP_PROMPT,
           input: {
             subject: input.subject,
@@ -471,7 +500,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
         });
         if (!GOAL_MET.test(remainingGapStatement)) return remainingGapStatement;
       }
-      throw new ModelError("invalid_output");
+      throw rejectedOutput();
     },
   };
 }

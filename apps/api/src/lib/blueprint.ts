@@ -34,7 +34,7 @@ export type BlueprintInput = {
 /** A Blueprint that passed the Code checks and the Judge. */
 export type CheckedBlueprint = { blueprint: CourseBlueprint; judge: JudgeResult };
 
-/** The Blueprint failed system validation. Revising and re-checking is SEN-57's loop. */
+/** The Blueprint failed system validation. It has no repair loop yet; the route returns the Request to confirmed. */
 export class BlueprintFailedError extends Error {
   /**
    * @param codeFailures - Code check problems; empty when only the Judge failed
@@ -200,7 +200,7 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
         throw new Error("[blueprint: build] Judge must use a different model from the author");
       }
       const startingLevel = gapView(input.startingLevel);
-      const blueprint = await generator.generateStructured({
+      const { value: blueprint, modelId: authorModelId } = await generator.generateStructured({
         systemPrompt: AUTHOR_PROMPT,
         input: {
           subject: input.subject,
@@ -220,13 +220,13 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
       const codeFailures = blueprintCodeFailures(blueprint, input.profile.quizCadence);
       if (codeFailures.length) throw new BlueprintFailedError(codeFailures, null);
 
-      const verdict = await judge.judge({
+      const { value: verdict } = await judge.judge({
         systemPrompt: JUDGE_PROMPT,
         input: { subject: input.subject, learningGoal: input.learningGoal, ...startingLevel, blueprint },
         schemaName: "course_blueprint_review",
         schema: judgeSchema(BLUEPRINT_JUDGE_CHECKS),
         parse: judgeParser(BLUEPRINT_JUDGE_CHECKS),
-        authorModelId: generator.modelId,
+        authorModelIds: [authorModelId],
       });
       if (!verdict.pass) throw new BlueprintFailedError([], verdict);
       return { blueprint, judge: verdict };

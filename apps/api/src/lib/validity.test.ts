@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Generator, StructuredRequest } from "./model-ports.ts";
+import type { Generator, StructuredRequest, ModelReply } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
 import { createValidityGate, type ValidityExtraction, type ValidityInput } from "./validity.ts";
 
@@ -9,8 +9,8 @@ function fixtureGenerator(evidence: unknown): Generator {
   return {
     modelId: "fixture/author",
     /** Validates fixtures as unknown model output rather than trusting test types. */
-    async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
-      return request.parse(evidence);
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
+      return { value: request.parse(evidence), modelId: "fixture/author" };
     },
   };
 }

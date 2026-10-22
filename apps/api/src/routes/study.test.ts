@@ -306,7 +306,7 @@ test("A generated Quiz plays through the Quiz plugin: attempts, best score, and 
   const generator: Generator = {
     modelId: "fixture/author",
     async generateStructured(request) {
-      return request.parse({
+      return { modelId: "fixture/author", value: request.parse({
         items: [1, 2, 3, 4, 5, 6].map((n) => ({
           objective: "Name the Nine Worlds", prompt: `Which world is number ${n}?`,
           options: [
@@ -315,10 +315,10 @@ test("A generated Quiz plays through the Quiz plugin: attempts, best score, and 
           ],
           explanations: { brief: `Brief ${n}.`, standard: `Standard ${n}.`, detailed: `Detailed ${n}.` },
         })),
-      });
+      }) };
     },
   };
-  const judge: Judge = { modelId: "fixture/judge", judge: async (request) => request.parse({ pass: true, failedChecks: [], reasons: [] }) };
+  const judge: Judge = { modelId: "fixture/judge", judge: async (request) => ({ value: request.parse({ pass: true, failedChecks: [], reasons: [] }), modelId: "fixture/judge" }) };
   const reading = {
     id: "slot1", method: "reading" as const, title: "Worlds", lessonGoal: "Name the worlds.", objectives: ["Name the Nine Worlds"],
     topicTags: ["norse", "worlds"], assessesSlotIds: [],

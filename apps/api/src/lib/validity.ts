@@ -1,6 +1,6 @@
 import type { ValidityClarification, ValidityResult } from "@senoy/db/course-request";
 import { createModelPorts, type Generator } from "./model-ports.ts";
-import { ModelError } from "./openrouter.ts";
+import { ModelError, rejectedOutput } from "./openrouter.ts";
 
 /** Version persisted with every decision; change it when application policy changes. */
 export const VALIDITY_POLICY_VERSION = 1;
@@ -204,7 +204,7 @@ export function createValidityGate(generator?: Generator): ValidityGate {
     async evaluate(input: ValidityInput): Promise<ValidityResult> {
       try {
         const model = generator ?? createModelPorts().generator;
-        const extraction = await model.generateStructured({
+        const { value: extraction } = await model.generateStructured({
           systemPrompt: SYSTEM_PROMPT,
           input: { subject: input.subject, learningGoal: input.learningGoal, clarification: input.clarification ?? null },
           schemaName: "course_request_validity_evidence",
@@ -213,9 +213,9 @@ export function createValidityGate(generator?: Generator): ValidityGate {
         });
         if (input.clarification) {
           if (extraction.clarificationResolved === null || (extraction.confirmedUnsupportedPremise !== null &&
-              !input.clarification.answer.includes(extraction.confirmedUnsupportedPremise))) throw new ModelError("invalid_output");
+              !input.clarification.answer.includes(extraction.confirmedUnsupportedPremise))) throw rejectedOutput();
         } else if (extraction.clarificationResolved !== null || extraction.confirmedUnsupportedPremise !== null) {
-          throw new ModelError("invalid_output");
+          throw rejectedOutput();
         }
         const prohibited = extraction.outcomes.find((outcome) => outcome.category !== "ordinary" && outcome.mode === "operational");
         if (prohibited && prohibited.category !== "ordinary") {
@@ -241,7 +241,7 @@ export function createValidityGate(generator?: Generator): ValidityGate {
         const needsClarification = extraction.learnability !== "learnable" || extraction.outcomes.some((outcome) => outcome.mode === "ambiguous");
         if (needsClarification) {
           const question = input.clarification?.question ?? extraction.question;
-          if (!question) throw new ModelError("invalid_output");
+          if (!question) throw rejectedOutput();
           return {
             policyVersion: VALIDITY_POLICY_VERSION, outcome: "clarify",
             reason: "The goal needs one clarification to distinguish a learnable framing from an unsupported premise or prohibited outcome.",

@@ -62,7 +62,7 @@ TypeScript full-stack web app. One seeded Learner; no authentication. Every Lear
 
 Anthropic is not on the Generator or Judge path and is not a required secret. Claude remains off both paths.
 
-Optional server-only model overrides: `GENERATOR_MODEL`, `GENERATOR_FALLBACK_MODEL`, `JUDGE_MODEL`, and `JUDGE_FALLBACK_MODEL`. Defaults are resolved in the shared model configuration; a model change must preserve author/Judge independence. Configuring a fallback does not automatically retry a validity call.
+Optional server-only model overrides: `GENERATOR_MODEL`, `GENERATOR_FALLBACK_MODEL`, `JUDGE_MODEL`, and `JUDGE_FALLBACK_MODEL`. Defaults are resolved in the shared model configuration; a model change must preserve author/Judge independence. An invalid or incomplete reply is retried once on the same model, then once on the configured fallback; the Judge never falls back to a model that wrote the artifact (ADR 0014).
 
 **Conceptual records (not SQL).**
 

@@ -1,4 +1,4 @@
-/** Model IDs for the two domain roles; fallbacks are configuration, not automatic retries. */
+/** Model IDs for the two domain roles; a fallback makes the third call after two bad replies (ADR 0014). */
 export type ModelConfig = {
   generatorModel: string;
   generatorFallbackModel: string;
