@@ -41,7 +41,7 @@ export type RejectedSource = { sourceId: string; url: string; reason: string };
 
 /**
  * A reading Lesson that passed the Code checks and the Judge, how many repairs it took, which Sources were vetted out,
- * every model that wrote a draft of it, and the model that passed it (ADR 0014).
+ * every model that wrote a draft of it, and the model that passed it (ADR 0015).
  */
 export type CheckedReading = {
   lesson: ReadingLessonDraft;

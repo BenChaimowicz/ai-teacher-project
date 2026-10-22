@@ -38,6 +38,7 @@ export function courseRequestStatusLabel(status: string): string {
     case "rejected": return "Request rejected";
     case "assessment_preparing": return "Preparing your Starting Level check";
     case "assessment_ready": return "Starting Level check";
+    case "assessment_failed": return "Starting Level check could not be prepared";
     case "awaiting_gap_confirmation": return "Confirm where your Course starts";
     case "starting_level_confirmed": return "Starting point confirmed";
     case "blueprint_preparing": return "Designing your Course Blueprint";

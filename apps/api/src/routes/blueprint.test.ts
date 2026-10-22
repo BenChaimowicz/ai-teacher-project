@@ -15,7 +15,9 @@ import {
   type StartingLevel,
 } from "@senoy/db";
 import { createFixtureBlueprintBuilder } from "../lib/blueprint-fixture.ts";
+import { createBlueprintJob } from "../lib/blueprint-job.ts";
 import { BlueprintFailedError, type BlueprintBuilder, type BlueprintInput } from "../lib/blueprint.ts";
+import type { GenerationControl } from "../lib/generation-job.ts";
 import { blueprintRoutes } from "./blueprint.ts";
 import { fakeDb } from "./fake-db.ts";
 
@@ -57,15 +59,33 @@ function recordingBuilder(fail = false) {
   return { builder, inputs };
 }
 
-/** Runs the real routes on in-memory storage with one Request in `status` and a confirmed Starting Level. */
+/** A generation job row. */
+type JobRow = typeof generationJobs.$inferSelect;
+
+/** Job control for a run that holds `job`: settling writes the job's status, as the Postgres control does. */
+function heldControl(job: JobRow): GenerationControl {
+  return {
+    async progress() {},
+    async hold() {},
+    async settle(_transaction, status) {
+      Object.assign(job, { status, claimToken: null, leaseExpiresAt: null });
+    },
+  };
+}
+
+/**
+ * Runs the real routes on in-memory storage with one Request in `status` and a confirmed Starting Level.
+ * `runBlueprintJob` stands in for the worker: it claims the queued Blueprint job and runs it with `builder`.
+ */
 async function testApp(status: CourseRequestStatus = "starting_level_confirmed", fail = false) {
   const learner = savedLearner();
-  const { db, rows } = fakeDb([courseRequests, startingLevelDiagnostics, courseBlueprints, generationJobs, unpublishedLessons]);
-  const { builder, inputs } = recordingBuilder(fail);
+  const { db, rows } = fakeDb([learners, courseRequests, startingLevelDiagnostics, courseBlueprints, generationJobs, unpublishedLessons]);
+  const recording = recordingBuilder(fail);
   const app = Fastify();
   app.decorate("db", db);
   app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
-  await app.register(blueprintRoutes, { blueprintBuilder: builder });
+  await app.register(blueprintRoutes);
+  await db.insert(learners).values(learner).returning();
   const [request] = await db.insert(courseRequests).values({
     learnerId: learner.id, subject: "Drum kit", learningGoal: "Play Iris by the Goo Goo Dolls", status,
   }).returning();
@@ -73,16 +93,41 @@ async function testApp(status: CourseRequestStatus = "starting_level_confirmed",
     courseRequestId: request!.id, learnerId: learner.id, startingLevel, confirmation: "looks_right",
   }).returning();
   const url = `/api/course-requests/${request!.id}/blueprint`;
-  /** The Request's generation jobs. */
-  const jobs = () => rows.get(generationJobs)! as (typeof generationJobs.$inferSelect)[];
-  return { app, rows, inputs, jobs, url, requestRow: rows.get(courseRequests)![0]! };
+  /** The Request's jobs of one kind. */
+  const jobs = (kind: JobRow["kind"] = "course") => (rows.get(generationJobs)! as JobRow[]).filter((job) => job.kind === kind);
+  /**
+   * Claims the queued Blueprint job and runs it, as the worker would. A failed run's error is returned, not thrown,
+   * since the worker only logs it.
+   */
+  async function runBlueprintJob(builder: BlueprintBuilder = recording.builder) {
+    const job = jobs("blueprint").find((candidate) => candidate.status === "queued");
+    assert.ok(job, "A Blueprint job is queued.");
+    Object.assign(job, { status: "running", claimToken: randomUUID(), leaseExpiresAt: new Date() });
+    return createBlueprintJob(builder).start({ db, courseRequestId: request!.id, learnerId: learner.id, control: heldControl(job) })
+      .then(() => null, (error: unknown) => error);
+  }
+  /** Queues the Blueprint through the route, then runs its job. */
+  async function designBlueprint() {
+    assert.equal((await app.inject({ method: "POST", url })).statusCode, 202);
+    assert.equal(await runBlueprintJob(), null);
+  }
+  return { app, rows, inputs: recording.inputs, jobs, url, requestRow: rows.get(courseRequests)![0]!, runBlueprintJob, designBlueprint };
 }
 
-test("Preparing designs from the confirmed gap and write-time Profile, then shows only titles and Lesson goals", async () => {
-  const { app, rows, inputs, url, requestRow } = await testApp();
+test("Preparing queues a Blueprint job whose run designs from the confirmed gap and write-time Profile; review shows only titles and Lesson goals", async () => {
+  const { app, rows, inputs, jobs, url, requestRow, runBlueprintJob } = await testApp();
   try {
-    const response = await app.inject({ method: "POST", url });
-    assert.equal(response.statusCode, 200);
+    const queued = await app.inject({ method: "POST", url });
+    assert.equal(queued.statusCode, 202);
+    assert.equal(queued.json().courseRequest.status, "blueprint_preparing");
+    assert.deepEqual(jobs("blueprint").map((job) => job.status), ["queued"], "The status and the job land together.");
+    assert.equal(inputs.length, 0, "The API never designs the Blueprint itself.");
+    assert.equal((await app.inject({ method: "POST", url })).statusCode, 409, "One Blueprint job at a time.");
+    assert.equal((await app.inject({ method: "GET", url })).json().blueprint, null);
+
+    assert.equal(await runBlueprintJob(), null);
+    assert.equal(jobs("blueprint")[0]!.status, "succeeded");
+    const response = await app.inject({ method: "GET", url });
     const { courseRequest, blueprint } = response.json();
     assert.equal(courseRequest.status, "blueprint_review");
     assert.equal(requestRow.status, "blueprint_review");
@@ -105,33 +150,57 @@ test("Preparing designs from the confirmed gap and write-time Profile, then show
 });
 
 test("A Blueprint is only designed after the Starting Level is confirmed, once", async () => {
-  for (const status of ["awaiting_gap_confirmation", "blueprint_review", "generating"] as const) {
-    const { app, url } = await testApp(status);
+  for (const status of ["awaiting_gap_confirmation", "blueprint_preparing", "blueprint_review", "generating"] as const) {
+    const { app, url, jobs } = await testApp(status);
     try {
       assert.equal((await app.inject({ method: "POST", url })).statusCode, 409);
+      assert.equal(jobs("blueprint").length, 0);
     } finally {
       await app.close();
     }
   }
 });
 
-test("A failed Blueprint check returns the Request to confirmed and saves no draft", async () => {
-  const { app, rows, url, requestRow } = await testApp("starting_level_confirmed", true);
+test("A Blueprint still failing its checks returns the Request to confirmed with a reason; Try again queues the same job", async () => {
+  const { app, rows, jobs, url, requestRow, runBlueprintJob } = await testApp("starting_level_confirmed", true);
   try {
-    const response = await app.inject({ method: "POST", url });
-    assert.equal(response.statusCode, 502);
-    assert.match(response.json().error, /did not pass our checks/);
+    await app.inject({ method: "POST", url });
+    assert.ok(await runBlueprintJob() instanceof BlueprintFailedError);
     assert.equal(requestRow.status, "starting_level_confirmed");
-    assert.equal(rows.get(courseBlueprints)!.length, 0);
+    assert.match(String(requestRow.failureReason), /passed our checks, even after 2 revisions\. Try again/);
+    assert.equal(rows.get(courseBlueprints)!.length, 0, "No draft is saved.");
+    assert.equal(jobs("blueprint")[0]!.status, "failed");
+    assert.match((await app.inject({ method: "GET", url })).json().courseRequest.failureReason, /Try again/);
+
+    const retried = await app.inject({ method: "POST", url });
+    assert.equal(retried.statusCode, 202);
+    assert.deepEqual([requestRow.status, requestRow.failureReason], ["blueprint_preparing", null]);
+    assert.deepEqual(jobs("blueprint").map((job) => job.status), ["queued"], "The same row is queued again.");
+    assert.equal(await runBlueprintJob(createFixtureBlueprintBuilder()), null);
+    assert.deepEqual([requestRow.status, requestRow.failureReason], ["blueprint_review", null]);
+  } finally {
+    await app.close();
+  }
+});
+
+test("A Blueprint run stopped by a provider error says so and offers Try again", async () => {
+  const { app, jobs, url, requestRow, runBlueprintJob } = await testApp();
+  try {
+    await app.inject({ method: "POST", url });
+    assert.ok(await runBlueprintJob({ async build() { throw new Error("provider down"); } }) instanceof Error);
+    assert.deepEqual([requestRow.status, requestRow.failureReason], [
+      "starting_level_confirmed", "We couldn't finish designing your Course Blueprint. Try again.",
+    ]);
+    assert.equal(jobs("blueprint")[0]!.status, "failed");
   } finally {
     await app.close();
   }
 });
 
 test("Closing and returning keeps the review and the Sequence mode pick", async () => {
-  const { app, url } = await testApp();
+  const { app, url, designBlueprint } = await testApp();
   try {
-    await app.inject({ method: "POST", url });
+    await designBlueprint();
     const picked = await app.inject({ method: "PUT", url: `${url}/sequence-mode`, payload: { sequenceMode: "free_jump" } });
     assert.equal(picked.statusCode, 200);
     const reopened = await app.inject({ method: "GET", url });
@@ -145,9 +214,9 @@ test("Closing and returning keeps the review and the Sequence mode pick", async 
 });
 
 test("Approve persists the approved snapshot and Sequence mode, then queues one generation job for the worker", async () => {
-  const { app, rows, jobs, url, requestRow } = await testApp();
+  const { app, rows, jobs, url, requestRow, designBlueprint } = await testApp();
   try {
-    await app.inject({ method: "POST", url });
+    await designBlueprint();
     assert.equal((await app.inject({ method: "POST", url: `${url}/approve`, payload: {} })).statusCode, 400);
     const approved = await app.inject({ method: "POST", url: `${url}/approve`, payload: { sequenceMode: "free_jump" } });
     assert.equal(approved.statusCode, 200);
@@ -165,7 +234,8 @@ test("Approve persists the approved snapshot and Sequence mode, then queues one 
 
     assert.equal((await app.inject({ method: "POST", url: `${url}/approve`, payload: { sequenceMode: "linear" } })).statusCode, 409);
     assert.equal((await app.inject({ method: "PUT", url: `${url}/sequence-mode`, payload: { sequenceMode: "linear" } })).statusCode, 409);
-    assert.equal(jobs().length, 1, "One job per Request.");
+    assert.equal(jobs().length, 1, "One Course job per Request.");
+    assert.equal(jobs("blueprint")[0]!.status, "succeeded", "The Blueprint job is untouched.");
     const reopened = await app.inject({ method: "GET", url });
     assert.equal(reopened.json().blueprint.sequenceMode, "free_jump");
   } finally {
@@ -184,10 +254,10 @@ test("Another Learner's Request is not found", async () => {
   }
 });
 
-/** A Request approved and generating, with its job in `status` and the worker on its first Lesson. */
-async function generatingApp(status: (typeof generationJobs.$inferSelect)["status"] = "running") {
+/** A Request approved and generating, with its Course job in `status` and the worker on its first Lesson. */
+async function generatingApp(status: JobRow["status"] = "running") {
   const context = await testApp();
-  await context.app.inject({ method: "POST", url: context.url });
+  await context.designBlueprint();
   await context.app.inject({ method: "POST", url: `${context.url}/approve`, payload: { sequenceMode: "linear" } });
   const blueprint = context.rows.get(courseBlueprints)![0] as typeof courseBlueprints.$inferSelect;
   const first = blueprint.draft.modules[0]!.slots[0]!;
@@ -218,6 +288,7 @@ test("Cancel stops the job and keeps the Request's checkpoints; Resume queues th
     assert.equal(cancelled.json().courseRequest.status, "generation_cancelled");
     assert.equal(requestRow.status, "generation_cancelled");
     assert.deepEqual([jobs()[0]!.status, jobs()[0]!.claimToken, jobs()[0]!.leaseExpiresAt], ["cancelled", null, null], "The worker's lease is gone.");
+    assert.equal(jobs("blueprint")[0]!.status, "succeeded", "Cancel touches only the Course job.");
     assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/cancel` })).statusCode, 409);
     assert.equal((await app.inject({ method: "GET", url })).json().generation.status, "cancelled", "Nothing resumes by itself.");
 

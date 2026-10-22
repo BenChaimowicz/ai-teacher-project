@@ -12,9 +12,9 @@ import {
   type CourseRequestStatus,
   type DiagnosticItem,
 } from "@senoy/db";
-import type { DiagnosticBuilder, DiagnosticDraft, GapStatementInput } from "../lib/diagnostic.ts";
+import { DiagnosticFailedError, type DiagnosticBuilder, type DiagnosticDraft, type GapStatementInput } from "../lib/diagnostic.ts";
 import { fakeDb } from "./fake-db.ts";
-import { startingLevelRoutes } from "./starting-level.ts";
+import { ASSESSMENT_FAILED_REASON, PREPARE_FAILED_REASON, PREPARE_INTERRUPTED_REASON, startingLevelRoutes } from "./starting-level.ts";
 
 /** A Learner with a saved Teaching Profile. */
 function savedLearner(): typeof learners.$inferSelect {
@@ -42,12 +42,16 @@ const draft: DiagnosticDraft = {
   factCheckVendor: "you-research",
 };
 
+/** How a fixture preparation fails: a provider error, or a set that failed its checks with both Generators. */
+type Failure = "provider" | "checks" | null;
+
 /** Builder fixture that records gap-statement inputs; `fail` makes preparation throw. */
-function fixtureBuilder(fail = false) {
+function fixtureBuilder(fail: Failure = null) {
   const gapInputs: GapStatementInput[] = [];
   const builder: DiagnosticBuilder = {
     async build() {
-      if (fail) throw new Error("provider down");
+      if (fail === "provider") throw new Error("provider down");
+      if (fail === "checks") throw new DiagnosticFailedError({ item3: ["The reviewer found more than one defensible answer."] });
       return structuredClone(draft);
     },
     async writeGapStatement(input) {
@@ -59,7 +63,7 @@ function fixtureBuilder(fail = false) {
 }
 
 /** Runs the real routes on in-memory storage with one Course Request in `status`. */
-async function testApp(status: CourseRequestStatus = "validity_passed", fail = false) {
+async function testApp(status: CourseRequestStatus = "validity_passed", fail: Failure = null) {
   const learner = savedLearner();
   const { db, rows, inserts } = fakeDb([courseRequests, startingLevelDiagnostics, lessonCompletions]);
   const { builder, gapInputs } = fixtureBuilder(fail);
@@ -114,11 +118,78 @@ test("A diagnostic only starts after the Validity gate passes, once", async () =
   }
 });
 
-test("A preparation failure returns the Request to validity passed so the Learner can try again", async () => {
-  const { app, url, requestRow } = await testApp("validity_passed", true);
+test("A provider failure returns the Request to where it started, with a reason and Try again", async () => {
+  const { app, url, requestRow } = await testApp("validity_passed", "provider");
   try {
-    assert.equal((await app.inject({ method: "POST", url })).statusCode, 502);
+    const response = await app.inject({ method: "POST", url });
+    assert.equal(response.statusCode, 200, "The failure is a saved state, not a lost request.");
+    assert.deepEqual([response.json().courseRequest.status, response.json().courseRequest.failureReason], ["validity_passed", PREPARE_FAILED_REASON]);
     assert.equal(requestRow.status, "validity_passed");
+    assert.equal(requestRow.failureReason, PREPARE_FAILED_REASON);
+  } finally {
+    await app.close();
+  }
+});
+
+test("A set failing its checks with both Generators is assessment-failed; Retry diagnostic is the one way on", async () => {
+  const { app, url, requestRow } = await testApp("validity_passed", "checks");
+  try {
+    const failed = await app.inject({ method: "POST", url });
+    assert.deepEqual([failed.json().courseRequest.status, failed.json().courseRequest.failureReason], ["assessment_failed", ASSESSMENT_FAILED_REASON]);
+    assert.equal(requestRow.status, "assessment_failed");
+    assert.equal(failed.json().diagnostic, null, "No Starting Level is invented.");
+    for (const action of ["/answers", "/confirm", "/too-easy"]) {
+      assert.equal((await app.inject({ method: "POST", url: `${url}${action}`, payload: {} })).statusCode, 409);
+    }
+  } finally {
+    await app.close();
+  }
+});
+
+test("Retry diagnostic prepares a fresh set and clears the reason", async () => {
+  const { app, url, requestRow } = await testApp("assessment_failed");
+  try {
+    Object.assign(requestRow, { failureReason: ASSESSMENT_FAILED_REASON });
+    const retried = await app.inject({ method: "POST", url });
+    assert.deepEqual([retried.json().courseRequest.status, retried.json().courseRequest.failureReason], ["assessment_ready", null]);
+  } finally {
+    await app.close();
+  }
+});
+
+test("A check left preparing by an API restart can be started again", async () => {
+  const { app, url, requestRow } = await testApp("assessment_preparing");
+  try {
+    const reopened = await app.inject({ method: "GET", url });
+    assert.deepEqual([reopened.json().courseRequest.status, reopened.json().courseRequest.failureReason], ["validity_passed", PREPARE_INTERRUPTED_REASON]);
+    assert.equal(requestRow.status, "validity_passed");
+    const started = await app.inject({ method: "POST", url });
+    assert.deepEqual([started.json().courseRequest.status, started.json().courseRequest.failureReason], ["assessment_ready", null]);
+  } finally {
+    await app.close();
+  }
+});
+
+test("A check still being prepared by this process is left alone", async () => {
+  const learner = savedLearner();
+  const { db, rows } = fakeDb([courseRequests, startingLevelDiagnostics]);
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const app = Fastify();
+  app.decorate("db", db);
+  app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
+  await app.register(startingLevelRoutes, {
+    diagnosticBuilder: { async build() { await gate; return structuredClone(draft); }, async writeGapStatement() { return "Gap"; } },
+  });
+  const [request] = await db.insert(courseRequests).values({ learnerId: learner.id, subject: "Drums", learningGoal: "Play", status: "validity_passed" }).returning();
+  const url = `/api/course-requests/${request!.id}/diagnostic`;
+  try {
+    const preparing = app.inject({ method: "POST", url });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal((await app.inject({ method: "GET", url })).json().courseRequest.status, "assessment_preparing");
+    release();
+    assert.equal((await preparing).json().courseRequest.status, "assessment_ready");
+    assert.equal(rows.get(courseRequests)![0]!.status, "assessment_ready");
   } finally {
     await app.close();
   }

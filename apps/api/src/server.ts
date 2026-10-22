@@ -9,7 +9,6 @@ import { courseRequestRoutes } from "./routes/course-requests.ts";
 import { startingLevelRoutes } from "./routes/starting-level.ts";
 import { createFixtureDiagnosticBuilder } from "./lib/diagnostic-fixture.ts";
 import { blueprintRoutes } from "./routes/blueprint.ts";
-import { createFixtureBlueprintBuilder } from "./lib/blueprint-fixture.ts";
 import { libraryRoutes } from "./routes/library.ts";
 import { mediaRoutes } from "./routes/media.ts";
 import { studyRoutes } from "./routes/study.ts";
@@ -34,9 +33,7 @@ async function start() {
     await app.register(startingLevelRoutes, {
       diagnosticBuilder: fixtures ? createFixtureDiagnosticBuilder() : undefined,
     });
-    await app.register(blueprintRoutes, {
-      blueprintBuilder: fixtures ? createFixtureBlueprintBuilder() : undefined,
-    });
+    await app.register(blueprintRoutes);
     await app.register(studyRoutes);
     await app.register(teachingProfileRoutes);
     await app.register(mediaRoutes);

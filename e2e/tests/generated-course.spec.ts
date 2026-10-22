@@ -11,7 +11,8 @@ test("An approved Blueprint generates a Course that publishes to Home and comple
   await page.getByRole("button", { name: "Design my Course Blueprint" }).click();
   await page.getByRole("button", { name: "Approve" }).click();
 
-  await expect(page.getByText("Your Course is ready.")).toBeVisible({ timeout: 15_000 });
+  // Three fixture Lessons at FIXTURE_LESSON_DELAY_MS each, then publish, plus the worker's and the page's polls.
+  await expect(page.getByText("Your Course is ready.")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Course published")).toBeVisible();
 
   await page.getByRole("link", { name: "Back to Home" }).click();

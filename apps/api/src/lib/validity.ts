@@ -46,7 +46,7 @@ export type ValidityInput = {
   clarification?: ValidityClarification | null;
 };
 
-/** Evaluates one request before Assessment, with no search, override, or hidden retry. */
+/** Evaluates one request before Assessment, with no search or override. A malformed reply is asked once more. */
 export interface ValidityGate {
   /** Returns a policy decision or throws a safe provider/validation error, never a fallback pass. */
   evaluate(input: ValidityInput): Promise<ValidityResult>;
@@ -204,19 +204,27 @@ export function createValidityGate(generator?: Generator): ValidityGate {
     async evaluate(input: ValidityInput): Promise<ValidityResult> {
       try {
         const model = generator ?? createModelPorts().generator;
+        // Evidence that contradicts the stage is as malformed as unparseable JSON, so the port retries it (ADR 0015).
         const { value: extraction } = await model.generateStructured({
           systemPrompt: SYSTEM_PROMPT,
           input: { subject: input.subject, learningGoal: input.learningGoal, clarification: input.clarification ?? null },
           schemaName: "course_request_validity_evidence",
           schema: input.clarification ? CLARIFIED_EXTRACTION_SCHEMA : INITIAL_EXTRACTION_SCHEMA,
-          parse: parseValidityExtraction,
+          parse: (raw) => {
+            const extracted = parseValidityExtraction(raw);
+            if (input.clarification) {
+              if (extracted.clarificationResolved === null || (extracted.confirmedUnsupportedPremise !== null &&
+                  !input.clarification.answer.includes(extracted.confirmedUnsupportedPremise))) throw rejectedOutput();
+            } else if (extracted.clarificationResolved !== null || extracted.confirmedUnsupportedPremise !== null) {
+              throw rejectedOutput();
+            }
+            // A clarify needs a question to ask; a prohibition rejects first, so it needs none.
+            const prohibited = extracted.outcomes.some((outcome) => outcome.category !== "ordinary" && outcome.mode === "operational");
+            const needsClarification = extracted.learnability !== "learnable" || extracted.outcomes.some((outcome) => outcome.mode === "ambiguous");
+            if (!prohibited && needsClarification && !input.clarification && !extracted.question) throw rejectedOutput();
+            return extracted;
+          },
         });
-        if (input.clarification) {
-          if (extraction.clarificationResolved === null || (extraction.confirmedUnsupportedPremise !== null &&
-              !input.clarification.answer.includes(extraction.confirmedUnsupportedPremise))) throw rejectedOutput();
-        } else if (extraction.clarificationResolved !== null || extraction.confirmedUnsupportedPremise !== null) {
-          throw rejectedOutput();
-        }
         const prohibited = extraction.outcomes.find((outcome) => outcome.category !== "ordinary" && outcome.mode === "operational");
         if (prohibited && prohibited.category !== "ordinary") {
           return { policyVersion: VALIDITY_POLICY_VERSION, outcome: "reject", ...PROHIBITIONS[prohibited.category], question: null };

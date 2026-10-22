@@ -18,7 +18,7 @@ export type ReasoningEffort = "none" | "low" | "medium" | "high";
 
 /** The one transport used by both domain model roles. */
 export interface StructuredTransport {
-  /** Generates and validates one non-streaming response, with no search or retries; the ports retry (ADR 0014). */
+  /** Generates and validates one non-streaming response, with no search or retries; the ports retry (ADR 0015). */
   complete<T>(modelId: string, request: StructuredRequest<T>, providerOrder?: string[]): Promise<T>;
 }
 

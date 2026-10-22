@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Generator, Judge, StructuredRequest, ModelReply } from "./model-ports.ts";
+import { createModelPorts, type Generator, type Judge, type StructuredRequest, type ModelReply } from "./model-ports.ts";
+import { loadModelConfig } from "./model-config.ts";
 import { createDiagnosticBuilder, DiagnosticFailedError, type FactChecker } from "./diagnostic.ts";
-import { ModelError } from "./openrouter.ts";
+import { ModelError, type StructuredTransport } from "./openrouter.ts";
 
 const INPUT = { subject: "Microbiology", learningGoal: "Perform and interpret a Gram stain" };
 
@@ -276,4 +277,66 @@ test("Re-reviewed items are judged alongside the kept items so duplicates can be
   assert.deepEqual(second.items.map((item) => item.itemId), ["item2"]);
   assert.equal(second.otherItems.length, 7);
   assert.ok(!JSON.stringify(second.otherItems).includes("keyIndex"));
+});
+
+/** The clean set as a different author would write it, with stems the scripted Judge can tell apart. */
+const fallbackSet = { ...cleanSet, probes: cleanSet.probes.map((value, i) => ({ ...value, stem: `Fallback: which dye marks step ${i + 1} here?` })) };
+
+/** A Judge that finds no defensible answer to the primary author's item 8, in every round. */
+function failsPrimaryItem8() {
+  return scriptedJudge((itemId, stem) => itemId === "item8" && !stem.startsWith("Fallback") ? { defensibleOptions: [] } : {});
+}
+
+test("A set still failing after its rewrite rounds is written again once by the fallback Generator", async () => {
+  const primary = scriptedGenerator(cleanSet, [{ items: [rewrite("cap8", 8)] }, { items: [rewrite("cap8", 8)] }]);
+  const fallback = scriptedGenerator(fallbackSet, [], "fixture/fallback");
+  const { judge, calls } = failsPrimaryItem8();
+  const draft = await createDiagnosticBuilder({ generator: primary.generator, fallbackGenerator: fallback.generator, judge, ...scriptedFactChecker() }).build(INPUT);
+  assert.equal(primary.calls.length, 3, "The primary author used its full rewrite budget first.");
+  assert.equal(fallback.calls.length, 1);
+  assert.equal(draft.authorModelId, "fixture/fallback");
+  assert.ok(draft.items.every((item) => item.stem.startsWith("Fallback")));
+  assert.deepEqual(calls.at(-1)!.authorModelIds, ["fixture/fallback"], "The Judge is told who wrote the set it reviews.");
+});
+
+test("When the fallback Generator's set fails too, the diagnostic fails", async () => {
+  const primary = scriptedGenerator(cleanSet, [{ items: [rewrite("cap8", 8)] }, { items: [rewrite("cap8", 8)] }]);
+  const fallback = scriptedGenerator(cleanSet, [{ items: [rewrite("cap8", 8)] }, { items: [rewrite("cap8", 8)] }], "fixture/fallback");
+  const { judge } = failsPrimaryItem8();
+  await assert.rejects(
+    createDiagnosticBuilder({ generator: primary.generator, fallbackGenerator: fallback.generator, judge, ...scriptedFactChecker() }).build(INPUT),
+    DiagnosticFailedError,
+  );
+  assert.deepEqual([primary.calls.length, fallback.calls.length], [3, 3]);
+});
+
+test("A provider error does not switch to the fallback Generator", async () => {
+  const generator: Generator = { modelId: "fixture/author", async generateStructured<T>(): Promise<ModelReply<T>> { throw new ModelError("network"); } };
+  const fallback = scriptedGenerator(cleanSet, [], "fixture/fallback");
+  await assert.rejects(createDiagnosticBuilder({ generator, fallbackGenerator: fallback.generator, ...scriptedJudge(), ...scriptedFactChecker() }).build(INPUT), ModelError);
+  assert.equal(fallback.calls.length, 0);
+});
+
+test("A malformed set or Judge reply is asked once more by the ports; a set malformed on every model is an error", async () => {
+  const config = loadModelConfig({});
+  let authored = 0;
+  let judged = 0;
+  const transport: StructuredTransport = {
+    async complete<T>(_modelId: string, request: StructuredRequest<T>): Promise<T> {
+      if (request.schemaName === "starting_level_diagnostic_items") return request.parse(++authored === 1 ? { probes: "eight" } : cleanSet);
+      const { items } = request.input as { items: { itemId: string }[] };
+      return request.parse(++judged === 1 ? { reviews: "none" } : { reviews: items.map((item) => verdict(item.itemId)) });
+    },
+  };
+  const { generator, judge } = createModelPorts({ config, transport, log: { warn() {} } });
+  const draft = await createDiagnosticBuilder({ generator, judge, ...scriptedFactChecker() }).build(INPUT);
+  assert.equal(draft.items.length, 8);
+  assert.deepEqual([authored, judged], [2, 2]);
+
+  let garbageCalls = 0;
+  const garbage: StructuredTransport = { async complete<T>(_modelId: string, request: StructuredRequest<T>): Promise<T> { garbageCalls++; return request.parse({}); } };
+  const ports = createModelPorts({ config, transport: garbage, log: { warn() {} } });
+  await assert.rejects(createDiagnosticBuilder({ generator: ports.generator, judge: ports.judge, ...scriptedFactChecker() }).build(INPUT),
+    (error) => error instanceof ModelError && error.code === "invalid_output");
+  assert.equal(garbageCalls, 3, "The primary twice, then the fallback once (ADR 0015).");
 });

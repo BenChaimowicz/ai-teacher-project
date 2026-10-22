@@ -15,7 +15,8 @@ export type ValidityClarification = {
 
 /**
  * Every Course Request status, in lifecycle order. `assessment_*` through `starting_level_confirmed` belong to the
- * Starting Level diagnostic; `blueprint_*` to the Course Blueprint; `generating` starts after Approve and ends in
+ * Starting Level diagnostic, where `assessment_failed` means the item set failed its checks with both Generators and only
+ * Retry diagnostic is offered (spec §4.3); `blueprint_*` to the Course Blueprint; `generating` starts after Approve and ends in
  * `published` (the Course is playable) or `generation_failed` (with a plain-language reason). The Learner's Cancel moves
  * `generating` to `generation_cancelled`; Resume moves it back.
  */
@@ -27,6 +28,7 @@ export const COURSE_REQUEST_STATUSES = [
   "validity_passed",
   "assessment_preparing",
   "assessment_ready",
+  "assessment_failed",
   "awaiting_gap_confirmation",
   "starting_level_confirmed",
   "blueprint_preparing",
@@ -50,6 +52,9 @@ export type CourseRequestRecord = {
   validity: ValidityResult | null;
   clarification: ValidityClarification | null;
   revisedFromId: string | null;
-  /** Plain-language reason, set only when generation failed. */
+  /**
+   * Plain-language reason the last step failed, with its next step: a Starting Level check or Blueprint that could not
+   * be prepared, an assessment-failed set, or failed generation. Cleared when the Learner tries again.
+   */
   failureReason: string | null;
 };

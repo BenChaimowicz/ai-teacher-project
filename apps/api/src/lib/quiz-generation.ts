@@ -35,7 +35,7 @@ export type QuizInput = {
   profile: Record<string, unknown>;
 };
 
-/** A Quiz that passed the Code checks and the Judge, how many repairs it took, and its models (ADR 0014). */
+/** A Quiz that passed the Code checks and the Judge, how many repairs it took, and its models (ADR 0015). */
 export type CheckedQuiz = { lesson: QuizLessonDraft; judge: JudgeResult; repairs: number; authorModelIds: string[]; judgeModelId: string };
 
 /** The Quiz still failed system validation after its repairs. */

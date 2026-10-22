@@ -1,5 +1,5 @@
 {
-  "id": "a27829c7-2e86-4137-b02d-ad4aadbf00f6",
+  "id": "a2db15ff-8f89-4197-95eb-828d695c9a00",
   "prevId": "3de039b8-bb58-43d6-b759-9a75a08cb21d",
   "version": "7",
   "dialect": "postgresql",
@@ -302,6 +302,14 @@
           "primaryKey": false,
           "notNull": true
         },
+        "kind": {
+          "name": "kind",
+          "type": "generation_job_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'course'"
+        },
         "status": {
           "name": "status",
           "type": "generation_job_status",
@@ -410,11 +418,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "generation_jobs_course_request_id_unique": {
-          "name": "generation_jobs_course_request_id_unique",
+        "generation_jobs_request_kind": {
+          "name": "generation_jobs_request_kind",
           "nullsNotDistinct": false,
           "columns": [
-            "course_request_id"
+            "course_request_id",
+            "kind"
           ]
         }
       },
@@ -1306,19 +1315,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "author_model_ids": {
-          "name": "author_model_ids",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "judge_model_id": {
-          "name": "judge_model_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "finalized_at": {
           "name": "finalized_at",
           "type": "timestamp with time zone",
@@ -1371,6 +1367,7 @@
         "validity_passed",
         "assessment_preparing",
         "assessment_ready",
+        "assessment_failed",
         "awaiting_gap_confirmation",
         "starting_level_confirmed",
         "blueprint_preparing",
@@ -1379,6 +1376,14 @@
         "published",
         "generation_failed",
         "generation_cancelled"
+      ]
+    },
+    "public.generation_job_kind": {
+      "name": "generation_job_kind",
+      "schema": "public",
+      "values": [
+        "blueprint",
+        "course"
       ]
     },
     "public.generation_job_status": {
