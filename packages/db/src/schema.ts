@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { doublePrecision, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
 import { COURSE_REQUEST_STATUSES, type ValidityClarification, type ValidityResult } from "./course-request.ts";
 import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
@@ -9,6 +9,7 @@ import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
 import type { SequenceMode } from "./sequence-mode.ts";
 import type { FeedbackTiming, TeachingProfileAnswers } from "./teaching-profile.ts";
+import type { CostBasis, PipelineEventKind, PipelineEventStatus, ProductEventKind, UsageOutcome, UsageRole, UsageVendor } from "./usage.ts";
 
 /** One person taking Courses. The prototype seeds a single row. Teaching Profile lives here. */
 export const learners = pgTable("learners", {
@@ -303,4 +304,111 @@ export const quizAttempts = pgTable(
     index("quiz_attempts_learner_lesson").on(table.learnerId, table.lessonId),
     uniqueIndex("quiz_attempts_one_draft").on(table.learnerId, table.lessonId).where(sql`${table.status} = 'draft'`),
   ],
+);
+
+/**
+ * One step of the platform's own work (validity, a diagnostic, a Lesson write, publish), tied to the Course Request it
+ * serves. Steps nest through `parentId` (Course generation → one Reading → its research). Written `running` when the
+ * step starts and closed when it returns or throws. Tracking writes never fail the step (ADR 0008).
+ */
+export const pipelineEvents = pgTable(
+  "pipeline_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    parentId: uuid("parent_id").references((): AnyPgColumn => pipelineEvents.id),
+    kind: text("kind").$type<PipelineEventKind>().notNull(),
+    /** Human label, such as the Lesson title or slot id. */
+    label: text("label"),
+    courseRequestId: uuid("course_request_id").references(() => courseRequests.id),
+    learnerId: uuid("learner_id").references(() => learners.id),
+    status: text("status").$type<PipelineEventStatus>().notNull().default("running"),
+    /** The thrown error's message when the step failed. */
+    error: text("error"),
+    /** Step-specific facts worth seeing (round counts, verdicts). Never credentials. */
+    detail: jsonb("detail"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    durationMs: integer("duration_ms"),
+  },
+  (table) => [
+    index("pipeline_events_started").on(table.startedAt),
+    index("pipeline_events_request").on(table.courseRequestId),
+    index("pipeline_events_parent").on(table.parentId),
+  ],
+);
+
+/**
+ * One captured call to an external paid service: an OpenRouter model call (one attempt; a retry is its own row) or a
+ * research vendor call. Keeps the full request and response with no retention limit (ADR 0008). Its Course Request is
+ * reached through its Pipeline Event, never stored twice.
+ */
+export const usageRecords = pgTable(
+  "usage_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pipelineEventId: uuid("pipeline_event_id").references(() => pipelineEvents.id),
+    vendor: text("vendor").$type<UsageVendor>().notNull(),
+    role: text("role").$type<UsageRole>().notNull(),
+    /** The OpenRouter model id, or the research adapter id. */
+    modelId: text("model_id").notNull(),
+    /** The OpenRouter host that answered. */
+    provider: text("provider"),
+    /** OpenRouter response id or vendor request/run id. */
+    responseId: text("response_id"),
+    /** 1-based position among the port's attempts for one request (ADR 0015). */
+    attempt: integer("attempt").notNull().default(1),
+    outcome: text("outcome").$type<UsageOutcome>().notNull(),
+    invalidCause: text("invalid_cause"),
+    httpStatus: integer("http_status"),
+    /** Safe error text: never provider bodies, prompts, or credentials. */
+    error: text("error"),
+    promptTokens: integer("prompt_tokens"),
+    completionTokens: integer("completion_tokens"),
+    reasoningTokens: integer("reasoning_tokens"),
+    cachedTokens: integer("cached_tokens"),
+    costUsd: doublePrecision("cost_usd"),
+    costBasis: text("cost_basis").$type<CostBasis>().notNull(),
+    request: jsonb("request").notNull(),
+    /** The provider body as received; null when none arrived. */
+    response: jsonb("response"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    durationMs: integer("duration_ms"),
+  },
+  (table) => [
+    index("usage_records_created").on(table.createdAt),
+    index("usage_records_event").on(table.pipelineEventId),
+    index("usage_records_model").on(table.modelId, table.createdAt),
+  ],
+);
+
+/** Something a Learner did. */
+export const productEvents = pgTable(
+  "product_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind").$type<ProductEventKind>().notNull(),
+    learnerId: uuid("learner_id").references(() => learners.id),
+    courseRequestId: uuid("course_request_id").references(() => courseRequests.id),
+    detail: jsonb("detail"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("product_events_created").on(table.createdAt)],
+);
+
+/** One hit on the platform's own `/api/*`, except the Usage Console's own routes. */
+export const apiRequests = pgTable(
+  "api_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    method: text("method").notNull(),
+    /** The route pattern, such as `/api/course-requests/:id`; the raw URL when no route matched. */
+    route: text("route").notNull(),
+    url: text("url").notNull(),
+    statusCode: integer("status_code").notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    learnerId: uuid("learner_id").references(() => learners.id),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("api_requests_created").on(table.createdAt), index("api_requests_route").on(table.route, table.createdAt)],
 );

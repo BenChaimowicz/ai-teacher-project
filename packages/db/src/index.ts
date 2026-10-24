@@ -43,3 +43,4 @@ export * from "./blueprint.ts";
 export * from "./lesson-checkpoint.ts";
 export * from "./publication.ts";
 export * from "./generation-job.ts";
+export * from "./usage.ts";
