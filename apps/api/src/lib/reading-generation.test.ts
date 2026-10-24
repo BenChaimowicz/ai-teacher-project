@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { BlueprintSlot } from "@senoy/db/blueprint";
 import type { PackSource, SourcePack } from "@senoy/research";
 import type { Generator, Judge, StructuredRequest, ModelReply } from "./model-ports.ts";
-import { createReadingGenerator, LessonUnresearchableError, ReadingFailedError, type ReadingInput } from "./reading-generation.ts";
+import { applyRepairEdits, createReadingGenerator, LessonUnresearchableError, READING_JUDGE_CHECKS, ReadingFailedError, UNRELIABLE_SOURCE, type ReadingInput } from "./reading-generation.ts";
 
 /** A Source with the given excerpts. */
 function source(sourceId: string, url: string, excerpts: string[]): PackSource {
@@ -47,14 +47,22 @@ function authored(text = "Yggdrasil is the world tree [src_aaaaaaaaaa]. It has t
   return { sections: [{ heading: "The tree", paragraphs: [text] }, { heading: "Roots", paragraphs: ["Roots again [src_bbbbbbbbbb]."] }] };
 }
 
-/** Scripted Generator: one output per call, repeating the last; records what it was shown. */
+/** Repair edits as the author returns them. */
+function edits(...pairs: [find: string, replace: string][]) {
+  return { edits: pairs.map(([find, replace]) => ({ find, replace })) };
+}
+
+/** A repair edit that matches the default draft on every attempt and leaves it as it was. */
+const TOUCH = edits(["Roots again", "Roots again"]);
+
+/** Scripted Generator: one output per call, repeating the last; records what it was shown and asked for. */
 function scriptedGenerator(output: unknown, modelId = "fixture/author", ...later: unknown[]) {
   const outputs = [output, ...later];
-  const calls: { input: unknown }[] = [];
+  const calls: { input: unknown; schemaName: string }[] = [];
   const generator: Generator = {
     modelId,
     async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
-      calls.push({ input: request.input });
+      calls.push({ input: request.input, schemaName: request.schemaName });
       return { value: request.parse(outputs[Math.min(calls.length, outputs.length) - 1]), modelId: modelId };
     },
   };
@@ -69,17 +77,17 @@ const PASS = { pass: true, failedChecks: [], reasons: [] };
  */
 function scriptedJudge(verdict: unknown = PASS, modelId = "fixture/judge", ...later: unknown[]) {
   const verdicts = [verdict, ...later];
-  const calls: { input: unknown; authorModelIds: readonly string[] }[] = [];
-  const vettings: { input: unknown }[] = [];
+  const calls: { input: unknown; authorModelIds: readonly string[]; schema: unknown }[] = [];
+  const vettings: { input: unknown; systemPrompt: string }[] = [];
   const rejected: string[] = [];
   const judge: Judge = {
     modelId,
     async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
       if (request.schemaName === "source_vetting") {
-        vettings.push({ input: request.input });
+        vettings.push({ input: request.input, systemPrompt: request.systemPrompt });
         return { value: request.parse({ rejected: rejected.map((sourceId) => ({ sourceId, reason: "A shop's blog." })) }), modelId: modelId };
       }
-      calls.push({ input: request.input, authorModelIds: request.authorModelIds });
+      calls.push({ input: request.input, authorModelIds: request.authorModelIds, schema: request.schema });
       return { value: request.parse(verdicts[Math.min(calls.length, verdicts.length) - 1]), modelId: modelId };
     },
   };
@@ -130,33 +138,86 @@ test("The author sees each Source once with every excerpt, and never a vendor su
 
 const UNSUPPORTED = { pass: false, failedChecks: ["claim_support"], reasons: ["[2] does not say the roots are three."] };
 
-test("A Judge failure is repaired once: the author sees its draft, the numbering, and the reasons", async () => {
-  const { generator, calls } = scriptedGenerator(authored(), "fixture/author", authored("Yggdrasil is the world tree [src_aaaaaaaaaa]."));
+test("A Judge failure is repaired by edits: the repair sees its draft, the numbering, and the reasons, and nothing else changes", async () => {
+  const cut = edits(["It has three roots [src_bbbbbbbbbb, src_aaaaaaaaaa].", ""]);
+  const { generator, calls } = scriptedGenerator(authored(), "fixture/author", cut);
   const { judge, calls: judgeCalls } = scriptedJudge(UNSUPPORTED, "fixture/judge", PASS);
   const { lesson, repairs } = await createReadingGenerator({ generator, judge }).generate(INPUT);
 
   assert.equal(repairs, 1);
   assert.equal(judgeCalls.length, 2);
+  assert.deepEqual(calls.map((call) => call.schemaName), ["cited_reading", "cited_reading_repair"], "A repair returns edits, never a new Lesson.");
   assert.equal(lesson.body.sections[0]!.blocks[0]!.text, "Yggdrasil is the world tree [1].");
-  assert.equal((calls[0]!.input as { revision?: unknown }).revision, undefined);
-  const { revision } = calls[1]!.input as { revision: { previousDraft: unknown; numberedSources: unknown; problems: string[] } };
+  assert.equal(lesson.body.sections[1]!.blocks[0]!.text, "Roots again [2].", "The passage no problem named is kept verbatim.");
+  assert.equal((calls[0]!.input as { previousDraft?: unknown }).previousDraft, undefined);
+  const revision = calls[1]!.input as { previousDraft: unknown; numberedSources: unknown; problems: string[]; sources: unknown[] };
   assert.deepEqual(revision.previousDraft, authored().sections);
   assert.deepEqual(revision.numberedSources, [{ n: 1, sourceId: WIKI.sourceId }, { n: 2, sourceId: BRIT.sourceId }]);
   assert.deepEqual(revision.problems, UNSUPPORTED.reasons);
+  assert.equal(revision.sources.length, 2, "A repair is grounded in the same Sources.");
+});
+
+test("A repair whose edits all miss is not judged again; the next repair gets the same problems and is told why", async () => {
+  const miss = edits(["A sentence the draft never had.", "Anything."]);
+  const { generator, calls } = scriptedGenerator(authored(), "fixture/author", miss, TOUCH);
+  const { judge, calls: judgeCalls } = scriptedJudge(UNSUPPORTED, "fixture/judge", PASS);
+  const { repairs } = await createReadingGenerator({ generator, judge }).generate(INPUT);
+
+  assert.equal(repairs, 2);
+  assert.equal(judgeCalls.length, 2, "The unchanged draft was not sent to the Judge.");
+  const problems = (calls[2]!.input as { problems: string[] }).problems;
+  assert.match(problems[0]!, /None of your edits changed previousDraft/);
+  assert.deepEqual(problems.slice(1), UNSUPPORTED.reasons);
+});
+
+test("The next repair is told which of the last repair's edits matched nothing", async () => {
+  const partly = edits(["Roots again", "Roots again"], ["A sentence the draft never had.", "Anything."]);
+  const { generator, calls } = scriptedGenerator(authored(), "fixture/author", partly);
+  const { judge } = scriptedJudge(UNSUPPORTED, "fixture/judge", UNSUPPORTED, PASS);
+  await createReadingGenerator({ generator, judge }).generate(INPUT);
+  const problems = (calls[2]!.input as { problems: string[] }).problems;
+  assert.deepEqual(problems.slice(0, -1), UNSUPPORTED.reasons);
+  assert.match(problems.at(-1)!, /not applied.*"A sentence the draft never had\."/);
+});
+
+test("A last repair that misses fails with the last real verdict", async () => {
+  const miss = edits(["A sentence the draft never had.", "Anything."]);
+  const { generator } = scriptedGenerator(authored(), "fixture/author", miss);
+  const { judge } = scriptedJudge(UNSUPPORTED);
+  await assert.rejects(createReadingGenerator({ generator, judge }).generate(INPUT), (error: unknown) =>
+    error instanceof ReadingFailedError && error.judge?.reasons.join() === UNSUPPORTED.reasons.join());
+});
+
+test("Repair edits change only the one passage each names, and skip a passage that is missing or ambiguous", () => {
+  const draft = [
+    { heading: "A", paragraphs: ["One  two [src_aaaaaaaaaa]. Three.", "Three."] },
+    { heading: "B", paragraphs: ["Gone entirely."] },
+  ];
+  const { sections, applied, skipped } = applyRepairEdits(draft, [
+    { find: "One two [src_aaaaaaaaaa].", replace: "One costs $1 [src_aaaaaaaaaa]." },
+    { find: "Three.", replace: "Ambiguous: it is in two paragraphs." },
+    { find: "Not in the draft.", replace: "x" },
+    { find: "Gone entirely.", replace: "" },
+  ]);
+  assert.equal(applied, 2);
+  assert.deepEqual(skipped, ["Three.", "Not in the draft."]);
+  assert.deepEqual(sections, [{ heading: "A", paragraphs: ["One costs $1 [src_aaaaaaaaaa]. Three.", "Three."] }],
+    "Spacing is forgiven, $ is literal, an emptied section is dropped, and the rest is verbatim.");
+  assert.deepEqual(draft[1]!.paragraphs, ["Gone entirely."], "The previous draft is not mutated.");
 });
 
 test("A Citation to a Source ID outside the packs fails the Code checks, is repaired, and never reaches the Judge", async () => {
-  const { generator, calls } = scriptedGenerator(authored("Yggdrasil is the world tree [src_aaaaaaaaaa, src_dddddddddd]."));
+  const { generator, calls } = scriptedGenerator(authored("Yggdrasil is the world tree [src_aaaaaaaaaa, src_dddddddddd]."), "fixture/author", TOUCH);
   const { judge, calls: judgeCalls } = scriptedJudge();
   await assert.rejects(createReadingGenerator({ generator, judge }).generate(INPUT), (error: unknown) =>
     error instanceof ReadingFailedError && error.codeFailures.some((failure) => failure.includes("Source ID")) && error.lesson !== null);
   assert.equal(calls.length, 3, "One initial attempt and two repairs (spec §6.1).");
-  assert.ok((calls[1]!.input as { revision: { problems: string[] } }).revision.problems.some((problem) => problem.includes("Source ID")));
+  assert.ok((calls[1]!.input as { problems: string[] }).problems.some((problem) => problem.includes("Source ID")));
   assert.equal(judgeCalls.length, 0);
 });
 
 test("A Lesson the Judge still fails after its two repairs fails, whatever pass says", async () => {
-  const { generator, calls } = scriptedGenerator(authored());
+  const { generator, calls } = scriptedGenerator(authored(), "fixture/author", TOUCH);
   const { judge } = scriptedJudge({ pass: true, failedChecks: ["claim_support", "claim_support"], reasons: ["Unsupported root count."] });
   await assert.rejects(createReadingGenerator({ generator, judge }).generate(INPUT), (error: unknown) =>
     error instanceof ReadingFailedError && error.codeFailures.length === 0 && error.judge?.failedChecks.join() === "claim_support");
@@ -178,7 +239,7 @@ test("Sources the Judge model vets out never reach the author; preferred hosts a
 });
 
 test("Citing a vetted-out Source is a Citation to an unknown Source", async () => {
-  const { generator } = scriptedGenerator(authored());
+  const { generator } = scriptedGenerator(authored(), "fixture/author", TOUCH);
   const { judge, rejected } = scriptedJudge();
   rejected.push(BRIT.sourceId);
   await assert.rejects(createReadingGenerator({ generator, judge }).generate(INPUT), (error: unknown) =>
@@ -186,11 +247,14 @@ test("Citing a vetted-out Source is a Citation to an unknown Source", async () =
     error.rejectedSources.length === 1);
 });
 
-test("A Citation to a shop or marketing page is a Judge failure", async () => {
+test("Whether a Source is fit to cite is decided once, by vetting; the Lesson Judge never asks again", async () => {
   const { generator } = scriptedGenerator(authored());
-  const { judge } = scriptedJudge({ pass: false, failedChecks: ["unreliable_source"], reasons: ["[2] is an engraving shop's blog."] });
-  await assert.rejects(createReadingGenerator({ generator, judge }).generate(INPUT), (error: unknown) =>
-    error instanceof ReadingFailedError && error.judge?.failedChecks.join() === "unreliable_source");
+  const { judge, calls, vettings } = scriptedJudge();
+  await createReadingGenerator({ generator, judge }).generate(INPUT);
+  assert.ok(vettings[0]!.systemPrompt.includes(UNRELIABLE_SOURCE));
+  assert.ok(!(READING_JUDGE_CHECKS as readonly string[]).includes("unreliable_source"));
+  const schema = calls[0]!.schema as { properties: { failedChecks: { items: { enum: readonly string[] } } } };
+  assert.deepEqual(schema.properties.failedChecks.items.enum, READING_JUDGE_CHECKS);
 });
 
 test("Packs with no excerpts are unresearchable, before any model call", async () => {
@@ -211,7 +275,7 @@ test("Vetting out every Source is unresearchable, and says which were vetted out
 });
 
 test("A repair written by the fallback model is judged by a model that wrote neither draft", async () => {
-  const { generator } = scriptedGenerator(authored());
+  const { generator } = scriptedGenerator(authored(), "fixture/author", TOUCH);
   const authoredBy = ["fixture/author", "fixture/fallback"];
   const write = generator.generateStructured.bind(generator);
   generator.generateStructured = async (request) => ({ ...(await write(request)), modelId: authoredBy.shift() ?? "fixture/fallback" });
