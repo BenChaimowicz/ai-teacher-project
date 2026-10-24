@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { doublePrecision, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { boolean, date, doublePrecision, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
 import { COURSE_REQUEST_STATUSES, type ValidityClarification, type ValidityResult } from "./course-request.ts";
 import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
@@ -447,4 +447,52 @@ export const vendorBalanceSnapshots = pgTable(
     error: text("error"),
   },
   (table) => [index("vendor_balance_snapshots_vendor_taken").on(table.vendor, table.takenAt)],
+);
+
+/**
+ * Every OpenRouter API key on the account, as the management API listed it at import (`pnpm openrouter:import`).
+ * Lets the console tell the platform's own spend apart from other tools sharing the account (coding agents, editors).
+ */
+export const openrouterKeys = pgTable("openrouter_keys", {
+  /** OpenRouter's SHA-256 of the key; never the key itself. */
+  hash: text("hash").primaryKey(),
+  name: text("name").notNull(),
+  /** OpenRouter's masked label, e.g. `sk-or-v1-4b3...d16`. */
+  label: text("label"),
+  /** True for the key the platform calls with (`OPENROUTER_API_KEY`). */
+  isPlatformKey: boolean("is_platform_key").notNull().default(false),
+  usageUsd: doublePrecision("usage_usd").notNull(),
+  limitUsd: doublePrecision("limit_usd"),
+  disabled: boolean("disabled").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * OpenRouter's own daily usage per key, model, and serving endpoint, for the 30 completed UTC days before an import.
+ * OpenRouter keeps no longer history in its API and no per-call list, so this is the record of spend from before the
+ * console captured calls. Re-importing updates rows in place.
+ */
+export const openrouterActivity = pgTable(
+  "openrouter_activity",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    day: date("day").notNull(),
+    keyHash: text("key_hash").notNull().references(() => openrouterKeys.hash),
+    model: text("model").notNull(),
+    modelPermaslug: text("model_permaslug"),
+    endpointId: text("endpoint_id").notNull(),
+    /** The serving host, e.g. `alibaba/fp8`. */
+    providerName: text("provider_name"),
+    requests: integer("requests").notNull(),
+    usageUsd: doublePrecision("usage_usd").notNull(),
+    byokUsageUsd: doublePrecision("byok_usage_usd"),
+    byokRequests: integer("byok_requests"),
+    promptTokens: integer("prompt_tokens"),
+    completionTokens: integer("completion_tokens"),
+    reasoningTokens: integer("reasoning_tokens"),
+    cachedTokens: integer("cached_tokens"),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique("openrouter_activity_day_key_endpoint").on(table.day, table.keyHash, table.endpointId)],
 );
