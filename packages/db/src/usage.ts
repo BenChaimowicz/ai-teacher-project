@@ -10,6 +10,10 @@ export type UsageVendor = (typeof USAGE_VENDORS)[number];
 /** Which vendor bills each research adapter. */
 export const RESEARCH_ADAPTER_VENDORS = { "parallel-pro": "parallel", "you-research": "you" } as const satisfies Record<string, UsageVendor>;
 
+/** Vendors whose account balance the Usage Console reads. */
+export const BALANCE_VENDORS = ["openrouter", "you", "parallel"] as const;
+export type BalanceVendor = (typeof BALANCE_VENDORS)[number];
+
 /** Who made the call: a model port, or a research slot. */
 export const USAGE_ROLES = ["generator", "fallback_generator", "judge", "research_primary", "research_secondary"] as const;
 export type UsageRole = (typeof USAGE_ROLES)[number];
@@ -187,6 +191,9 @@ export type OpsUsageRecordRow = {
   cachedTokens: number | null;
   costUsd: number | null;
   costBasis: CostBasis;
+  /** Research calls: the vendor balance drop measured across the call; null with a note when not measurable. */
+  measuredCostUsd: number | null;
+  measurementNote: string | null;
   pipelineEventId: string | null;
   pipelineKind: PipelineEventKind | null;
   pipelineLabel: string | null;
@@ -346,4 +353,54 @@ export type OpsSetup = {
   /** Why research config could not be read, if it could not. */
   researchError: string | null;
   fetchedAt: string;
+};
+
+/** One balance reading, as the console shows it. */
+export type OpsBalanceSnapshot = {
+  takenAt: string;
+  balanceUsd: number | null;
+  pendingUsd: number | null;
+  creditsTotalUsd: number | null;
+  accountUsageUsd: number | null;
+  keyUsageUsd: number | null;
+  error: string | null;
+};
+
+/**
+ * One vendor's billing check: what it says we spent versus what the console recorded.
+ * `billedSinceFirstUsd` is the balance drop (or usage rise) between the first good reading and the latest one, plus
+ * any top-ups; `recordedSinceFirstUsd` is what Usage Records say for the same window. `gapUsd` = billed − recorded.
+ */
+export type OpsVendorBilling = {
+  vendor: BalanceVendor;
+  /** `not_configured`: no credentials to read it (Parallel needs `pnpm parallel:login`). */
+  status: "ok" | "not_configured" | "error";
+  error: string | null;
+  latest: OpsBalanceSnapshot | null;
+  firstGoodAt: string | null;
+  billedSinceFirstUsd: number | null;
+  recordedSinceFirstUsd: number;
+  gapUsd: number | null;
+  /** All Usage Records ever, for this vendor. */
+  recordedAllTimeUsd: number;
+  /**
+   * Spend the vendor knows about from before recording began or from other keys: OpenRouter only, where lifetime
+   * usage is reported (`accountUsageUsd` − `recordedAllTimeUsd`; `keyUsageUsd` − recorded for this key alone).
+   * Null for vendors that do not report lifetime usage.
+   */
+  untrackedAccountUsd: number | null;
+  untrackedKeyUsd: number | null;
+  /** OpenRouter key usage windows as OpenRouter reports them. */
+  keyWindows: { dailyUsd: number; weeklyUsd: number; monthlyUsd: number; limitUsd: number | null; remainingUsd: number | null } | null;
+  /** Readings in the range, oldest first, for a balance-over-time line. */
+  series: OpsBalanceSnapshot[];
+};
+
+/** `GET /api/ops/billing` (query: range). `POST /api/ops/billing/refresh` takes readings now and returns the same. */
+export type OpsBilling = {
+  vendors: OpsVendorBilling[];
+  /** The first Usage Record ever written; spend before it was never recorded. Null when none yet. */
+  recordingStartedAt: string | null;
+  /** How often the console API takes readings while it runs. */
+  snapshotEveryMs: number;
 };

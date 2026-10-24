@@ -120,6 +120,13 @@
       "when": 1792850456089,
       "tag": "0016_20261024140056_usage_console",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792852802530,
+      "tag": "0017_20261024144002_vendor_billing",
+      "breakpoints": true
     }
   ]
 }
