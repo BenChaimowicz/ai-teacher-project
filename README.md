@@ -13,7 +13,17 @@ pnpm db:seed
 pnpm run apps
 ```
 
-Then open `http://127.0.0.1:5173`. That one command starts the Vite Workspace, the Fastify API, and the worker that generates Courses.
+Then open `http://127.0.0.1:5173`. That one command starts the Vite Workspace, the Fastify API, the worker that generates Courses, and the Operator-only Usage Console at `http://127.0.0.1:5174` (its own API on `CONSOLE_API_PORT`, default 3100). To run only the Usage Console:
+
+```bash
+pnpm dash
+```
+
+Set `OPERATOR_KEY` in `.env` to require that key in the Usage Console; leave it empty for open local use.
+
+## Migrations
+
+`pnpm db:generate --name <what_it_does>` writes `<number>_<UTC timestamp>_<name>.sql` (for example `0016_20261024140056_usage_console.sql`) and its journal entry. The number is drizzle's order; the timestamp says when it was made. Drizzle applies only migrations whose journal `when` is later than the last one applied to the shared database, so when another branch's migration was applied first, re-stamp yours (raise its `when` and its file timestamp) before `pnpm db:migrate`.
 
 ## Check
 

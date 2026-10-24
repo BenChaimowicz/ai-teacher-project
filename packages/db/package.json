@@ -19,7 +19,7 @@
     "./usage": "./src/usage.ts"
   },
   "scripts": {
-    "generate": "drizzle-kit generate",
+    "generate": "tsx scripts/generate.ts",
     "migrate": "drizzle-kit migrate",
     "seed": "tsx src/seed.ts"
   },
