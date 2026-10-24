@@ -14,6 +14,14 @@ export const RESEARCH_ADAPTER_VENDORS = { "parallel-pro": "parallel", "you-resea
 export const BALANCE_VENDORS = ["openrouter", "you", "parallel"] as const;
 export type BalanceVendor = (typeof BALANCE_VENDORS)[number];
 
+/**
+ * How a Usage Record got here. `captured`: written live as the call happened. `backfill`: rebuilt afterwards from a
+ * vendor's own record of a past call (e.g. a Parallel run looked up by its id). "Recording started" counts only
+ * `captured` rows.
+ */
+export const USAGE_ORIGINS = ["captured", "backfill"] as const;
+export type UsageOrigin = (typeof USAGE_ORIGINS)[number];
+
 /** Who made the call: a model port, or a research slot. */
 export const USAGE_ROLES = ["generator", "fallback_generator", "judge", "research_primary", "research_secondary"] as const;
 export type UsageRole = (typeof USAGE_ROLES)[number];

@@ -9,7 +9,7 @@ import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
 import type { SequenceMode } from "./sequence-mode.ts";
 import type { FeedbackTiming, TeachingProfileAnswers } from "./teaching-profile.ts";
-import type { BalanceVendor, CostBasis, PipelineEventKind, PipelineEventStatus, ProductEventKind, UsageOutcome, UsageRole, UsageVendor } from "./usage.ts";
+import type { BalanceVendor, CostBasis, UsageOrigin, PipelineEventKind, PipelineEventStatus, ProductEventKind, UsageOutcome, UsageRole, UsageVendor } from "./usage.ts";
 
 /** One person taking Courses. The prototype seeds a single row. Teaching Profile lives here. */
 export const learners = pgTable("learners", {
@@ -374,6 +374,8 @@ export const usageRecords = pgTable(
      */
     measuredCostUsd: doublePrecision("measured_cost_usd"),
     measurementNote: text("measurement_note"),
+    /** `captured` live, or `backfill` rebuilt from a vendor's record of a past call. */
+    origin: text("origin").$type<UsageOrigin>().notNull().default("captured"),
     request: jsonb("request").notNull(),
     /** The provider body as received; null when none arrived. */
     response: jsonb("response"),
