@@ -20,7 +20,7 @@ export class LeaseLostError extends Error {
 }
 
 /** How a job ends when this run settles it. */
-export type SettledStatus = Extract<GenerationJobStatus, "succeeded" | "failed" | "interrupted">;
+export type SettledStatus = Extract<GenerationJobStatus, "succeeded" | "failed" | "needs_new_blueprint" | "interrupted">;
 
 /**
  * What generation needs from its job. Each call throws `LeaseLostError` once the run no longer holds the job, so a

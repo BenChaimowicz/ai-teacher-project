@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { StartingLevel } from "@senoy/db/starting-level";
-import { BlueprintFailedError, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, slugTag, type BlueprintInput } from "./blueprint.ts";
+import { BlueprintFailedError, BLUEPRINT_JUDGE_CHECKS, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, slugTag, type BlueprintInput } from "./blueprint.ts";
+import { COURSE_JUDGE_CHECKS, SEQUENCE_REACHES_GOAL } from "./course-judge.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createModelPorts, type Generator, type Judge, type StructuredRequest, type ModelReply } from "./model-ports.ts";
 import { ModelError, type StructuredTransport } from "./openrouter.ts";
@@ -171,14 +172,16 @@ function queuedGenerator(...outputs: unknown[]) {
 /** A Judge that returns each scripted verdict in turn, repeating the last. */
 function queuedJudge(...verdicts: unknown[]) {
   let calls = 0;
+  const prompts: string[] = [];
   const judge: Judge = {
     modelId: "fixture/judge",
     async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
       calls++;
+      prompts.push(request.systemPrompt);
       return { value: request.parse(verdicts.length > 1 ? verdicts.shift() : verdicts[0]), modelId: "fixture/judge" };
     },
   };
-  return { judge, calls: () => calls };
+  return { judge, calls: () => calls, prompts };
 }
 
 const PASS = { pass: true, failedChecks: [], reasons: [] };
@@ -201,6 +204,19 @@ test("A failing Blueprint is revised from its own draft and problems, then check
   assert.ok((codeRevision.input.problems as string[]).some((problem) => problem.includes("precede")));
   assert.equal(codeRevision.input.learningGoal, INPUT.learningGoal);
   assert.deepEqual(calls[2]!.input.problems, ["Failed check: coverage", "Misses counting."]);
+});
+
+const SEQUENCE_FAIL = { pass: false, failedChecks: ["sequence_reaches_goal"], reasons: ["Covers only two myths, not the main stories across the corpus."] };
+
+test("A Blueprint that misses the whole Learning Goal is revised before review, on the whole-Course Judge's own check", async () => {
+  const { generator, calls } = queuedGenerator(authored(), authored());
+  const verdicts = queuedJudge(SEQUENCE_FAIL, PASS);
+  const checked = await createBlueprintBuilder({ generator, judge: verdicts.judge }).build(INPUT);
+  assert.equal(checked.judge.pass, true);
+  assert.ok(BLUEPRINT_JUDGE_CHECKS.includes("sequence_reaches_goal") && COURSE_JUDGE_CHECKS.includes("sequence_reaches_goal"));
+  assert.ok(verdicts.prompts[0]!.includes(SEQUENCE_REACHES_GOAL), "Both Judges ask the same question, so publish cannot fail what review passed.");
+  assert.match(calls[0]!.systemPrompt, /sample the Learning Goal, they do not list it/, "The author designs for the whole goal, not only the missed probes.");
+  assert.deepEqual(calls[1]!.input.problems, ["Failed check: sequence_reaches_goal", SEQUENCE_FAIL.reasons[0]]);
 });
 
 test("A Blueprint still failing after two revisions fails with its last verdict; each Judge fail is a revision, never a re-ask", async () => {

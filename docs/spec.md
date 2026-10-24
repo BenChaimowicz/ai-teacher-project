@@ -274,7 +274,7 @@ Scaffolding *dosage* (worked-example amount, tighter sequencing) follows Startin
 
 ### 4.4 Course Blueprint
 
-The generator is told subject, Learning Goal, Starting Level, and the write-time Teaching Profile fields the Blueprint consumes (including `quizCadence`). It designs the Module and Lesson sequence for that remaining gap alone. There is no canonical novice→goal outline and no unpublished prefix. Remaining-gap scope lives on the Blueprint; Lessons have no difficulty score.
+The generator is told subject, Learning Goal, Starting Level, and the write-time Teaching Profile fields the Blueprint consumes (including `quizCadence`). It designs the Module and Lesson sequence for that remaining gap alone: what the whole Learning Goal needs that the Learner does not yet have. The diagnostic's probed capabilities sample the goal; they do not list it, so a Blueprint teaches the missed probes and whatever else the goal clearly needs, and skips only what the diagnostic evidenced. There is no canonical novice→goal outline and no unpublished prefix. Remaining-gap scope lives on the Blueprint; Lessons have no difficulty score.
 
 Each slot: title, Lesson goal, non-empty objectives, registered teaching method (`reading` or `quiz`), 2–5 Topic tags (lowercase slugs from the slot’s objectives; no closed taxonomy). A Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it) and lists 1–10 objectives. No two slots share a Lesson goal. At least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal.
 
@@ -477,7 +477,7 @@ If Test-course protocol finds missed factual errors, bump Judge SKU in config (`
 
 **Code:** every slot has title, Lesson goal, non-empty objectives, and a registered method (`reading` or `quiz`); a Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it); no two slots share a Lesson goal; at least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal; a Quiz slot lists 1–10 objectives.
 
-**Judge:** coverage (this sequence can take this Starting Level to this Learning Goal); prerequisite order; no redundant slot; each Quiz’s assessed Lessons are the right chunk.
+**Judge:** coverage (no remaining-gap capability is left untaught); the sequence reaches this Learning Goal from this Starting Level, which is the same check the whole-Course Judge makes (§6.5), so a sequence that cannot reach the goal fails here, before any Lesson is written; prerequisite order; no redundant slot; each Quiz’s assessed Lessons are the right chunk.
 
 A Blueprint fail is a Blueprint revision, then Learner review again.
 
@@ -503,7 +503,7 @@ Do not re-judge every Lesson from scratch.
 
 **Judge:** one pass over titles, Lesson goals, objectives, and short per-Lesson commitments — Course coherence across Modules, and the assembled sequence reaches this Learning Goal from this Starting Level.
 
-If that Judge names a **Lesson**, targeted repair from that earliest Lesson and affected downstream, then this pass again. If it names the **sequence**, structural return to Blueprint review.
+If that Judge names a **Lesson**, targeted repair from that earliest Lesson and affected downstream, then this pass again. If it names the **sequence**, structural return to Blueprint review. Retrying cannot fix the sequence, so it is never offered for one. Until the structural return is built (SEN-85), the Request fails with a reason that says so and points to a new Course Request.
 
 ### 6.6 Test-course protocol
 

@@ -351,13 +351,30 @@ test("A passing Course publishes atomically: Course, Module, both Lessons, the p
 });
 
 test("A failed whole-Course Judge publishes nothing, keeps the checkpoints, and fails the Request", async () => {
-  const { started, rows, stored } = await run("course");
+  const { started, rows, stored, job } = await run("course");
   await assert.rejects(started, CourseFailedError);
   assert.equal(rows.get(publishedCourses)!.length, 0);
   assert.equal(rows.get(publishedLessons)!.length, 0);
   assert.equal(rows.get(unpublishedLessons)!.length, 2);
   assert.equal(stored().status, "generation_failed");
   assert.match(stored().failureReason!, /didn't fit together well enough to publish/);
+  assert.deepEqual(job.settled, ["failed"], "A Lesson the Judge names waits for Retry.");
+});
+
+test("A whole-Course sequence that misses the goal ends the job for good: no Retry, and the reason says so", async () => {
+  const { started, rows, stored, job } = await run(null, () => ({
+    async judge() {
+      return { pass: false, failedChecks: ["sequence_reaches_goal"], reasons: ["Covers two myths, not the main stories."] };
+    },
+  }));
+  await assert.rejects(started, CourseFailedError);
+  assert.deepEqual(job.settled, ["needs_new_blueprint"]);
+  assert.equal(rows.get(publishedCourses)!.length, 0);
+  assert.equal(rows.get(unpublishedLessons)!.length, 2, "Checkpoints stay until the structural return (SEN-85) discards them.");
+  assert.equal(stored().status, "generation_failed");
+  assert.match(stored().failureReason!, /don't reach your Learning Goal/);
+  assert.match(stored().failureReason!, /Start a new Course Request from Home/);
+  assert.doesNotMatch(stored().failureReason!, /Retry /);
 });
 
 test("Publish is all or nothing: a Request that stopped generating leaves no published rows", async () => {

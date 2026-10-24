@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { StructuredRequest } from "./openrouter.ts";
-import { COURSE_JUDGE_CHECKS, createCourseJudge, type CourseOutline } from "./course-judge.ts";
+import { COURSE_JUDGE_CHECKS, createCourseJudge, SEQUENCE_REACHES_GOAL, type CourseOutline } from "./course-judge.ts";
 import type { Judge } from "./model-ports.ts";
 
 const OUTLINE: CourseOutline = {
@@ -41,6 +41,7 @@ test("The whole-Course Judge reads the outline as the Lessons' author's independ
   const schema = calls[0]!.schema as { properties: { failedChecks: { items: { enum: readonly string[] } } } };
   assert.deepEqual(schema.properties.failedChecks.items.enum, COURSE_JUDGE_CHECKS);
   assert.doesNotMatch(calls[0]!.systemPrompt, /norse|yggdrasil/i, "Prompts stay subject-neutral (ADR 0011).");
+  assert.ok(calls[0]!.systemPrompt.includes(SEQUENCE_REACHES_GOAL), "The Blueprint Judge asks this same check before review.");
 });
 
 test("Any failed whole-Course check fails, whatever pass says", async () => {
