@@ -21,6 +21,15 @@ function fakeFetch(answers: Record<string, [number, unknown]>) {
 }
 
 describe("readOpenRouterBalance", () => {
+  it("uses what is left of our key's limit as the balance, since the account is shared with other projects", async () => {
+    const { fetch } = fakeFetch({
+      "https://openrouter.ai/api/v1/credits": [200, { data: { total_credits: 50, total_usage: 35.4 } }],
+      "https://openrouter.ai/api/v1/key": [200, { data: { usage: 6.8, limit: 25, limit_remaining: 18.2 } }],
+    });
+    const reading = await readOpenRouterBalance(KEY, { fetch });
+    assert.deepEqual([reading.balanceUsd, reading.keyUsageUsd, reading.accountUsageUsd], [18.2, 6.8, 35.4]);
+  });
+
   it("reads account credits and key usage in USD, keeping only the key's numbers", async () => {
     const { fetch, seen } = fakeFetch({
       "https://openrouter.ai/api/v1/credits": [200, { data: { total_credits: 50, total_usage: 34.9475 } }],

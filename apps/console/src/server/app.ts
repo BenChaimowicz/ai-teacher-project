@@ -1,6 +1,7 @@
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import type { BillingService } from "./billing.ts";
 import type { OpsStore } from "./ops-store.ts";
+import type { OpenRouterHistoryReader } from "./openrouter-history.ts";
 import type { SetupReader } from "./setup.ts";
 import {
   assertUuid,
@@ -18,6 +19,8 @@ import {
 export type ConsoleAppOptions = {
   /** Reads the configured models and research vendors; without it `/setup` answers 404. */
   setup?: SetupReader;
+  /** OpenRouter's imported history for our key; without it `/openrouter-history` answers 404. */
+  openrouterHistory?: OpenRouterHistoryReader;
   /** The billing check; without it `/billing` answers 404. */
   billing?: BillingService;
   /** Whether Fastify logs (Pino); tests leave it off. */
@@ -128,6 +131,10 @@ export function buildConsoleApp(store: OpsStore, options: ConsoleAppOptions = {}
 
       ops.get("/setup", (request, reply) =>
         answer(request, reply, "GET /setup", async () => (options.setup ? options.setup() : null), "Setup is not available"));
+
+      ops.get("/openrouter-history", (request, reply) =>
+        answer(request, reply, "GET /openrouter-history", async () => (options.openrouterHistory ? options.openrouterHistory() : null),
+          "OpenRouter history is not available"));
 
       ops.get("/billing", (request, reply) =>
         answer(request, reply, "GET /billing", async () => {

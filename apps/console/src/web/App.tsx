@@ -9,6 +9,7 @@ import { CourseRequestDetail } from "@/views/CourseRequestDetail";
 import { CourseRequests } from "@/views/CourseRequests";
 import { Failures } from "@/views/Failures";
 import { LearnerActivity } from "@/views/LearnerActivity";
+import { OpenRouterHistory } from "@/views/OpenRouterHistory";
 import { Overview } from "@/views/Overview";
 import { PipelineSteps } from "@/views/PipelineSteps";
 
@@ -25,6 +26,7 @@ export function App() {
             <Route path="course-requests/:id" element={<CourseRequestDetail />} />
             <Route path="steps" element={<PipelineSteps />} />
             <Route path="billing" element={<Billing />} />
+            <Route path="openrouter" element={<OpenRouterHistory />} />
             <Route path="failures" element={<Failures />} />
             <Route path="activity" element={<LearnerActivity />} />
             <Route path="api" element={<ApiTraffic />} />

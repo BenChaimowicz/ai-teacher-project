@@ -14,6 +14,14 @@ export const RESEARCH_ADAPTER_VENDORS = { "parallel-pro": "parallel", "you-resea
 export const BALANCE_VENDORS = ["openrouter", "you", "parallel"] as const;
 export type BalanceVendor = (typeof BALANCE_VENDORS)[number];
 
+/**
+ * How a Usage Record got here. `captured`: written live as the call happened. `backfill`: rebuilt afterwards from a
+ * vendor's own record of a past call (e.g. a Parallel run looked up by its id). "Recording started" counts only
+ * `captured` rows.
+ */
+export const USAGE_ORIGINS = ["captured", "backfill"] as const;
+export type UsageOrigin = (typeof USAGE_ORIGINS)[number];
+
 /** Who made the call: a model port, or a research slot. */
 export const USAGE_ROLES = ["generator", "fallback_generator", "judge", "research_primary", "research_secondary"] as const;
 export type UsageRole = (typeof USAGE_ROLES)[number];
@@ -384,15 +392,16 @@ export type OpsVendorBilling = {
   /** All Usage Records ever, for this vendor. */
   recordedAllTimeUsd: number;
   /**
-   * What the account started with. `vendor`: reported by the vendor (OpenRouter's credits bought). `operator`: told
+   * What the account started with. `vendor`: reported by the vendor (OpenRouter: our key's spend limit, since the
+   * account is shared with other projects; the account's credits bought when the key has no limit). `operator`: told
    * to us by an Operator (You.com, Parallel), kept in the console API's config. Null when neither is known.
    */
   startingUsd: number | null;
   startingSource: "vendor" | "operator" | null;
   /**
-   * Spend the console never saw (before recording began, other keys, untracked processes). OpenRouter: its reported
-   * lifetime usage − `recordedAllTimeUsd`. You.com/Parallel: (`startingUsd` − balance now) − `recordedAllTimeUsd`.
-   * `untrackedKeyUsd` is OpenRouter only (our key's lifetime usage − recorded). Null when lifetime spend is unknown.
+   * Spend the console never saw (before recording began, untracked processes). OpenRouter: our key's reported lifetime
+   * usage − `recordedAllTimeUsd`; other keys on the shared account are other projects and are ignored. You.com/Parallel:
+   * (`startingUsd` − balance now) − `recordedAllTimeUsd`. `untrackedKeyUsd` is no longer used (always null).
    */
   untrackedAccountUsd: number | null;
   untrackedKeyUsd: number | null;
@@ -422,4 +431,52 @@ export type OpsBilling = {
   recordingStartedAt: string | null;
   /** How often the console API takes readings while it runs. */
   snapshotEveryMs: number;
+};
+
+/** One day × model × serving endpoint of OpenRouter's own usage report for our key. */
+export type OpsOpenRouterActivityRow = {
+  day: string;
+  model: string;
+  /** Serving host, e.g. `alibaba/fp8`. */
+  providerName: string | null;
+  requests: number;
+  usageUsd: number;
+  promptTokens: number;
+  completionTokens: number;
+  reasoningTokens: number;
+  cachedTokens: number;
+};
+
+/** A slice of OpenRouter's report: one model or provider. */
+export type OpsOpenRouterSlice = {
+  key: string;
+  requests: number;
+  usageUsd: number;
+  promptTokens: number;
+  completionTokens: number;
+  reasoningTokens: number;
+};
+
+/**
+ * `GET /api/ops/openrouter-history` — everything `pnpm openrouter:import` stored for the platform's own key, all rows
+ * (not limited by the console's time range). Other keys on the shared account are other projects and are never imported.
+ */
+export type OpsOpenRouterHistory = {
+  key: { name: string; label: string | null; usageUsd: number; limitUsd: number | null; createdAt: string | null; fetchedAt: string } | null;
+  totals: {
+    usageUsd: number;
+    requests: number;
+    promptTokens: number;
+    completionTokens: number;
+    reasoningTokens: number;
+    cachedTokens: number;
+    firstDay: string | null;
+    lastDay: string | null;
+  };
+  /** Per UTC day: what OpenRouter billed our key, and what the console recorded for OpenRouter that day. */
+  byDay: { day: string; usageUsd: number; requests: number; recordedUsd: number; recordedCalls: number }[];
+  byModel: OpsOpenRouterSlice[];
+  byProvider: OpsOpenRouterSlice[];
+  /** Every stored row, newest day first, then by cost. */
+  rows: OpsOpenRouterActivityRow[];
 };

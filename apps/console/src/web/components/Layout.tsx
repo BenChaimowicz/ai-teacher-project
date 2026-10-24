@@ -1,4 +1,4 @@
-import { Activity, AlertOctagon, Gauge, Scale, GitBranch, ListTree, Network, Users } from "lucide-react";
+import { Activity, AlertOctagon, Gauge, History, Scale, GitBranch, ListTree, Network, Users } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { PipelineEventDrawer } from "@/components/PipelineEventDrawer";
 import { Tip, TipBody } from "@/components/Tip";
@@ -15,6 +15,7 @@ const NAV = [
   { to: "/course-requests", label: "Course Requests", icon: GitBranch, hint: "Cost and timeline per Course Request." },
   { to: "/steps", label: "Pipeline steps", icon: ListTree, hint: "Pipeline Events: the platform's own steps." },
   { to: "/billing", label: "Billing check", icon: Scale, hint: "Vendor balances vs what the console recorded." },
+  { to: "/openrouter", label: "OpenRouter history", icon: History, hint: "OpenRouter's own daily report for our key, imported once." },
   { to: "/failures", label: "Failures", icon: AlertOctagon, hint: "What failed and why, grouped by reason." },
   { to: "/activity", label: "Learner activity", icon: Users, hint: "Product Events: what Learners did." },
   { to: "/api", label: "API traffic", icon: Network, hint: "API Requests: hits on our own HTTP API." },

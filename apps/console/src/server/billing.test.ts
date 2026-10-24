@@ -109,7 +109,7 @@ describe("One vendor's billing check", () => {
     assert.deepEqual([parallel.status, parallel.error], ["not_configured", "Run pnpm parallel:login."]);
   });
 
-  it("works out OpenRouter's untracked spend and key windows; no reconstruction", () => {
+  it("works out OpenRouter's untracked spend from our key alone, starting from its limit; no reconstruction", () => {
     const row = vendorBilling(input({
       vendor: "openrouter",
       good: [reading("1", { balanceUsd: 15.05, creditsTotalUsd: 50, accountUsageUsd: 34.95, keyUsageUsd: 30 })],
@@ -118,11 +118,11 @@ describe("One vendor's billing check", () => {
       recordedAllTimeUsd: 12.5,
       reconstructed: { calls: 1, estimatedUsd: 1, factCheckDiagnostics: 0, from: null, to: null },
     }));
-    assert.equal(row.untrackedAccountUsd, 22.45);
-    assert.equal(row.untrackedKeyUsd, 17.5);
+    assert.equal(row.untrackedAccountUsd, 17.5);
+    assert.equal(row.untrackedKeyUsd, null);
     assert.deepEqual(row.keyWindows, { dailyUsd: 1.5, weeklyUsd: 4, monthlyUsd: 20, limitUsd: 100, remainingUsd: 70 });
     assert.equal(row.reconstructed, null);
-    assert.deepEqual([row.startingUsd, row.startingSource], [50, "vendor"]);
+    assert.deepEqual([row.startingUsd, row.startingSource], [100, "vendor"]);
   });
 
   it("uses an Operator-told starting balance for research vendors, counting Parallel's held funds as ours", () => {

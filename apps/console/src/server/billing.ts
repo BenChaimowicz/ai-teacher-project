@@ -150,11 +150,14 @@ export function vendorBilling(input: VendorBillingInput): OpsVendorBilling {
   const latestGood = good[good.length - 1] ?? null;
   const billed = billedSinceFirst(vendor, good);
   const openRouter = vendor === "openrouter";
+  // OpenRouter's account is shared with other projects; our key's limit is what the platform was given to spend.
+  const keyLimit = openRouter ? keyWindowsFrom(input.latestGoodRaw)?.limitUsd ?? null : null;
   const starting = openRouter
-    ? latestGood?.creditsTotalUsd != null ? { usd: latestGood.creditsTotalUsd, source: "vendor" as const } : null
+    ? keyLimit != null ? { usd: keyLimit, source: "vendor" as const }
+      : latestGood?.creditsTotalUsd != null ? { usd: latestGood.creditsTotalUsd, source: "vendor" as const } : null
     : input.operatorStartingUsd != null ? { usd: input.operatorStartingUsd, source: "operator" as const } : null;
-  // OpenRouter reports lifetime usage itself; for the others it is what the account started with minus what is left.
-  const lifetimeSpent = openRouter ? latestGood?.accountUsageUsd ?? null
+  // OpenRouter reports our key's lifetime usage itself; for the others it is what the account started with minus what is left.
+  const lifetimeSpent = openRouter ? latestGood?.keyUsageUsd ?? null
     : starting && latestGood?.balanceUsd != null ? starting.usd - fundsOf(vendor, latestGood) : null;
   const [status, error]: [OpsVendorBilling["status"], string | null] = input.notConfigured ? ["not_configured", input.notConfigured]
     : !latest ? ["error", "No reading yet"]
@@ -172,7 +175,8 @@ export function vendorBilling(input: VendorBillingInput): OpsVendorBilling {
     startingUsd: starting?.usd ?? null,
     startingSource: starting?.source ?? null,
     untrackedAccountUsd: lifetimeSpent === null ? null : round(lifetimeSpent - input.recordedAllTimeUsd),
-    untrackedKeyUsd: openRouter && latestGood?.keyUsageUsd != null ? round(latestGood.keyUsageUsd - input.recordedAllTimeUsd) : null,
+    // Untracked is already our key's alone (other keys on the account are other projects), so there is no second figure.
+    untrackedKeyUsd: null,
     reconstructed: openRouter ? null : input.reconstructed,
     keyWindows: openRouter ? keyWindowsFrom(input.latestGoodRaw) : null,
     series: input.series,
@@ -233,7 +237,7 @@ const SNAPSHOT_COLUMNS = sql`s.vendor, s.taken_at as "takenAt", s.balance_usd as
  * began, when its call was recorded without an id to match. Browser-test fixture packs (answered, yet priced at 0, which
  * a real answered pack never is) are left out.
  */
-export const RECONSTRUCTED_PACKS_QUERY = sql`with first_record as (select min(created_at) as at from usage_records),
+export const RECONSTRUCTED_PACKS_QUERY = sql`with first_record as (select min(created_at) as at from usage_records where origin = 'captured'),
   packs as (
     select p->>'adapter' as adapter, p->>'status' as status, nullif(p->>'vendorRequestId', '') as rid,
       (p->>'startedAt')::timestamptz as started, (p->>'estimatedCostUsd')::double precision as listed
@@ -252,7 +256,7 @@ export const RECONSTRUCTED_PACKS_QUERY = sql`with first_record as (select min(cr
 const FACT_CHECK_DIAGNOSTICS_QUERY = sql`select d.fact_check_vendor as adapter, count(*) as count
   from starting_level_diagnostics d
   where d.fact_check_vendor is not null
-    and d.created_at < coalesce((select min(created_at) from usage_records), 'infinity'::timestamptz)
+    and d.created_at < coalesce((select min(created_at) from usage_records where origin = 'captured'), 'infinity'::timestamptz)
   group by 1`;
 
 /**
@@ -382,7 +386,7 @@ export function createBillingService(options: {
           select vendor, min(taken_at) as first_at, max(taken_at) as last_at
           from vendor_balance_snapshots where error is null group by vendor
         )
-        select u.vendor, min(u.created_at) as "firstAt", coalesce(sum(${RECORDED_COST}), 0) as "allTime",
+        select u.vendor, min(u.created_at) filter (where u.origin = 'captured') as "firstAt", coalesce(sum(${RECORDED_COST}), 0) as "allTime",
           coalesce(sum(${RECORDED_COST}) filter (where u.created_at >= b.first_at and u.created_at <= b.last_at), 0) as "sinceFirst"
         from usage_records u left join bounds b on b.vendor = u.vendor
         group by u.vendor`),
@@ -417,8 +421,9 @@ export function createBillingService(options: {
         operatorStartingUsd: OPERATOR_STARTING_BALANCES[vendor],
       });
     });
-    // The first Usage Record of any vendor (folded into the per-vendor sums rather than one more query).
-    const firsts = recordedRows.map((row) => toIso(row.firstAt)).sort();
+    // The first captured Usage Record of any vendor (folded into the per-vendor sums rather than one more query);
+    // backfilled rows describe calls from before recording started, so they don't move it.
+    const firsts = recordedRows.filter((row) => row.firstAt != null).map((row) => toIso(row.firstAt)).sort();
     return { vendors, recordingStartedAt: firsts[0] ?? null, snapshotEveryMs };
   };
 
