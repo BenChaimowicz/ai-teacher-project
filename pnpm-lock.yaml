@@ -44,9 +44,15 @@ importers:
 
   apps/console:
     dependencies:
+      '@senoy/api':
+        specifier: workspace:*
+        version: link:../api
       '@senoy/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@senoy/research':
+        specifier: workspace:*
+        version: link:../../packages/research
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

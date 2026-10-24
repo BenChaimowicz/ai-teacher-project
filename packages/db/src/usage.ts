@@ -7,6 +7,9 @@
 export const USAGE_VENDORS = ["openrouter", "parallel", "you"] as const;
 export type UsageVendor = (typeof USAGE_VENDORS)[number];
 
+/** Which vendor bills each research adapter. */
+export const RESEARCH_ADAPTER_VENDORS = { "parallel-pro": "parallel", "you-research": "you" } as const satisfies Record<string, UsageVendor>;
+
 /** Who made the call: a model port, or a research slot. */
 export const USAGE_ROLES = ["generator", "fallback_generator", "judge", "research_primary", "research_secondary"] as const;
 export type UsageRole = (typeof USAGE_ROLES)[number];
@@ -307,4 +310,40 @@ export type OpsApiRouteRow = {
   p50Ms: number | null;
   p95Ms: number | null;
   maxMs: number | null;
+};
+
+/** One OpenRouter host that can serve a configured model, as OpenRouter lists it now. */
+export type OpsModelEndpoint = {
+  provider: string;
+  /** OpenRouter's endpoint tag, e.g. `alibaba/fp8`. */
+  tag: string | null;
+  promptUsdPerMTok: number | null;
+  completionUsdPerMTok: number | null;
+  /** Whether it accepts every parameter we send (`response_format` + `reasoning`); OpenRouter only routes us to these. */
+  servesOurCalls: boolean;
+  uptimeLast30m: number | null;
+  /** Typical time to first token over the last 30 minutes, in ms, as OpenRouter reports it. */
+  latencyLast30mMs: number | null;
+  throughputLast30m: number | null;
+};
+
+/** One configured model role and every host that could serve it. */
+export type OpsSetupModel = {
+  role: "generator" | "generator_fallback" | "judge" | "judge_fallback";
+  modelId: string;
+  /** Hosts we ask OpenRouter to try first, in order. Empty = OpenRouter chooses. */
+  preferredProviders: string[];
+  /** Null when OpenRouter's list could not be fetched; see `endpointsError`. */
+  endpoints: OpsModelEndpoint[] | null;
+  endpointsError: string | null;
+};
+
+/** `GET /api/ops/setup` — what the app is configured to call, so the console can list providers before any data. */
+export type OpsSetup = {
+  vendors: UsageVendor[];
+  models: OpsSetupModel[];
+  research: { slot: "primary" | "secondary"; adapterId: string; vendor: UsageVendor; estimatedCostUsd: number }[];
+  /** Why research config could not be read, if it could not. */
+  researchError: string | null;
+  fetchedAt: string;
 };

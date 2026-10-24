@@ -1,5 +1,6 @@
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import type { OpsStore } from "./ops-store.ts";
+import type { SetupReader } from "./setup.ts";
 import {
   assertUuid,
   parseApiRequestQuery,
@@ -14,6 +15,8 @@ import {
 
 /** How the Usage Console API is set up. */
 export type ConsoleAppOptions = {
+  /** Reads the configured models and research vendors; without it `/setup` answers 404. */
+  setup?: SetupReader;
   /** Whether Fastify logs (Pino); tests leave it off. */
   logger?: boolean;
   /** The current instant, injected for tests; defaults to the wall clock. */
@@ -119,6 +122,9 @@ export function buildConsoleApp(store: OpsStore, options: ConsoleAppOptions = {}
 
       ops.get("/api-routes", (request, reply) =>
         answer(request, reply, "GET /api-routes", () => store.listApiRoutes(parseRange(query(request), now()))));
+
+      ops.get("/setup", (request, reply) =>
+        answer(request, reply, "GET /setup", async () => (options.setup ? options.setup() : null), "Setup is not available"));
     },
     { prefix: "/api/ops" },
   );

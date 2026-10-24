@@ -1,6 +1,7 @@
 import { createDb, loadRootEnv } from "@senoy/db";
 import { buildConsoleApp } from "./app.ts";
 import { createOpsStore, runnerFor } from "./ops-store.ts";
+import { createSetupReader } from "./setup.ts";
 
 /**
  * Starts the Usage Console API (`/api/ops/*`) on `CONSOLE_API_PORT` (default 3100). The console's Vite dev server
@@ -11,7 +12,7 @@ async function start() {
   loadRootEnv(import.meta.url, 4);
   const app = buildConsoleApp(
     createOpsStore(runnerFor(createDb(requireDatabaseUrl(), { max: 3 }))),
-    { logger: true },
+    { logger: true, setup: createSetupReader({ env: process.env }) },
   );
 
   try {

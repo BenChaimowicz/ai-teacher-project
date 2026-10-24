@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { eq } from "drizzle-orm";
 import {
   apiRequests,
+  RESEARCH_ADAPTER_VENDORS,
   pipelineEvents,
   productEvents,
   usageRecords,
@@ -312,7 +313,7 @@ export function createTrackedTransport(options: { fetch?: typeof globalThis.fetc
 }
 
 /** The research vendor each adapter calls. */
-const RESEARCH_VENDORS: Record<ResearchAdapterId, UsageVendor> = { "parallel-pro": "parallel", "you-research": "you" };
+const RESEARCH_VENDORS: Record<ResearchAdapterId, UsageVendor> = RESEARCH_ADAPTER_VENDORS;
 
 /** How a research call ended, as a Usage Record outcome. */
 const RESEARCH_OUTCOMES: Record<SourcePackStatus, UsageOutcome> = {
