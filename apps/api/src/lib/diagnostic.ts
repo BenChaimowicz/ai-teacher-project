@@ -9,6 +9,7 @@ import type {
 import { createFactChecker } from "./fact-check.ts";
 import { createModelPorts, type Generator, type Judge } from "./model-ports.ts";
 import { ModelError, rejectedOutput } from "./openrouter.ts";
+import { withPipelineEvent } from "./usage-tracking.ts";
 
 /** Eight items: a coarse capability map, not a reliable score (spec §4.3). */
 export const DIAGNOSTIC_ITEM_COUNT = 8;
@@ -436,7 +437,14 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
         if (claims.length) {
           const factChecker = options.factChecker ?? createFactChecker({ judge, authorModelIds: [...authors] });
           factCheckVendor = factChecker.vendor;
-          const results = await factChecker.check(claims);
+          const results = await withPipelineEvent("fact_check", {
+            label: `Round ${round + 1}: ${claims.length} keyed answer${claims.length === 1 ? "" : "s"}`,
+            detail: { round, vendor: factChecker.vendor, itemIds: claims.map((claim) => claim.itemId) },
+          }, async (step) => {
+            const checked = await factChecker.check(claims);
+            step.setDetail({ confirmed: checked.filter((result) => result.confirmed).length, unconfirmed: checked.filter((result) => !result.confirmed).length });
+            return checked;
+          });
           for (const result of results) if (result.judgeModelId) judges.add(result.judgeModelId);
           for (const claim of claims) {
             const result = results.find((candidate) => candidate.itemId === claim.itemId);

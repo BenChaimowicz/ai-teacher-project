@@ -21,6 +21,7 @@ import {
 import { teachingMethodPlugin } from "../teaching-methods/index.ts";
 import { submittedScores } from "../teaching-methods/quiz.ts";
 import type { CourseRow, LessonRow, ModuleRow, StudyStore } from "./study-store.ts";
+import { recordProductEvent } from "./usage-tracking.ts";
 
 /** One Lesson in the Study list. */
 export type StudyLessonListItem = {
@@ -171,7 +172,10 @@ export async function recordCourseCompletion(store: StudyStore, learnerId: strin
     if (await store.courseCompletedAt(learnerId, courseId)) return;
     const lessonIds = (await store.listLessons(courseId)).map((row) => row.id);
     const completedIds = await store.completedLessonIds(learnerId, lessonIds);
-    if (isCourseComplete(lessonIds, completedIds)) await store.insertCourseCompletion(learnerId, courseId);
+    if (isCourseComplete(lessonIds, completedIds)) {
+      await store.insertCourseCompletion(learnerId, courseId);
+      void recordProductEvent("course_completed", { learnerId, detail: { courseId, lessons: lessonIds.length } });
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
@@ -365,6 +369,9 @@ export async function completeLesson(
 
     const outcome = await plugin.complete(store, learnerId, lesson);
     if (!outcome.ok) return outcome;
+    void recordProductEvent("lesson_completed", {
+      learnerId, detail: { courseId, lessonId, teachingMethod: lesson.teachingMethod, title: lesson.title },
+    });
     await recordCourseCompletion(store, learnerId, courseId);
 
     const payload = await loadStudyCourse(store, learnerId, courseId);

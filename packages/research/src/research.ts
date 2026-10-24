@@ -10,6 +10,22 @@ export type ResearchOptions = {
   env: Record<string, string | undefined>;
   fetch?: typeof fetch;
   now?: () => Date;
+  /**
+   * Sees each vendor call once its pack is built (usage tracking, ADR 0008). Awaited; anything it throws is ignored, so
+   * observing never changes the packs returned.
+   */
+  observe?: (call: ResearchCallObservation) => Promise<void> | void;
+};
+
+/** One finished vendor call, as an observer sees it. */
+export type ResearchCallObservation = {
+  slot: ResearchSlot;
+  adapter: Pick<ResearchAdapter, "id" | "timeoutMs" | "estimatedCostUsd">;
+  topic: string;
+  /** The pack built from the call; its `status` says how the call ended. */
+  pack: SourcePack;
+  /** The vendor's answer before Host policy and Source IDs; null when the call did not complete. */
+  vendorResult: VendorResult | null;
 };
 
 /** How one vendor call ended, with its timing. */
@@ -194,5 +210,22 @@ export async function runResearch(topic: string, options: ResearchOptions): Prom
   const [primaryPack, secondaryPack] = slots.map(({ slot, adapter }, index) =>
     buildPack(slot, adapter, query, calls[index]!, stableByUrl, warnings),
   );
+  if (options.observe) {
+    const observe = options.observe;
+    await Promise.all([primaryPack!, secondaryPack!].map(async (pack, index) => {
+      const call = calls[index]!;
+      try {
+        await observe({
+          slot: slots[index]!.slot,
+          adapter: slots[index]!.adapter,
+          topic: query,
+          pack,
+          vendorResult: call.outcome.kind === "done" ? call.outcome.result : null,
+        });
+      } catch {
+        // Observing never changes the research result (ADR 0008).
+      }
+    }));
+  }
   return [primaryPack!, secondaryPack!];
 }

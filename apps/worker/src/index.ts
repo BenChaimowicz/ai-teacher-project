@@ -7,6 +7,7 @@ import { createBlueprintJob } from "@senoy/api/blueprint-job";
 import { createCourseGeneration } from "@senoy/api/course-generation";
 import { createFixtureCourseGeneration } from "@senoy/api/course-generation-fixture";
 import { createGenerationWorker } from "@senoy/api/generation-worker";
+import { installUsageTracking } from "@senoy/api/usage-tracking";
 
 const log = pino({ name: "worker" });
 
@@ -25,6 +26,7 @@ async function startWorker() {
 
     const db = createDb(url, { max: 2 });
     await db.execute(sql`select 1`);
+    installUsageTracking({ db, log });
 
     // Browser tests run the real pipeline and publish with fixed research, Generators, and Judge; never set
     // DIAGNOSTIC_FIXTURE in a deployed service.

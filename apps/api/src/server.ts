@@ -1,5 +1,7 @@
 import Fastify from "fastify";
 import { loadRootEnv } from "@senoy/db";
+import { installUsageTracking } from "./lib/usage-tracking.ts";
+import apiRequestsPlugin from "./plugins/api-requests.ts";
 import corsPlugin from "./plugins/cors.ts";
 import currentLearnerPlugin from "./plugins/current-learner.ts";
 import dbPlugin from "./plugins/db.ts";
@@ -23,6 +25,8 @@ async function start() {
 
   try {
     await app.register(dbPlugin);
+    installUsageTracking({ db: app.db, log: app.log });
+    await app.register(apiRequestsPlugin);
     await app.register(currentLearnerPlugin);
     await app.register(corsPlugin);
     await app.register(healthRoutes);

@@ -15,6 +15,7 @@ import {
   type StartingLevel,
 } from "@senoy/db";
 import { createDiagnosticBuilder, DiagnosticFailedError, type DiagnosticBuilder } from "../lib/diagnostic.ts";
+import { recordProductEvent, withPipelineEvent } from "../lib/usage-tracking.ts";
 
 /** Learner-facing Request fields; ownership is never exposed. */
 const requestFields = {
@@ -153,7 +154,19 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       preparing.add(row.id);
       let draft;
       try {
-        draft = await builder.build({ subject: row.subject, learningGoal: row.learningGoal });
+        draft = await withPipelineEvent("diagnostic", {
+          label: "Item set", courseRequestId: row.id, learnerId: request.currentLearner.id,
+        }, async (event) => {
+          const built = await builder.build({ subject: row.subject, learningGoal: row.learningGoal });
+          event.setDetail({
+            items: built.items.length,
+            rounds: built.reviews.reduce((most, review) => Math.max(most, review.round + 1), 0),
+            authorModelId: built.authorModelId,
+            judgeModelId: built.judgeModelId,
+            factCheckVendor: built.factCheckVendor,
+          });
+          return built;
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         request.log.error(`[starting-level.ts: prepare] Diagnostic preparation failed || requestId=${row.id} || ${message}`);
@@ -195,9 +208,11 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       if (!valid) return reply.code(400).send({ error: "Answer every question with an option or I don't know." });
       const keys = Object.fromEntries(attempt.items.map((item) => [item.id, item.keyIndex]));
       const scored = scoreDiagnostic(attempt.capabilities, keys, submitted as Record<string, DiagnosticAnswer>);
-      const remainingGapStatement = await builder.writeGapStatement({
+      const remainingGapStatement = await withPipelineEvent("diagnostic", {
+        label: "Gap statement", courseRequestId: row.id, learnerId: request.currentLearner.id, detail: { extremity: scored.extremity },
+      }, () => builder.writeGapStatement({
         subject: row.subject, learningGoal: row.learningGoal, extremity: scored.extremity, capabilities: scored.probedCapabilities,
-      });
+      }));
       const saved = await saveStartingLevel(attempt.id, {
         learningGoal: row.learningGoal,
         probedCapabilities: scored.probedCapabilities,
@@ -207,6 +222,10 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       }, { answers: submitted as Record<string, DiagnosticAnswer>, submittedAt: new Date() });
       const updated = await transition(row.id, request.currentLearner.id, "assessment_ready", "awaiting_gap_confirmation");
       if (!updated) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+      void recordProductEvent("diagnostic_submitted", {
+        learnerId: request.currentLearner.id, courseRequestId: row.id,
+        detail: { items: itemIds.length, dontKnow: Object.values(submitted).filter((answer) => answer === "dont_know").length, extremity: scored.extremity },
+      });
       return { courseRequest: updated, diagnostic: learnerView(saved) };
     } catch (error) {
       return fail(reply, request.log, "answers", request.params.requestId, error, "Failed to score the Starting Level check.");
@@ -224,9 +243,11 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       if (!canExpandGap(level.probedCapabilities)) return reply.code(409).send({ error: "Everything is already in your Course." });
       const probedCapabilities = expandGap(level.probedCapabilities);
       const extremity = extremityOf(probedCapabilities);
-      const remainingGapStatement = await builder.writeGapStatement({
+      const remainingGapStatement = await withPipelineEvent("diagnostic", {
+        label: "Gap statement (too easy)", courseRequestId: row.id, learnerId: request.currentLearner.id, detail: { extremity },
+      }, () => builder.writeGapStatement({
         subject: row.subject, learningGoal: row.learningGoal, extremity, capabilities: probedCapabilities,
-      });
+      }));
       const saved = await saveStartingLevel(attempt.id, { ...level, probedCapabilities, extremity, remainingGapStatement });
       return { courseRequest: row, diagnostic: learnerView(saved) };
     } catch (error) {
@@ -251,6 +272,9 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       await saveStartingLevel(attempt.id, level, { confirmation: choice as GapConfirmation, confirmedAt: new Date() });
       const updated = await transition(row.id, request.currentLearner.id, "awaiting_gap_confirmation", "starting_level_confirmed");
       if (!updated) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+      void recordProductEvent("starting_level_confirmed", {
+        learnerId: request.currentLearner.id, courseRequestId: row.id, detail: { choice, extremity: level.extremity },
+      });
       return { courseRequest: updated };
     } catch (error) {
       return fail(reply, request.log, "confirm", request.params.requestId, error, "Failed to confirm the Starting Level.");
@@ -271,6 +295,9 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
         learnerId: request.currentLearner.id, subject: row.subject, learningGoal: row.learningGoal, status: "draft", revisedFromId: row.id,
       }).returning(requestFields);
       if (!draft) throw new Error("Revised Request was not saved.");
+      void recordProductEvent("course_request_created", {
+        learnerId: request.currentLearner.id, courseRequestId: draft.id, detail: { revisedFromId: row.id, from: "change_goal" },
+      });
       return reply.code(201).send({ courseRequest: draft });
     } catch (error) {
       return fail(reply, request.log, "change-goal", request.params.requestId, error, "Could not create the revised Request.");
