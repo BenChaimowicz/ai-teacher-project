@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Async, Spinner } from "@/components/States";
 import { Card } from "@/components/ui";
 import { BillingUnavailable } from "@/views/Billing";
-import { BillingStatusPill, GapValue, ReadNowButton, vendorColor } from "@/views/billing/BillingParts";
+import { BillingStatusPill, GapValue, ReadNowButton, StartedWith, vendorColor } from "@/views/billing/BillingParts";
 import { isMissingRoute, orderVendors, type BillingState } from "@/lib/billing";
 import { vendorLabel } from "@/lib/labels";
 import { formatAgo, formatUsd } from "@/lib/format";
@@ -53,6 +53,7 @@ export function BillingSummary({ billing }: { billing: BillingState }) {
                         <span className="font-mono text-xl font-semibold tabular-nums">{v.latest?.balanceUsd == null ? "—" : formatUsd(v.latest.balanceUsd)}</span>
                         <span className="text-[11px] text-muted-foreground">balance{v.latest ? ` · ${formatAgo(v.latest.takenAt)}` : ""}</span>
                       </div>
+                      <StartedWith billing={v} compact />
                       <GapValue billing={v} compact />
                     </>
                   )}

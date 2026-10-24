@@ -7,7 +7,7 @@ import { CopyButton } from "@/components/CodeBlock";
 import { Tip, TipBody } from "@/components/Tip";
 import { Button } from "@/components/ui";
 import { VENDOR_COLOR } from "@/views/overview/ProviderSection";
-import { gapTone, type BillingState, type GapTone } from "@/lib/billing";
+import { gapTone, startingBalance, type BillingState, type GapTone } from "@/lib/billing";
 import { BILLING_HELP } from "@/lib/glossary";
 import { BILLING_STATUS_LABEL, vendorLabel } from "@/lib/labels";
 import { SERIES_COLORS, type StatusTone } from "@/lib/palette";
@@ -327,6 +327,29 @@ function NeedsLogin({ vendor }: { vendor: string }) {
 }
 
 /**
+ * "Started with": the account's starting balance, exact for OpenRouter and worked out (with ≈) for the others.
+ * @param props.billing - One vendor's billing check
+ * @param props.compact - One small line, for the Overview summary
+ */
+export function StartedWith({ billing: b, compact }: { billing: OpsVendorBilling; compact?: boolean }) {
+  const start = startingBalance(b);
+  if (!start) return null;
+  const value = `${start.exact ? "" : "≈ "}${formatUsd(start.usd)}`;
+  if (compact) {
+    return (
+      <Tip content={<TipBody title="Started with">{BILLING_HELP.startedWith}</TipBody>} underline className="text-[11px] text-muted-foreground">
+        started with {value}
+      </Tip>
+    );
+  }
+  return (
+    <Figure label="Started with" tip={BILLING_HELP.startedWith}>
+      {value}
+    </Figure>
+  );
+}
+
+/**
  * One vendor's billing check card: status, latest balance, billed vs recorded with the gap, key windows
  * (OpenRouter), a balance sparkline, and what is known about spend before recording.
  * @param props.billing - The vendor's billing check
@@ -359,14 +382,10 @@ export function VendorBillingCard({ billing: b }: { billing: OpsVendorBilling })
               <div className="text-[11px] text-muted-foreground">Balance now</div>
               <div className="font-mono text-2xl font-semibold tabular-nums">{latest?.balanceUsd == null ? "—" : formatUsd(latest.balanceUsd)}</div>
             </div>
+            <StartedWith billing={b} />
             {latest?.pendingUsd != null && (
               <Figure label="Pending" tip={BILLING_HELP.pending}>
                 {formatUsd(latest.pendingUsd)}
-              </Figure>
-            )}
-            {latest?.creditsTotalUsd != null && (
-              <Figure label="Credits bought" tip="All credits ever added to the account.">
-                {formatUsd(latest.creditsTotalUsd)}
               </Figure>
             )}
             {latest?.accountUsageUsd != null && (

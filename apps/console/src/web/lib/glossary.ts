@@ -108,6 +108,8 @@ export const BILLING_HELP = {
   gapOk: "Within a few cents: the console's records match the vendor's bill.",
   keyWindows:
     "OpenRouter's own spend counters for our API key: today, this week, and this month (UTC). The bar shows how much of the key's spend limit is left.",
+  startedWith:
+    "What the account started with. OpenRouter: every credit ever bought, as OpenRouter reports it. You.com and Parallel don't report that, so it is today's balance plus what we know was spent (recorded calls and calls rebuilt from stored research). Spend we never saw makes the true figure higher; a top-up in between makes it lower.",
   untrackedAccount:
     "Billed by OpenRouter that the console never saw: spend from before recording started, or from other keys on the same account. Code: untrackedAccountUsd",
   untrackedKey: "Spend on our own key that the console never saw, mostly calls from before recording started. Code: untrackedKeyUsd",

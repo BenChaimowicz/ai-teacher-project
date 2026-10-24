@@ -10,6 +10,23 @@ export const GAP_TOLERANCE_USD = 0.05;
 /** A measured research cost within this of the estimate counts as matching. */
 export const MEASURED_TOLERANCE_USD = 0.01;
 
+/** What a vendor's account started with, and whether the vendor reported it or we worked it out. */
+export type StartingBalance = { usd: number; exact: boolean };
+
+/**
+ * What the account started with. OpenRouter reports every credit ever bought, so that is exact. The research vendors
+ * report only today's balance, so it is today's balance plus everything we know was spent: recorded calls and the
+ * calls rebuilt from stored research. That is a floor when there were no top-ups in between.
+ * @param b - One vendor's billing check
+ * @returns The starting balance, or null with no reading yet
+ */
+export function startingBalance(b: OpsVendorBilling): StartingBalance | null {
+  const latest = b.latest;
+  if (latest?.creditsTotalUsd != null) return { usd: latest.creditsTotalUsd, exact: true };
+  if (latest?.balanceUsd == null) return null;
+  return { usd: latest.balanceUsd + b.recordedAllTimeUsd + (b.reconstructed?.estimatedUsd ?? 0), exact: false };
+}
+
 /** Vendors in display order: the model vendor first, then research. */
 export const BILLING_ORDER: BalanceVendor[] = ["openrouter", "you", "parallel"];
 
