@@ -4,7 +4,7 @@ import { researchAdaptersFromEnv } from "./adapters/index.ts";
 import { parallelProAdapter } from "./adapters/parallel-pro.ts";
 import { youResearchAdapter } from "./adapters/you-research.ts";
 import { applyHostPolicy } from "./host-policy.ts";
-import { runResearch } from "./research.ts";
+import { runResearch, type ResearchCallObservation } from "./research.ts";
 import { sourceIdFor } from "./source-id.ts";
 import type { ResearchAdapter, VendorResult } from "./types.ts";
 import { pinWikipediaRevisions } from "./wikipedia.ts";
@@ -153,6 +153,32 @@ test("A timed-out or failing call yields its own pack without the key; the other
   assert.equal(s.status, "error");
   assert.match(s.error!, /\[redacted\]/);
   assert.ok(!JSON.stringify([p, s]).includes("secret-"));
+});
+
+test("The observer sees every vendor call with its pack and raw result, and its failure changes nothing", async () => {
+  const seen: ResearchCallObservation[] = [];
+  const [p, s] = await runResearch(TOPIC, {
+    primary: fakeAdapter("parallel-pro", "PARALLEL_PRO_API_KEY", primaryResult),
+    secondary: fakeAdapter("you-research", "YOU_DOT_COM_API_KEY", async () => {
+      throw new Error("vendor down");
+    }),
+    env: ENV,
+    fetch: wikipediaFetch,
+    observe: (call) => {
+      seen.push(call);
+      throw new Error("tracking is down");
+    },
+  });
+  assert.equal(p.status, "ok");
+  assert.equal(s.status, "error");
+  assert.deepEqual(seen.map((call) => [call.slot, call.adapter.id, call.pack.status]), [
+    ["primary", "parallel-pro", "ok"],
+    ["secondary", "you-research", "error"],
+  ]);
+  assert.equal(seen[0]!.topic, TOPIC);
+  assert.equal(seen[0]!.pack, p);
+  assert.equal(seen[0]!.vendorResult, primaryResult);
+  assert.equal(seen[1]!.vendorResult, null);
 });
 
 test("A missing key fails before any vendor is called", async () => {

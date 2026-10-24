@@ -22,10 +22,53 @@ export interface StructuredTransport {
   complete<T>(modelId: string, request: StructuredRequest<T>, providerOrder?: string[]): Promise<T>;
 }
 
-/** Injects fetch and credentials without introducing a vendor SDK. */
+/** Injects fetch and credentials without introducing a vendor SDK, and an optional observer of every call. */
 export type OpenRouterOptions = {
   fetch?: typeof globalThis.fetch;
   apiKey?: string;
+  /**
+   * Sees every call this transport makes, successful or not, once it ends. It is awaited, and anything it throws is
+   * ignored: observing never changes what the call returns or throws.
+   */
+  observe?: (call: ModelCallObservation) => Promise<void> | void;
+};
+
+/** What we sent OpenRouter for one call: everything except credentials and the JSON schema. */
+export type ModelCallRequest = {
+  systemPrompt: string;
+  input: unknown;
+  schemaName: string;
+  providerOrder?: string[];
+  reasoning?: unknown;
+  timeoutMs: number;
+};
+
+/** Token counts and cost from an OpenRouter `usage` object; each is null when the body did not report it. */
+export type ModelUsage = {
+  promptTokens: number | null;
+  completionTokens: number | null;
+  reasoningTokens: number | null;
+  cachedTokens: number | null;
+  /** USD, as OpenRouter reports it in `usage.cost`. */
+  costUsd: number | null;
+};
+
+/** One finished transport call, as its observer sees it. */
+export type ModelCallObservation = {
+  modelId: string;
+  request: ModelCallRequest;
+  /** The provider body as received (parsed JSON, or text when an error body was not JSON); null when none arrived. */
+  response: unknown;
+  httpStatus: number | null;
+  outcome: "ok" | ModelErrorCode;
+  invalidCause: InvalidOutputCause | null;
+  provider: string | null;
+  responseId: string | null;
+  /** Null when no body arrived or it had no `usage` object. */
+  usage: ModelUsage | null;
+  /** The safe ModelError message on failure. */
+  error: string | null;
+  durationMs: number;
 };
 
 /** Safe failure categories that do not expose provider bodies, prompts, or credentials. */
@@ -92,6 +135,36 @@ function stringField(raw: unknown, key: string): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+/** A finite number, or null. */
+function numberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/** A nested object field, if it has one. */
+function objectField(raw: unknown, key: string): Record<string, unknown> | undefined {
+  if (raw === null || typeof raw !== "object" || !(key in raw)) return undefined;
+  const value: unknown = (raw as Record<string, unknown>)[key];
+  return value !== null && typeof value === "object" ? value as Record<string, unknown> : undefined;
+}
+
+/**
+ * Reads OpenRouter's `usage` object: tokens, cached and reasoning token details, and `cost` in USD. Every reply carries
+ * it, including refusals, cut-off replies, and replies that fail our validation, which are all billed.
+ * @param raw - The response body
+ * @returns The usage, or null when the body has none
+ */
+export function modelUsageOf(raw: unknown): ModelUsage | null {
+  const usage = objectField(raw, "usage");
+  if (!usage) return null;
+  return {
+    promptTokens: numberOrNull(usage.prompt_tokens),
+    completionTokens: numberOrNull(usage.completion_tokens),
+    reasoningTokens: numberOrNull(objectField(usage, "completion_tokens_details")?.reasoning_tokens),
+    cachedTokens: numberOrNull(objectField(usage, "prompt_tokens_details")?.cached_tokens),
+    costUsd: numberOrNull(usage.cost),
+  };
+}
+
 /** True when the call's time limit aborted it, while connecting or while reading the body. */
 function isTimeout(error: unknown) {
   return error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
@@ -130,65 +203,156 @@ function responseContent(raw: unknown, reply: Pick<ModelErrorDetails, "provider"
   return message.content;
 }
 
+/** What one call has seen so far, for its observer. */
+type CallState = { response: unknown; httpStatus: number | null; provider: string | null; responseId: string | null };
+
 /**
  * Creates the reusable native-fetch transport. Credentials are read only when a call is made.
- * No fallback models, tools, plugins, or vendor search are added to requests.
+ * No fallback models, tools, plugins, or vendor search are added to requests. When `options.observe` is set, every call
+ * is reported to it once it ends, with the body as received, so a billed reply is recorded even when it fails validation.
  */
 export function createOpenRouterTransport(options: OpenRouterOptions = {}): StructuredTransport {
+  /**
+   * Sends one call and validates its reply, noting what arrived in `state`.
+   * @param modelId - OpenRouter model id
+   * @param request - The structured request
+   * @param reasoning - The reasoning setting sent, if any
+   * @param timeoutMs - Whole-call limit
+   * @param providerOrder - Preferred hosts
+   * @param state - Filled in as the call proceeds
+   */
+  async function send<T>(
+    modelId: string,
+    request: StructuredRequest<T>,
+    reasoning: unknown,
+    timeoutMs: number,
+    providerOrder: string[] | undefined,
+    state: CallState,
+  ): Promise<T> {
+    const apiKey = (options.apiKey ?? process.env.OPENROUTER_API_KEY)?.trim();
+    if (!apiKey) throw new ModelError("configuration");
+    let response: Response;
+    try {
+      response = await (options.fetch ?? globalThis.fetch)("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(timeoutMs),
+        body: JSON.stringify({
+          model: modelId,
+          messages: [
+            { role: "system", content: request.systemPrompt },
+            { role: "user", content: JSON.stringify(request.input) },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: { name: request.schemaName, strict: true, schema: request.schema },
+          },
+          provider: providerOrder?.length
+            ? { require_parameters: true, order: providerOrder, allow_fallbacks: true }
+            : { require_parameters: true },
+          reasoning,
+          stream: false,
+        }),
+      });
+    } catch (error) {
+      throw new ModelError(isTimeout(error) ? "timeout" : "network");
+    }
+    state.httpStatus = response.status;
+    if (!response.ok) {
+      // The error body is kept only for the observer; it never reaches the thrown error.
+      if (options.observe) state.response = await errorBody(response);
+      throw new ModelError("http", { status: response.status });
+    }
+    let raw: unknown;
+    try {
+      raw = await response.json();
+    } catch (error) {
+      throw isTimeout(error) ? new ModelError("timeout") : new ModelError("invalid_output", { invalidCause: "unparseable" });
+    }
+    state.response = raw;
+    const reply = { provider: stringField(raw, "provider"), responseId: stringField(raw, "id") };
+    state.provider = reply.provider ?? null;
+    state.responseId = reply.responseId ?? null;
+    const content = responseContent(raw, reply);
+    let value: unknown;
+    try {
+      value = JSON.parse(content);
+    } catch {
+      throw new ModelError("invalid_output", { ...reply, invalidCause: "unparseable" });
+    }
+    try {
+      return request.parse(value);
+    } catch (error) {
+      const invalidCause = error instanceof ModelError && error.invalidCause === "check" ? "check" : "schema";
+      throw new ModelError("invalid_output", { ...reply, invalidCause });
+    }
+  }
+
   return {
     /** Sends a single strict structured call and rejects any unvalidated model output. */
     async complete<T>(modelId: string, request: StructuredRequest<T>, providerOrder?: string[]): Promise<T> {
       const reasoning = request.reasoningEffort ? { effort: request.reasoningEffort }
         : request.reasoningMaxTokens ? { max_tokens: request.reasoningMaxTokens } : undefined;
-      const apiKey = (options.apiKey ?? process.env.OPENROUTER_API_KEY)?.trim();
-      if (!apiKey) throw new ModelError("configuration");
-      let response: Response;
-      try {
-        response = await (options.fetch ?? globalThis.fetch)("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(request.timeoutMs ?? 60_000),
-          body: JSON.stringify({
-            model: modelId,
-            messages: [
-              { role: "system", content: request.systemPrompt },
-              { role: "user", content: JSON.stringify(request.input) },
-            ],
-            response_format: {
-              type: "json_schema",
-              json_schema: { name: request.schemaName, strict: true, schema: request.schema },
+      const timeoutMs = request.timeoutMs ?? 60_000;
+      const state: CallState = { response: null, httpStatus: null, provider: null, responseId: null };
+      const startedAt = performance.now();
+
+      /** Reports the finished call; an observer failure is ignored. */
+      const observe = async (error: unknown) => {
+        if (!options.observe) return;
+        const failure = error instanceof ModelError ? error : null;
+        try {
+          await options.observe({
+            modelId,
+            request: {
+              systemPrompt: request.systemPrompt,
+              input: request.input,
+              schemaName: request.schemaName,
+              ...(providerOrder?.length ? { providerOrder } : {}),
+              ...(reasoning ? { reasoning } : {}),
+              timeoutMs,
             },
-            provider: providerOrder?.length
-              ? { require_parameters: true, order: providerOrder, allow_fallbacks: true }
-              : { require_parameters: true },
-            reasoning,
-            stream: false,
-          }),
-        });
-      } catch (error) {
-        throw new ModelError(isTimeout(error) ? "timeout" : "network");
-      }
-      if (!response.ok) throw new ModelError("http", { status: response.status });
-      let raw: unknown;
+            response: state.response,
+            httpStatus: state.httpStatus,
+            outcome: error === undefined ? "ok" : failure?.code ?? "network",
+            invalidCause: failure?.invalidCause ?? null,
+            provider: state.provider ?? failure?.provider ?? null,
+            responseId: state.responseId ?? failure?.responseId ?? null,
+            usage: modelUsageOf(state.response),
+            error: error === undefined ? null : error instanceof Error ? error.message : String(error),
+            durationMs: Math.round(performance.now() - startedAt),
+          });
+        } catch {
+          // Observing never changes the call's result (ADR 0008).
+        }
+      };
+
+      let value: T;
       try {
-        raw = await response.json();
+        value = await send(modelId, request, reasoning, timeoutMs, providerOrder, state);
       } catch (error) {
-        throw isTimeout(error) ? new ModelError("timeout") : new ModelError("invalid_output", { invalidCause: "unparseable" });
+        await observe(error ?? new Error("Unknown failure"));
+        throw error;
       }
-      const reply = { provider: stringField(raw, "provider"), responseId: stringField(raw, "id") };
-      const content = responseContent(raw, reply);
-      let value: unknown;
-      try {
-        value = JSON.parse(content);
-      } catch {
-        throw new ModelError("invalid_output", { ...reply, invalidCause: "unparseable" });
-      }
-      try {
-        return request.parse(value);
-      } catch (error) {
-        const invalidCause = error instanceof ModelError && error.invalidCause === "check" ? "check" : "schema";
-        throw new ModelError("invalid_output", { ...reply, invalidCause });
-      }
+      await observe(undefined);
+      return value;
     },
   };
+}
+
+/**
+ * Reads an error response body for the observer: JSON when it parses, else its text; null when it cannot be read.
+ * @param response - A non-success response
+ */
+async function errorBody(response: Response): Promise<unknown> {
+  try {
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  } catch {
+    return null;
+  }
 }

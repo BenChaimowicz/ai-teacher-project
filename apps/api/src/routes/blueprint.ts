@@ -18,6 +18,7 @@ import {
 } from "@senoy/db";
 import { enqueueJob } from "../lib/generation-job.ts";
 import { studyLinksByCourseId } from "../lib/study.ts";
+import { recordProductEvent } from "../lib/usage-tracking.ts";
 
 /** Learner-facing Request fields; ownership is never exposed. */
 const requestFields = {
@@ -239,6 +240,9 @@ export async function blueprintRoutes(app: FastifyInstance) {
         throw error;
       });
       if ("error" in outcome) return reply.code(409).send({ error: outcome.error });
+      void recordProductEvent("blueprint_approved", {
+        learnerId, courseRequestId: row.id, detail: { sequenceMode, slots: blueprintSlots(current.draft).length },
+      });
       const generation = await generationView(app.db, row.id, outcome.saved);
       return { courseRequest: outcome.generating, blueprint: learnerView(outcome.saved), generation };
     } catch (error) {
@@ -266,6 +270,7 @@ export async function blueprintRoutes(app: FastifyInstance) {
         throw error;
       });
       if (!cancelled) return reply.code(409).send({ error: "This Course is not being generated." });
+      void recordProductEvent("generation_cancelled", { learnerId, courseRequestId: row.id });
       const generation = await generationView(app.db, row.id, await blueprintOf(row.id));
       return { courseRequest: cancelled, generation };
     } catch (error) {
@@ -303,6 +308,7 @@ export async function blueprintRoutes(app: FastifyInstance) {
           throw error;
         });
         if (!queued) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+        void recordProductEvent("generation_retried", { learnerId, courseRequestId: row.id, detail: { action, from: status } });
         const generation = await generationView(app.db, row.id, await blueprintOf(row.id));
         return { courseRequest: queued, generation };
       } catch (error) {

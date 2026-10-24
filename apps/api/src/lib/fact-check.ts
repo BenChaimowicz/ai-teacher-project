@@ -1,7 +1,8 @@
-import { youResearchAdapter, type ResearchAdapter } from "@senoy/research";
+import { redact, youResearchAdapter, type ResearchAdapter } from "@senoy/research";
 import type { FactChecker, FactCheckClaim, FactCheckResult } from "./diagnostic.ts";
 import type { Judge } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
+import { recordVendorCall } from "./usage-tracking.ts";
 
 /** Sources and excerpts handed to the Judge per claim; enough to confirm a key, not a Lesson's evidence. */
 const MAX_SOURCES = 5;
@@ -41,12 +42,26 @@ export function createFactChecker(options: FactCheckerOptions): FactChecker {
       if (!apiKey) throw new Error(`[fact-check: check] Missing research key || envKey=${adapter.envKey}`);
       return Promise.all(claims.map(async (claim) => {
         let sources;
+        const topic = `Is "${claim.answer}" the correct answer to: ${claim.question}`;
+        const signal = AbortSignal.timeout(adapter.timeoutMs);
+        const startedAt = performance.now();
+        // The one research slot of a fact-check is recorded as primary research.
+        const usage = { adapter, role: "research_primary" as const, topic };
         try {
-          const result = await adapter.research(`Is "${claim.answer}" the correct answer to: ${claim.question}`, {
-            apiKey, fetch: options.fetch ?? globalThis.fetch, signal: AbortSignal.timeout(adapter.timeoutMs),
-          });
+          const result = await adapter.research(topic, { apiKey, fetch: options.fetch ?? globalThis.fetch, signal });
           sources = result.sources.slice(0, MAX_SOURCES);
-        } catch {
+          await recordVendorCall({
+            ...usage, status: result.sources.length ? "ok" : "empty_vendor", responseId: result.requestId, error: null,
+            response: result, durationMs: Math.round(performance.now() - startedAt),
+          });
+        } catch (error) {
+          const timedOut = signal.aborted || (error instanceof Error && error.name === "TimeoutError");
+          const message = error instanceof Error ? error.message : String(error);
+          await recordVendorCall({
+            ...usage, status: timedOut ? "timed_out" : "error", responseId: null,
+            error: timedOut ? `No answer within ${adapter.timeoutMs} ms` : redact(`[fact-check: check] ${adapter.id} failed || ${message}`, apiKey),
+            response: null, durationMs: Math.round(performance.now() - startedAt),
+          });
           return { itemId: claim.itemId, confirmed: false, reason: "The fact-check search did not complete.", sourceUrls: [] };
         }
         if (sources.length === 0) return { itemId: claim.itemId, confirmed: false, reason: "The search returned no pages.", sourceUrls: [] };

@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { and, eq, isNull } from "drizzle-orm";
 import { courseRequests, TEACHING_PROFILE_VERSION, type ValidityClarification } from "@senoy/db";
+import { recordProductEvent, withPipelineEvent } from "../lib/usage-tracking.ts";
 import { createValidityGate, type ValidityGate } from "../lib/validity.ts";
 
 /** Learner-facing fields; ownership is never accepted from or exposed to the browser. */
@@ -63,6 +64,7 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
         learnerId: request.currentLearner.id, ...fields, status: "awaiting_validity",
       }).returning(requestFields);
       if (!row) return reply.code(500).send({ error: "Failed to save Course Request." });
+      void recordProductEvent("course_request_created", { learnerId: request.currentLearner.id, courseRequestId: row.id });
       return reply.code(201).send({ courseRequest: row });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -100,7 +102,16 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
       }
       let validity;
       try {
-        validity = await gate.evaluate({ subject: row.subject, learningGoal: row.learningGoal, clarification });
+        validity = await withPipelineEvent("validity", {
+          label: clarification ? "With clarification" : row.subject,
+          courseRequestId: row.id,
+          learnerId: request.currentLearner.id,
+          detail: { clarified: clarification !== null },
+        }, async (event) => {
+          const result = await gate.evaluate({ subject: row.subject, learningGoal: row.learningGoal, clarification });
+          event.setDetail({ outcome: result.outcome });
+          return result;
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         request.log.error(`[course-requests.ts: courseRequestRoutes] Validity provider failed || requestId=${row.id} || ${message}`);
@@ -113,6 +124,11 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
         row.clarification ? eq(courseRequests.clarification, row.clarification) : isNull(courseRequests.clarification),
       )).returning(requestFields);
       if (!updated) return reply.code(409).send({ error: "This Request changed during review. Reload it before continuing." });
+      if (clarification) {
+        void recordProductEvent("course_request_clarified", {
+          learnerId: request.currentLearner.id, courseRequestId: row.id, detail: { outcome: validity.outcome },
+        });
+      }
       return { courseRequest: updated };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -134,6 +150,9 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
         status: "draft", revisedFromId: row.id,
       }).returning(requestFields);
       if (!draft) throw new Error("Revised Request was not saved.");
+      void recordProductEvent("course_request_created", {
+        learnerId: request.currentLearner.id, courseRequestId: draft.id, detail: { revisedFromId: row.id, from: "rejected" },
+      });
       return reply.code(201).send({ courseRequest: draft });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

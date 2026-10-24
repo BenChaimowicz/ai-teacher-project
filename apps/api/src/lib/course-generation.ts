@@ -33,6 +33,7 @@ import {
   type PriorLesson,
   type ReadingGenerator,
 } from "./reading-generation.ts";
+import { recordResearchCall, withPipelineEvent, type PipelineEventScope } from "./usage-tracking.ts";
 
 /** What one run of a claimed generation job receives. */
 export type GenerationStart = {
@@ -129,8 +130,9 @@ export function writeTimeProfile(plugin: TeachingMethodPlugin, profile: Resolved
   return Object.fromEntries(plugin.writeTimeFields.map((field) => [field, profile[field].value]));
 }
 
-/** Research run against both vendors with keys from the environment. */
-const researchFromEnv: LessonResearch = (topic) => runResearch(topic, { ...researchAdaptersFromEnv(process.env), env: process.env });
+/** Research run against both vendors with keys from the environment; each vendor call becomes a Usage Record. */
+const researchFromEnv: LessonResearch = (topic) =>
+  runResearch(topic, { ...researchAdaptersFromEnv(process.env), env: process.env, observe: recordResearchCall });
 
 /**
  * Researches every Reading slot at once and stores each slot's Source packs as it finishes, so one slow research call
@@ -152,75 +154,95 @@ const researchFromEnv: LessonResearch = (topic) => runResearch(topic, { ...resea
  */
 export function createCourseGeneration(options: CourseGenerationOptions = {}): CourseGeneration {
   return {
-    async start({ db, courseRequestId, learnerId, approved, control }) {
-      let stage: Stage = { kind: "course" };
-      try {
-        const [request] = await db.select().from(courseRequests).where(eq(courseRequests.id, courseRequestId)).limit(1);
-        const [learner] = await db.select().from(learners).where(eq(learners.id, learnerId)).limit(1);
-        if (!request || !learner?.teachingProfileAnswers) {
-          throw new Error(`[course-generation: start] Request or Teaching Profile is missing || requestId=${courseRequestId}`);
-        }
-        const resolved = resolveTeachingProfile(learner.teachingProfileAnswers);
-        const profile = writeTimeProfile(readingPlugin, resolved);
-        const research = options.research ?? researchFromEnv;
-        const generator = options.readingGenerator ?? createReadingGenerator();
-        const priorLessons: PriorLesson[] = [];
-        /** Runs one write only while this run still holds the job. */
-        const holding = (write: (transaction: Transaction) => Promise<unknown>) => db.transaction(async (transaction) => {
-          await control.hold(transaction);
-          await write(transaction);
-        });
-        const finished = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
-        const finishedSlotIds = new Set(finished.map((row) => row.slotId));
-        const slots = blueprintSlots(approved.blueprint);
+    start({ db, courseRequestId, learnerId, approved, control }) {
+      return withPipelineEvent("course_generation", {
+        label: approved.blueprint.courseTitle, courseRequestId, learnerId,
+      }, (event) => run({ db, courseRequestId, learnerId, approved, control }, event));
+    },
+  };
 
-        const stored = await db.select().from(lessonResearch).where(eq(lessonResearch.courseRequestId, courseRequestId));
-        const packsBySlot = new Map(stored.map((row) => [row.slotId, row.sourcePacks as SourcePack[]]));
-        const unresearched = slots.filter((slot) => slot.method === readingPlugin.id && !finishedSlotIds.has(slot.id) && !packsBySlot.has(slot.id));
-        if (unresearched.length) {
-          stage = { kind: "research" };
-          await control.progress("research", null);
-          // Every call runs to the end, even after one fails, so each finished slot is stored and Resume skips it.
-          const outcomes = await Promise.allSettled(unresearched.map(async (slot) => {
-            const packs = await research(lessonResearchTopic(request.subject, slot));
-            await holding((transaction) => transaction.insert(lessonResearch).values({ courseRequestId, slotId: slot.id, sourcePacks: packs }));
-            packsBySlot.set(slot.id, packs);
-          }));
-          const failed = outcomes.find((outcome) => outcome.status === "rejected");
-          if (failed) {
-            const lost = outcomes.find((outcome) => outcome.status === "rejected" && outcome.reason instanceof LeaseLostError);
-            throw ((lost ?? failed) as PromiseRejectedResult).reason;
-          }
-        }
-        // A Reading with nothing to ground it fails the Course before any more is written (spec §5.9).
-        const unresearchable = slots.find((slot) => slot.method === readingPlugin.id && !finishedSlotIds.has(slot.id) &&
-          lessonEvidence(packsBySlot.get(slot.id) ?? []).size === 0);
-        if (unresearchable) {
-          stage = { kind: "lesson", title: unresearchable.title };
-          throw new LessonUnresearchableError(unresearchable.id);
-        }
+  /**
+   * One run of the job, inside its `course_generation` Pipeline Event.
+   * @param input - The claimed job
+   * @param event - The run's Pipeline Event, for its detail
+   */
+  async function run({ db, courseRequestId, learnerId, approved, control }: GenerationStart, event: PipelineEventScope): Promise<void> {
+    let stage: Stage = { kind: "course" };
+    try {
+      const [request] = await db.select().from(courseRequests).where(eq(courseRequests.id, courseRequestId)).limit(1);
+      const [learner] = await db.select().from(learners).where(eq(learners.id, learnerId)).limit(1);
+      if (!request || !learner?.teachingProfileAnswers) {
+        throw new Error(`[course-generation: start] Request or Teaching Profile is missing || requestId=${courseRequestId}`);
+      }
+      const resolved = resolveTeachingProfile(learner.teachingProfileAnswers);
+      const profile = writeTimeProfile(readingPlugin, resolved);
+      const research = options.research ?? researchFromEnv;
+      const generator = options.readingGenerator ?? createReadingGenerator();
+      const priorLessons: PriorLesson[] = [];
+      /** Runs one write only while this run still holds the job. */
+      const holding = (write: (transaction: Transaction) => Promise<unknown>) => db.transaction(async (transaction) => {
+        await control.hold(transaction);
+        await write(transaction);
+      });
+      const finished = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
+      const finishedSlotIds = new Set(finished.map((row) => row.slotId));
+      const slots = blueprintSlots(approved.blueprint);
+      event.setDetail({ slots: slots.length, alreadyWritten: finishedSlotIds.size });
 
-        // Lessons are written one at a time in Blueprint order. A Quiz reads its Readings from their checkpoints, not
-        // this run's memory, so it assesses exactly what was saved; every Reading it assesses precedes it.
-        const quizGenerator = options.quizGenerator ?? createQuizGenerator();
-        for (const [position, slot] of slots.entries()) {
-          const saved = finished.find((row) => row.slotId === slot.id);
-          if (slot.method === readingPlugin.id && saved) {
-            priorLessons.push({
-              title: saved.title,
-              lessonGoal: saved.lessonGoal,
-              objectives: saved.objectives,
-              headings: (saved.body as ReadingBody).sections.map((section) => section.heading),
-            });
-          }
-          if (saved) continue;
-          stage = { kind: "lesson", title: slot.title };
-          await control.progress("lesson", slot.id);
+      const stored = await db.select().from(lessonResearch).where(eq(lessonResearch.courseRequestId, courseRequestId));
+      const packsBySlot = new Map(stored.map((row) => [row.slotId, row.sourcePacks as SourcePack[]]));
+      const unresearched = slots.filter((slot) => slot.method === readingPlugin.id && !finishedSlotIds.has(slot.id) && !packsBySlot.has(slot.id));
+      if (unresearched.length) {
+        stage = { kind: "research" };
+        await control.progress("research", null);
+        // Every call runs to the end, even after one fails, so each finished slot is stored and Resume skips it.
+        const outcomes = await Promise.allSettled(unresearched.map(async (slot) => {
+          const packs = await withPipelineEvent("research", { label: slot.title, detail: { slotId: slot.id } }, async (step) => {
+            const found = await research(lessonResearchTopic(request.subject, slot));
+            step.setDetail({ packs: found.map((pack) => ({ adapter: pack.adapter, status: pack.status, sources: pack.sources.length })) });
+            return found;
+          });
+          await holding((transaction) => transaction.insert(lessonResearch).values({ courseRequestId, slotId: slot.id, sourcePacks: packs }));
+          packsBySlot.set(slot.id, packs);
+        }));
+        const failed = outcomes.find((outcome) => outcome.status === "rejected");
+        if (failed) {
+          const lost = outcomes.find((outcome) => outcome.status === "rejected" && outcome.reason instanceof LeaseLostError);
+          throw ((lost ?? failed) as PromiseRejectedResult).reason;
+        }
+      }
+      // A Reading with nothing to ground it fails the Course before any more is written (spec §5.9).
+      const unresearchable = slots.find((slot) => slot.method === readingPlugin.id && !finishedSlotIds.has(slot.id) &&
+        lessonEvidence(packsBySlot.get(slot.id) ?? []).size === 0);
+      if (unresearchable) {
+        stage = { kind: "lesson", title: unresearchable.title };
+        throw new LessonUnresearchableError(unresearchable.id);
+      }
 
-          if (slot.method === readingPlugin.id) {
-            const packs = packsBySlot.get(slot.id);
-            if (!packs) throw new Error(`[course-generation: lesson] Reading slot has no stored research || slotId=${slot.id}`);
-            const { lesson, judge, rejectedSources, authorModelIds, judgeModelId } = await generator.generate({
+      // Lessons are written one at a time in Blueprint order. A Quiz reads its Readings from their checkpoints, not
+      // this run's memory, so it assesses exactly what was saved; every Reading it assesses precedes it.
+      const quizGenerator = options.quizGenerator ?? createQuizGenerator();
+      for (const [position, slot] of slots.entries()) {
+        const saved = finished.find((row) => row.slotId === slot.id);
+        if (slot.method === readingPlugin.id && saved) {
+          priorLessons.push({
+            title: saved.title,
+            lessonGoal: saved.lessonGoal,
+            objectives: saved.objectives,
+            headings: (saved.body as ReadingBody).sections.map((section) => section.heading),
+          });
+        }
+        if (saved) continue;
+        stage = { kind: "lesson", title: slot.title };
+        await control.progress("lesson", slot.id);
+
+        if (slot.method === readingPlugin.id) {
+          const packs = packsBySlot.get(slot.id);
+          if (!packs) throw new Error(`[course-generation: lesson] Reading slot has no stored research || slotId=${slot.id}`);
+          const { lesson, judge, rejectedSources, authorModelIds, judgeModelId } = await withPipelineEvent("reading", {
+            label: slot.title, detail: { slotId: slot.id, position },
+          }, async (step) => {
+            const checked = await generator.generate({
               courseTitle: approved.blueprint.courseTitle,
               learningGoal: request.learningGoal,
               slot,
@@ -228,24 +250,33 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
               profile,
               packs,
             });
-            await holding((transaction) => transaction.insert(unpublishedLessons).values({
-              ...lesson, courseRequestId, position, rejectedSources, judge, authorModelIds, judgeModelId,
-            }));
-            priorLessons.push({
-              title: lesson.title,
-              lessonGoal: lesson.lessonGoal,
-              objectives: lesson.objectives,
-              headings: lesson.body.sections.map((section) => section.heading),
+            step.setDetail({
+              repairs: checked.repairs, judgePass: checked.judge.pass, rejectedSources: checked.rejectedSources.length,
+              authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
             });
-            continue;
-          }
-
-          const readings = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
-          const assessed = slot.assessesSlotIds.flatMap((slotId) => {
-            const checkpoint = readings.find((row) => row.slotId === slotId && row.teachingMethod === readingPlugin.id);
-            return checkpoint ? [{ ...checkpoint, body: checkpoint.body as ReadingBody }] : [];
+            return checked;
           });
-          const { lesson, judge, authorModelIds, judgeModelId } = await quizGenerator.generate({
+          await holding((transaction) => transaction.insert(unpublishedLessons).values({
+            ...lesson, courseRequestId, position, rejectedSources, judge, authorModelIds, judgeModelId,
+          }));
+          priorLessons.push({
+            title: lesson.title,
+            lessonGoal: lesson.lessonGoal,
+            objectives: lesson.objectives,
+            headings: lesson.body.sections.map((section) => section.heading),
+          });
+          continue;
+        }
+
+        const readings = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
+        const assessed = slot.assessesSlotIds.flatMap((slotId) => {
+          const checkpoint = readings.find((row) => row.slotId === slotId && row.teachingMethod === readingPlugin.id);
+          return checkpoint ? [{ ...checkpoint, body: checkpoint.body as ReadingBody }] : [];
+        });
+        const { lesson, judge, authorModelIds, judgeModelId } = await withPipelineEvent("quiz", {
+          label: slot.title, detail: { slotId: slot.id, position, assessedSlotIds: slot.assessesSlotIds },
+        }, async (step) => {
+          const checked = await quizGenerator.generate({
             courseTitle: approved.blueprint.courseTitle,
             learningGoal: request.learningGoal,
             slot,
@@ -253,61 +284,70 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
             assessed,
             profile: writeTimeProfile(quizPlugin, resolved),
           });
-          await holding((transaction) => transaction.insert(unpublishedLessons).values({
-            ...lesson, courseRequestId, position, rejectedSources: [], judge, authorModelIds, judgeModelId,
-          }));
-        }
-
-        stage = { kind: "course" };
-        await control.progress("publish", null);
-        const checkpoints = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
-        const codeFailures = courseCodeFailures(approved, checkpoints);
-        if (codeFailures.length) throw new CourseFailedError(codeFailures, null);
-        const [diagnostic] = await db.select({ startingLevel: startingLevelDiagnostics.startingLevel }).from(startingLevelDiagnostics)
-          .where(eq(startingLevelDiagnostics.courseRequestId, courseRequestId))
-          .orderBy(desc(startingLevelDiagnostics.createdAt)).limit(1);
-        if (!diagnostic?.startingLevel) throw new Error(`[course-generation: publish] Request has no Starting Level || requestId=${courseRequestId}`);
-        const courseJudge = options.courseJudge ?? createCourseJudge();
-        // A checkpoint from before SEN-57 names no author; the primary Generator wrote it.
-        const authors = new Set(checkpoints.flatMap((checkpoint) =>
-          checkpoint.authorModelIds.length ? checkpoint.authorModelIds : [loadModelConfig().generatorModel]));
-        const outline = courseOutline(approved, checkpoints, request.learningGoal, diagnostic.startingLevel.remainingGapStatement);
-        const verdict = await courseJudge.judge(outline, [...authors]);
-        if (!verdict.pass) throw new CourseFailedError([], verdict);
-
-        const rows = publicationRows({
-          learnerId, courseRequestId, subject: request.subject, learningGoal: request.learningGoal, approved, checkpoints,
-        });
-        await db.transaction(async (transaction) => {
-          await control.hold(transaction);
-          await transaction.insert(publishedCourses).values(rows.course);
-          await transaction.insert(publishedModules).values(rows.modules);
-          await transaction.insert(publishedLessons).values(rows.lessons);
-          const [published] = await transaction.update(courseRequests).set({ status: "published" })
-            .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "generating"))).returning({ id: courseRequests.id });
-          if (!published) throw new Error(`[course-generation: publish] Request is no longer generating || requestId=${courseRequestId}`);
-          await control.settle(transaction, "succeeded");
-        });
-      } catch (error) {
-        // A run that lost its job records nothing: Cancel already moved the Request, or another worker owns it.
-        if (error instanceof LeaseLostError) throw error;
-        try {
-          await db.transaction(async (transaction) => {
-            await control.settle(transaction, failedCheck(error) ? "failed" : "interrupted");
-            if (error instanceof LessonUnresearchableError) {
-              await transaction.delete(lessonResearch)
-                .where(and(eq(lessonResearch.courseRequestId, courseRequestId), eq(lessonResearch.slotId, error.slotId)));
-            }
-            await transaction.update(courseRequests).set({ status: "generation_failed", failureReason: failureReason(stage, error) })
-              .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "generating"))).returning({ id: courseRequests.id });
+          step.setDetail({
+            repairs: checked.repairs, judgePass: checked.judge.pass,
+            authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
           });
-        } catch (recordError) {
-          if (recordError instanceof LeaseLostError) throw error;
-          const detail = (caught: unknown) => caught instanceof Error ? caught.message : String(caught);
-          throw new Error(`[course-generation: start] Failed to record the generation failure || requestId=${courseRequestId} || ${detail(recordError)} || ${detail(error)}`);
-        }
-        throw error;
+          return checked;
+        });
+        await holding((transaction) => transaction.insert(unpublishedLessons).values({
+          ...lesson, courseRequestId, position, rejectedSources: [], judge, authorModelIds, judgeModelId,
+        }));
       }
-    },
-  };
+
+      stage = { kind: "course" };
+      await control.progress("publish", null);
+      const checkpoints = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
+      const codeFailures = courseCodeFailures(approved, checkpoints);
+      if (codeFailures.length) throw new CourseFailedError(codeFailures, null);
+      const [diagnostic] = await db.select({ startingLevel: startingLevelDiagnostics.startingLevel }).from(startingLevelDiagnostics)
+        .where(eq(startingLevelDiagnostics.courseRequestId, courseRequestId))
+        .orderBy(desc(startingLevelDiagnostics.createdAt)).limit(1);
+      if (!diagnostic?.startingLevel) throw new Error(`[course-generation: publish] Request has no Starting Level || requestId=${courseRequestId}`);
+      const courseJudge = options.courseJudge ?? createCourseJudge();
+      // A checkpoint from before SEN-57 names no author; the primary Generator wrote it.
+      const authors = new Set(checkpoints.flatMap((checkpoint) =>
+        checkpoint.authorModelIds.length ? checkpoint.authorModelIds : [loadModelConfig().generatorModel]));
+      const outline = courseOutline(approved, checkpoints, request.learningGoal, diagnostic.startingLevel.remainingGapStatement);
+      const verdict = await withPipelineEvent("course_judge", { detail: { authorModelIds: [...authors] } }, async (step) => {
+        const judged = await courseJudge.judge(outline, [...authors]);
+        step.setDetail({ pass: judged.pass, failedChecks: judged.failedChecks });
+        return judged;
+      });
+      if (!verdict.pass) throw new CourseFailedError([], verdict);
+
+      const rows = publicationRows({
+        learnerId, courseRequestId, subject: request.subject, learningGoal: request.learningGoal, approved, checkpoints,
+      });
+      await withPipelineEvent("publish", { detail: { lessons: rows.lessons.length, modules: rows.modules.length } }, () => db.transaction(async (transaction) => {
+        await control.hold(transaction);
+        await transaction.insert(publishedCourses).values(rows.course);
+        await transaction.insert(publishedModules).values(rows.modules);
+        await transaction.insert(publishedLessons).values(rows.lessons);
+        const [published] = await transaction.update(courseRequests).set({ status: "published" })
+          .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "generating"))).returning({ id: courseRequests.id });
+        if (!published) throw new Error(`[course-generation: publish] Request is no longer generating || requestId=${courseRequestId}`);
+        await control.settle(transaction, "succeeded");
+      }));
+    } catch (error) {
+      // A run that lost its job records nothing: Cancel already moved the Request, or another worker owns it.
+      if (error instanceof LeaseLostError) throw error;
+      try {
+        await db.transaction(async (transaction) => {
+          await control.settle(transaction, failedCheck(error) ? "failed" : "interrupted");
+          if (error instanceof LessonUnresearchableError) {
+            await transaction.delete(lessonResearch)
+              .where(and(eq(lessonResearch.courseRequestId, courseRequestId), eq(lessonResearch.slotId, error.slotId)));
+          }
+          await transaction.update(courseRequests).set({ status: "generation_failed", failureReason: failureReason(stage, error) })
+            .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "generating"))).returning({ id: courseRequests.id });
+        });
+      } catch (recordError) {
+        if (recordError instanceof LeaseLostError) throw error;
+        const detail = (caught: unknown) => caught instanceof Error ? caught.message : String(caught);
+        throw new Error(`[course-generation: start] Failed to record the generation failure || requestId=${courseRequestId} || ${detail(recordError)} || ${detail(error)}`);
+      }
+      throw error;
+    }
+  }
 }

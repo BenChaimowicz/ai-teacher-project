@@ -7,7 +7,9 @@
     "./blueprint-job": "./src/lib/blueprint-job.ts",
     "./blueprint-fixture": "./src/lib/blueprint-fixture.ts",
     "./course-generation": "./src/lib/course-generation.ts",
-    "./course-generation-fixture": "./src/lib/course-generation-fixture.ts"
+    "./course-generation-fixture": "./src/lib/course-generation-fixture.ts",
+    "./usage-tracking": "./src/lib/usage-tracking.ts",
+    "./model-config": "./src/lib/model-config.ts"
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",

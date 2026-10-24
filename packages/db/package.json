@@ -15,10 +15,11 @@
     "./blueprint": "./src/blueprint.ts",
     "./lesson-checkpoint": "./src/lesson-checkpoint.ts",
     "./publication": "./src/publication.ts",
-    "./generation-job": "./src/generation-job.ts"
+    "./generation-job": "./src/generation-job.ts",
+    "./usage": "./src/usage.ts"
   },
   "scripts": {
-    "generate": "drizzle-kit generate",
+    "generate": "tsx scripts/generate.ts",
     "migrate": "drizzle-kit migrate",
     "seed": "tsx src/seed.ts"
   },
