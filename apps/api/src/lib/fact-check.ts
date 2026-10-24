@@ -2,7 +2,7 @@ import { redact, youResearchAdapter, type ResearchAdapter } from "@senoy/researc
 import type { FactChecker, FactCheckClaim, FactCheckResult } from "./diagnostic.ts";
 import type { Judge } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
-import { recordVendorCall } from "./usage-tracking.ts";
+import { beginResearchMeasurement, recordVendorCall } from "./usage-tracking.ts";
 
 /** Sources and excerpts handed to the Judge per claim; enough to confirm a key, not a Lesson's evidence. */
 const MAX_SOURCES = 5;
@@ -47,21 +47,25 @@ export function createFactChecker(options: FactCheckerOptions): FactChecker {
         const startedAt = performance.now();
         // The one research slot of a fact-check is recorded as primary research.
         const usage = { adapter, role: "research_primary" as const, topic };
+        // Balance before/after this call; it runs alongside and never delays the search.
+        const measurement = beginResearchMeasurement(adapter.id);
         try {
           const result = await adapter.research(topic, { apiKey, fetch: options.fetch ?? globalThis.fetch, signal });
+          measurement?.end();
           sources = result.sources.slice(0, MAX_SOURCES);
           await recordVendorCall({
             ...usage, status: result.sources.length ? "ok" : "empty_vendor", responseId: result.requestId, error: null,
             response: result, durationMs: Math.round(performance.now() - startedAt),
-          });
+          }, measurement);
         } catch (error) {
+          measurement?.end();
           const timedOut = signal.aborted || (error instanceof Error && error.name === "TimeoutError");
           const message = error instanceof Error ? error.message : String(error);
           await recordVendorCall({
             ...usage, status: timedOut ? "timed_out" : "error", responseId: null,
             error: timedOut ? `No answer within ${adapter.timeoutMs} ms` : redact(`[fact-check: check] ${adapter.id} failed || ${message}`, apiKey),
             response: null, durationMs: Math.round(performance.now() - startedAt),
-          });
+          }, measurement);
           return { itemId: claim.itemId, confirmed: false, reason: "The fact-check search did not complete.", sourceUrls: [] };
         }
         if (sources.length === 0) return { itemId: claim.itemId, confirmed: false, reason: "The search returned no pages.", sourceUrls: [] };

@@ -14,7 +14,7 @@ import { useOps } from "@/lib/useOps";
 import { cn } from "@/lib/cn";
 
 /** Fixed vendor colors (color follows the vendor, never its rank). */
-const VENDOR_COLOR: Record<string, string> = { openrouter: SERIES_COLORS[0], parallel: SERIES_COLORS[1], you: SERIES_COLORS[2] };
+export const VENDOR_COLOR: Record<string, string> = { openrouter: SERIES_COLORS[0], parallel: SERIES_COLORS[1], you: SERIES_COLORS[2] };
 
 /** What each vendor is for. */
 const VENDOR_HELP: Record<string, string> = {

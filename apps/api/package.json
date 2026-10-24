@@ -9,10 +9,11 @@
     "./course-generation": "./src/lib/course-generation.ts",
     "./course-generation-fixture": "./src/lib/course-generation-fixture.ts",
     "./usage-tracking": "./src/lib/usage-tracking.ts",
+    "./research-measurement": "./src/lib/research-measurement.ts",
     "./model-config": "./src/lib/model-config.ts"
   },
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --include ../../packages/db/src --include ../../packages/research/src src/server.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "tsx src/server.ts"
   },

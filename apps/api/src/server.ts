@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { loadRootEnv } from "@senoy/db";
+import { balanceProbeFromEnv, createResearchMeter } from "./lib/research-measurement.ts";
 import { installUsageTracking } from "./lib/usage-tracking.ts";
 import apiRequestsPlugin from "./plugins/api-requests.ts";
 import corsPlugin from "./plugins/cors.ts";
@@ -25,7 +26,12 @@ async function start() {
 
   try {
     await app.register(dbPlugin);
-    installUsageTracking({ db: app.db, log: app.log });
+    installUsageTracking({
+      db: app.db,
+      log: app.log,
+      // Research calls are measured against the vendor balance; this process only reads the Parallel token file.
+      meter: createResearchMeter({ probe: balanceProbeFromEnv({ env: process.env, repoRoot: root }) }),
+    });
     await app.register(apiRequestsPlugin);
     await app.register(currentLearnerPlugin);
     await app.register(corsPlugin);

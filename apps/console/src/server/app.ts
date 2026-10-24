@@ -1,4 +1,5 @@
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
+import type { BillingService } from "./billing.ts";
 import type { OpsStore } from "./ops-store.ts";
 import type { SetupReader } from "./setup.ts";
 import {
@@ -17,6 +18,8 @@ import {
 export type ConsoleAppOptions = {
   /** Reads the configured models and research vendors; without it `/setup` answers 404. */
   setup?: SetupReader;
+  /** The billing check; without it `/billing` answers 404. */
+  billing?: BillingService;
   /** Whether Fastify logs (Pino); tests leave it off. */
   logger?: boolean;
   /** The current instant, injected for tests; defaults to the wall clock. */
@@ -125,6 +128,18 @@ export function buildConsoleApp(store: OpsStore, options: ConsoleAppOptions = {}
 
       ops.get("/setup", (request, reply) =>
         answer(request, reply, "GET /setup", async () => (options.setup ? options.setup() : null), "Setup is not available"));
+
+      ops.get("/billing", (request, reply) =>
+        answer(request, reply, "GET /billing", async () => {
+          const range = parseRange(query(request), now());
+          return options.billing ? options.billing.billing(range) : null;
+        }, "Billing check is not available"));
+
+      ops.post("/billing/refresh", (request, reply) =>
+        answer(request, reply, "POST /billing/refresh", async () => {
+          const range = parseRange(query(request), now());
+          return options.billing ? options.billing.refresh(range) : null;
+        }, "Billing check is not available"));
     },
     { prefix: "/api/ops" },
   );

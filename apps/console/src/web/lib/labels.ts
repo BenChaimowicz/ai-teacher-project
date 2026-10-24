@@ -65,6 +65,9 @@ export const ROLE_LABEL: Record<UsageRole, string> = {
 /** Paid service names. */
 export const VENDOR_LABEL: Record<UsageVendor, string> = { openrouter: "OpenRouter", parallel: "Parallel", you: "You.com" };
 
+/** Billing check status names. */
+export const BILLING_STATUS_LABEL = { ok: "OK", not_configured: "Needs login", error: "Error" } as const;
+
 /** Step status names. */
 export const STEP_STATUS_LABEL = { running: "Running", ok: "Done", failed: "Failed" } as const;
 

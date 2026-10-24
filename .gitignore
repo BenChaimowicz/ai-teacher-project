@@ -30,3 +30,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Parallel Account API login (pnpm parallel:login); holds a refresh token
+.parallel-account.json

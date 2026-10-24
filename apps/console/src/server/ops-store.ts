@@ -89,7 +89,8 @@ const USAGE_RECORD_COLUMNS = sql`
   u.provider, u.response_id as "responseId", u.attempt, u.outcome, u.invalid_cause as "invalidCause",
   u.http_status as "httpStatus", u.error, u.prompt_tokens as "promptTokens", u.completion_tokens as "completionTokens",
   u.reasoning_tokens as "reasoningTokens", u.cached_tokens as "cachedTokens", u.cost_usd as "costUsd",
-  u.cost_basis as "costBasis", u.pipeline_event_id as "pipelineEventId", pe.kind as "pipelineKind",
+  u.cost_basis as "costBasis", u.measured_cost_usd as "measuredCostUsd", u.measurement_note as "measurementNote",
+  u.pipeline_event_id as "pipelineEventId", pe.kind as "pipelineKind",
   pe.label as "pipelineLabel", pe.course_request_id as "courseRequestId", cr.subject as "courseRequestSubject"`;
 
 /** Usage Records with their Pipeline Event and that event's Course Request. */

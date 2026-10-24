@@ -144,3 +144,16 @@ export function shortId(id: string | null | undefined): string {
 export function humanize(value: string): string {
   return value.replaceAll("_", " ");
 }
+
+/**
+ * Formats an ISO instant as a short local day, or "today" when it is today.
+ * @param iso - ISO string
+ * @returns e.g. `today`, `Oct 19`
+ */
+export function formatDay(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  if (d.toDateString() === new Date().toDateString()) return "today";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}

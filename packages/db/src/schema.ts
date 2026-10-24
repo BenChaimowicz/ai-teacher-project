@@ -9,7 +9,7 @@ import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
 import type { SequenceMode } from "./sequence-mode.ts";
 import type { FeedbackTiming, TeachingProfileAnswers } from "./teaching-profile.ts";
-import type { CostBasis, PipelineEventKind, PipelineEventStatus, ProductEventKind, UsageOutcome, UsageRole, UsageVendor } from "./usage.ts";
+import type { BalanceVendor, CostBasis, PipelineEventKind, PipelineEventStatus, ProductEventKind, UsageOutcome, UsageRole, UsageVendor } from "./usage.ts";
 
 /** One person taking Courses. The prototype seeds a single row. Teaching Profile lives here. */
 export const learners = pgTable("learners", {
@@ -368,6 +368,12 @@ export const usageRecords = pgTable(
     cachedTokens: integer("cached_tokens"),
     costUsd: doublePrecision("cost_usd"),
     costBasis: text("cost_basis").$type<CostBasis>().notNull(),
+    /**
+     * Research calls only: what the vendor's balance dropped by across this call, read before and after it. Null when
+     * it could not be measured; `measurementNote` says why (overlapping call, balance not readable, still settling).
+     */
+    measuredCostUsd: doublePrecision("measured_cost_usd"),
+    measurementNote: text("measurement_note"),
     request: jsonb("request").notNull(),
     /** The provider body as received; null when none arrived. */
     response: jsonb("response"),
@@ -411,4 +417,32 @@ export const apiRequests = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("api_requests_created").on(table.createdAt), index("api_requests_route").on(table.route, table.createdAt)],
+);
+
+/**
+ * One reading of a paid vendor's account, taken on a schedule by the Usage Console API. Comparing how the balance
+ * moved with what was recorded shows spend we did not capture (calls before recording began, other keys, timeouts).
+ * A failed reading is kept with its error so gaps are visible.
+ */
+export const vendorBalanceSnapshots = pgTable(
+  "vendor_balance_snapshots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    vendor: text("vendor").$type<BalanceVendor>().notNull(),
+    takenAt: timestamp("taken_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Prepaid money left, in USD. */
+    balanceUsd: doublePrecision("balance_usd"),
+    /** Parallel: money held for runs still in progress and charges not yet settled, in USD. */
+    pendingUsd: doublePrecision("pending_usd"),
+    /** OpenRouter: all credits ever bought on the account, in USD. */
+    creditsTotalUsd: doublePrecision("credits_total_usd"),
+    /** OpenRouter: everything the account has ever spent, across all keys, in USD. */
+    accountUsageUsd: doublePrecision("account_usage_usd"),
+    /** OpenRouter: everything our API key has ever spent, in USD. */
+    keyUsageUsd: doublePrecision("key_usage_usd"),
+    /** The vendor's body as received, minus nothing secret (these endpoints return no secrets). */
+    raw: jsonb("raw"),
+    error: text("error"),
+  },
+  (table) => [index("vendor_balance_snapshots_vendor_taken").on(table.vendor, table.takenAt)],
 );

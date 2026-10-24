@@ -8,6 +8,15 @@ const ADAPTERS: Record<ResearchAdapterId, ResearchAdapter> = {
   "you-research": youResearchAdapter,
 };
 
+/**
+ * Each adapter's list price per call, in USD (SEN-72: neither vendor reports cost). The Usage Console prices calls
+ * rebuilt from stored Source packs with it.
+ */
+export const RESEARCH_LIST_PRICES_USD: Record<ResearchAdapterId, number> = {
+  "parallel-pro": parallelProAdapter.estimatedCostUsd,
+  "you-research": youResearchAdapter.estimatedCostUsd,
+};
+
 /** Used when the slot's env var is unset. */
 const DEFAULTS = { primary: "parallel-pro", secondary: "you-research" } as const;
 

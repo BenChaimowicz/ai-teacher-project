@@ -2,7 +2,7 @@ import type { ModelUsageRequest, OpsUsageRecordDetail, OpsUsageRecordRow } from 
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CodeBlock, CopyButton } from "@/components/CodeBlock";
-import { CostCell } from "@/components/Cost";
+import { CostCell, MeasuredCostCell, hasMeasurement } from "@/components/Cost";
 import { Drawer, DrawerSection } from "@/components/Drawer";
 import { OutcomeBadge, RoleBadge, StepStatusBadge, kindLabel } from "@/components/Badges";
 import { Async } from "@/components/States";
@@ -10,7 +10,7 @@ import { Field, Mono } from "@/components/ui";
 import { formatDateTime, formatDuration, formatInt, formatUsd } from "@/lib/format";
 import { useDrawers, useHref } from "@/lib/nav";
 import { useOps } from "@/lib/useOps";
-import { METRIC_HELP } from "@/lib/glossary";
+import { BILLING_HELP, METRIC_HELP } from "@/lib/glossary";
 import { BASIS_LABEL, tryLabel } from "@/lib/labels";
 import { cn } from "@/lib/cn";
 
@@ -92,8 +92,12 @@ function UsageRecordBody({ record: r }: { record: OpsUsageRecordDetail }) {
       )}
 
       <dl className="mb-5 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
-        <Field label="Cost">
-          <CostCell usd={r.costUsd} basis={r.costBasis} /> <span className="text-xs text-muted-foreground">{BASIS_LABEL[r.costBasis]}</span>
+        <Field
+          label="Cost"
+          tip={hasMeasurement(r) ? `${METRIC_HELP.estimated} ${BILLING_HELP.measured}` : undefined}
+          className={hasMeasurement(r) ? "col-span-2" : undefined}
+        >
+          <MeasuredCostCell record={r} /> <span className="text-xs text-muted-foreground">{BASIS_LABEL[r.costBasis]}</span>
         </Field>
         <Field label="Duration">
           {formatDuration(r.durationMs)}

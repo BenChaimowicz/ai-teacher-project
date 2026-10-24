@@ -33,7 +33,7 @@ import {
   type PriorLesson,
   type ReadingGenerator,
 } from "./reading-generation.ts";
-import { recordResearchCall, withPipelineEvent, type PipelineEventScope } from "./usage-tracking.ts";
+import { trackResearchRun, withPipelineEvent, type PipelineEventScope } from "./usage-tracking.ts";
 
 /** What one run of a claimed generation job receives. */
 export type GenerationStart = {
@@ -130,9 +130,10 @@ export function writeTimeProfile(plugin: TeachingMethodPlugin, profile: Resolved
   return Object.fromEntries(plugin.writeTimeFields.map((field) => [field, profile[field].value]));
 }
 
-/** Research run against both vendors with keys from the environment; each vendor call becomes a Usage Record. */
+/** Research run against both vendors with keys from the environment; each vendor call becomes a Usage Record,
+ * measured against the vendor balance when the meter is on. */
 const researchFromEnv: LessonResearch = (topic) =>
-  runResearch(topic, { ...researchAdaptersFromEnv(process.env), env: process.env, observe: recordResearchCall });
+  runResearch(topic, { ...researchAdaptersFromEnv(process.env), env: process.env, ...trackResearchRun() });
 
 /**
  * Researches every Reading slot at once and stores each slot's Source packs as it finishes, so one slow research call
