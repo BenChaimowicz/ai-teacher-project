@@ -35,24 +35,26 @@ export function buildQuery(params: QueryParams = {}): string {
 }
 
 /**
- * One GET of an `/api/ops/*` route, without retries.
+ * One request to an `/api/ops/*` route, without retries.
+ * @param method - `GET` or `POST`
  * @param path - Route below `/api/ops/`, e.g. `summary` or `usage-records/abc`
  * @param params - Query parameters
  * @param signal - Abort signal
  * @returns The parsed JSON body
  * @throws ApiError when the API is unreachable, answers non-2xx, or returns non-JSON
  */
-async function opsGetOnce<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
+async function opsFetchOnce<T>(method: "GET" | "POST", path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
   const url = `/api/ops/${path}${buildQuery(params)}`;
+  const where = method === "GET" ? "opsGet" : "opsPost";
   const headers: Record<string, string> = { accept: "application/json" };
 
   let response: Response;
   try {
-    response = await fetch(url, { headers, signal });
+    response = await fetch(url, { method, headers, signal });
   } catch (error) {
     if ((error as Error).name === "AbortError") throw error;
     throw new ApiError(
-      `[api: opsGet] Console API unreachable — is it running on :3100? || url=${url} || ${(error as Error).message}`,
+      `[api: ${where}] Console API unreachable — is it running on :3100? || url=${url} || ${(error as Error).message}`,
       0,
     );
   }
@@ -60,14 +62,14 @@ async function opsGetOnce<T>(path: string, params?: QueryParams, signal?: AbortS
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     throw new ApiError(
-      `[api: opsGet] Request failed || url=${url} || status=${response.status} ${body.slice(0, 300)}`,
+      `[api: ${where}] Request failed || url=${url} || status=${response.status} ${body.slice(0, 300)}`,
       response.status,
     );
   }
   try {
     return (await response.json()) as T;
   } catch (error) {
-    throw new ApiError(`[api: opsGet] Response is not JSON || url=${url} || ${(error as Error).message}`, response.status);
+    throw new ApiError(`[api: ${where}] Response is not JSON || url=${url} || ${(error as Error).message}`, response.status);
   }
 }
 
@@ -114,10 +116,22 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
 export async function opsGet<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
-      return await opsGetOnce<T>(path, params, signal);
+      return await opsFetchOnce<T>("GET", path, params, signal);
     } catch (error) {
       if (!isRetryable(error) || attempt >= RETRY_DELAYS_MS.length) throw error;
       await delay(RETRY_DELAYS_MS[attempt], signal);
     }
   }
+}
+
+/**
+ * POSTs to an `/api/ops/*` action route once (no retries: an action should not silently run twice).
+ * @param path - Route below `/api/ops/`, e.g. `billing/refresh`
+ * @param params - Query parameters
+ * @param signal - Abort signal
+ * @returns The parsed JSON body
+ * @throws ApiError when the API is unreachable, answers non-2xx, or returns non-JSON
+ */
+export function opsPost<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
+  return opsFetchOnce<T>("POST", path, params, signal);
 }

@@ -24,7 +24,8 @@ type StoredEvent = PipelineEventStart & { id: string; finish?: PipelineEventFini
 /** An in-memory sink; `failing` makes every write throw. */
 function fakeSink(failing = false) {
   const events: StoredEvent[] = [];
-  const usage: (UsageRecordRow & { pipelineEventId: string | null })[] = [];
+  const usage: (UsageRecordRow & { id?: string; pipelineEventId: string | null })[] = [];
+  const measurements: { id: string; measuredCostUsd: number | null; measurementNote: string }[] = [];
   const product: unknown[] = [];
   const api: unknown[] = [];
   const fail = () => {
@@ -45,6 +46,10 @@ function fakeSink(failing = false) {
       fail();
       usage.push(row);
     },
+    async setUsageMeasurement(id, measurement) {
+      fail();
+      measurements.push({ id, ...measurement });
+    },
     async insertProductEvent(row) {
       fail();
       product.push(row);
@@ -54,7 +59,7 @@ function fakeSink(failing = false) {
       api.push(row);
     },
   };
-  return { sink, events, usage, product, api };
+  return { sink, events, usage, measurements, product, api };
 }
 
 /** A log that keeps every error line. */

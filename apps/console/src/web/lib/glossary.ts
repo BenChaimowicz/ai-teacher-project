@@ -88,3 +88,34 @@ export const METRIC_HELP = {
   vendorVsProvider:
     "Vendor is who we pay: OpenRouter for model calls, Parallel or You.com for research. Provider is who actually answered: OpenRouter routes each model call to a host (Alibaba, OpenAI, Google…). The same model can be cheaper or faster on one host; by our measurements DeepSeek on Alibaba is both.",
 } as const;
+
+/** Tooltips for the billing check and measured research cost. */
+export const BILLING_HELP = {
+  measured:
+    "Measured: the drop in the vendor's balance between a reading just before and just after this call. It is what the vendor really charged, as long as nothing else used the account at the same moment.",
+  measuredMatch: "The measured balance drop matches the estimate to within a cent.",
+  measuredDiffers:
+    "The measured balance drop differs from the estimate. The price list may be out of date, or the vendor charged for extra work (more searches, a longer run).",
+  measuredMissing: "No measured cost for this call.",
+  billed:
+    "What the vendor itself says we spent since the console's first good balance reading: the balance drop (or usage rise), plus any top-ups in between.",
+  recorded: "What the console's Usage Records add up to for the same window: exact costs plus estimates.",
+  gap: "Billed by the vendor minus recorded by the console. Near zero means the console saw every dollar.",
+  gapUnder:
+    "The vendor billed more than the console recorded. Likely causes: calls made before recording started, other keys or machines using the same account, calls we stopped for taking too long (billed but no price reported), or price changes the estimates don't know about.",
+  gapOver:
+    "The console recorded more than the vendor billed. Usually the price-list estimates are higher than what the vendor actually charged, or a reading was taken mid-call.",
+  gapOk: "Within a few cents: the console's records match the vendor's bill.",
+  keyWindows:
+    "OpenRouter's own spend counters for our API key: today, this week, and this month (UTC). The bar shows how much of the key's spend limit is left.",
+  untrackedAccount:
+    "Billed by OpenRouter that the console never saw: spend from before recording started, or from other keys on the same account. Code: untrackedAccountUsd",
+  untrackedKey: "Spend on our own key that the console never saw, mostly calls from before recording started. Code: untrackedKeyUsd",
+  reconstructed:
+    "Rebuilt from what the platform stored before recording began: the Source packs saved for each lesson's research, priced at the list price per run. It is a lower bound: live checks and runs that left no stored trace are missing. Code: reconstructed",
+  factChecks:
+    "Placement diagnostics that ran fact-checks on this vendor before recording began. How many calls each one made was never stored, so they are counted but not priced.",
+  noLifetime: "This vendor doesn't report lifetime spend, so only spend from the first balance reading on can be checked.",
+  pending: "Parallel holds money for runs still in progress; it leaves the balance once they finish.",
+  snapshots: "The console API reads each vendor's balance on a timer while it runs, and before and after every research call.",
+} as const;

@@ -9,6 +9,7 @@
     "./course-generation": "./src/lib/course-generation.ts",
     "./course-generation-fixture": "./src/lib/course-generation-fixture.ts",
     "./usage-tracking": "./src/lib/usage-tracking.ts",
+    "./research-measurement": "./src/lib/research-measurement.ts",
     "./model-config": "./src/lib/model-config.ts"
   },
   "scripts": {

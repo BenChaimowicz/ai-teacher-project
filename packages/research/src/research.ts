@@ -15,6 +15,11 @@ export type ResearchOptions = {
    * observing never changes the packs returned.
    */
   observe?: (call: ResearchCallObservation) => Promise<void> | void;
+  /**
+   * Told as each vendor call starts; the function it returns is called the moment that call ends, before Wikipedia
+   * pinning or observing (per-call balance measurement, SEN-70). Not awaited; anything it throws is ignored.
+   */
+  onVendorCall?: (call: { slot: ResearchSlot; adapter: Pick<ResearchAdapter, "id"> }) => (() => void) | void;
 };
 
 /** One finished vendor call, as an observer sees it. */
@@ -203,7 +208,21 @@ export async function runResearch(topic: string, options: ResearchOptions): Prom
     return key;
   });
   const calls = await Promise.all(
-    slots.map(({ adapter }, index) => callVendor(adapter, query, keys[index]!, fetchImpl, now)),
+    slots.map(async ({ slot, adapter }, index) => {
+      let ended: (() => void) | void = undefined;
+      try {
+        ended = options.onVendorCall?.({ slot, adapter });
+      } catch {
+        // Measuring never changes the research call.
+      }
+      const call = await callVendor(adapter, query, keys[index]!, fetchImpl, now);
+      try {
+        ended?.();
+      } catch {
+        // As above.
+      }
+      return call;
+    }),
   );
   const urls = calls.flatMap((call) => (call.outcome.kind === "done" ? call.outcome.result.sources.map((s) => s.url) : []));
   const { stableByUrl, warnings } = await pinWikipediaRevisions(urls, fetchImpl);

@@ -1,6 +1,6 @@
 import type { OpsUsageRecordQuery, OpsUsageRecordRow } from "@senoy/db/usage";
 import { Link } from "react-router-dom";
-import { CostCell } from "@/components/Cost";
+import { MeasuredCostCell } from "@/components/Cost";
 import { KindName, OutcomeBadge, RoleBadge } from "@/components/Badges";
 import { METRIC_HELP } from "@/lib/glossary";
 import { Table, Td, Th, Tr } from "@/components/Table";
@@ -57,7 +57,7 @@ export function UsageRecordTable({
           <Th numeric tip={METRIC_HELP.reasoning}>
             Reasoning
           </Th>
-          <Th numeric {...sortProps("costUsd")} tip="$0.10 actual (vendor-reported) · ~$0.10 estimated (list price) · ? unknown (billed but unreported). Hover a cost for its basis.">
+          <Th numeric {...sortProps("costUsd")} tip="$0.10 actual (vendor-reported) · ~$0.10 estimated (list price) · ? unknown (billed but unreported). Research calls also show the measured balance drop. Hover a cost for its basis.">
             Cost
           </Th>
           <Th numeric {...sortProps("durationMs")}>
@@ -113,7 +113,7 @@ export function UsageRecordTable({
               {r.reasoningTokens ? formatTokens(r.reasoningTokens) : "—"}
             </Td>
             <Td numeric>
-              <CostCell usd={r.costUsd} basis={r.costBasis} />
+              <MeasuredCostCell record={r} />
             </Td>
             <Td numeric>{formatDuration(r.durationMs)}</Td>
           </Tr>

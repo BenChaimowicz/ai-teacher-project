@@ -19,7 +19,8 @@
     "check:validity:live": "pnpm --filter @senoy/api exec tsx src/routes/validity.live-check.ts",
     "db:generate": "pnpm --filter @senoy/db generate",
     "db:migrate": "pnpm --filter @senoy/db migrate",
-    "db:seed": "pnpm --filter @senoy/db seed"
+    "db:seed": "pnpm --filter @senoy/db seed",
+    "parallel:login": "pnpm --filter @senoy/research exec tsx src/parallel-login.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

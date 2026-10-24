@@ -1,7 +1,9 @@
-import type { CostBasis, CostSplit } from "@senoy/db/usage";
+import type { CostBasis, CostSplit, OpsUsageRecordRow } from "@senoy/db/usage";
+import { AlertTriangle, Check } from "lucide-react";
 import { Tip, TipBody } from "@/components/Tip";
+import { MEASURED_TOLERANCE_USD } from "@/lib/billing";
 import { formatCost, formatInt, formatUsd } from "@/lib/format";
-import { METRIC_HELP } from "@/lib/glossary";
+import { BILLING_HELP, METRIC_HELP } from "@/lib/glossary";
 import { BASIS_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/cn";
 
@@ -31,6 +33,70 @@ export function CostCell({ usd, basis, className }: { usd: number | null; basis:
         {formatCost(usd, basis)}
       </span>
     </Tip>
+  );
+}
+
+/** The cost fields of a Usage Record that the measured-cost display reads. */
+type MeasuredFields = Pick<OpsUsageRecordRow, "role" | "costUsd" | "costBasis" | "measuredCostUsd" | "measurementNote">;
+
+/**
+ * Whether a Usage Record carries a measured cost (or a note on why it has none): research calls only.
+ * @param r - The record
+ * @returns True when there is something to show
+ */
+export function hasMeasurement(r: MeasuredFields): boolean {
+  return r.role.startsWith("research") && (r.measuredCostUsd !== null || r.measurementNote !== null);
+}
+
+/**
+ * A Usage Record's cost with the measured balance drop next to it for research calls:
+ * `~$0.05 · $0.05 measured ✓` when they agree, `~$0.05 · measured $0.07 ⚠` when they differ, and a muted
+ * `not measured` with the reason in a tooltip when the drop couldn't be pinned to this call.
+ * @param props.record - The record
+ * @param props.className - Classes for the wrapper
+ */
+export function MeasuredCostCell({ record: r, className }: { record: MeasuredFields; className?: string }) {
+  if (!hasMeasurement(r)) return <CostCell usd={r.costUsd} basis={r.costBasis} className={className} />;
+
+  const measured = r.measuredCostUsd;
+  const diff = measured !== null && r.costUsd !== null ? measured - r.costUsd : null;
+  const matches = diff !== null && Math.abs(diff) < MEASURED_TOLERANCE_USD;
+  const tip =
+    measured === null ? (
+      <TipBody title="Not measured">{r.measurementNote ?? BILLING_HELP.measuredMissing}</TipBody>
+    ) : (
+      <TipBody
+        title={matches ? "Measured cost matches" : diff === null ? "Measured cost" : "Measured cost differs"}
+        rows={[
+          [`${BASIS_LABEL[r.costBasis]} (price list)`, formatCost(r.costUsd, r.costBasis)],
+          ["Measured (balance drop)", formatUsd(measured)],
+          ...(diff !== null ? ([["Difference", `${diff > 0 ? "+" : ""}${formatUsd(diff)}`]] as [string, string][]) : []),
+        ]}
+      >
+        {BILLING_HELP.measured} {diff === null ? "" : matches ? BILLING_HELP.measuredMatch : BILLING_HELP.measuredDiffers}
+        {r.measurementNote ? ` ${r.measurementNote}` : ""}
+      </TipBody>
+    );
+
+  return (
+    <span className={cn("inline-flex items-baseline justify-end gap-1.5 whitespace-nowrap", className)}>
+      <CostCell usd={r.costUsd} basis={r.costBasis} />
+      <Tip content={tip}>
+        {measured === null ? (
+          <span className="cursor-help text-[11px] text-muted-foreground/80 underline decoration-dotted decoration-muted-foreground/40 underline-offset-2">
+            not measured
+          </span>
+        ) : matches || diff === null ? (
+          <span className="inline-flex items-center gap-0.5 text-[11px] tabular-nums text-ok/90">
+            · {formatUsd(measured)} measured {diff !== null && <Check className="size-3" />}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-0.5 text-[11px] tabular-nums text-est">
+            · measured {formatUsd(measured)} <AlertTriangle className="size-3" />
+          </span>
+        )}
+      </Tip>
+    </span>
   );
 }
 

@@ -146,6 +146,8 @@ export function toUsageRecordRow(row: SqlRow): OpsUsageRecordRow {
     cachedTokens: toNumberOrNull(row.cachedTokens),
     costUsd: toNumberOrNull(row.costUsd),
     costBasis: row.costBasis as CostBasis,
+    measuredCostUsd: toNumberOrNull(row.measuredCostUsd),
+    measurementNote: toText(row.measurementNote),
     pipelineEventId: toText(row.pipelineEventId),
     pipelineKind: (toText(row.pipelineKind) as PipelineEventKind | null) ?? null,
     pipelineLabel: toText(row.pipelineLabel),

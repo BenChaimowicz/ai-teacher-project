@@ -3,6 +3,7 @@ import { Layout } from "@/components/Layout";
 import { EmptyState } from "@/components/States";
 import { RefreshProvider } from "@/lib/refresh";
 import { ApiTraffic } from "@/views/ApiTraffic";
+import { Billing } from "@/views/Billing";
 import { Calls } from "@/views/Calls";
 import { CourseRequestDetail } from "@/views/CourseRequestDetail";
 import { CourseRequests } from "@/views/CourseRequests";
@@ -23,6 +24,7 @@ export function App() {
             <Route path="course-requests" element={<CourseRequests />} />
             <Route path="course-requests/:id" element={<CourseRequestDetail />} />
             <Route path="steps" element={<PipelineSteps />} />
+            <Route path="billing" element={<Billing />} />
             <Route path="failures" element={<Failures />} />
             <Route path="activity" element={<LearnerActivity />} />
             <Route path="api" element={<ApiTraffic />} />

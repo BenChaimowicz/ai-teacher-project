@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildConsoleApp } from "./app.ts";
+import type { BillingService } from "./billing.ts";
 import type { OpsStore } from "./ops-store.ts";
 
 const NOW = new Date("2026-10-24T12:00:00.000Z");
@@ -121,5 +122,40 @@ describe("Responses", () => {
     const response = await app.inject({ method: "GET", url: "/api/ops/failures" });
     assert.equal(response.statusCode, 500);
     assert.doesNotMatch(response.body, /relation|usage_records/);
+  });
+});
+
+describe("Billing check", () => {
+  /** A billing service that records the ranges it was asked for. */
+  function fakeBilling() {
+    const calls: { method: string; range: unknown }[] = [];
+    const body = { vendors: [], recordingStartedAt: null, snapshotEveryMs: 900_000 };
+    const billing: BillingService = {
+      billing: async (range) => (calls.push({ method: "billing", range }), body),
+      refresh: async (range) => (calls.push({ method: "refresh", range }), body),
+      takeSnapshots: async () => [],
+      start: () => undefined,
+      stop: () => undefined,
+    };
+    return { billing, calls };
+  }
+
+  it("answers GET /billing and POST /billing/refresh for the requested range", async () => {
+    const { billing, calls } = fakeBilling();
+    const app = buildConsoleApp(fakeStore().store, { now: () => NOW, billing });
+    const range = "from=2026-10-20T00:00:00.000Z&to=2026-10-24T00:00:00.000Z";
+    assert.equal((await app.inject({ method: "GET", url: "/api/ops/billing" })).statusCode, 200);
+    const refreshed = await app.inject({ method: "POST", url: `/api/ops/billing/refresh?${range}` });
+    assert.equal(refreshed.json().snapshotEveryMs, 900_000);
+    assert.deepEqual(calls, [
+      { method: "billing", range: { from: "2026-10-17T12:00:00.000Z", to: "2026-10-24T12:00:00.000Z" } },
+      { method: "refresh", range: { from: "2026-10-20T00:00:00.000Z", to: "2026-10-24T00:00:00.000Z" } },
+    ]);
+  });
+
+  it("404s without a billing service and 400s a bad range", async () => {
+    assert.equal((await buildConsoleApp(fakeStore().store).inject({ method: "GET", url: "/api/ops/billing" })).statusCode, 404);
+    const app = buildConsoleApp(fakeStore().store, { billing: fakeBilling().billing });
+    assert.equal((await app.inject({ method: "POST", url: "/api/ops/billing/refresh?from=nope" })).statusCode, 400);
   });
 });

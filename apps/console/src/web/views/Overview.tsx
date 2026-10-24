@@ -11,12 +11,14 @@ import { PageHeader } from "@/components/PageHeader";
 import { Async, CAPTURE_HINT } from "@/components/States";
 import { TipBody } from "@/components/Tip";
 import { Card } from "@/components/ui";
+import { BillingSummary } from "@/views/overview/BillingSummary";
 import { BreakdownPills } from "@/views/overview/BreakdownPills";
 import { HeroSpend, TodayCard, greeting } from "@/views/overview/Hero";
 import { ModelTable } from "@/views/overview/ModelTable";
 import { ProviderSection } from "@/views/overview/ProviderSection";
 import { SpendCalendar } from "@/views/overview/SpendCalendar";
 import { TopCourseRequests } from "@/views/overview/TopCourseRequests";
+import { useBilling, type BillingState } from "@/lib/billing";
 import { KIND_HELP, METRIC_HELP, OUTCOME_HELP, ROLE_HELP } from "@/lib/glossary";
 import { MEASURE, kindLabel, outcomeLabel } from "@/lib/labels";
 import { assignColors, outcomeTone, SERIES_COLORS, STATUS_COLORS } from "@/lib/palette";
@@ -34,6 +36,8 @@ export function Overview() {
   const range = useTimeRange();
   const summary = useOps<OpsSummary>("summary", { from: range.from, to: range.to });
   const failures = useOps<OpsFailureGroup[]>("failures", { from: range.from, to: range.to });
+  // Optional: an older console API has no billing routes, and the Overview must not depend on them.
+  const billing = useBilling();
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
   return (
@@ -48,7 +52,7 @@ export function Overview() {
         actions={<CostLegend />}
       />
       <Async state={summary} rows={10}>
-        {(s) => <OverviewBody summary={s} failures={failures.data} />}
+        {(s) => <OverviewBody summary={s} failures={failures.data} billing={billing} />}
       </Async>
     </>
   );
@@ -58,8 +62,17 @@ export function Overview() {
  * The Overview once the summary is loaded.
  * @param props.summary - The summary
  * @param props.failures - Failure groups, for money wasted (may still be loading)
+ * @param props.billing - The billing check (may be loading, failed, or absent on an older API)
  */
-function OverviewBody({ summary: s, failures }: { summary: OpsSummary; failures: OpsFailureGroup[] | undefined }) {
+function OverviewBody({
+  summary: s,
+  failures,
+  billing,
+}: {
+  summary: OpsSummary;
+  failures: OpsFailureGroup[] | undefined;
+  billing: BillingState;
+}) {
   const go = useGo();
   const t = s.totals;
 
@@ -77,6 +90,7 @@ function OverviewBody({ summary: s, failures }: { summary: OpsSummary; failures:
   return (
     <div className="space-y-4">
       {t.calls === 0 && <EmptyBanner />}
+
 
       <div className="stagger grid gap-4 xl:grid-cols-3">
         <HeroSpend summary={s} onBucket={toBucket} />
@@ -179,6 +193,8 @@ function OverviewBody({ summary: s, failures }: { summary: OpsSummary; failures:
       <Insights summary={s} wasted={wasted} />
 
       <ProviderSection summary={s} onVendor={(vendor) => go("/calls", { vendor })} onProvider={(provider) => go("/calls", { provider })} />
+
+      <BillingSummary billing={billing} />
 
       <div className="stagger grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
