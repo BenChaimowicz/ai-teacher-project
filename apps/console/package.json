@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm run --parallel \"/^dev:/\"",
-    "dev:server": "tsx watch src/server/index.ts",
+    "dev:server": "tsx watch --include ../api/src/lib/model-config.ts --include ../../packages/db/src --include ../../packages/research/src src/server/index.ts",
     "dev:web": "vite --host 127.0.0.1 --port 5174 --strictPort",
     "build": "vite build",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.server.json"
