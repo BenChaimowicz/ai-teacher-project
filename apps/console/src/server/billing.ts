@@ -150,11 +150,14 @@ export function vendorBilling(input: VendorBillingInput): OpsVendorBilling {
   const latestGood = good[good.length - 1] ?? null;
   const billed = billedSinceFirst(vendor, good);
   const openRouter = vendor === "openrouter";
+  // OpenRouter's account is shared with other projects; our key's limit is what the platform was given to spend.
+  const keyLimit = openRouter ? keyWindowsFrom(input.latestGoodRaw)?.limitUsd ?? null : null;
   const starting = openRouter
-    ? latestGood?.creditsTotalUsd != null ? { usd: latestGood.creditsTotalUsd, source: "vendor" as const } : null
+    ? keyLimit != null ? { usd: keyLimit, source: "vendor" as const }
+      : latestGood?.creditsTotalUsd != null ? { usd: latestGood.creditsTotalUsd, source: "vendor" as const } : null
     : input.operatorStartingUsd != null ? { usd: input.operatorStartingUsd, source: "operator" as const } : null;
-  // OpenRouter reports lifetime usage itself; for the others it is what the account started with minus what is left.
-  const lifetimeSpent = openRouter ? latestGood?.accountUsageUsd ?? null
+  // OpenRouter reports our key's lifetime usage itself; for the others it is what the account started with minus what is left.
+  const lifetimeSpent = openRouter ? latestGood?.keyUsageUsd ?? null
     : starting && latestGood?.balanceUsd != null ? starting.usd - fundsOf(vendor, latestGood) : null;
   const [status, error]: [OpsVendorBilling["status"], string | null] = input.notConfigured ? ["not_configured", input.notConfigured]
     : !latest ? ["error", "No reading yet"]
@@ -172,7 +175,8 @@ export function vendorBilling(input: VendorBillingInput): OpsVendorBilling {
     startingUsd: starting?.usd ?? null,
     startingSource: starting?.source ?? null,
     untrackedAccountUsd: lifetimeSpent === null ? null : round(lifetimeSpent - input.recordedAllTimeUsd),
-    untrackedKeyUsd: openRouter && latestGood?.keyUsageUsd != null ? round(latestGood.keyUsageUsd - input.recordedAllTimeUsd) : null,
+    // Untracked is already our key's alone (other keys on the account are other projects), so there is no second figure.
+    untrackedKeyUsd: null,
     reconstructed: openRouter ? null : input.reconstructed,
     keyWindows: openRouter ? keyWindowsFrom(input.latestGoodRaw) : null,
     series: input.series,

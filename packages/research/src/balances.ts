@@ -139,7 +139,9 @@ export async function readOpenRouterBalance(apiKey: string | undefined, options:
     limit: k.limit, limit_remaining: k.limit_remaining, limit_reset: k.limit_reset, is_free_tier: k.is_free_tier,
   };
   return {
-    balanceUsd: creditsTotal - accountUsage,
+    // The account is shared with other projects, so the balance is our key's own: what is left of its limit. A key with
+    // no limit falls back to the account's money left.
+    balanceUsd: finite(k.limit_remaining) ?? creditsTotal - accountUsage,
     pendingUsd: null,
     creditsTotalUsd: creditsTotal,
     accountUsageUsd: accountUsage,
