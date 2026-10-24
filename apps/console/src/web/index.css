@@ -1,0 +1,323 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Usage Console theme: deep navy/slate surfaces with layered depth, a calm ice-blue accent, light green only as
+ * small "flashes" (live/OK, positive deltas), soft coral for failures, soft amber for estimated costs.
+ */
+:root {
+  --background: #060a12;
+  --foreground: #e6edf7;
+  --card: rgba(16, 23, 37, 0.72);
+  --card-solid: #0e1522;
+  --card-foreground: #e6edf7;
+  --popover: rgba(14, 21, 34, 0.94);
+  --primary: #8ccbf5;
+  --primary-foreground: #06111d;
+  --secondary: rgba(30, 41, 61, 0.7);
+  --secondary-foreground: #e6edf7;
+  --muted: #1a2436;
+  --muted-foreground: #8a98ad;
+  --accent: rgba(140, 203, 245, 0.08);
+  --accent-foreground: #e6edf7;
+  --border: rgba(148, 178, 214, 0.12);
+  --input: rgba(148, 178, 214, 0.18);
+  --ring: #8ccbf5;
+  --ice: #8ccbf5;
+  --ok: #6ee7a8;
+  --bad: #f08a80;
+  --est: #f2c27a;
+  --radius: 0.625rem;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-solid: var(--card-solid);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ice: var(--ice);
+  --color-ok: var(--ok);
+  --color-bad: var(--bad);
+  --color-est: var(--est);
+  --radius-md: calc(var(--radius) - 2px);
+  --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(900px 600px at 8% -8%, rgba(56, 189, 248, 0.13), transparent 60%),
+    radial-gradient(700px 500px at 60% 0%, rgba(74, 154, 222, 0.06), transparent 65%),
+    radial-gradient(800px 600px at 105% 105%, rgba(110, 231, 168, 0.07), transparent 60%),
+    var(--background);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(140, 203, 245, 0.3);
+}
+
+/* Thin, quiet scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 178, 214, 0.2) transparent;
+}
+
+/* A glass panel: translucent, blurred, with a faint top highlight. */
+.glass {
+  background: var(--card);
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 30px -12px rgba(0, 0, 0, 0.6);
+}
+
+/* A 1px gradient border drawn with a masked pseudo-element, so it works on translucent panels. */
+.glow-border {
+  position: relative;
+  border-color: transparent !important;
+}
+.glow-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    140deg,
+    rgba(140, 203, 245, 0.32),
+    rgba(148, 178, 214, 0.08) 35%,
+    rgba(148, 178, 214, 0.05) 65%,
+    rgba(110, 231, 168, 0.16)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  transition: opacity 220ms var(--ease-out), filter 220ms var(--ease-out);
+}
+.glow-border:hover::before {
+  filter: brightness(1.7) saturate(1.2);
+}
+/* Faint inner glow at the top of a card. */
+.inner-glow {
+  background-image: radial-gradient(120% 80% at 0% 0%, rgba(140, 203, 245, 0.07), transparent 55%);
+}
+
+/* Cyan → blue gradient text for hero numbers. */
+.text-gradient {
+  background: linear-gradient(95deg, #a5f3fc 0%, #8ccbf5 45%, #4a9ade 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 18px rgba(103, 232, 249, 0.18));
+}
+
+/* The active nav pill / primary accents. */
+.pill-gradient {
+  background: linear-gradient(90deg, rgba(103, 232, 249, 0.18), rgba(74, 154, 222, 0.22));
+  box-shadow:
+    inset 0 0 0 1px rgba(140, 203, 245, 0.35),
+    0 0 22px -8px rgba(103, 232, 249, 0.6);
+}
+
+/* Glowing line on the hero area chart. */
+.glow-line .recharts-area-curve {
+  filter: drop-shadow(0 0 6px rgba(103, 232, 249, 0.55));
+}
+
+/* Staggered entrance for a grid of cards. */
+.stagger > * {
+  animation: view-in 420ms var(--ease-out) both;
+}
+.stagger > *:nth-child(2) { animation-delay: 50ms; }
+.stagger > *:nth-child(3) { animation-delay: 100ms; }
+.stagger > *:nth-child(4) { animation-delay: 150ms; }
+.stagger > *:nth-child(5) { animation-delay: 200ms; }
+.stagger > *:nth-child(6) { animation-delay: 250ms; }
+.stagger > *:nth-child(7) { animation-delay: 300ms; }
+.stagger > *:nth-child(8) { animation-delay: 350ms; }
+.stagger > *:nth-child(n + 9) { animation-delay: 400ms; }
+
+/* Ring gauge draw-in. */
+@keyframes ring-in {
+  from {
+    stroke-dashoffset: var(--ring-len);
+  }
+}
+.ring-in {
+  animation: ring-in 900ms var(--ease-out) both;
+}
+
+/* Cards lift and glow faintly on hover. */
+.lift {
+  transition:
+    transform 220ms var(--ease-out),
+    box-shadow 220ms var(--ease-out),
+    border-color 220ms var(--ease-out);
+}
+.lift:hover {
+  transform: translateY(-1px);
+  border-color: rgba(140, 203, 245, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 34px -14px rgba(74, 154, 222, 0.35);
+}
+
+/* Focus glow. */
+.glow-focus:focus-visible,
+.glow-focus:focus-within {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--ice), 0 0 14px -2px rgba(140, 203, 245, 0.55);
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-view-in {
+  animation: view-in 320ms var(--ease-out) both;
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.animate-drawer-in {
+  animation: drawer-in 300ms var(--ease-out) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 200ms var(--ease-out) both;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-pop-in {
+  animation: pop-in 160ms var(--ease-out) both;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+.shimmer {
+  background: linear-gradient(90deg, var(--muted) 0%, rgba(140, 203, 245, 0.1) 50%, var(--muted) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* The small green "live" pulse. */
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(110, 231, 168, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 7px rgba(110, 231, 168, 0);
+  }
+}
+.live-dot {
+  background: var(--ok);
+  animation: live-pulse 1.8s var(--ease-out) infinite;
+}
+
+/* A one-off green flash (refresh tick, success). */
+@keyframes flash-ok {
+  0% {
+    color: var(--ok);
+    text-shadow: 0 0 10px rgba(110, 231, 168, 0.6);
+  }
+  100% {
+    text-shadow: none;
+  }
+}
+.flash-ok {
+  animation: flash-ok 900ms var(--ease-out) both;
+}
+
+/* Bars that grow from their start edge (timeline, bar lists). */
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.animate-grow-x {
+  transform-origin: left center;
+  animation: grow-x 420ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
