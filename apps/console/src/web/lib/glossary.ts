@@ -109,9 +109,9 @@ export const BILLING_HELP = {
   keyWindows:
     "OpenRouter's own spend counters for our API key: today, this week, and this month (UTC). The bar shows how much of the key's spend limit is left.",
   startedWith:
-    "What the account started with. OpenRouter: every credit ever bought, as OpenRouter reports it. You.com and Parallel don't report that, so it is today's balance plus what we know was spent (recorded calls and calls rebuilt from stored research). Spend we never saw makes the true figure higher; a top-up in between makes it lower.",
+    "What the account started with. OpenRouter reports every credit ever bought. You.com and Parallel don't, so their starting amounts were told to us by the team ($100 and $25) and are kept in the console API's config; update them after a top-up. Shown with ≈ only when it had to be worked out from today's balance plus known spend.",
   untrackedAccount:
-    "Billed by OpenRouter that the console never saw: spend from before recording started, or from other keys on the same account. Code: untrackedAccountUsd",
+    "Spent on the account that the console never saw: calls from before recording started, from other keys, or from processes running without tracking. Lifetime spend minus everything recorded. OpenRouter reports lifetime spend; for You.com and Parallel it is the starting amount minus the balance now. Code: untrackedAccountUsd",
   untrackedKey: "Spend on our own key that the console never saw, mostly calls from before recording started. Code: untrackedKeyUsd",
   reconstructed:
     "Rebuilt from what the platform stored before recording began: the Source packs saved for each lesson's research, priced at the list price per run. It is a lower bound: live checks and runs that left no stored trace are missing. Code: reconstructed",

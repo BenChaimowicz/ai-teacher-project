@@ -423,7 +423,7 @@ export function VendorBillingCard({ billing: b }: { billing: OpsVendorBilling })
             <span className="font-mono tabular-nums text-est">≈ {formatUsd(Math.max(0, b.untrackedKeyUsd))}</span>
           </div>
         )}
-        {b.untrackedAccountUsd === null && <ReconstructedLine billing={b} />}
+        <ReconstructedLine billing={b} />
         {b.untrackedAccountUsd === null && <p>{BILLING_HELP.noLifetime}</p>}
       </div>
     </section>

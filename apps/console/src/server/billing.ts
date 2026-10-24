@@ -118,6 +118,12 @@ export function keyWindowsFrom(raw: unknown): OpsVendorBilling["keyWindows"] {
   };
 }
 
+/**
+ * What the research accounts started with, as the Operators told us on 2026-10-24 (neither vendor reports it).
+ * Lifetime spend is this minus today's balance, so update it when an account is topped up.
+ */
+export const OPERATOR_STARTING_BALANCES: Partial<Record<BalanceVendor, number>> = { you: 100, parallel: 25 };
+
 /** Everything one vendor's billing check is built from. */
 export type VendorBillingInput = {
   vendor: BalanceVendor;
@@ -131,6 +137,8 @@ export type VendorBillingInput = {
   recordedSinceFirstUsd: number;
   recordedAllTimeUsd: number;
   reconstructed: OpsVendorBilling["reconstructed"];
+  /** A starting balance an Operator told us, for vendors that do not report one. */
+  operatorStartingUsd?: number;
 };
 
 /**
@@ -142,6 +150,12 @@ export function vendorBilling(input: VendorBillingInput): OpsVendorBilling {
   const latestGood = good[good.length - 1] ?? null;
   const billed = billedSinceFirst(vendor, good);
   const openRouter = vendor === "openrouter";
+  const starting = openRouter
+    ? latestGood?.creditsTotalUsd != null ? { usd: latestGood.creditsTotalUsd, source: "vendor" as const } : null
+    : input.operatorStartingUsd != null ? { usd: input.operatorStartingUsd, source: "operator" as const } : null;
+  // OpenRouter reports lifetime usage itself; for the others it is what the account started with minus what is left.
+  const lifetimeSpent = openRouter ? latestGood?.accountUsageUsd ?? null
+    : starting && latestGood?.balanceUsd != null ? starting.usd - fundsOf(vendor, latestGood) : null;
   const [status, error]: [OpsVendorBilling["status"], string | null] = input.notConfigured ? ["not_configured", input.notConfigured]
     : !latest ? ["error", "No reading yet"]
       : latest.error ? ["error", latest.error] : ["ok", null];
@@ -155,7 +169,9 @@ export function vendorBilling(input: VendorBillingInput): OpsVendorBilling {
     recordedSinceFirstUsd: round(input.recordedSinceFirstUsd),
     gapUsd: billed === null ? null : round(billed - input.recordedSinceFirstUsd),
     recordedAllTimeUsd: round(input.recordedAllTimeUsd),
-    untrackedAccountUsd: openRouter && latestGood?.accountUsageUsd != null ? round(latestGood.accountUsageUsd - input.recordedAllTimeUsd) : null,
+    startingUsd: starting?.usd ?? null,
+    startingSource: starting?.source ?? null,
+    untrackedAccountUsd: lifetimeSpent === null ? null : round(lifetimeSpent - input.recordedAllTimeUsd),
     untrackedKeyUsd: openRouter && latestGood?.keyUsageUsd != null ? round(latestGood.keyUsageUsd - input.recordedAllTimeUsd) : null,
     reconstructed: openRouter ? null : input.reconstructed,
     keyWindows: openRouter ? keyWindowsFrom(input.latestGoodRaw) : null,
@@ -398,6 +414,7 @@ export function createBillingService(options: {
         recordedSinceFirstUsd: toNumber(recorded?.sinceFirst),
         recordedAllTimeUsd: toNumber(recorded?.allTime),
         reconstructed: reconstructed[vendor],
+        operatorStartingUsd: OPERATOR_STARTING_BALANCES[vendor],
       });
     });
     // The first Usage Record of any vendor (folded into the per-vendor sums rather than one more query).

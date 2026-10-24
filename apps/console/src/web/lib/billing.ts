@@ -14,15 +14,15 @@ export const MEASURED_TOLERANCE_USD = 0.01;
 export type StartingBalance = { usd: number; exact: boolean };
 
 /**
- * What the account started with. OpenRouter reports every credit ever bought, so that is exact. The research vendors
- * report only today's balance, so it is today's balance plus everything we know was spent: recorded calls and the
- * calls rebuilt from stored research. That is a floor when there were no top-ups in between.
+ * What the account started with: the API's figure when it has one (OpenRouter's credits bought, or what an Operator
+ * told us for You.com and Parallel). Otherwise worked out as today's balance plus everything we know was spent
+ * (recorded calls and calls rebuilt from stored research), a floor when there were no top-ups in between.
  * @param b - One vendor's billing check
  * @returns The starting balance, or null with no reading yet
  */
 export function startingBalance(b: OpsVendorBilling): StartingBalance | null {
+  if (b.startingUsd != null) return { usd: b.startingUsd, exact: true };
   const latest = b.latest;
-  if (latest?.creditsTotalUsd != null) return { usd: latest.creditsTotalUsd, exact: true };
   if (latest?.balanceUsd == null) return null;
   return { usd: latest.balanceUsd + b.recordedAllTimeUsd + (b.reconstructed?.estimatedUsd ?? 0), exact: false };
 }

@@ -384,9 +384,15 @@ export type OpsVendorBilling = {
   /** All Usage Records ever, for this vendor. */
   recordedAllTimeUsd: number;
   /**
-   * Spend the vendor knows about from before recording began or from other keys: OpenRouter only, where lifetime
-   * usage is reported (`accountUsageUsd` − `recordedAllTimeUsd`; `keyUsageUsd` − recorded for this key alone).
-   * Null for vendors that do not report lifetime usage.
+   * What the account started with. `vendor`: reported by the vendor (OpenRouter's credits bought). `operator`: told
+   * to us by an Operator (You.com, Parallel), kept in the console API's config. Null when neither is known.
+   */
+  startingUsd: number | null;
+  startingSource: "vendor" | "operator" | null;
+  /**
+   * Spend the console never saw (before recording began, other keys, untracked processes). OpenRouter: its reported
+   * lifetime usage − `recordedAllTimeUsd`. You.com/Parallel: (`startingUsd` − balance now) − `recordedAllTimeUsd`.
+   * `untrackedKeyUsd` is OpenRouter only (our key's lifetime usage − recorded). Null when lifetime spend is unknown.
    */
   untrackedAccountUsd: number | null;
   untrackedKeyUsd: number | null;

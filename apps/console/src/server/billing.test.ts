@@ -122,6 +122,16 @@ describe("One vendor's billing check", () => {
     assert.equal(row.untrackedKeyUsd, 17.5);
     assert.deepEqual(row.keyWindows, { dailyUsd: 1.5, weeklyUsd: 4, monthlyUsd: 20, limitUsd: 100, remainingUsd: 70 });
     assert.equal(row.reconstructed, null);
+    assert.deepEqual([row.startingUsd, row.startingSource], [50, "vendor"]);
+  });
+
+  it("uses an Operator-told starting balance for research vendors, counting Parallel's held funds as ours", () => {
+    const you = vendorBilling(input({ vendor: "you", good: [reading("1", { balanceUsd: 88.35 })], latest, recordedAllTimeUsd: 0.45, operatorStartingUsd: 100 }));
+    assert.deepEqual([you.startingUsd, you.startingSource, you.untrackedAccountUsd, you.untrackedKeyUsd], [100, "operator", 11.2, null]);
+    const parallel = vendorBilling(input({ vendor: "parallel", good: [reading("1", { balanceUsd: 22.5, pendingUsd: 0.5 })], latest, operatorStartingUsd: 25 }));
+    assert.equal(parallel.untrackedAccountUsd, 2);
+    const unknown = vendorBilling(input({ vendor: "you", good: [reading("1", { balanceUsd: 88.35 })], latest }));
+    assert.deepEqual([unknown.startingUsd, unknown.startingSource, unknown.untrackedAccountUsd], [null, null, null]);
   });
 });
 
