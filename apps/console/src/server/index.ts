@@ -9,17 +9,16 @@ import { createOpsStore, runnerFor } from "./ops-store.ts";
 async function start() {
   // apps/console/src/server → repo root is four directories up.
   loadRootEnv(import.meta.url, 4);
-  const operatorKey = process.env.OPERATOR_KEY || undefined;
   const app = buildConsoleApp(
     createOpsStore(runnerFor(createDb(requireDatabaseUrl(), { max: 3 }))),
-    { operatorKey, logger: true },
+    { logger: true },
   );
 
   try {
     const port = Number(process.env.CONSOLE_API_PORT ?? 3100);
-    const host = process.env.HOST ?? "127.0.0.1";
+    // It has no key and shows every prompt and cost, so it never listens beyond this machine.
+    const host = "127.0.0.1";
     await app.listen({ port, host });
-    if (!operatorKey) app.log.warn("[index.ts: start] OPERATOR_KEY is unset, so the Usage Console is open to anyone who can reach it");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     app.log.error(`[index.ts: start] Failed to start the Usage Console API || ${message}`);

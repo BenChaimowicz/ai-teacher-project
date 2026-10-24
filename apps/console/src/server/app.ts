@@ -1,5 +1,4 @@
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
-import { isOperator, OPERATOR_KEY_HEADER } from "./gate.ts";
 import type { OpsStore } from "./ops-store.ts";
 import {
   assertUuid,
@@ -15,8 +14,6 @@ import {
 
 /** How the Usage Console API is set up. */
 export type ConsoleAppOptions = {
-  /** When set, every `/api/ops/*` route except health needs this in `x-operator-key`. Unset = open (local dev). */
-  operatorKey?: string;
   /** Whether Fastify logs (Pino); tests leave it off. */
   logger?: boolean;
   /** The current instant, injected for tests; defaults to the wall clock. */
@@ -67,27 +64,21 @@ function idParam(request: FastifyRequest): string {
 }
 
 /**
- * Builds the Usage Console API: `GET /api/ops/health` plus the Operator-gated `/api/ops/*` read routes.
+ * Builds the Usage Console API: `GET /api/ops/health` plus the `/api/ops/*` read routes. There is no key; the server
+ * listens on localhost only.
  * @param store - Where the routes read from (the real database, or a fake in tests)
- * @param options - Operator key, logger, clock
+ * @param options - Logger, clock
  * @returns The Fastify app, not yet listening
  */
 export function buildConsoleApp(store: OpsStore, options: ConsoleAppOptions = {}) {
   const app = Fastify({ logger: options.logger ?? false });
-  const operatorKey = options.operatorKey || undefined;
   const now = options.now ?? (() => new Date());
   const query = (request: FastifyRequest) => (request.query ?? {}) as RawQuery;
 
-  app.get("/api/ops/health", async () => ({ ok: true, gated: operatorKey !== undefined }));
+  app.get("/api/ops/health", async () => ({ ok: true }));
 
   app.register(
     async (ops) => {
-      ops.addHook("onRequest", async (request, reply) => {
-        if (!isOperator(request.headers[OPERATOR_KEY_HEADER], operatorKey)) {
-          return reply.code(401).send({ error: "Operator key missing or wrong" });
-        }
-      });
-
       ops.get("/summary", (request, reply) =>
         answer(request, reply, "GET /summary", () => store.summary(parseRange(query(request), now()))));
 

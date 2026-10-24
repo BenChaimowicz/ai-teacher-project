@@ -3,7 +3,6 @@ import { describe, it } from "node:test";
 import { buildConsoleApp } from "./app.ts";
 import type { OpsStore } from "./ops-store.ts";
 
-const KEY = "operator-secret";
 const NOW = new Date("2026-10-24T12:00:00.000Z");
 const ID = "0b8c2a52-7a52-4c3e-9a3c-2f1e5b0d9a11";
 
@@ -36,39 +35,10 @@ function fakeStore(overrides: Partial<OpsStore> = {}) {
   return { store, calls };
 }
 
-describe("Operator gate", () => {
-  it("rejects /api/ops/* without the key, or with a wrong one, when OPERATOR_KEY is set", async () => {
-    const app = buildConsoleApp(fakeStore().store, { operatorKey: KEY });
-    const missing = await app.inject({ method: "GET", url: "/api/ops/summary" });
-    assert.equal(missing.statusCode, 401);
-    assert.equal(typeof missing.json().error, "string");
-    const wrong = await app.inject({ method: "GET", url: "/api/ops/usage-records", headers: { "x-operator-key": "nope" } });
-    assert.equal(wrong.statusCode, 401);
-    const prefix = await app.inject({ method: "GET", url: "/api/ops/failures", headers: { "x-operator-key": KEY.slice(0, 5) } });
-    assert.equal(prefix.statusCode, 401, "A prefix of the key is not the key.");
-  });
-
-  it("lets the right key through", async () => {
-    const app = buildConsoleApp(fakeStore().store, { operatorKey: KEY });
-    const response = await app.inject({ method: "GET", url: "/api/ops/api-routes", headers: { "x-operator-key": KEY } });
-    assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.json(), []);
-  });
-
-  it("is open when OPERATOR_KEY is unset or empty", async () => {
-    for (const operatorKey of [undefined, ""]) {
-      const app = buildConsoleApp(fakeStore().store, { operatorKey });
-      assert.equal((await app.inject({ method: "GET", url: "/api/ops/failures" })).statusCode, 200);
-    }
-  });
-
-  it("answers health without the key and says whether the gate is on", async () => {
-    const gated = buildConsoleApp(fakeStore().store, { operatorKey: KEY });
-    const health = await gated.inject({ method: "GET", url: "/api/ops/health" });
-    assert.equal(health.statusCode, 200);
-    assert.deepEqual(health.json(), { ok: true, gated: true });
-    const open = buildConsoleApp(fakeStore().store);
-    assert.deepEqual((await open.inject({ method: "GET", url: "/api/ops/health" })).json(), { ok: true, gated: false });
+describe("Health", () => {
+  it("answers ok", async () => {
+    const app = buildConsoleApp(fakeStore().store);
+    assert.deepEqual((await app.inject({ method: "GET", url: "/api/ops/health" })).json(), { ok: true });
   });
 });
 

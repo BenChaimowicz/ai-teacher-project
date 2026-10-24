@@ -19,7 +19,7 @@ Then open `http://127.0.0.1:5173`. That one command starts the Vite Workspace, t
 pnpm dash
 ```
 
-Set `OPERATOR_KEY` in `.env` to require that key in the Usage Console; leave it empty for open local use.
+The Usage Console has no login. Its API listens on this machine only (`127.0.0.1`), so it is not reachable from elsewhere.
 
 ## Migrations
 
