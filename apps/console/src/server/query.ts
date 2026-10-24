@@ -59,6 +59,8 @@ export type PageWindow = { limit: number; offset: number };
 export type UsageRecordFilter = ResolvedRange &
   PageWindow & {
     vendor?: UsageVendor;
+    /** Serving provider, as in the summary's `byProvider` key. */
+    provider?: string;
     role?: UsageRole;
     modelId?: string;
     outcome?: UsageOutcome | "failed";
@@ -242,6 +244,7 @@ export function parseUsageRecordQuery(raw: RawQuery, now?: Date): UsageRecordFil
     ...parseRange(raw, now),
     ...parsePage(raw),
     vendor: readEnum(raw, "vendor", USAGE_VENDORS),
+    provider: readString(raw, "provider"),
     role: readEnum(raw, "role", USAGE_ROLES),
     modelId: readString(raw, "modelId"),
     outcome: readEnum(raw, "outcome", [...USAGE_OUTCOMES, "failed"] as const),

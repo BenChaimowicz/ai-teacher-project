@@ -137,6 +137,7 @@ function courseRequestActiveIn(range: ResolvedRange): SQL {
 export function usageRecordWhere(filter: UsageRecordFilter): SQL {
   const conditions: SQL[] = [inRange("u.created_at", filter)];
   if (filter.vendor) conditions.push(sql`u.vendor = ${filter.vendor}`);
+  if (filter.provider) conditions.push(sql`coalesce(u.provider, u.vendor) = ${filter.provider}`);
   if (filter.role) conditions.push(sql`u.role = ${filter.role}`);
   if (filter.modelId) conditions.push(sql`u.model_id = ${filter.modelId}`);
   if (filter.outcome === "failed") conditions.push(sql`u.outcome <> 'ok'`);
@@ -331,7 +332,7 @@ export function createOpsStore(run: SqlRunner): OpsStore {
       const previous = previousRange(range);
       const bucket = chooseBucket(range);
       const usageInRange = inRange("u.created_at", range);
-      const [totals, counts, before, series, byModel, byKind, byRole, byOutcome, latency, top] = await Promise.all([
+      const [totals, counts, before, series, byModel, byKind, byRole, byVendor, byProvider, byOutcome, latency, top] = await Promise.all([
         run(sql`select ${SPEND_COLUMNS},
             coalesce(sum(u.prompt_tokens), 0) as "promptTokens",
             coalesce(sum(u.completion_tokens), 0) as "completionTokens",
@@ -359,6 +360,9 @@ export function createOpsStore(run: SqlRunner): OpsStore {
         run(breakdownQuery("u.model_id", range)),
         run(breakdownQuery("coalesce(pe.kind, 'unattributed')", range)),
         run(breakdownQuery("u.role", range)),
+        run(breakdownQuery("u.vendor", range)),
+        // The OpenRouter host that served a model call; research calls have none, so they count under their vendor.
+        run(breakdownQuery("coalesce(u.provider, u.vendor)", range)),
         run(sql`select u.outcome, count(u.id) as calls from usage_records u where ${usageInRange}
           group by 1 order by 2 desc, 1`),
         run(sql`select ${latencyBucketExpression()} as bucket, count(u.id) as calls
@@ -405,6 +409,8 @@ export function createOpsStore(run: SqlRunner): OpsStore {
         byModel: byModel.map(toBreakdownRow),
         byPipelineKind: byKind.map(toBreakdownRow),
         byRole: byRole.map(toBreakdownRow),
+        byVendor: byVendor.map(toBreakdownRow),
+        byProvider: byProvider.map(toBreakdownRow),
         byOutcome: byOutcome.map((row) => ({ outcome: row.outcome as UsageOutcome, calls: toNumber(row.calls) })),
         latencyHistogram: toLatencyHistogram(latency),
         topCourseRequests: top.map(toCourseRequestRow),

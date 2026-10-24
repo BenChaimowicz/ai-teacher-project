@@ -118,6 +118,7 @@ describe("Query validation", () => {
         limit: 500,
         offset: 0,
         vendor: "openrouter",
+        provider: undefined,
         role: undefined,
         modelId: undefined,
         outcome: "failed",

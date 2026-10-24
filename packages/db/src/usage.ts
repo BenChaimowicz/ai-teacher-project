@@ -122,13 +122,20 @@ export type OpsSummary = {
   byModel: OpsBreakdownRow[];
   byPipelineKind: OpsBreakdownRow[];
   byRole: OpsBreakdownRow[];
+  /** Spend per paid vendor (`openrouter`, `parallel`, `you`). */
+  byVendor: OpsBreakdownRow[];
+  /**
+   * Spend per serving provider: the OpenRouter host that answered a model call (Alibaba, OpenAI, …), or the vendor
+   * for research calls. A model call that got no reply has no host and counts under `openrouter`.
+   */
+  byProvider: OpsBreakdownRow[];
   byOutcome: { outcome: UsageOutcome; calls: number }[];
   /** Calls per duration bucket (upper bound in ms; last bucket is `null` = no upper bound). */
   latencyHistogram: { upToMs: number | null; calls: number }[];
   topCourseRequests: OpsCourseRequestRow[];
 };
 
-/** One slice of spend. `key` is a model id, Pipeline Event kind, or role. */
+/** One slice of spend. `key` is a model id, Pipeline Event kind, role, vendor, or provider. */
 export type OpsBreakdownRow = CostSplit & {
   key: string;
   calls: number;
@@ -142,6 +149,8 @@ export type OpsBreakdownRow = CostSplit & {
 /** `GET /api/ops/usage-records` query. `q` searches model id, response id, and error. */
 export type OpsUsageRecordQuery = OpsRangeQuery & {
   vendor?: UsageVendor;
+  /** Serving provider, matching a `byProvider` key. */
+  provider?: string;
   role?: UsageRole;
   modelId?: string;
   outcome?: UsageOutcome | "failed";
