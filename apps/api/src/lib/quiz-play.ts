@@ -24,6 +24,7 @@ import {
   type StudyCoursePayload,
 } from "./study.ts";
 import type { LessonRow, QuizAttemptRow, StudyStore } from "./study-store.ts";
+import { recordProductEvent } from "./usage-tracking.ts";
 
 /** The attempt Study shows: the open draft, or the last submitted one. */
 export type QuizAttemptView = {
@@ -260,6 +261,13 @@ export function submitQuiz(store: StudyStore, request: QuizRequest): Promise<Qui
 
     const outcome = await quizPlugin.complete(store, request.learnerId, quiz.lesson);
     if (!outcome.ok && isPassingScore(score)) throw new Error(outcome.error);
+    void recordProductEvent("quiz_submitted", {
+      learnerId: request.learnerId,
+      detail: {
+        courseId: request.courseId, lessonId: request.lessonId, correct: score.correct, total: score.total,
+        passed: isPassingScore(score), feedbackTiming: quiz.draft.feedbackTiming,
+      },
+    });
     if (outcome.ok) await recordCourseCompletion(store, request.learnerId, request.courseId);
 
     const next = await reload(store, request);

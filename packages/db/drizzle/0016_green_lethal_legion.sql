@@ -1,1 +1,0 @@
-ALTER TYPE "public"."generation_job_status" ADD VALUE 'needs_new_blueprint' BEFORE 'succeeded';

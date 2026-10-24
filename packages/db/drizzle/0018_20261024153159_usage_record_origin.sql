@@ -1,0 +1,1 @@
+ALTER TABLE "usage_records" ADD COLUMN "origin" text DEFAULT 'captured' NOT NULL;

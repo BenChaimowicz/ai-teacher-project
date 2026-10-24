@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { boolean, date, doublePrecision, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
 import { COURSE_REQUEST_STATUSES, type ValidityClarification, type ValidityResult } from "./course-request.ts";
 import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
@@ -9,6 +9,7 @@ import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
 import type { SequenceMode } from "./sequence-mode.ts";
 import type { FeedbackTiming, TeachingProfileAnswers } from "./teaching-profile.ts";
+import type { BalanceVendor, CostBasis, UsageOrigin, PipelineEventKind, PipelineEventStatus, ProductEventKind, UsageOutcome, UsageRole, UsageVendor } from "./usage.ts";
 
 /** One person taking Courses. The prototype seeds a single row. Teaching Profile lives here. */
 export const learners = pgTable("learners", {
@@ -303,4 +304,195 @@ export const quizAttempts = pgTable(
     index("quiz_attempts_learner_lesson").on(table.learnerId, table.lessonId),
     uniqueIndex("quiz_attempts_one_draft").on(table.learnerId, table.lessonId).where(sql`${table.status} = 'draft'`),
   ],
+);
+
+/**
+ * One step of the platform's own work (validity, a diagnostic, a Lesson write, publish), tied to the Course Request it
+ * serves. Steps nest through `parentId` (Course generation → one Reading → its research). Written `running` when the
+ * step starts and closed when it returns or throws. Tracking writes never fail the step (ADR 0008).
+ */
+export const pipelineEvents = pgTable(
+  "pipeline_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    parentId: uuid("parent_id").references((): AnyPgColumn => pipelineEvents.id),
+    kind: text("kind").$type<PipelineEventKind>().notNull(),
+    /** Human label, such as the Lesson title or slot id. */
+    label: text("label"),
+    courseRequestId: uuid("course_request_id").references(() => courseRequests.id),
+    learnerId: uuid("learner_id").references(() => learners.id),
+    status: text("status").$type<PipelineEventStatus>().notNull().default("running"),
+    /** The thrown error's message when the step failed. */
+    error: text("error"),
+    /** Step-specific facts worth seeing (round counts, verdicts). Never credentials. */
+    detail: jsonb("detail"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    durationMs: integer("duration_ms"),
+  },
+  (table) => [
+    index("pipeline_events_started").on(table.startedAt),
+    index("pipeline_events_request").on(table.courseRequestId),
+    index("pipeline_events_parent").on(table.parentId),
+  ],
+);
+
+/**
+ * One captured call to an external paid service: an OpenRouter model call (one attempt; a retry is its own row) or a
+ * research vendor call. Keeps the full request and response with no retention limit (ADR 0008). Its Course Request is
+ * reached through its Pipeline Event, never stored twice.
+ */
+export const usageRecords = pgTable(
+  "usage_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pipelineEventId: uuid("pipeline_event_id").references(() => pipelineEvents.id),
+    vendor: text("vendor").$type<UsageVendor>().notNull(),
+    role: text("role").$type<UsageRole>().notNull(),
+    /** The OpenRouter model id, or the research adapter id. */
+    modelId: text("model_id").notNull(),
+    /** The OpenRouter host that answered. */
+    provider: text("provider"),
+    /** OpenRouter response id or vendor request/run id. */
+    responseId: text("response_id"),
+    /** 1-based position among the port's attempts for one request (ADR 0015). */
+    attempt: integer("attempt").notNull().default(1),
+    outcome: text("outcome").$type<UsageOutcome>().notNull(),
+    invalidCause: text("invalid_cause"),
+    httpStatus: integer("http_status"),
+    /** Safe error text: never provider bodies, prompts, or credentials. */
+    error: text("error"),
+    promptTokens: integer("prompt_tokens"),
+    completionTokens: integer("completion_tokens"),
+    reasoningTokens: integer("reasoning_tokens"),
+    cachedTokens: integer("cached_tokens"),
+    costUsd: doublePrecision("cost_usd"),
+    costBasis: text("cost_basis").$type<CostBasis>().notNull(),
+    /**
+     * Research calls only: what the vendor's balance dropped by across this call, read before and after it. Null when
+     * it could not be measured; `measurementNote` says why (overlapping call, balance not readable, still settling).
+     */
+    measuredCostUsd: doublePrecision("measured_cost_usd"),
+    measurementNote: text("measurement_note"),
+    /** `captured` live, or `backfill` rebuilt from a vendor's record of a past call. */
+    origin: text("origin").$type<UsageOrigin>().notNull().default("captured"),
+    request: jsonb("request").notNull(),
+    /** The provider body as received; null when none arrived. */
+    response: jsonb("response"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    durationMs: integer("duration_ms"),
+  },
+  (table) => [
+    index("usage_records_created").on(table.createdAt),
+    index("usage_records_event").on(table.pipelineEventId),
+    index("usage_records_model").on(table.modelId, table.createdAt),
+  ],
+);
+
+/** Something a Learner did. */
+export const productEvents = pgTable(
+  "product_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind").$type<ProductEventKind>().notNull(),
+    learnerId: uuid("learner_id").references(() => learners.id),
+    courseRequestId: uuid("course_request_id").references(() => courseRequests.id),
+    detail: jsonb("detail"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("product_events_created").on(table.createdAt)],
+);
+
+/** One hit on the platform's own `/api/*`, except the Usage Console's own routes. */
+export const apiRequests = pgTable(
+  "api_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    method: text("method").notNull(),
+    /** The route pattern, such as `/api/course-requests/:id`; the raw URL when no route matched. */
+    route: text("route").notNull(),
+    url: text("url").notNull(),
+    statusCode: integer("status_code").notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    learnerId: uuid("learner_id").references(() => learners.id),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("api_requests_created").on(table.createdAt), index("api_requests_route").on(table.route, table.createdAt)],
+);
+
+/**
+ * One reading of a paid vendor's account, taken on a schedule by the Usage Console API. Comparing how the balance
+ * moved with what was recorded shows spend we did not capture (calls before recording began, other keys, timeouts).
+ * A failed reading is kept with its error so gaps are visible.
+ */
+export const vendorBalanceSnapshots = pgTable(
+  "vendor_balance_snapshots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    vendor: text("vendor").$type<BalanceVendor>().notNull(),
+    takenAt: timestamp("taken_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Prepaid money left, in USD. */
+    balanceUsd: doublePrecision("balance_usd"),
+    /** Parallel: money held for runs still in progress and charges not yet settled, in USD. */
+    pendingUsd: doublePrecision("pending_usd"),
+    /** OpenRouter: all credits ever bought on the account, in USD. */
+    creditsTotalUsd: doublePrecision("credits_total_usd"),
+    /** OpenRouter: everything the account has ever spent, across all keys, in USD. */
+    accountUsageUsd: doublePrecision("account_usage_usd"),
+    /** OpenRouter: everything our API key has ever spent, in USD. */
+    keyUsageUsd: doublePrecision("key_usage_usd"),
+    /** The vendor's body as received, minus nothing secret (these endpoints return no secrets). */
+    raw: jsonb("raw"),
+    error: text("error"),
+  },
+  (table) => [index("vendor_balance_snapshots_vendor_taken").on(table.vendor, table.takenAt)],
+);
+
+/**
+ * Every OpenRouter API key on the account, as the management API listed it at import (`pnpm openrouter:import`).
+ * Lets the console tell the platform's own spend apart from other tools sharing the account (coding agents, editors).
+ */
+export const openrouterKeys = pgTable("openrouter_keys", {
+  /** OpenRouter's SHA-256 of the key; never the key itself. */
+  hash: text("hash").primaryKey(),
+  name: text("name").notNull(),
+  /** OpenRouter's masked label, e.g. `sk-or-v1-4b3...d16`. */
+  label: text("label"),
+  /** True for the key the platform calls with (`OPENROUTER_API_KEY`). */
+  isPlatformKey: boolean("is_platform_key").notNull().default(false),
+  usageUsd: doublePrecision("usage_usd").notNull(),
+  limitUsd: doublePrecision("limit_usd"),
+  disabled: boolean("disabled").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * OpenRouter's own daily usage per key, model, and serving endpoint, for the 30 completed UTC days before an import.
+ * OpenRouter keeps no longer history in its API and no per-call list, so this is the record of spend from before the
+ * console captured calls. Re-importing updates rows in place.
+ */
+export const openrouterActivity = pgTable(
+  "openrouter_activity",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    day: date("day").notNull(),
+    keyHash: text("key_hash").notNull().references(() => openrouterKeys.hash),
+    model: text("model").notNull(),
+    modelPermaslug: text("model_permaslug"),
+    endpointId: text("endpoint_id").notNull(),
+    /** The serving host, e.g. `alibaba/fp8`. */
+    providerName: text("provider_name"),
+    requests: integer("requests").notNull(),
+    usageUsd: doublePrecision("usage_usd").notNull(),
+    byokUsageUsd: doublePrecision("byok_usage_usd"),
+    byokRequests: integer("byok_requests"),
+    promptTokens: integer("prompt_tokens"),
+    completionTokens: integer("completion_tokens"),
+    reasoningTokens: integer("reasoning_tokens"),
+    cachedTokens: integer("cached_tokens"),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique("openrouter_activity_day_key_endpoint").on(table.day, table.keyHash, table.endpointId)],
 );

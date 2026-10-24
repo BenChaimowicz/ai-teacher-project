@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch --include ../api/src --include ../../packages/db/src --include ../../packages/research/src src/index.ts",
     "start": "tsx src/index.ts"
   },
   "dependencies": {

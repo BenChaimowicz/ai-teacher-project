@@ -1,5 +1,6 @@
 import { loadModelConfig, type ModelConfig } from "./model-config.ts";
-import { createOpenRouterTransport, ModelError, type ModelErrorCode, type StructuredRequest, type StructuredTransport } from "./openrouter.ts";
+import { ModelError, type ModelErrorCode, type StructuredRequest, type StructuredTransport } from "./openrouter.ts";
+import { createTrackedTransport, withModelCall, type ModelCallFrame } from "./usage-tracking.ts";
 
 export type { StructuredRequest } from "./openrouter.ts";
 
@@ -39,24 +40,28 @@ const RETRIED: readonly ModelErrorCode[] = ["invalid_output", "incomplete"];
 /** One model call the ports may make. */
 type Attempt = { modelId: string; providerOrder?: string[] };
 
+/** Port names in logs, by Usage Record role. */
+const PORT_NAMES: Record<ModelCallFrame["role"], string> = { generator: "generator", fallback_generator: "fallback generator", judge: "judge" };
+
 /**
- * Makes the first attempt, then the rest only after a retryable failure, logging each one retried.
- * @param role - Which port, for the log
+ * Makes the first attempt, then the rest only after a retryable failure, logging each one retried. Each call runs with
+ * its role and 1-based attempt number visible to usage tracking.
+ * @param role - Which port, for the log and the Usage Record
  * @param attempts - The primary call, its one retry, and the fallback call
  * @param call - Sends one attempt
  * @param log - Where retries are reported
  */
-async function attempt<T>(role: string, attempts: Attempt[], call: (attempt: Attempt) => Promise<T>, log: ModelPortsLog): Promise<ModelReply<T>> {
+async function attempt<T>(role: ModelCallFrame["role"], attempts: Attempt[], call: (attempt: Attempt) => Promise<T>, log: ModelPortsLog): Promise<ModelReply<T>> {
   for (const [index, next] of attempts.entries()) {
     try {
-      return { value: await call(next), modelId: next.modelId };
+      return { value: await withModelCall({ role, attempt: index + 1 }, () => call(next)), modelId: next.modelId };
     } catch (error) {
       const following = attempts[index + 1];
       if (!following || !(error instanceof ModelError) || !RETRIED.includes(error.code)) throw error;
-      log.warn(`[model-ports: ${role}] Retrying after a bad reply || model=${next.modelId} || next=${following.modelId} || ${error.message}`);
+      log.warn(`[model-ports: ${PORT_NAMES[role]}] Retrying after a bad reply || model=${next.modelId} || next=${following.modelId} || ${error.message}`);
     }
   }
-  throw new Error(`[model-ports: ${role}] No model may make this call`);
+  throw new Error(`[model-ports: ${PORT_NAMES[role]}] No model may make this call`);
 }
 
 /**
@@ -78,7 +83,7 @@ function attempts(primary: Attempt, fallback: string, excluded: readonly string[
  */
 export function createModelPorts(options: ModelPortsOptions = {}): { generator: Generator; fallbackGenerator: Generator; judge: Judge } {
   const config = options.config ?? loadModelConfig();
-  const transport = options.transport ?? createOpenRouterTransport();
+  const transport = options.transport ?? createTrackedTransport();
   const log = options.log ?? console;
   return {
     generator: {
@@ -94,7 +99,7 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
       modelId: config.generatorFallbackModel,
       /** The provider order names the primary author's hosts, so the fallback uses default routing. */
       generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
-        return attempt("fallback generator", attempts({ modelId: config.generatorFallbackModel }, ""),
+        return attempt("fallback_generator", attempts({ modelId: config.generatorFallbackModel }, ""),
           (next) => transport.complete(next.modelId, request), log);
       },
     },

@@ -6,6 +6,7 @@ import {
   resolveTeachingProfile,
   TEACHING_PROFILE_VERSION,
 } from "@senoy/db";
+import { recordProductEvent } from "../lib/usage-tracking.ts";
 
 /**
  * GET/PUT/DELETE the current Learner's Teaching Profile.
@@ -70,6 +71,9 @@ export async function teachingProfileRoutes(app: FastifyInstance) {
       if (!row) {
         return reply.code(500).send({ error: "Failed to save Teaching Profile." });
       }
+      void recordProductEvent("teaching_profile_saved", {
+        learnerId: request.currentLearner.id, detail: { action, firstSave: !wasPresent },
+      });
 
       return {
         present: true,

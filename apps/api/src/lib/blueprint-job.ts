@@ -7,8 +7,10 @@ import {
   startingLevelDiagnostics,
   type Database,
 } from "@senoy/db";
+import { blueprintSlots } from "@senoy/db/blueprint";
 import { BlueprintFailedError, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, type BlueprintBuilder } from "./blueprint.ts";
 import { LeaseLostError, type GenerationControl } from "./generation-job.ts";
+import { withPipelineEvent } from "./usage-tracking.ts";
 
 /** What one run of a claimed Blueprint job receives. */
 export type BlueprintJobStart = {
@@ -44,52 +46,61 @@ export function blueprintFailureReason(error: unknown): string {
  */
 export function createBlueprintJob(builder: BlueprintBuilder = createBlueprintBuilder()): BlueprintJob {
   return {
-    async start({ db, courseRequestId, learnerId, control }) {
-      try {
-        const [request] = await db.select().from(courseRequests).where(eq(courseRequests.id, courseRequestId)).limit(1);
-        const [learner] = await db.select().from(learners).where(eq(learners.id, learnerId)).limit(1);
-        const [attempt] = await db.select().from(startingLevelDiagnostics)
-          .where(eq(startingLevelDiagnostics.courseRequestId, courseRequestId))
-          .orderBy(desc(startingLevelDiagnostics.createdAt)).limit(1);
-        if (!request || !learner?.teachingProfileAnswers || !attempt?.startingLevel || !attempt.confirmation) {
-          throw new Error(`[blueprint-job: start] Request, Teaching Profile, or confirmed Starting Level is missing || requestId=${courseRequestId}`);
-        }
-        const profile = resolveTeachingProfile(learner.teachingProfileAnswers);
-        const checked = await builder.build({
-          subject: request.subject,
-          learningGoal: request.learningGoal,
-          startingLevel: attempt.startingLevel,
-          confirmation: attempt.confirmation,
-          profile: {
-            instructionLanguage: profile.instructionLanguage.value,
-            quizCadence: profile.quizCadence.value,
-            explanationOrder: profile.explanationOrder.value,
-          },
-        });
-        await db.transaction(async (transaction) => {
-          await control.hold(transaction);
-          await transaction.insert(courseBlueprints).values({ courseRequestId, learnerId, draft: checked.blueprint, judge: checked.judge });
-          const [ready] = await transaction.update(courseRequests).set({ status: "blueprint_review", failureReason: null })
-            .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "blueprint_preparing"))).returning({ id: courseRequests.id });
-          if (!ready) throw new Error(`[blueprint-job: start] Request is no longer preparing a Blueprint || requestId=${courseRequestId}`);
-          await control.settle(transaction, "succeeded");
-        });
-      } catch (error) {
-        // A run that lost its job records nothing: another worker owns it now.
-        if (error instanceof LeaseLostError) throw error;
+    start(input) {
+      return withPipelineEvent("blueprint", { courseRequestId: input.courseRequestId, learnerId: input.learnerId }, async (event) => {
+        const { db, courseRequestId, learnerId, control } = input;
         try {
-          await db.transaction(async (transaction) => {
-            await control.settle(transaction, "failed");
-            await transaction.update(courseRequests).set({ status: "starting_level_confirmed", failureReason: blueprintFailureReason(error) })
-              .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "blueprint_preparing"))).returning({ id: courseRequests.id });
+          const [request] = await db.select().from(courseRequests).where(eq(courseRequests.id, courseRequestId)).limit(1);
+          const [learner] = await db.select().from(learners).where(eq(learners.id, learnerId)).limit(1);
+          const [attempt] = await db.select().from(startingLevelDiagnostics)
+            .where(eq(startingLevelDiagnostics.courseRequestId, courseRequestId))
+            .orderBy(desc(startingLevelDiagnostics.createdAt)).limit(1);
+          if (!request || !learner?.teachingProfileAnswers || !attempt?.startingLevel || !attempt.confirmation) {
+            throw new Error(`[blueprint-job: start] Request, Teaching Profile, or confirmed Starting Level is missing || requestId=${courseRequestId}`);
+          }
+          const profile = resolveTeachingProfile(learner.teachingProfileAnswers);
+          event.setDetail({ subject: request.subject });
+          const checked = await builder.build({
+            subject: request.subject,
+            learningGoal: request.learningGoal,
+            startingLevel: attempt.startingLevel,
+            confirmation: attempt.confirmation,
+            profile: {
+              instructionLanguage: profile.instructionLanguage.value,
+              quizCadence: profile.quizCadence.value,
+              explanationOrder: profile.explanationOrder.value,
+            },
           });
-        } catch (recordError) {
-          if (recordError instanceof LeaseLostError) throw error;
-          const detail = (caught: unknown) => caught instanceof Error ? caught.message : String(caught);
-          throw new Error(`[blueprint-job: start] Failed to record the Blueprint failure || requestId=${courseRequestId} || ${detail(recordError)} || ${detail(error)}`);
+          event.setDetail({
+            courseTitle: checked.blueprint.courseTitle,
+            slots: blueprintSlots(checked.blueprint).length,
+            judgePass: checked.judge.pass,
+          });
+          await db.transaction(async (transaction) => {
+            await control.hold(transaction);
+            await transaction.insert(courseBlueprints).values({ courseRequestId, learnerId, draft: checked.blueprint, judge: checked.judge });
+            const [ready] = await transaction.update(courseRequests).set({ status: "blueprint_review", failureReason: null })
+              .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "blueprint_preparing"))).returning({ id: courseRequests.id });
+            if (!ready) throw new Error(`[blueprint-job: start] Request is no longer preparing a Blueprint || requestId=${courseRequestId}`);
+            await control.settle(transaction, "succeeded");
+          });
+        } catch (error) {
+          // A run that lost its job records nothing: another worker owns it now.
+          if (error instanceof LeaseLostError) throw error;
+          try {
+            await db.transaction(async (transaction) => {
+              await control.settle(transaction, "failed");
+              await transaction.update(courseRequests).set({ status: "starting_level_confirmed", failureReason: blueprintFailureReason(error) })
+                .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "blueprint_preparing"))).returning({ id: courseRequests.id });
+            });
+          } catch (recordError) {
+            if (recordError instanceof LeaseLostError) throw error;
+            const detail = (caught: unknown) => caught instanceof Error ? caught.message : String(caught);
+            throw new Error(`[blueprint-job: start] Failed to record the Blueprint failure || requestId=${courseRequestId} || ${detail(recordError)} || ${detail(error)}`);
+          }
+          throw error;
         }
-        throw error;
-      }
+      });
     },
   };
 }
