@@ -390,6 +390,19 @@ export type OpsVendorBilling = {
    */
   untrackedAccountUsd: number | null;
   untrackedKeyUsd: number | null;
+  /**
+   * Research vendors only: calls rebuilt from what the platform stored before recording began (Source packs in
+   * `lesson_research`, Starting Level diagnostics that used this vendor for fact-checks), priced at list price. A lower
+   * bound: live checks and anything not stored are missing, and fact-check call counts were never stored.
+   */
+  reconstructed: {
+    calls: number;
+    estimatedUsd: number;
+    /** Diagnostics that ran fact-checks on this vendor; each made an unknown number of calls. */
+    factCheckDiagnostics: number;
+    from: string | null;
+    to: string | null;
+  } | null;
   /** OpenRouter key usage windows as OpenRouter reports them. */
   keyWindows: { dailyUsd: number; weeklyUsd: number; monthlyUsd: number; limitUsd: number | null; remainingUsd: number | null } | null;
   /** Readings in the range, oldest first, for a balance-over-time line. */
