@@ -14,7 +14,9 @@ import { createSetupReader } from "./setup.ts";
 async function start() {
   // apps/console/src/server → repo root is four directories up.
   const root = loadRootEnv(import.meta.url, 4);
-  const run = runnerFor(createDb(requireDatabaseUrl(), { max: 3 }));
+  // The runner never puts more queries in flight than the pool has connections (see runnerFor).
+  const POOL = 3;
+  const run = runnerFor(createDb(requireDatabaseUrl(), { max: POOL }), { concurrency: POOL });
   const keeper = createParallelTokenKeeper({ path: parallelAccountPath(root) });
   const billing = createBillingService({ run, readers: vendorReadersFromEnv({ env: process.env, keeper }), keeper });
   const app = buildConsoleApp(createOpsStore(run), { logger: true, setup: createSetupReader({ env: process.env }), billing,

@@ -1,4 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import type {
   Database,
   OpsApiRequestRow,
@@ -594,18 +595,63 @@ export function createOpsStore(run: SqlRunner): OpsStore {
   };
 }
 
+/** How the runner shares the pool: at most this many queries in flight, each cut off after this long. */
+export type RunnerOptions = { concurrency?: number; timeoutMs?: number };
+
+/** Default cap on one query; a stuck one becomes an error the screen retries instead of a spinner forever. */
+export const QUERY_TIMEOUT_MS = 20_000;
+
 /**
- * Wraps the Drizzle database as a SQL runner.
- * @param db - The Drizzle client
- * @returns A runner that executes raw SQL and returns plain rows
+ * Lets at most `limit` tasks run at once; the rest wait their turn in order.
+ * @param limit - Tasks allowed in flight
+ * @returns A function that runs a task when a slot is free
  */
-export function runnerFor(db: Database): SqlRunner {
-  return async (query) => {
+export function createLimiter(limit: number) {
+  let active = 0;
+  const waiting: (() => void)[] = [];
+  return async function run<T>(task: () => Promise<T>): Promise<T> {
+    if (active >= limit) await new Promise<void>((resolve) => waiting.push(resolve));
+    active += 1;
     try {
-      return [...(await db.execute<SqlRow>(query))];
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`[ops-store.ts: runnerFor] Usage Console query failed || ${message}`);
+      return await task();
+    } finally {
+      active -= 1;
+      waiting.shift()?.();
     }
   };
+}
+
+/**
+ * Wraps the database as a SQL runner that is safe on Supabase's transaction pooler (port 6543). postgres.js pipelines
+ * extra queries onto a connection that is still busy, and the pooler can lose those, leaving them pending forever and
+ * the whole console frozen. So no more queries run at once than the pool has connections, and each query is cancelled
+ * after `timeoutMs` (on the server too, which frees its connection).
+ * @param db - The Drizzle client
+ * @param options - Concurrency (match the pool's `max`) and per-query timeout
+ * @returns A runner that executes raw SQL and returns plain rows
+ */
+export function runnerFor(db: Database, options: RunnerOptions = {}): SqlRunner {
+  const dialect = new PgDialect();
+  const limit = createLimiter(options.concurrency ?? 3);
+  const timeoutMs = options.timeoutMs ?? QUERY_TIMEOUT_MS;
+  return (query) =>
+    limit(async () => {
+      const { sql: text, params } = dialect.sqlToQuery(query);
+      const pending = db.$client.unsafe(text, params as never[]);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timedOut = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          void Promise.resolve(pending.cancel()).catch(() => undefined);
+          reject(new Error(`timed out after ${timeoutMs} ms`));
+        }, timeoutMs);
+      });
+      try {
+        return [...((await Promise.race([pending, timedOut])) as unknown as SqlRow[])];
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`[ops-store.ts: runnerFor] Usage Console query failed || ${message}`);
+      } finally {
+        clearTimeout(timer);
+      }
+    });
 }
