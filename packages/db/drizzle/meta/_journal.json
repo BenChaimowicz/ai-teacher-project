@@ -141,6 +141,13 @@
       "when": 1792856532090,
       "tag": "0019_20261024154212_openrouter_history",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792857500667,
+      "tag": "0020_20261024155820_needs_new_blueprint",
+      "breakpoints": true
     }
   ]
 }

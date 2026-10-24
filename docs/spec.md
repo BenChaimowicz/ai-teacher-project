@@ -274,7 +274,7 @@ Scaffolding *dosage* (worked-example amount, tighter sequencing) follows Startin
 
 ### 4.4 Course Blueprint
 
-The generator is told subject, Learning Goal, Starting Level, and the write-time Teaching Profile fields the Blueprint consumes (including `quizCadence`). It designs the Module and Lesson sequence for that remaining gap alone. There is no canonical novice→goal outline and no unpublished prefix. Remaining-gap scope lives on the Blueprint; Lessons have no difficulty score.
+The generator is told subject, Learning Goal, Starting Level, and the write-time Teaching Profile fields the Blueprint consumes (including `quizCadence`). It designs the Module and Lesson sequence for that remaining gap alone: what the whole Learning Goal needs that the Learner does not yet have. The diagnostic's probed capabilities sample the goal; they do not list it, so a Blueprint teaches the missed probes and whatever else the goal clearly needs, and skips only what the diagnostic evidenced. There is no canonical novice→goal outline and no unpublished prefix. Remaining-gap scope lives on the Blueprint; Lessons have no difficulty score.
 
 Each slot: title, Lesson goal, non-empty objectives, registered teaching method (`reading` or `quiz`), 2–5 Topic tags (lowercase slugs from the slot’s objectives; no closed taxonomy). A Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it) and lists 1–10 objectives. No two slots share a Lesson goal. At least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal.
 
@@ -332,7 +332,7 @@ Preference list and Denylist are host policy in the app, not a vendor-specific `
 
 **Denylist:** junk hosts, content farms, social scrapes, quiz mills, Pinterest, unlicensed tab mills. Post-filter in app even if a vendor misses. Do not denylist YouTube solely to hide it; treat it as cite-the-URL, do-not-scrape.
 
-**Source vetting.** A Denylist cannot name every shop. Before the Generator writes, the Judge model vets each non-preferred Source and drops shop, product and marketing pages, commercial blogs, and content farms. The Generator never sees a vetted-out Source, so citing one is a Citation to an unknown ID. Vetted-out Sources and reasons are stored with the Lesson checkpoint. The reading Judge still fails `unreliable_source` as a backstop.
+**Source vetting.** A Denylist cannot name every shop. Before the Generator writes, the Judge model vets each non-preferred Source and drops shop, product and marketing pages, commercial blogs, and content farms. The Generator never sees a vetted-out Source, so citing one is a Citation to an unknown ID. Vetted-out Sources and reasons are stored with the Lesson checkpoint. Vetting is the only reliability check: every Source the Generator is given may be cited, and the reading Judge does not judge a Source's reliability again (ADR 0016).
 
 Give every retrieved excerpt a stable source ID. Pass those excerpts to the Generator. Require source IDs in the generated Lesson. Reject citations to unknown IDs.
 
@@ -471,13 +471,13 @@ type JudgeResult = {
 
 If Test-course protocol finds missed factual errors, bump Judge SKU in config (`luna` → `gpt-6.1-sol`) without changing the pairing rule — never to the authoring model.
 
-**Repair budget.** Two regenerations per slot after the first failed validate (initial generate + two repairs). A third failure on that slot is terminal: keep unpublished Lessons before it; Course Request fails; Retry refreshes that slot’s budget on the same approved Blueprint; Revise request discards unpublished Lessons. No Course-wide repair pool. Retrieval’s 2–3 query reformulations and the one media vision repair stay inside generate and do not draw on this number. A Judge **fail** consumes a regeneration of the artifact, not a second Judge SKU, unless the Judge call itself errored.
+**Repair budget.** Two regenerations per slot after the first failed validate (initial generate + two repairs). A Reading repair edits only the passages the failed checks name and keeps every other sentence verbatim, so a repair cannot add new problems elsewhere in the Lesson (ADR 0016). A third failure on that slot is terminal: keep unpublished Lessons before it; Course Request fails; Retry refreshes that slot’s budget on the same approved Blueprint; Revise request discards unpublished Lessons. No Course-wide repair pool. Retrieval’s 2–3 query reformulations and the one media vision repair stay inside generate and do not draw on this number. A Judge **fail** consumes a regeneration of the artifact, not a second Judge SKU, unless the Judge call itself errored.
 
 ### 6.2 Blueprint (before Learner review)
 
 **Code:** every slot has title, Lesson goal, non-empty objectives, and a registered method (`reading` or `quiz`); a Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it); no two slots share a Lesson goal; at least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal; a Quiz slot lists 1–10 objectives.
 
-**Judge:** coverage (this sequence can take this Starting Level to this Learning Goal); prerequisite order; no redundant slot; each Quiz’s assessed Lessons are the right chunk.
+**Judge:** coverage (no remaining-gap capability is left untaught); the sequence reaches this Learning Goal from this Starting Level, which is the same check the whole-Course Judge makes (§6.5), so a sequence that cannot reach the goal fails here, before any Lesson is written; prerequisite order; no redundant slot; each Quiz’s assessed Lessons are the right chunk.
 
 A Blueprint fail is a Blueprint revision, then Learner review again.
 
@@ -503,7 +503,7 @@ Do not re-judge every Lesson from scratch.
 
 **Judge:** one pass over titles, Lesson goals, objectives, and short per-Lesson commitments — Course coherence across Modules, and the assembled sequence reaches this Learning Goal from this Starting Level.
 
-If that Judge names a **Lesson**, targeted repair from that earliest Lesson and affected downstream, then this pass again. If it names the **sequence**, structural return to Blueprint review.
+If that Judge names a **Lesson**, targeted repair from that earliest Lesson and affected downstream, then this pass again. If it names the **sequence**, structural return to Blueprint review. Retrying cannot fix the sequence, so it is never offered for one. Until the structural return is built (SEN-85), the Request fails with a reason that says so and points to a new Course Request.
 
 ### 6.6 Test-course protocol
 

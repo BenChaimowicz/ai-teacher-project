@@ -338,6 +338,12 @@ test("Retry queues a failed job again on the same Blueprint and clears the reaso
     Object.assign(requestRow, { status: "generation_cancelled", failureReason: null });
     Object.assign(jobs()[0]!, { status: "cancelled" });
     assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/retry` })).statusCode, 409);
+
+    Object.assign(requestRow, { status: "generation_failed", failureReason: "Together, the finished Lessons don't reach your Learning Goal." });
+    Object.assign(jobs()[0]!, { status: "needs_new_blueprint" });
+    assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/retry` })).statusCode, 409, "Retrying cannot fix a sequence.");
+    assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/resume` })).statusCode, 409);
+    assert.equal(requestRow.status, "generation_failed");
   } finally {
     await app.close();
   }

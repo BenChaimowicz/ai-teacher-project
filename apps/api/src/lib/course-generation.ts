@@ -22,7 +22,7 @@ import { quizPlugin } from "../teaching-methods/quiz.ts";
 import { readingPlugin } from "../teaching-methods/reading.ts";
 import type { TeachingMethodPlugin } from "../teaching-methods/types.ts";
 import { courseOutline, createCourseJudge, type CourseJudge } from "./course-judge.ts";
-import { LeaseLostError, type GenerationControl } from "./generation-job.ts";
+import { LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createQuizGenerator, QuizFailedError, type QuizGenerator } from "./quiz-generation.ts";
 import {
@@ -71,6 +71,11 @@ export class CourseFailedError extends Error {
     super(`[course-generation: publish] Course failed whole-Course ${codeFailures.length ? "Code" : "Judge"} checks || ${reasons.join(" || ")}`);
     this.name = "CourseFailedError";
   }
+
+  /** The Judge named the sequence, not a Lesson: only a new Blueprint can fix it (spec §6.5), never Retry. */
+  get needsNewBlueprint(): boolean {
+    return this.judge?.failedChecks.includes("sequence_reaches_goal") ?? false;
+  }
 }
 
 /** Where generation stopped, so its failure can be told in plain language. */
@@ -107,9 +112,22 @@ export function failureReason(stage: Stage, error: unknown): string {
       ? `We couldn't write the Lesson “${stage.title}” so that it passed our quality checks. ${RETRY_STEP}`
       : `Generation was interrupted while writing the Lesson “${stage.title}”. ${RESUME_STEP}`;
   }
+  if (error instanceof CourseFailedError && error.needsNewBlueprint) {
+    return "Together, the finished Lessons don't reach your Learning Goal, so this Course can't be published, and retrying won't change that. Start a new Course Request from Home.";
+  }
   return failedCheck(error)
     ? `The finished Lessons didn't fit together well enough to publish as one Course. Retry checks them again.`
     : `Generation was interrupted while publishing your Course. ${RESUME_STEP}`;
+}
+
+/**
+ * How the job ends when generation stops: a sequence that misses the goal is final, a failed check waits for Retry, and
+ * anything else is an interruption that Retry resumes.
+ * @param error - What stopped generation
+ */
+export function settledStatus(error: unknown): SettledStatus {
+  if (error instanceof CourseFailedError && error.needsNewBlueprint) return "needs_new_blueprint";
+  return failedCheck(error) ? "failed" : "interrupted";
 }
 
 /**
@@ -150,7 +168,8 @@ const researchFromEnv: LessonResearch = (topic) =>
  * Any failure publishes nothing and keeps the checkpoints. A failed check fails the job and an interruption leaves it
  * `interrupted`; either moves the Request to `generation_failed` with a plain-language reason, and Retry queues the
  * job again (spec §5.1). A Reading with no usable Source also discards its research, so Retry searches again.
- * Targeted repair of a failed whole-Course check is not built; Retry judges the Course again.
+ * Targeted repair of a Lesson the whole-Course Judge names is not built; Retry judges the Course again. A sequence that
+ * misses the goal ends the job `needs_new_blueprint` with no Retry: the structural return is SEN-85.
  * @param options - Injected research, Generators, and Judge; tests pass fixtures
  */
 export function createCourseGeneration(options: CourseGenerationOptions = {}): CourseGeneration {
@@ -335,7 +354,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       if (error instanceof LeaseLostError) throw error;
       try {
         await db.transaction(async (transaction) => {
-          await control.settle(transaction, failedCheck(error) ? "failed" : "interrupted");
+          await control.settle(transaction, settledStatus(error));
           if (error instanceof LessonUnresearchableError) {
             await transaction.delete(lessonResearch)
               .where(and(eq(lessonResearch.courseRequestId, courseRequestId), eq(lessonResearch.slotId, error.slotId)));
