@@ -19,7 +19,7 @@ test("The topic is typed, the goal is tapped, and the checks that need no Learne
   // Validity passes and the Starting Level check is prepared, with no button in between.
   await expect(page.getByRole("group", { name: "Question 1 of 8" })).toBeVisible({ timeout: 10_000 });
   const thread = page.getByRole("log");
-  await expect(thread.getByText("Drum kit", { exact: true })).toBeVisible();
+  await expect(thread.getByText(/^You: ?Drum kit$/)).toBeVisible();
   await expect(thread.getByText("Understand the main ideas of Drum kit and how they fit together.")).toBeVisible();
 });
 

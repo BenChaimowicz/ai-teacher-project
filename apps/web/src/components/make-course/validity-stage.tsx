@@ -1,5 +1,5 @@
 import { Home, MessageCircle, Pencil, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ComposeFlow } from "@/components/make-course/compose-flow.tsx";
 import { ThreadEnd, WorkingLine, useAutoStep } from "@/components/make-course/flow.tsx";
@@ -57,6 +57,8 @@ export function ValidityStage({ record }: StageProps) {
   const [busy, setBusy] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
+  // A new decision replaces the pick: history shows it from the saved Request instead.
+  useEffect(() => setPicked(null), [record.status, record.clarification?.answer]);
 
   /** Runs the Validity check, with the clarification answer when there is one. */
   async function check(answer?: string) {
@@ -98,7 +100,7 @@ export function ValidityStage({ record }: StageProps) {
         {error ? (
           <>
             <NibblesLine mood="think"><span role="alert">{error}</span></NibblesLine>
-            <OptionTiles
+            <OptionTiles key={`${record.status}-t0`}
               label="Checking didn't finish"
               resetKey={attempt}
               options={[
@@ -131,7 +133,7 @@ export function ValidityStage({ record }: StageProps) {
         </NibblesLine>
         <NibblesLine continued><b>{question}</b></NibblesLine>
         {answers.length ? (
-          <OptionTiles
+          <OptionTiles key={`${record.status}-t1-${record.clarification?.answer ?? ""}`}
             label={question}
             resetKey={attempt}
             cols={1}
@@ -161,7 +163,7 @@ export function ValidityStage({ record }: StageProps) {
     <>
       <NibblesLine mood="think">I can't make this one. <span className="mk-faint">{record.validity?.reason}</span></NibblesLine>
       {record.validity?.safeReframe ? <NibblesLine continued>What I could do instead: {record.validity.safeReframe}</NibblesLine> : null}
-      <OptionTiles
+      <OptionTiles key={`${record.status}-t2`}
         label="What next?"
         resetKey={attempt}
         options={[

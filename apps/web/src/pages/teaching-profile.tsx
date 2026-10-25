@@ -63,6 +63,13 @@ type Step =
 export function TeachingProfilePage() {
   const { loading, error, present, record, save, reset, refresh } = useTeachingProfile();
   useCompanionLines(LINES);
+  // A fresh conversation only after Reset; saving keeps the one in progress (it shows what was just saved).
+  const [epoch, setEpoch] = useState(0);
+  const wasPresent = useRef(present);
+  useEffect(() => {
+    if (wasPresent.current && !present) setEpoch((n) => n + 1);
+    wasPresent.current = present;
+  }, [present]);
 
   if (loading) return <PageLoader label="Loading how you like to learn…" />;
   if (error) {
@@ -74,7 +81,7 @@ export function TeachingProfilePage() {
       </div>
     );
   }
-  return <ProfileConversation key={present ? "saved" : "new"} present={present} saved={record?.answers ?? null} save={save} reset={reset} />;
+  return <ProfileConversation key={epoch} present={present} saved={record?.answers ?? null} save={save} reset={reset} />;
 }
 
 type ConversationProps = {
@@ -210,10 +217,10 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
   const currentField = step.kind === "ask" ? PROFILE_QUESTIONS[step.index]!.field : step.kind === "redo" ? step.field : null;
 
   const doneTiles: OptionTile[] = useMemo(() => [
-    { id: "course", label: present ? "Make a new course" : "Make my first course", description: "Pick a topic next", icon: <Sparkles />, tone: "primary" },
+    { id: "course", label: mode === "first" ? "Make my first course" : "Make a new course", description: "Pick a topic next", icon: <Sparkles />, tone: "primary" },
     { id: "change", label: "Change something", description: "Pick a line to redo", icon: <Pencil />, tone: "quiet" },
     { id: "home", label: "Back to Home", description: "Start whenever you like", icon: <Home />, tone: "quiet" },
-  ], [present]);
+  ], [mode]);
 
   const changeTiles: OptionTile<ProfileField>[] = PROFILE_QUESTIONS.map((question) => ({
     id: question.field,

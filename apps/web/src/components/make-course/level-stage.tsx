@@ -170,7 +170,7 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
   );
   const errorLine = error ? <NibblesLine mood="think"><span role="alert">{error}</span></NibblesLine> : null;
   const retryTiles = (label: string, onRetry: () => void | Promise<void>, retryLabel = "Try again") => (
-    <OptionTiles
+    <OptionTiles key={`${record.status}-t0`}
       label={label}
       resetKey={`${attempt}-${record.status}`}
       options={[
@@ -314,7 +314,7 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
       {gapLine}
       {ceiling ? <NibblesLine continued>You answered nearly everything. I can still make a short course toward your goal, or you can set a harder one.</NibblesLine> : null}
       {busy === "widen" ? <NibblesLine mood="think"><WorkingLine>Covering a bit more…</WorkingLine></NibblesLine> : (
-        <OptionTiles
+        <OptionTiles key={`${record.status}-t1`}
           label="Where your course starts"
           resetKey={`${result.remainingGapStatement}-${attempt}`}
           cols={tiles.length === 3 ? 3 : 2}

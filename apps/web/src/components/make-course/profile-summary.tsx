@@ -36,7 +36,7 @@ export function ProfileSummaryPanel({ draft, current = null, fresh = null, onCha
               >
                 <span className="pk">{question.short}</span>
                 <span className="pv">
-                  {summary ? summary.chip : now ? "…" : "–"}
+                  <span>{summary ? summary.chip : now ? "…" : "–"}</span>
                   {summary?.tag ? <span className="mk-defaulttag"> · {summary.tag}</span> : null}
                 </span>
                 <span className="pe" aria-hidden="true">change</span>
@@ -70,7 +70,7 @@ export function ProfileSettingsCard({ draft, fresh = null, busy = false, onChang
             <span className="ic" aria-hidden="true">{question.icon}</span>
             <span className="bk">{question.short}</span>
             <span className="bv">
-              {summary?.chip ?? question.defaultChip}
+              <span>{summary?.chip ?? question.defaultChip}</span>
               {summary?.tag ? <span className="mk-defaulttag"> · {summary.tag}</span> : null}
               <small>{question.about}</small>
             </span>

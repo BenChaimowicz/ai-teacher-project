@@ -152,7 +152,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
         {failure ? (
           <>
             <NibblesLine mood="think"><span role="alert">{failure}</span></NibblesLine>
-            <OptionTiles
+            <OptionTiles key={`${record.status}-t0`}
               label="The plan didn't finish"
               resetKey={attempt}
               options={[{ id: "retry", label: "Try again", description: "A fresh design", icon: <RefreshCw />, tone: "primary" }, homeTile]}
@@ -191,7 +191,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
     return (
       <>
         <NibblesLine mood="think"><span role="alert">{loadError}</span></NibblesLine>
-        <OptionTiles label="Couldn't load" options={[{ id: "retry", label: "Try again", icon: <RefreshCw />, tone: "primary" }, homeTile]}
+        <OptionTiles key={`${record.status}-t1`} label="Couldn't load" options={[{ id: "retry", label: "Try again", icon: <RefreshCw />, tone: "primary" }, homeTile]}
           onPick={(option) => (option.id === "retry" ? setLoadKey((n) => n + 1) : navigate("/"))} />
       </>
     );
@@ -231,7 +231,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
           <>
             <LearnerEcho>Redo the plan without these</LearnerEcho>
             <NibblesLine typing delayMs={360}>Sure. Why skip them? <span className="mk-faint">Optional, but it helps me redo it.</span></NibblesLine>
-            <OptionTiles
+            <OptionTiles key={`${record.status}-t2`}
               label="Why skip them?"
               resetKey={attempt}
               cols={3}
@@ -244,7 +244,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
             />
           </>
         ) : (
-          <OptionTiles
+          <OptionTiles key={`${record.status}-t3`}
             label="Your plan"
             resetKey={`${unticked.size === 0}-${attempt}`}
             cols={reviewTiles.length === 1 ? 1 : 2}
@@ -283,7 +283,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
         {history}
         <NibblesLine mood="think">On it. You can leave; I'll keep going.</NibblesLine>
         <MakingCard view={view} generation={generation} status={record.status} />
-        <OptionTiles
+        <OptionTiles key={`${record.status}-t4`}
           label="While it's being made"
           resetKey={attempt}
           options={[
@@ -315,7 +315,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
           {" "}<span className="mk-faint">It won't restart by itself.</span>
         </NibblesLine>
         <MakingCard view={view} generation={generation} status={record.status} />
-        <OptionTiles
+        <OptionTiles key={`${record.status}-t5`}
           label="Stopped"
           resetKey={attempt}
           options={[{ id: "resume", label: "Resume", description: "Carry on writing", icon: <Play />, tone: "primary" }, homeTile]}
@@ -340,7 +340,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
         {history}
         <NibblesLine mood="think"><span role="alert">{record.failureReason ?? "I couldn't finish making this course."}</span></NibblesLine>
         <MakingCard view={view} generation={generation} status={record.status} />
-        <OptionTiles
+        <OptionTiles key={`${record.status}-t6`}
           label="Couldn't finish"
           resetKey={attempt}
           cols={tiles.length === 3 ? 3 : 2}
@@ -380,7 +380,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
           </div>
         </ThreadCard>
       </div>
-      <OptionTiles
+      <OptionTiles key={`${record.status}-t7`}
         label="Your course is ready"
         options={[
           { id: "start", label: "Start lesson 1", description: first?.title, icon: <Lightbulb />, tone: "primary", disabled: !courseHref },
