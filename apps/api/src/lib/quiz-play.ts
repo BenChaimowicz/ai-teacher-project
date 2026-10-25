@@ -3,7 +3,6 @@ import {
   canSubmitQuiz,
   isAnswerCorrect,
   isPassingScore,
-  isPerfectScore,
   parseQuizAnswers,
   parseQuizBody,
   QUIZ_METHOD_ID,
@@ -32,18 +31,21 @@ export type QuizAttemptView = {
   answers: QuizAnswers;
   /** Right/wrong per item, only for items that have feedback: checked in a per-item draft, or every item once submitted. */
   results: Record<string, boolean>;
+  /**
+   * The correct answer and its explanation, for exactly the items in `results`. An item's key reaches the
+   * browser only once the Learner has answered it and it has feedback: on Check (per-item) or on Submit.
+   */
+  answerKeys: Record<string, QuizAnswerKey>;
   score: QuizScore | null;
 };
 
-/** Learner state of one Quiz. Never carries the answer key. */
+/** Learner state of one Quiz. Carries an item's answer key only after that item has feedback. */
 export type QuizView = {
   /** Timing of the open draft, otherwise the Teaching Profile value the next attempt will use. */
   feedbackTiming: FeedbackTiming;
   attempt: QuizAttemptView | null;
   best: QuizScore | null;
   passed: boolean;
-  /** Correct answers may be opened while the best score is under 100%. */
-  answersOpen: boolean;
 };
 
 /** A revealed correct answer at the Learner's current Feedback detail. */
@@ -61,9 +63,6 @@ export type QuizResult = { ok: true; quiz: QuizView } | QuizError;
 
 /** Result of Submit; Progress may have changed. */
 export type QuizSubmitResult = { ok: true; quiz: QuizView; study: StudyCoursePayload } | QuizError;
-
-/** Result of opening one correct answer. */
-export type QuizRevealResult = { ok: true; answer: QuizAnswerKey } | QuizError;
 
 /** Who is playing which Quiz, and their current Teaching Profile. */
 export type QuizRequest = {
@@ -114,14 +113,22 @@ function quizView(quiz: QuizContext, profile: ResolvedTeachingProfile): QuizView
     const answers = parseQuizAnswers(quiz.latest.answers, quiz.body);
     const submitted = quiz.latest.status === "submitted";
     const results: Record<string, boolean> = {};
+    const answerKeys: Record<string, QuizAnswerKey> = {};
     for (const item of quiz.body.items) {
       const answer = answers[item.id];
-      if (answer && (submitted || answer.checked)) results[item.id] = isAnswerCorrect(item, answer);
+      if (!answer || !(submitted || answer.checked)) continue;
+      results[item.id] = isAnswerCorrect(item, answer);
+      answerKeys[item.id] = {
+        itemId: item.id,
+        correctOptionId: item.correctOptionId,
+        explanation: item.explanations[profile.feedbackDepth.value],
+      };
     }
     attempt = {
       status: quiz.latest.status,
       answers,
       results,
+      answerKeys,
       score: submitted ? scoreQuiz(quiz.body, answers) : null,
     };
   }
@@ -130,7 +137,6 @@ function quizView(quiz: QuizContext, profile: ResolvedTeachingProfile): QuizView
     attempt,
     best,
     passed: best != null && isPassingScore(best),
-    answersOpen: best == null || !isPerfectScore(best),
   };
 }
 
@@ -215,7 +221,7 @@ export function answerQuizItem(
 }
 
 /**
- * Per-item timing: locks one answered item and gives it right/wrong.
+ * Per-item timing: locks one answered item and gives it right/wrong, plus the correct answer and why.
  * @param store - Study store
  * @param request - Quiz request
  * @param itemId - Quiz item
@@ -291,34 +297,5 @@ export function retakeQuiz(store: StudyStore, request: QuizRequest): Promise<Qui
       await store.insertQuizAttempt(request.learnerId, quiz.lesson.id, request.profile.feedbackTiming.value, {});
     }
     return reload(store, request);
-  });
-}
-
-/**
- * Opens one correct answer and its explanation at the current Feedback detail.
- * Only for an item that already has feedback, and only while the best score is under 100%.
- * @param store - Study store
- * @param request - Quiz request
- * @param itemId - Quiz item
- */
-export function revealQuizAnswer(store: StudyStore, request: QuizRequest, itemId: unknown): Promise<QuizRevealResult> {
-  return withQuiz("revealQuizAnswer", store, request, async (quiz): Promise<QuizRevealResult | QuizError> => {
-    const item = quiz.body.items.find((row) => row.id === itemId);
-    if (!item) return { ok: false, status: 400, error: "Unknown question." };
-    const view = quizView(quiz, request.profile);
-    if (!view.answersOpen) {
-      return { ok: false, status: 409, error: "Correct answers close once your best score is 100%." };
-    }
-    if (!view.attempt || !(item.id in view.attempt.results)) {
-      return { ok: false, status: 409, error: "Answer this question and get feedback first." };
-    }
-    return {
-      ok: true,
-      answer: {
-        itemId: item.id,
-        correctOptionId: item.correctOptionId,
-        explanation: item.explanations[request.profile.feedbackDepth.value],
-      },
-    };
   });
 }

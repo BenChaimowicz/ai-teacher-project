@@ -39,19 +39,20 @@ export type QuizAttemptView = {
   status: QuizAttemptStatus;
   answers: QuizAnswers;
   results: Record<string, boolean>;
+  /** Correct answer and why, only for items that already have feedback (checked, or after Submit). */
+  answerKeys: Record<string, QuizAnswerKey>;
   score: QuizScore | null;
 };
 
-/** Learner state of one Quiz. Never carries the answer key. */
+/** Learner state of one Quiz. An item's answer key arrives only once that item has feedback. */
 export type QuizView = {
   feedbackTiming: FeedbackTiming;
   attempt: QuizAttemptView | null;
   best: QuizScore | null;
   passed: boolean;
-  answersOpen: boolean;
 };
 
-/** A revealed correct answer. */
+/** A correct answer, revealed with an item's feedback. */
 export type QuizAnswerKey = {
   itemId: string;
   correctOptionId: string;

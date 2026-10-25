@@ -45,19 +45,18 @@ type QuestionProps = {
   locked: boolean;
   canCheck: boolean;
   result: boolean | undefined;
-  answersOpen: boolean;
+  /** Arrives with the item's feedback (Check, or Submit). */
   revealed: QuizAnswerKey | undefined;
   busy: boolean;
   onAnswer: (optionId: string) => void;
   onCheck: () => void;
-  onReveal: () => void;
 };
 
 /**
  * One question card: the prompt, four answer tiles (radios), Check (per-item timing), the verdict, and
- * Show answer on a wrong one. A right answer glows green; a wrong one shakes, and Show answer lights the right one.
+ * the right answer with why. A right answer glows green; a wrong one shakes and the right one lights up.
  */
-function QuestionCard({ item, index, total, streak, results, chosen, locked, canCheck, result, answersOpen, revealed, busy, onAnswer, onCheck, onReveal }: QuestionProps) {
+function QuestionCard({ item, index, total, streak, results, chosen, locked, canCheck, result, revealed, busy, onAnswer, onCheck }: QuestionProps) {
   const card = useRef<HTMLFieldSetElement>(null);
   const lastResult = useRef(result);
   const qid = `q-${item.id}`;
@@ -100,7 +99,7 @@ function QuestionCard({ item, index, total, streak, results, chosen, locked, can
       <div className="l-qopts">
         {item.options.map((option, optionIndex) => {
           const isChosen = chosen === option.id;
-          const isKey = revealed?.correctOptionId === option.id;
+          const isKey = result === false && revealed?.correctOptionId === option.id;
           const state = isChosen && result === true ? "good" : isChosen && result === false ? "miss" : isKey ? "reveal" : null;
           return (
             <label
@@ -130,17 +129,14 @@ function QuestionCard({ item, index, total, streak, results, chosen, locked, can
             Check
           </Button>
         ) : null}
-        {result === false && answersOpen && !revealed ? (
-          <Button size="sm" variant="ghost" onClick={onReveal} disabled={busy}>
-            Show answer
-          </Button>
-        ) : null}
       </div>
-      {revealed ? (
-        <div className="l-why">
-          <p>
-            <b>Correct answer:</b> {item.options.find((option) => option.id === revealed.correctOptionId)?.text}
-          </p>
+      {revealed && result !== undefined ? (
+        <div className={cn("l-why", result && "right")}>
+          {result ? null : (
+            <p>
+              <b>Correct answer:</b> {item.options.find((option) => option.id === revealed.correctOptionId)?.text}
+            </p>
+          )}
           <p>{revealed.explanation}</p>
         </div>
       ) : null}
@@ -217,7 +213,6 @@ type QuizViewProps = {
  */
 export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, body, onPayload, finish }: QuizViewProps) {
   const [view, setView] = useState<QuizState | null>(null);
-  const [revealed, setRevealed] = useState<Record<string, QuizAnswerKey>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justSubmitted, setJustSubmitted] = useState(false);
@@ -231,7 +226,6 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
   useEffect(() => {
     let cancelled = false;
     setView(null);
-    setRevealed({});
     setError(null);
     setJustSubmitted(false);
     shownBefore.current = null;
@@ -280,6 +274,7 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
             status: "draft",
             answers: { ...draft?.answers, [itemId]: { optionId, checked: false } },
             results: draft?.results ?? {},
+            answerKeys: draft?.answerKeys ?? {},
             score: null,
           },
         });
@@ -301,12 +296,6 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
       if (right === false) say("That one's worth a second look.");
     });
 
-  const reveal = (itemId: string) =>
-    write(async () => {
-      const json = await requestJson<{ answer: QuizAnswerKey }>(`${base}/answers/${itemId}/reveal`, "POST", undefined, "Could not show answer");
-      setRevealed((current) => ({ ...current, [itemId]: json.answer }));
-    });
-
   const submit = () =>
     write(async () => {
       const json = await requestJson<{ quiz: QuizState; study: StudyPayload }>(`${base}/submit`, "POST", undefined, "Could not submit Quiz");
@@ -325,7 +314,6 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
   const retake = () =>
     write(async () => {
       const json = await requestJson<{ quiz: QuizState }>(`${base}/retake`, "POST", undefined, "Could not start a retake");
-      setRevealed({});
       setJustSubmitted(false);
       shownBefore.current = null;
       setView(json.quiz);
@@ -451,12 +439,10 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
                   locked={submitted || Boolean(chosen?.checked)}
                   canCheck={!submitted && perItem && Boolean(chosen) && !chosen?.checked}
                   result={results[item.id]}
-                  answersOpen={view.answersOpen}
-                  revealed={revealed[item.id]}
+                  revealed={attempt?.answerKeys?.[item.id]}
                   busy={busy}
                   onAnswer={(optionId) => void answer(item.id, optionId)}
                   onCheck={() => void check(item.id)}
-                  onReveal={() => void reveal(item.id)}
                 />
               );
             })}
@@ -476,7 +462,7 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
                     ? attempt.score.correct / attempt.score.total >= 0.7
                       ? "All clear."
                       : "Your best score still counts, so this one stays passed."
-                    : "Close. Have another look, then try again whenever you like. Wrong ones have Show answer."}
+                    : "Close. The right answers are marked above. Try again whenever you like."}
                 </NibblesLine>
               </>
             ) : null}

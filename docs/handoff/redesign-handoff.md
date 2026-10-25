@@ -58,10 +58,8 @@ The full list is in `docs/uis/redesign/09-implementation-notes.md`. The spec is 
     - a "Help me pick" font test
 
   The user loved the timeline figure and "Worth knowing" notes.
-- **Quiz:** one question at a time. A right answer glows green, a wrong one shakes and the correct one is revealed. The mock also shows an adaptive "I added a short lesson" path change, which is SEN-79 exploration only; the spec still says Quizzes don't rewrite the path.
-- **Still open, for the user to decide:**
-  - Keep the Sepia and Paper reading surfaces, or ship dark only? Everything is in the mock for them to choose from.
-  - Which reading modes ship first.
+- **Reading modes and page colours (decided 2026-10-25):** all five modes ship (Comfort is the default), and all four page colours ship: Dark (default), Dim, Sepia, Paper. Sepia and Paper are light reading surfaces inside the dark app.
+- **Quiz:** one question at a time. A right answer glows green, a wrong one shakes and the correct one is revealed automatically, with its explanation. There is no Show answer step (decided 2026-10-25). The answer key still never reaches the browser before the Learner answers: per item it comes back with Check, at the end of the quiz with Submit. The mock also shows an adaptive "I added a short lesson" path change, which is SEN-79 exploration only; the spec still says Quizzes don't rewrite the path.
 
 ## 3. The mocks (visual reference)
 

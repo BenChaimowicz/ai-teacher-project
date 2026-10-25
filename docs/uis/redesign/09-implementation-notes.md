@@ -11,4 +11,6 @@ SEN-52 · 2026-10-25. These were settled while reviewing the mocks in this folde
 - **Every course has an icon.** It's picked at plan time from a curated library (see `08-course-icons.md`) and shown on Home cards and sidebar rows.
 - **The sidebar never scrolls.** It shows a compact Nibbles card, New course, one line per course (4–5 at most, then "see all on Home"), and "How you like to learn" pinned at the bottom.
 - **Options only after the subject.** The topic is the only free text. Everything after it is tap-to-choose tiles placed right under Nibbles' line.
-- **Always dark**, with 5 accent palettes. Sepia and Paper are offered only as optional *reading surfaces* inside the Aa panel. Keeping them is still pending the user's decision.
+- **Always dark**, with 5 accent palettes. Sepia and Paper ship as light *reading surfaces* inside the Aa panel; the app chrome stays dark.
+- **Reading modes and page colours (decided 2026-10-25, SEN-88).** All five modes ship: Comfort (default), Focus, Spaced, Book, Skim. All four page colours ship: Dark (default), Dim, Sepia, Paper.
+- **Quiz answers (decided 2026-10-25, SEN-88).** A wrong answer reveals the correct one automatically, with its explanation. There is no Show answer step. The key still never reaches the browser before the Learner has answered: per item it comes with Check, at the end of the quiz with Submit.

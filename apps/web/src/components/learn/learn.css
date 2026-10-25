@@ -340,6 +340,8 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
 .l-verdict.miss { color: var(--miss); }
 .l-why { margin-top: 12px; padding: 12px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.55; background: rgba(var(--good-rgb), 0.07); border: 1px solid rgba(var(--good-rgb), 0.3); }
 .l-why b { color: var(--good); }
+.l-why.right { background: rgba(var(--a-rgb), 0.06); border-color: var(--line-2); }
+.l-why.right p + p, .l-why.right p { color: var(--text-muted); margin-top: 0; }
 .l-why p + p { margin-top: 4px; color: var(--text-muted); }
 .l-submit-bar { position: sticky; bottom: 0; z-index: 5; margin: 22px 0 0 48px; padding: 12px 14px; border-radius: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line-2); backdrop-filter: blur(8px); }
