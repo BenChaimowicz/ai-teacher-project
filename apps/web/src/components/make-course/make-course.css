@@ -67,13 +67,13 @@
 .mk-plan-bar i.q { flex: 0.5; background: var(--b); }
 .mk-plan-bar i.off { flex: 0; opacity: 0; }
 .mk-lessons { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px; }
-.mk-lesson { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; animation: k-pop 0.35s var(--ease-pop) backwards; animation-delay: calc(var(--i, 0) * 60ms); }
+.mk-lesson { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; animation: k-pop 0.35s var(--ease-pop) backwards; animation-delay: calc(var(--i, 0) * 60ms); }
 label.mk-lesson { cursor: pointer; }
 label.mk-lesson:hover { background: rgba(var(--a-rgb), 0.08); }
 label.mk-lesson:focus-within { outline: 2px solid var(--a); outline-offset: 1px; }
 .mk-lesson.off .lt { color: var(--faint); text-decoration: line-through; }
 .mk-lesson.off .lt small { text-decoration: none; }
-.mk-lesson input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.mk-lesson input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .mk-lesson .n { width: 22px; flex: none; color: var(--faint); font-family: var(--font-code); font-size: 0.75rem; text-align: right; }
 .mk-lesson .lt { flex: 1; min-width: 0; font-weight: 600; font-size: 0.92rem; overflow-wrap: anywhere; }
 .mk-lesson .lt small { display: block; font-weight: 500; color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
