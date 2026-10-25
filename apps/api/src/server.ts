@@ -11,6 +11,7 @@ import { healthRoutes } from "./routes/health.ts";
 import { courseRequestRoutes } from "./routes/course-requests.ts";
 import { startingLevelRoutes } from "./routes/starting-level.ts";
 import { createFixtureDiagnosticBuilder } from "./lib/diagnostic-fixture.ts";
+import { createFixtureValidityGate } from "./lib/validity-fixture.ts";
 import { blueprintRoutes } from "./routes/blueprint.ts";
 import { libraryRoutes } from "./routes/library.ts";
 import { mediaRoutes } from "./routes/media.ts";
@@ -37,9 +38,9 @@ async function start() {
     await app.register(corsPlugin);
     await app.register(healthRoutes);
     await app.register(libraryRoutes);
-    await app.register(courseRequestRoutes);
     // Browser tests run without provider calls; never set DIAGNOSTIC_FIXTURE in a deployed service.
     const fixtures = process.env.DIAGNOSTIC_FIXTURE === "1";
+    await app.register(courseRequestRoutes, { validityGate: fixtures ? createFixtureValidityGate() : undefined });
     await app.register(startingLevelRoutes, {
       diagnosticBuilder: fixtures ? createFixtureDiagnosticBuilder() : undefined,
     });

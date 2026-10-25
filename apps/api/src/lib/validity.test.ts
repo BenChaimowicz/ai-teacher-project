@@ -24,6 +24,7 @@ function evidence(overrides: Partial<ValidityExtraction> = {}): ValidityExtracti
     clarificationResolved: null,
     confirmedUnsupportedPremise: null,
     question: null,
+    answerOptions: overrides.question ? ["The first framing", "The second framing"] : [],
     explanation: "A documented subject or a legitimate capability is requested.",
     ...overrides,
   };
@@ -250,4 +251,15 @@ test("A prohibited outcome rejects even without a question, and is not retried a
   }), evidence());
   assert.equal((await createValidityGate(generator).evaluate({ subject: "Fighting", learningGoal: "Hurt someone." })).outcome, "reject");
   assert.equal(calls(), 1);
+});
+
+test("A clarification offers the Learner tap-to-choose answers, and a question without them is malformed", async () => {
+  const question = "Do you mean unicorns in myths and stories, or caring for a real animal?";
+  const answerOptions = ["Unicorns in myths and stories", "Caring for a real unicorn"];
+  const result = await evaluate({ subject: "Unicorns", learningGoal: "Feed unicorns." }, evidence({ learnability: "unsupported", question, answerOptions }));
+  assert.equal(result.outcome, "clarify");
+  assert.deepEqual(result.answerOptions, answerOptions);
+
+  await assert.rejects(evaluate({ subject: "Unicorns", learningGoal: "Feed unicorns." },
+    evidence({ learnability: "unsupported", question, answerOptions: ["Only one framing"] })), ModelError);
 });
