@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { StartingLevel } from "@senoy/db/starting-level";
-import { BlueprintFailedError, BLUEPRINT_JUDGE_CHECKS, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, slugTag, type BlueprintInput } from "./blueprint.ts";
+import { BlueprintFailedError, BLUEPRINT_JUDGE_CHECKS, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, parseAuthoredBlueprint, slugTag, type BlueprintInput } from "./blueprint.ts";
 import { COURSE_JUDGE_CHECKS, SEQUENCE_REACHES_GOAL } from "./course-judge.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createModelPorts, type Generator, type Judge, type StructuredRequest, type ModelReply } from "./model-ports.ts";
@@ -252,4 +252,21 @@ test("A malformed author or Judge reply is asked once more by the ports; a reply
   await assert.rejects(createBlueprintBuilder(garbage.ports).build(INPUT),
     (error: unknown) => error instanceof ModelError && error.code === "invalid_output");
   assert.equal(garbage.asked.length, 3, "The primary twice, then the fallback once (ADR 0015).");
+});
+
+test("After Learner review, the first design is a redesign of the reviewed plan without the Lessons they marked, and the Judge sees the marks", async () => {
+  const reviewed = parseAuthoredBlueprint(authored());
+  const { generator, calls } = queuedGenerator(authored());
+  const verdicts = scriptedJudge();
+  await createBlueprintBuilder({ generator, judge: verdicts.judge }).build({
+    ...INPUT, revision: { previousBlueprint: reviewed, feedback: { irrelevantSlotIds: ["slot1"], reason: "already_know" } },
+  });
+  assert.equal(calls.length, 1);
+  assert.match(calls[0]!.systemPrompt, /redesigning a Course Blueprint after the Learner reviewed it/);
+  assert.match(calls[0]!.systemPrompt, /English only/);
+  const slot1 = reviewed.modules[0]!.slots[0]!;
+  assert.deepEqual(calls[0]!.input.learnerMarkedIrrelevant, [{ title: slot1.title, lessonGoal: slot1.lessonGoal }]);
+  assert.equal(calls[0]!.input.learnerReason, "already_know");
+  assert.equal((calls[0]!.input.previousBlueprint as ReturnType<typeof authored>).lessons.length, reviewed.modules[0]!.slots.length);
+  assert.deepEqual((verdicts.calls[0]!.input as { learnerMarkedIrrelevant: unknown }).learnerMarkedIrrelevant, calls[0]!.input.learnerMarkedIrrelevant);
 });
