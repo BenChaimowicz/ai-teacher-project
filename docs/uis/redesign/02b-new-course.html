@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amethyst">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Knibbler · new course v2 (mock)</title>
+<link rel="icon" type="image/svg+xml" href="nibbles-logo.svg" />
+<link rel="stylesheet" href="kit.css" />
+<style>
+  /* ---------- top bar steps ---------- */
+  .top .title { font-weight: 800; }
+  .steps { display: flex; gap: 6px; align-items: center; font-size: 0.78rem; color: var(--faint); }
+  .steps span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 99px; border: 1px solid transparent; }
+  .steps span.done { color: rgba(var(--a-rgb), 0.85); border-color: rgba(var(--a-rgb), 0.25); }
+  .steps span.done svg { width: 12px; height: 12px; }
+  .steps span.now { color: var(--on-a); background: var(--a); box-shadow: var(--glow); font-weight: 700; }
+  .steps span.popped { animation: steppop 0.5s cubic-bezier(.3, 1.6, .5, 1); }
+  .steps i { width: 12px; height: 1px; background: rgba(var(--a-rgb), 0.3); }
+  @keyframes steppop { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+
+  /* ---------- topic card (the only free text) ---------- */
+  .field {
+    display: flex; gap: 8px; align-items: center; padding: 6px 6px 6px 16px; margin-top: 4px;
+    background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(var(--a-rgb), 0.35); border-radius: 14px; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .field:focus-within { border-color: var(--a); box-shadow: var(--glow); }
+  .field input { flex: 1; outline: none; padding: 10px 0; font-size: 1rem; }
+  .field input::placeholder { color: var(--faint); }
+  .sugg-h { margin-top: 14px; font-family: var(--mono); font-size: 0.68rem; color: var(--faint); }
+  .sugg { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 99px; font-size: 0.85rem;
+    border: 1px solid rgba(var(--a-rgb), 0.3); background: rgba(var(--a-rgb), 0.07); animation: pop 0.35s both; animation-delay: calc(var(--i) * 50ms);
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+  }
+  .chip:hover { border-color: var(--a); background: rgba(var(--a-rgb), 0.16); transform: translateY(-1px); }
+  .chip svg { width: 14px; height: 14px; color: var(--a); }
+
+  .qhead { display: flex; align-items: center; gap: 10px; }
+  .qnum { font-family: var(--mono); font-size: 0.7rem; color: var(--a); background: var(--a-soft); padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+  .qdots { display: inline-flex; gap: 4px; }
+  .qdots i { width: 16px; height: 4px; border-radius: 9px; background: var(--line-2); }
+  .qdots i.on { background: var(--a); box-shadow: 0 0 8px rgba(var(--a-rgb), 0.5); }
+
+  /* ---------- plan card ---------- */
+  .plan-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .summary { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .summary span { font-family: var(--mono); font-size: 0.7rem; padding: 3px 8px; border-radius: 7px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--line); color: var(--muted); }
+  .summary span b { color: var(--text); font-weight: 700; }
+  .plan-bar { display: flex; height: 6px; gap: 2px; margin-top: 12px; border-radius: 99px; overflow: hidden; }
+  .plan-bar i { background: linear-gradient(90deg, var(--a), color-mix(in srgb, var(--a) 60%, var(--b))); transition: flex 0.3s, opacity 0.3s; }
+  .plan-bar i.q { background: var(--b); }
+  .plan-bar i.off { flex: 0 !important; opacity: 0; }
+  .lessons { list-style: none; margin-top: 12px; display: grid; gap: 4px; }
+  .lessons li { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; cursor: pointer; animation: pop 0.35s both; animation-delay: calc(var(--i) * 70ms); }
+  .lessons li:hover { background: rgba(var(--a-rgb), 0.08); }
+  .lessons li.off .lt { color: var(--faint); text-decoration: line-through; }
+  .lessons .n { width: 22px; color: var(--faint); font-family: var(--mono); font-size: 0.75rem; text-align: right; }
+  .lessons .lt { flex: 1; font-weight: 600; font-size: 0.92rem; }
+  .lessons .lt small { display: block; font-weight: 500; color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+  .lessons .mins { font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+  .tag { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; color: var(--a); background: var(--a-soft); }
+  .tag.quiz { color: var(--b); background: var(--b-soft); }
+  .check { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--line-2); flex: none; display: grid; place-items: center; transition: background 0.2s, border-color 0.2s; }
+  .check.on { background: var(--a); border-color: var(--a); }
+  .check.on::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--on-a); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+  .seg { display: inline-flex; margin-top: 14px; padding: 3px; border-radius: 10px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--line); }
+  .seg button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-size: 0.86rem; font-weight: 600; color: var(--muted); }
+  .seg button svg { width: 15px; height: 15px; }
+  .seg button.on { background: var(--a-soft); color: var(--a); }
+  .hint { font-size: 0.8rem; color: var(--faint); margin-top: 8px; }
+
+  /* ---------- making card ---------- */
+  .stages { list-style: none; margin-top: 4px; display: grid; gap: 10px; }
+  .stages li { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; color: var(--faint); }
+  .stages li.done { color: var(--muted); }
+  .stages li.now { color: var(--text); font-weight: 700; }
+  .stages .tm { margin-left: auto; font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+  .dotc { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--line-2); flex: none; display: grid; place-items: center; }
+  .stages li.done .dotc { background: var(--a); border-color: var(--a); color: var(--on-a); }
+  .stages li.done .dotc svg { width: 12px; height: 12px; }
+  .stages li.now .dotc { border-color: var(--a); box-shadow: var(--glow); }
+  .stages li.now .dotc::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--a); animation: pulse 1.2s infinite; }
+  .bigbar { position: relative; margin-top: 18px; height: 10px; border-radius: 99px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); overflow: hidden; }
+  .bigbar i { position: relative; display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--a), var(--b)); box-shadow: 0 0 14px rgba(var(--b-rgb), 0.45); transition: width 0.8s ease; overflow: hidden; }
+  .bigbar i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent); animation: shine 1.8s ease-in-out infinite; }
+  .meta { display: flex; justify-content: space-between; gap: 10px; font-family: var(--mono); font-size: 0.72rem; color: var(--faint); margin-top: 8px; }
+  .meta .cur { color: var(--muted); }
+  .pct-wrap { display: flex; align-items: center; gap: 10px; }
+  .pct { font-family: var(--mono); font-size: 1.6rem; font-weight: 700; color: var(--a); }
+
+  /* ready card */
+  .ready { display: flex; gap: 16px; align-items: center; }
+  .cover { width: 84px; height: 84px; border-radius: 16px; flex: none; display: grid; place-items: center; color: var(--on-a);
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), transparent 50%), linear-gradient(135deg, var(--a), var(--b)); box-shadow: var(--glow); }
+  .cover svg { width: 36px; height: 36px; }
+  .ready .sub { font-family: var(--mono); font-size: 0.74rem; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="side">
+    <div class="side-in">
+      <div class="brand-row"><span class="wordmark">knibbler</span><span class="sys"><i></i>v0.2 · mock</span></div>
+      <div id="buddy-slot"></div>
+      <button class="new" type="button" id="new">＋ New course <kbd>N</kbd></button>
+      <div>
+        <div class="sec-h">your courses<span class="n">3</span></div>
+        <div class="clist" id="courses"></div>
+        <button type="button" class="see-all" onclick="location.href='04-home.html'">see all on Home →</button>
+      </div>
+      <div class="side-foot"><button type="button" class="ccard" id="profile"><span class="cdot" style="background:transparent;box-shadow:none;border:1.5px solid var(--a-line)"></span><span class="t">How you like to learn</span><span class="st">edit</span></button></div>
+      <div class="mock">
+        <p>mock</p>
+        <div class="sw" id="sw"></div>
+        <div class="row-btns"><button type="button" id="restart">↻ restart</button><button type="button" id="jump">jump to plan</button></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <button class="icon-btn" type="button" id="toggle" aria-label="Show or hide sidebar">☰</button>
+      <div class="title" id="title">New course</div>
+      <div class="spacer"></div>
+      <div class="steps" id="steps"></div>
+    </div>
+    <div class="scroll" id="scroll"><div class="thread" id="thread"></div></div>
+  </main>
+</div>
+
+<script src="kit.js"></script>
+<script>
+document.getElementById("buddy-slot").innerHTML = buddyHTML();
+renderBuddy();
+nibblesLines(["Pick anything. I'll handle the rest.", "A few taps and I'll make the plan.", "You can change the plan before I write it.", "No rush."]);
+initThemes(document.getElementById("sw"));
+useThread(document.getElementById("thread"), document.getElementById("scroll"));
+document.getElementById("toggle").onclick = () => document.getElementById("app").classList.toggle("side-closed");
+
+/* ---------- sidebar courses ---------- */
+const cur = {};
+function resetCur() { Object.assign(cur, { id: "new", title: "New course", icon: "generic", status: "making", badge: "drafting", segs: "------", left: "just started", right: "now" }); }
+const COURSES = {
+  knot: { id: "knot", title: "The square knot", icon: "knot", status: "learning", segs: "dn-", left: "1/3 · 12m left", right: "yesterday" },
+  ygg: { id: "ygg", title: "Yggdrasil and the Nine Worlds", icon: "yggdrasil", status: "done", segs: "dddddddd", badge: "✓ 8/8" },
+};
+function renderSide() {
+  document.getElementById("courses").innerHTML = courseCard(cur, true) + courseCard(COURSES.knot) + courseCard(COURSES.ygg);
+}
+function updCur(patch) { Object.assign(cur, patch); renderSide(); }
+
+/* ---------- steps ---------- */
+const STEP_NAMES = ["Topic", "Goal", "Level", "Plan", "Making"];
+let stepNow = -1;
+function setStep(i) {
+  const prev = stepNow; stepNow = i;
+  document.getElementById("steps").innerHTML = STEP_NAMES.map((n, j) =>
+    `<span class="${j < i ? "done" : j === i ? "now" : ""} ${j === i && i > prev ? "popped" : ""}">${j < i ? icon("check") : ""}${n}</span>`).join("<i></i>");
+}
+
+/* ---------- flow ---------- */
+const state = { subject: "" };
+/* In the app the plan step picks the icon (see 08-course-icons.md); the mock guesses from the topic. */
+function iconFor(t) { t = t.toLowerCase(); return /norse|viking|odin/.test(t) ? "norse" : /music|sheet/.test(t) ? "music" : /sourdough|bread/.test(t) ? "sourdough" : /invest|stock/.test(t) ? "investing" : /greek/.test(t) ? "greek" : /knot/.test(t) ? "knot" : "generic"; }
+let planMins = 67, planMode = "step by step";
+
+function begin() {
+  T.token++;
+  T.el.innerHTML = ""; T.lastWasBao = false; T.scroll.scrollTop = 0;
+  document.getElementById("title").textContent = "New course";
+  resetCur(); renderSide(); stepNow = -1; setStep(0);
+}
+
+async function start() {
+  begin();
+  baoSay("Pick anything. I'll handle the rest.", "idle");
+  if (!(await bao("Hi. What would you like to learn?"))) return;
+  const SUG = [["Norse mythology", "norse"], ["Reading sheet music", "music"], ["How sourdough works", "sourdough"], ["Basics of investing", "investing"]];
+  const el = block(`<div class="tcard">
+    <form class="field" id="topic-form">
+      <input id="topic" autocomplete="off" placeholder="A topic, a skill, anything you're curious about" />
+      <button class="btn primary" id="go" disabled>Continue</button>
+    </form>
+    <p class="sugg-h">or try one of these</p>
+    <div class="sugg">${SUG.map(([s, ic], i) => `<button type="button" class="chip" style="--i:${i}">${courseIcon(ic)}${s}</button>`).join("")}</div>
+  </div>`);
+  const input = el.querySelector("#topic"), go = el.querySelector("#go");
+  input.focus();
+  input.oninput = () => (go.disabled = !input.value.trim());
+  el.querySelectorAll(".chip").forEach((c) => (c.onclick = () => { input.value = c.textContent; go.disabled = false; input.focus(); }));
+  el.querySelector("#topic-form").onsubmit = (e) => {
+    e.preventDefault();
+    const v = input.value.trim(); if (!v) return;
+    el.remove(); pickTopic(v);
+  };
+}
+
+async function pickTopic(subject) {
+  state.subject = subject;
+  const row = me(subject);
+  cheer(row.querySelector(".msg"), "topic set");
+  document.getElementById("title").textContent = subject;
+  updCur({ title: subject, icon: iconFor(subject), left: "picking a goal" });
+  setStep(1);
+  baoSay(`${subject}. Good one.`);
+  if (!(await bao("Good choice. What would you like to get out of it?"))) return;
+  const { item } = await choose([
+    { label: "Know the main stories", desc: "The big myths, and who's who", icon: "book" },
+    { label: "See how it fits together", desc: "How the gods, worlds and stories connect", icon: "network" },
+    { label: "Explain it to someone", desc: "Enough to retell it well", icon: "message" },
+    { label: "Go deep, with sources", desc: "Including the original texts", icon: "layers" },
+  ]);
+  pickGoal(item);
+}
+
+const QUESTIONS = [
+  { q: "Who is Odin?", a: ["The chief of the gods", "A giant who fights the gods", "The tree that holds the worlds"] },
+  { q: "What is Yggdrasil?", a: ["A great ash tree linking the worlds", "The hall where heroes feast", "Thor's hammer"] },
+  { q: "Where do most of the myths we know today come from?", a: ["Medieval Icelandic writings", "Viking runestones alone", "Roman historians"] },
+];
+
+async function pickGoal() {
+  setStep(2);
+  updCur({ left: "a few questions" });
+  baoSay("Just checking where to start.", "think");
+  if (!(await bao(`A few quick questions so I don't start too easy. <span class="faint">"Not sure" is always a fine answer.</span>`))) return;
+  for (let i = 0; i < QUESTIONS.length; i++) {
+    const Q = QUESTIONS[i];
+    if (!(await bao(`<span class="qhead"><span class="qnum">${i + 1} of ${QUESTIONS.length}</span><b>${Q.q}</b></span>`, 380))) return;
+    const { item, row } = await choose([...Q.a.map((label) => ({ label })), { label: "Not sure", unsure: true }]);
+    if (row.isConnected) row.querySelector(".msg").innerHTML = `<span class="faint">${Q.q}</span>&nbsp; ${item.label}`;
+    cheer(row.querySelector(".msg"));
+  }
+  afterLevel();
+}
+
+async function afterLevel() {
+  baoSay("Got it. Starting in the right place.", "idle");
+  if (!(await bao("Thanks. You know the main figures, less so where the stories come from. I'll start there."))) return;
+  await choose([
+    { label: "Sounds right", desc: "Start there", icon: "check" },
+    { label: "Start a bit easier", desc: "A gentler first lesson", icon: "easier" },
+    { label: "Skip ahead, go further", desc: "Less basics", icon: "zap" },
+  ], { cols: 3 });
+  showPlan();
+}
+
+const PLAN = [
+  ["Gods, giants and the nine worlds", "Who's who, and where they live", "Read", 12],
+  ["Quick check", "Five questions", "Quiz", 5],
+  ["Where the myths come from", "The Eddas, the sagas, and who wrote them down", "Read", 15],
+  ["Quick check", "Five questions", "Quiz", 5],
+  ["Loki and the death of Baldr", "The story that sets the end in motion", "Read", 14],
+  ["Ragnarök", "How the Norse imagined the end, and what comes after", "Read", 16],
+];
+
+async function showPlan() {
+  setStep(3);
+  updCur({ badge: "plan", segs: "-".repeat(PLAN.length), left: "plan ready" });
+  baoSay("Here's what I'd do. Your call.");
+  if (!(await bao("Here's a plan. Untick anything you'd rather skip."))) return;
+  const el = block(`<div class="tcard">
+    <div class="plan-head"><div><h4>Norse Mythology: Gods, Worlds and Sources</h4><p class="sub">Starts with the sources, since that's the gap.</p></div></div>
+    <div class="summary" id="summary"></div>
+    <div class="plan-bar" id="plan-bar">${PLAN.map(([, , k, m]) => `<i class="${k === "Quiz" ? "q" : ""}" style="flex:${m}"></i>`).join("")}</div>
+    <ul class="lessons">${PLAN.map(([t, s, k, m], i) => `
+      <li data-i="${i}" style="--i:${i}"><span class="check on" role="checkbox" aria-checked="true" tabindex="0"></span><span class="n">${String(i + 1).padStart(2, "0")}</span>
+        <span class="lt">${t}<small>${s}</small></span><span class="mins">${m}m</span><span class="tag ${k === "Quiz" ? "quiz" : ""}">${k}</span></li>`).join("")}</ul>
+    <div class="seg" role="radiogroup"><button type="button" class="on" data-m="step">${icon("list")}Step by step</button><button type="button" data-m="free">${icon("shuffle")}Jump around</button></div>
+    <p class="hint" id="mode-hint">Lessons open in order. A quick check unlocks the next part.</p>
+  </div>`);
+  const summarise = () => {
+    const on = PLAN.filter((_, i) => !el.querySelectorAll(".lessons li")[i].classList.contains("off"));
+    const reads = on.filter((p) => p[2] === "Read").length, quizzes = on.length - reads;
+    const mins = on.reduce((a, p) => a + p[3], 0);
+    el.querySelector("#summary").innerHTML = `<span><b>${on.length}</b> lessons</span><span><b>${reads}</b> reading</span><span><b>${quizzes}</b> quiz</span><span>≈ <b>${Math.floor(mins / 60) ? Math.floor(mins / 60) + "h " : ""}${mins % 60}m</b></span>`;
+    el.querySelectorAll("#plan-bar i").forEach((b, i) => b.classList.toggle("off", el.querySelectorAll(".lessons li")[i].classList.contains("off")));
+    planMins = mins;
+    updCur({ segs: "-".repeat(on.length), left: `${on.length} lessons · ≈${mins}m` });
+  };
+  summarise();
+  el.querySelectorAll(".lessons li").forEach((li) => (li.onclick = () => {
+    const c = li.querySelector(".check");
+    c.classList.toggle("on"); li.classList.toggle("off");
+    c.setAttribute("aria-checked", String(c.classList.contains("on")));
+    summarise();
+  }));
+  el.querySelectorAll(".seg button").forEach((b) => (b.onclick = () => {
+    el.querySelectorAll(".seg button").forEach((x) => x.classList.toggle("on", x === b));
+    planMode = b.dataset.m === "step" ? "step by step" : "jump around";
+    el.querySelector("#mode-hint").textContent = b.dataset.m === "step"
+      ? "Lessons open in order. A quick check unlocks the next part."
+      : "Every lesson is open from the start. You can't switch back to step by step later.";
+  }));
+  const { item, row } = await choose([
+    { label: "Make my course", desc: "Takes a few minutes", icon: "sparkle", primary: true },
+    { label: "Change my goal", desc: "Go back a step", icon: "edit", quiet: true },
+  ]);
+  el.querySelectorAll(".lessons li, .seg button").forEach((x) => (x.onclick = null));
+  if (item.label === "Change my goal") { pickTopic(state.subject); return; }
+  cheer(row.querySelector(".msg"), "plan approved");
+  making(el.querySelectorAll(".lessons li:not(.off)").length);
+}
+
+async function making(n) {
+  setStep(4);
+  updCur({ badge: "writing", segs: "w" + "-".repeat(n - 1), left: `0/${n} written`, right: "~4m" });
+  baoSay("Writing. You can leave; I'll keep going.", "think");
+  if (!(await bao("On it. This takes a few minutes. You can leave; I'll keep going."))) return;
+  const av = T.el.querySelectorAll(".trow .av:not(.empty)");
+  const myAv = av[av.length - 1]; myAv?.classList.add("working");
+  const el = block(`<div class="tcard">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <ul class="stages" style="flex:1">
+        <li data-s="0"><span class="dotc"></span>Finding good sources<span class="tm" data-t="0"></span></li>
+        <li data-s="1"><span class="dotc"></span>Writing lessons<span class="tm" data-t="1"></span></li>
+        <li data-s="2"><span class="dotc"></span>Checking it all fits together<span class="tm" data-t="2"></span></li>
+      </ul>
+      <span class="pct-wrap"><span id="mk-load">${loaderHTML({ size: 30 })}</span><span class="pct" id="pct">0%</span></span>
+    </div>
+    <div class="bigbar"><i></i></div>
+    <div class="meta"><span class="cur"></span><span class="eta"></span></div>
+  </div>`);
+  const runP = run();
+  const ctl = await Promise.race([
+    choose([
+      { label: "Back to Home", desc: "It keeps going in the sidebar", icon: "home", quiet: true },
+      { label: "Stop making this course", desc: "Keeps what's written so far", icon: "stop", quiet: true },
+    ]),
+    runP,
+  ]);
+  async function run() {
+    const my = T.token;
+    const titles = PLAN.slice(0, n).map((p) => p[0]);
+    const frames = [
+      [0, 4, "reading up on the topic", "~4 min left"],
+      [0, 10, "reading up on the topic", "~4 min left"],
+      ...titles.map((t, i) => [1, 15 + ((i + 1) * 75) / n, `lesson ${i + 1}/${n}: ${t}`, `~${Math.max(1, 4 - Math.floor(i * 0.7))} min left`, i]),
+      [2, 95, "final read-through", "almost done"],
+      [3, 100, "", ""],
+    ];
+    for (const [stage, pct, curTxt, eta, li] of frames) {
+      if (my !== T.token) return "cancelled";
+      el.querySelectorAll(".stages li").forEach((x) => {
+        const s = +x.dataset.s;
+        x.className = s < stage ? "done" : s === stage ? "now" : "";
+        x.querySelector(".dotc").innerHTML = s < stage ? icon("check") : "";
+      });
+      el.querySelector(".bigbar i").style.width = pct + "%";
+      el.querySelector("#pct").textContent = Math.round(pct) + "%";
+      el.querySelector(".cur").textContent = curTxt;
+      el.querySelector(".eta").textContent = eta;
+      if (li != null) {
+        updCur({ segs: "d".repeat(li) + "w" + "-".repeat(n - li - 1), left: `${li}/${n} written`, right: eta.replace(" min left", "m") });
+        baoSay(`Writing lesson ${li + 1} of ${n}…`, "think");
+      }
+      await wait(1000);
+    }
+    el.querySelector("#mk-load")?.remove();
+    return "done";
+  }
+  if (ctl && ctl.item) {
+    if (ctl.item.label.startsWith("Stop")) {
+      T.token++;
+      el.querySelector("#mk-load")?.remove();
+      myAv?.classList.remove("working");
+      updCur({ badge: "stopped", left: "paused", right: "" });
+      baoSay("Stopped. Nothing's lost.", "idle");
+      bao("Stopped. What's written so far is saved, and you can pick it up again anytime.");
+    } else {
+      toast("Still writing", "Your course keeps going in the sidebar.", "home");
+      // the mock stays here; in the app this goes Home
+      if ((await runP) === "done") ready(n, el, myAv);
+    }
+    return;
+  }
+  if (ctl === "done") {
+    T.el.querySelector(".tiles")?.remove();
+    ready(n, el, myAv);
+  }
+}
+
+async function ready(n, el, myAv) {
+  myAv?.classList.remove("working");
+  const mins = planMins;
+  const dur = `${Math.floor(mins / 60) ? Math.floor(mins / 60) + "h " : ""}${mins % 60}m`;
+  updCur({ status: "learning", badge: "ready", segs: "n" + "-".repeat(n - 1), left: `0/${n} · ≈${dur}`, right: "just now" });
+  baoSay("All done. Lesson 1 is ready when you are.", "cheer");
+  if (!(await bao("Your course is ready."))) return;
+  const card = block(`<div class="tcard"><div class="ready">
+    <span class="cover">${courseIcon(cur.icon)}</span>
+    <div><h4>Norse Mythology: Gods, Worlds and Sources</h4><p class="sub">${n} lessons · ≈${dur} · ${planMode}</p></div>
+  </div></div>`);
+  confettiAt(card, { count: 70 });
+  toast("Course ready", "Norse Mythology · " + n + " lessons", "sparkle");
+  const { item } = await choose([
+    { label: "Start lesson 1", desc: "Gods, giants and the nine worlds · 12m", icon: "play", primary: true },
+    { label: "Back to Home", desc: "It'll be waiting", icon: "home", quiet: true },
+  ]);
+  if (item.primary) location.href = "03b-study.html";
+}
+
+/* jump straight to the plan for review */
+async function jumpToPlan() {
+  begin();
+  state.subject = "Norse mythology";
+  document.getElementById("title").textContent = state.subject;
+  updCur({ title: state.subject, icon: "norse" });
+  T.lastWasBao = false;
+  await bao("Hi. What would you like to learn?", 0);
+  me("Norse mythology");
+  await bao("Good choice. What would you like to get out of it?", 0);
+  me("See how it fits together");
+  await bao("Thanks. You know the main figures, less so where the stories come from. I'll start there.", 0);
+  me("Sounds right");
+  setStep(2);
+  showPlan();
+}
+
+document.getElementById("restart").onclick = start;
+document.getElementById("new").onclick = start;
+document.getElementById("jump").onclick = jumpToPlan;
+document.addEventListener("keydown", (e) => { if ((e.key === "n" || e.key === "N") && document.activeElement?.tagName !== "INPUT") start(); });
+start();
+</script>
+</body>
+</html>

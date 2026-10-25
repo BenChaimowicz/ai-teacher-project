@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amethyst">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Knibbler · home (mock)</title>
+<link rel="icon" type="image/svg+xml" href="nibbles-logo.svg" />
+<link rel="stylesheet" href="kit.css" />
+<style>
+  .top .title { font-weight: 800; }
+  .top .date { font-family: var(--mono); font-size: 0.72rem; color: var(--faint); }
+
+  .empty-side { border: 1px dashed var(--line-2); border-radius: 12px; padding: 12px; font-family: var(--mono); font-size: 0.68rem; color: var(--faint); line-height: 1.6; }
+
+  /* ---------- home layout ---------- */
+  .home { max-width: 860px; margin: 0 auto; padding: 0 28px 80px; }
+  .home .thread { max-width: none; padding: 28px 0 0; }
+  /* one left edge: the greeting row, hero, tiles, today strip and sections all start at the same x */
+  .home .tiles { margin-left: 0; }
+  .home .tcard { margin-left: 0; }
+
+  /* continue hero */
+  .hero { margin: 10px 0 2px 0; padding: 20px; border-radius: 18px; position: relative; overflow: hidden; animation: in 0.35s ease-out both;
+    background: radial-gradient(500px 200px at 100% 0%, rgba(var(--b-rgb), 0.16), transparent 70%), linear-gradient(160deg, rgba(var(--a-rgb), 0.2), rgba(var(--b-rgb), 0.05) 70%), var(--panel);
+    border: 1px solid rgba(var(--a-rgb), 0.4); box-shadow: 0 16px 40px -20px rgba(var(--a-rgb), 0.6); }
+  .hero-in { display: flex; gap: 18px; align-items: center; }
+  .cover { width: 76px; height: 76px; border-radius: 18px; flex: none; display: grid; place-items: center; color: var(--on-a);
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), transparent 50%), linear-gradient(135deg, var(--a), var(--b)); box-shadow: var(--glow); }
+  .cover svg { width: 34px; height: 34px; }
+  .cover.sm { width: 40px; height: 40px; border-radius: 11px; }
+  .cover.sm svg { width: 19px; height: 19px; }
+  .hero .k { font-family: var(--mono); font-size: 0.7rem; color: var(--a); }
+  .hero h3 { font-size: 1.3rem; font-weight: 800; margin-top: 4px; letter-spacing: -0.01em; }
+  .hero .nx { margin-top: 6px; color: var(--muted); font-size: 0.9rem; }
+  .hero .nx b { color: var(--text); }
+  .hero .segs { margin-top: 12px; }
+  .hero .segs i { height: 7px; }
+  .hero .m { display: flex; justify-content: space-between; margin-top: 8px; font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+  .ring-big { width: 84px; height: 84px; flex: none; position: relative; margin-left: auto; }
+  .ring-big svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-big circle { fill: none; stroke-width: 7; }
+  .ring-big .tr { stroke: rgba(var(--a-rgb), 0.15); }
+  .ring-big .vl { stroke: url(#hgrad); stroke-linecap: round; transition: stroke-dashoffset 1.1s cubic-bezier(.3, .8, .3, 1); }
+  .ring-big span { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--mono); font-weight: 700; font-size: 1.05rem; }
+  .ring-big span small { display: block; font-size: 0.58rem; color: var(--faint); font-weight: 400; text-align: center; margin-top: -2px; }
+
+  /* today strip */
+  .todaybar { display: grid; grid-template-columns: 1.25fr 1.5fr 1fr; gap: 10px; margin-top: 30px; }
+  .tbox .week { flex: 1; min-width: 0; }
+  .tbox { padding: 14px 16px; border-radius: 16px; background: rgba(var(--a-rgb), 0.06); border: 1px solid var(--line); display: flex; gap: 14px; align-items: center; animation: pop 0.4s both; animation-delay: calc(var(--i) * 70ms); }
+  .tbox .lbl { font-family: var(--mono); font-size: 0.66rem; color: var(--faint); }
+  .tbox .val { font-family: var(--mono); font-weight: 700; font-size: 1.35rem; margin-top: 2px; }
+  .tbox .val small { font-size: 0.75rem; color: var(--faint); font-weight: 400; }
+  .tbox .note { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+  .tbox .ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--b-soft); color: var(--b); flex: none; }
+  .mk-load { display: inline-flex; }
+  .tbox .ic svg { width: 18px; height: 18px; }
+  .goal { width: 58px; height: 58px; flex: none; position: relative; }
+  .goal svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .goal circle { fill: none; stroke-width: 6; }
+  .goal .tr { stroke: rgba(var(--a-rgb), 0.15); }
+  .goal .vl { stroke: var(--a); stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(var(--a-rgb), 0.6)); transition: stroke-dashoffset 1.2s cubic-bezier(.3, .8, .3, 1); }
+  .goal span { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--mono); font-size: 0.7rem; font-weight: 700; }
+
+  /* sections */
+  .sec { margin-top: 30px; }
+  .sec .sec-h { padding-left: 0; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .course {
+    position: relative; text-align: left; padding: 14px 16px; border-radius: 16px; width: 100%;
+    background: linear-gradient(160deg, rgba(var(--a-rgb), 0.09), rgba(var(--b-rgb), 0.03)), var(--panel); border: 1px solid var(--line-2);
+    transition: transform 0.16s, border-color 0.2s, box-shadow 0.2s; animation: pop 0.4s both; animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  button.course:hover { transform: translateY(-2px); border-color: var(--a); box-shadow: 0 10px 26px -12px rgba(var(--a-rgb), 0.6); }
+  .course .h { display: flex; gap: 12px; align-items: center; }
+  .course .t { flex: 1; min-width: 0; font-weight: 800; font-size: 0.98rem; }
+  .course .t small { display: block; font-weight: 500; color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+  .course .segs { margin-top: 12px; }
+  .course .m { display: flex; justify-content: space-between; margin-top: 8px; font-family: var(--mono); font-size: 0.68rem; color: var(--faint); }
+  .course .m b { color: var(--muted); font-weight: 500; }
+  .st2 { font-family: var(--mono); font-size: 0.64rem; padding: 2px 7px; border-radius: 6px; color: var(--a); background: var(--a-soft); white-space: nowrap; }
+  .st2.making { color: var(--b); background: var(--b-soft); }
+  .st2.needs { color: var(--miss); background: rgba(var(--miss-rgb), 0.12); }
+  .st2.done { color: var(--good); background: rgba(var(--good-rgb), 0.12); }
+  .st2.ready { color: var(--on-a); background: var(--a); box-shadow: var(--glow); }
+  .making-bar { margin-top: 12px; height: 6px; border-radius: 99px; background: rgba(0, 0, 0, 0.3); overflow: hidden; }
+  .making-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--a), var(--b)); box-shadow: 0 0 10px rgba(var(--b-rgb), 0.5); transition: width 0.8s; position: relative; overflow: hidden; }
+  .making-bar i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); animation: shine 1.8s infinite; }
+  .course.just-ready { animation: readyglow 1.6s ease-out; }
+
+  /* needs you */
+  .needs { border-color: rgba(var(--miss-rgb), 0.35); background: linear-gradient(160deg, rgba(var(--miss-rgb), 0.08), transparent 70%), var(--panel); }
+  .needs .say { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; font-size: 0.92rem; line-height: 1.5; }
+  .needs .say .av { width: 28px; height: 28px; flex: none; border-radius: 50%; background: rgba(var(--a-rgb), 0.14); padding: 2px; }
+  .needs .tiles { margin: 12px 0 0 38px; } /* inside the card: lines up with Nibbles' line above */
+  .needs .tile { min-height: 54px; padding-top: 10px; padding-bottom: 10px; }
+  .older { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 9px 14px; border-radius: 12px; border: 1px dashed var(--line-2); font-family: var(--mono); font-size: 0.72rem; color: var(--faint); overflow: hidden; max-height: 60px; transition: max-height 0.4s, opacity 0.3s, margin 0.4s, padding 0.4s; }
+  .older .grow { flex: 1; }
+  .older button { font-family: var(--mono); font-size: 0.7rem; color: var(--a); padding: 3px 9px; border-radius: 7px; border: 1px solid var(--a-line); }
+  .older button:hover { background: var(--a-soft); }
+  .older.gone { max-height: 0; opacity: 0; margin: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
+
+  /* finished */
+  .deeper { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 9px 12px; border-radius: 10px; background: var(--b-soft); border: 1px solid rgba(var(--b-rgb), 0.3); font-size: 0.84rem; width: 100%; text-align: left; }
+  .deeper svg { width: 15px; height: 15px; color: var(--b); }
+  .deeper:hover { border-color: var(--b); }
+
+  /* badges */
+  .shelf { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .badge { text-align: center; padding: 12px 6px 10px; border-radius: 14px; background: rgba(var(--a-rgb), 0.06); border: 1px solid var(--line); animation: pop 0.4s both; animation-delay: calc(var(--i) * 50ms); }
+  .badge .bi { width: 40px; height: 40px; margin: 0 auto; border-radius: 12px; display: grid; place-items: center; color: var(--on-a);
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), transparent 55%), linear-gradient(135deg, var(--a), var(--b)); box-shadow: 0 0 16px rgba(var(--a-rgb), 0.35); }
+  .badge .bi svg { width: 20px; height: 20px; }
+  .badge b { display: block; margin-top: 8px; font-size: 0.74rem; }
+  .badge small { font-family: var(--mono); font-size: 0.6rem; color: var(--faint); }
+  .badge.locked .bi { background: rgba(var(--a-rgb), 0.08); color: var(--faint); box-shadow: none; border: 1px dashed var(--line-2); }
+  .badge.locked b { color: var(--faint); }
+
+  /* suggestions + topic card (shared look with 02b) */
+  .sugg { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 99px; font-size: 0.85rem;
+    border: 1px solid rgba(var(--a-rgb), 0.3); background: rgba(var(--a-rgb), 0.07); animation: pop 0.35s both; animation-delay: calc(var(--i) * 50ms);
+    transition: border-color 0.15s, background 0.15s, transform 0.15s; }
+  .chip:hover { border-color: var(--a); background: rgba(var(--a-rgb), 0.16); transform: translateY(-1px); }
+  .chip svg { width: 14px; height: 14px; color: var(--a); }
+  .chip small { font-family: var(--mono); font-size: 0.62rem; color: var(--faint); }
+  .field { display: flex; gap: 8px; align-items: center; padding: 6px 6px 6px 16px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(var(--a-rgb), 0.35); border-radius: 14px; transition: border-color 0.2s, box-shadow 0.2s; }
+  .field:focus-within { border-color: var(--a); box-shadow: var(--glow); }
+  .field input { flex: 1; outline: none; padding: 10px 0; font-size: 1rem; }
+  .field input::placeholder { color: var(--faint); }
+  .sugg-h { margin-top: 14px; font-family: var(--mono); font-size: 0.68rem; color: var(--faint); }
+  .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 26px 0 0 0; }
+  .how div { padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(var(--a-rgb), 0.04); animation: pop 0.4s both; animation-delay: calc(300ms + var(--i) * 80ms); }
+  .how .n { font-family: var(--mono); font-size: 0.68rem; color: var(--a); }
+  .how b { display: block; margin-top: 6px; font-size: 0.9rem; }
+  .how span { display: block; color: var(--muted); font-size: 0.8rem; margin-top: 3px; line-height: 1.45; }
+
+  @keyframes readyglow { 0% { box-shadow: 0 0 0 2px var(--a), 0 0 40px rgba(var(--a-rgb), 0.6); } 100% { box-shadow: none; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="side">
+    <div class="side-in">
+      <div class="brand-row"><span class="wordmark">knibbler</span><span class="sys"><i></i>v0.2 · mock</span></div>
+      <div id="buddy-slot"></div>
+      <button class="new" type="button" id="new">＋ New course <kbd>N</kbd></button>
+      <div id="side-courses"></div>
+      <div class="side-foot"><button type="button" class="ccard" id="profile"><span class="cdot" style="background:transparent;box-shadow:none;border:1.5px solid var(--a-line)"></span><span class="t">How you like to learn</span><span class="st">edit</span></button></div>
+      <div class="mock">
+        <p>mock</p>
+        <div class="sw" id="sw"></div>
+        <div class="row-btns"><button type="button" data-v="returning">returning</button><button type="button" data-v="first">first run</button></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <button class="icon-btn" type="button" id="toggle" aria-label="Show or hide sidebar">☰</button>
+      <div class="title">Home</div>
+      <div class="spacer"></div>
+      <span class="date" id="date">sun · 25 oct</span>
+    </div>
+    <div class="scroll" id="scroll"><div class="home" id="home"></div></div>
+  </main>
+</div>
+
+<script src="kit.js"></script>
+<script>
+const app = document.getElementById("app");
+const home = document.getElementById("home");
+const scrollEl = document.getElementById("scroll");
+document.getElementById("toggle").onclick = () => app.classList.toggle("side-closed");
+initThemes(document.getElementById("sw"));
+nibblesLines(["Three days in a row. One short quiz keeps it going.", "Norse is next: a 3-minute quick check.", "Greek Gods is still being written. I'll tell you when it's ready.", "No rush. Small steps add up."]);
+
+const go = (href) => (location.href = href);
+let ticker = null;
+
+function setBuddy(p) {
+  Object.assign(PLAYER, p);
+  document.getElementById("buddy-slot").innerHTML = buddyHTML();
+  renderBuddy();
+}
+
+/* ---------- data ---------- */
+const NORSE = { title: "Norse Mythology: Gods, Worlds and Sources", segs: "dddn--", next: "Lesson 4 · Quick check", mins: "3m", left: "24m left", pct: 50 };
+const MAKING = { title: "Greek Gods and Heroes", total: 5, done: 2 };
+
+const SIDE0 = [
+  { id: "norse", title: "Norse Mythology", icon: "norse", status: "learning", segs: "dddn--" },
+  { id: "greek", title: "Greek Gods and Heroes", icon: "greek", status: "making", segs: "ddw--" },
+  { id: "music", title: "Reading sheet music", icon: "music", status: "needs", segs: "dd-dd" },
+  { id: "knot", title: "The square knot", icon: "knot", status: "learning", segs: "dn-" },
+];
+const SIDE = [];
+function sideReturning() {
+  document.getElementById("side-courses").innerHTML = `
+    <div class="sec-h">your courses<span class="n">5</span></div>
+    <div class="clist" id="clist">${SIDE.map((c, i) => courseCard(c, i === 0)).join("")}</div>
+    <button type="button" class="see-all" onclick="document.getElementById('learning-sec').scrollIntoView({behavior:'smooth'})">+1 finished · see all below ↓</button>`;
+  document.querySelector('#clist .ccard[data-id="norse"]').onclick = () => go("03b-study.html");
+}
+function updSide(id, patch) { Object.assign(SIDE.find((c) => c.id === id), patch); sideReturning(); }
+function sideFirst() {
+  document.getElementById("side-courses").innerHTML = `
+    <div class="sec-h">your courses<span class="n">0</span></div>
+    <div class="empty-side">no courses yet. your first one shows up here.</div>`;
+}
+
+/* ---------- returning ---------- */
+async function returning() {
+  T.token++; clearInterval(ticker); T.autoScroll = false;
+  setBuddy({ streak: 3, minutes: 18, week: [2, 3, 0, 1, 3, 2, 1] });
+  SIDE.splice(0, SIDE.length, ...SIDE0.map((c) => ({ ...c })));
+  sideReturning();
+  baoSay("Three days in a row. One short quiz keeps it going.", "idle");
+  home.innerHTML = `<div class="thread" id="thread"></div><div id="dash"></div>`;
+  scrollEl.scrollTop = 0;
+  useThread(document.getElementById("thread"), scrollEl);
+
+  if (!(await bao(`Evening. Norse Mythology is next: lesson 4, a 3-minute quick check.`, 450))) return;
+  const hero = block(`<div class="hero"><div class="hero-in">
+    <span class="cover">${courseIcon("norse")}</span>
+    <div style="flex:1;min-width:0">
+      <span class="k">continue · opened yesterday</span>
+      <h3>${NORSE.title}</h3>
+      <p class="nx">Next: <b>${NORSE.next}</b> · ${NORSE.mins}</p>
+    </div>
+    <div class="ring-big"><svg viewBox="0 0 84 84"><defs><linearGradient id="hgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--a)"/><stop offset="1" style="stop-color:var(--b)"/></linearGradient></defs>
+      <circle class="tr" cx="42" cy="42" r="36"/><circle class="vl" id="hero-ring" cx="42" cy="42" r="36" stroke-dasharray="226.2" stroke-dashoffset="226.2"/></svg>
+      <span><div>0%<small>done</small></div></span></div>
+  </div>
+  <div class="segs">${[...NORSE.segs].map((s) => `<i class="${s === "-" ? "" : s}"></i>`).join("")}</div>
+  <div class="m"><span>3 of 6 lessons · quiz avg 100%</span><span>${NORSE.left}</span></div></div>`);
+  requestAnimationFrame(() => {
+    hero.querySelector("#hero-ring").style.strokeDashoffset = String(226.2 * (1 - NORSE.pct / 100));
+    countTo(hero.querySelector(".ring-big span div").firstChild.parentNode, 0, NORSE.pct, 1000);
+  });
+  // countTo writes plain numbers; restore the "%" + label after it finishes
+  setTimeout(() => { const d = hero.querySelector(".ring-big span div"); if (d) d.innerHTML = `${NORSE.pct}%<small>done</small>`; }, 1100);
+
+  const pick = choose([
+    { label: "Continue", desc: "Quick check · 3m", icon: "play", primary: true, href: "03b-study.html" },
+    { label: "Start something new", desc: "Tell Nibbles a topic", icon: "plus", href: "02b-new-course.html" },
+    { label: "Review something", desc: "Revisit a lesson you've done", icon: "eye", review: true },
+  ], { cols: 3, echo: false });
+  renderDash();
+  const { item } = await pick;
+  if (item.href) go(item.href);
+  else { toast("Mock", "This would open a list of finished lessons.", "eye"); returningAgain(); }
+}
+async function returningAgain() { await wait(800); returning(); }
+
+function renderDash() {
+  const dash = document.getElementById("dash");
+  dash.innerHTML = `
+    <div class="todaybar">
+      <div class="tbox" style="--i:0" id="t-goal">
+        <div class="goal"><svg viewBox="0 0 58 58"><circle class="tr" cx="29" cy="29" r="24"/><circle class="vl" id="goal-ring" cx="29" cy="29" r="24" stroke-dasharray="150.8" stroke-dashoffset="150.8"/></svg><span id="goal-pct">0%</span></div>
+        <div><div class="lbl">today's goal</div><div class="val"><span id="c-min">0</span><small> / 20 min</small></div><div class="note">2 minutes to go. The quiz would do it.</div></div>
+      </div>
+      <div class="tbox" style="--i:1"><div><div class="lbl">streak</div><div class="val"><span id="c-streak">0</span><small> days</small></div><div class="note">best: 5</div></div>
+        <div class="week">${PLAYER.week.map((v, i) => `<div class="${i === 6 ? "today" : ""}"><i class="l${v}"></i>${"MTWTFSS"[i]}</div>`).join("")}</div></div>
+      <div class="tbox" style="--i:2"><span class="ic">${icon("book")}</span><div><div class="lbl">this week</div><div class="val"><span id="c-week">0</span><small> lessons</small></div><div class="note">+1 vs last week</div></div></div>
+    </div>
+
+    <section class="sec" id="learning-sec">
+      <div class="sec-h">learning<span class="n">2</span></div>
+      <div class="grid2">
+        <button type="button" class="course" style="--i:0" onclick="go('03b-study.html')">
+          <div class="h"><span class="cover sm">${courseIcon("norse")}</span><span class="t">Norse Mythology<small>Next: quick check · 3m</small></span><span class="st2">3/6</span></div>
+          <div class="segs">${[..."dddn--"].map((s) => `<i class="${s === "-" ? "" : s}"></i>`).join("")}</div>
+          <div class="m"><span><b>24m</b> left</span><span>yesterday</span></div>
+        </button>
+        <button type="button" class="course" style="--i:1">
+          <div class="h"><span class="cover sm">${courseIcon("knot")}</span><span class="t">The square knot<small>Next: tying it one-handed · 6m</small></span><span class="st2">1/3</span></div>
+          <div class="segs"><i class="d"></i><i class="n"></i><i></i></div>
+          <div class="m"><span><b>12m</b> left</span><span>4 days ago</span></div>
+        </button>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h">being made<span class="n">1</span></div>
+      <div class="course" id="making" style="--i:0">
+        <div class="h"><span class="cover sm">${courseIcon("greek")}</span><span class="t">${MAKING.title}<small id="mk-cur">Writing lesson 3 of 5: The labours of Heracles</small></span><span class="mk-load" id="mk-load">${loaderHTML({ size: 24 })}</span><span class="st2 making" id="mk-st">writing</span></div>
+        <div class="segs" id="mk-segs"></div>
+        <div class="making-bar"><i id="mk-bar" style="width:0"></i></div>
+        <div class="m"><span id="mk-left"></span><span id="mk-eta"></span></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h">needs you<span class="n" id="needs-n">1</span></div>
+      <div class="course needs" id="needs" style="--i:0">
+        <div class="h"><span class="cover sm">${courseIcon("music")}</span><span class="t">Reading sheet music<small>4 of 5 lessons written</small></span><span class="st2 needs" id="nd-st">paused</span></div>
+        <div class="segs" id="nd-segs"><i class="d"></i><i class="d"></i><i style="background:rgba(var(--miss-rgb),.5)"></i><i class="d"></i><i class="d"></i></div>
+        <div class="say" id="nd-say"><span class="av bao">${baoSVG()}</span><span>One lesson didn't come out right: <b>Rhythm and time signatures</b>. I can try it again, or we can change the plan around it.</span></div>
+        <div class="tiles" id="nd-tiles">
+          <button type="button" class="tile primary" data-a="retry" style="--i:0"><span class="ti">${icon("refresh")}</span><span><span class="tt">Try again</span><span class="td">A fresh attempt · about 1 min</span></span></button>
+          <button type="button" class="tile quiet" data-a="plan" style="--i:1"><span class="ti">${icon("edit")}</span><span><span class="tt">Change the plan</span><span class="td">Skip or reword that lesson</span></span></button>
+        </div>
+      </div>
+      <div class="older" id="older"><span class="grow">4 older attempts at Norse mythology, stopped or unfinished</span><button type="button" id="clear">clear them</button></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h">finished<span class="n">1</span></div>
+      <div class="course" style="--i:0">
+        <div class="h"><span class="cover sm">${courseIcon("yggdrasil")}</span><span class="t">Yggdrasil and the Nine Worlds<small>Finished 3 days ago · 8 lessons</small></span><span class="st2 done">8/8 quiz</span></div>
+        <div class="segs">${"<i class='d'></i>".repeat(8)}</div>
+        <button type="button" class="deeper" onclick="go('02b-new-course.html')">${icon("arrow")}<span>Go deeper: <b>the heroic sagas</b></span></button>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h">badges<span class="n">4 of 10</span></div>
+      <div class="shelf">${[
+        ["sparkle", "First lesson", "oct 12"], ["target", "Perfect quiz", "8/8"], ["trophy", "Course done", "yggdrasil"], ["flame", "3-day streak", "today"],
+        ["flame", "7-day streak", "4 to go", 1], ["layers", "5 courses", "1 of 5", 1],
+      ].map(([ic, n, s, locked], i) => `<div class="badge ${locked ? "locked" : ""}" style="--i:${i}"><div class="bi">${icon(locked ? "lock" : ic)}</div><b>${n}</b><small>${s}</small></div>`).join("")}</div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h">nibbles suggests<span class="n">from what you finished</span></div>
+      <div class="sugg">${[["The heroic sagas", "norse", "deeper"], ["Greek mythology", "greek", "related"], ["Runes and what they say", "generic", "related"], ["Viking ships", "norse", "something new"]]
+        .map(([t, ic, why], i) => `<button type="button" class="chip" style="--i:${i}" onclick="go('02b-new-course.html')">${courseIcon(ic)}${t}<small>${why}</small></button>`).join("")}</div>
+    </section>`;
+
+  // today count-ups
+  setTimeout(() => {
+    document.getElementById("goal-ring").style.strokeDashoffset = String(150.8 * (1 - 18 / 20));
+    countTo(document.getElementById("c-min"), 0, 18, 900);
+    countTo(document.getElementById("goal-pct"), 0, 90, 900);
+    setTimeout(() => { const g = document.getElementById("goal-pct"); if (g) g.textContent = "90%"; }, 950);
+    countTo(document.getElementById("c-streak"), 0, 3, 700);
+    countTo(document.getElementById("c-week"), 0, 4, 700);
+  }, 250);
+
+  // daily check-in, once per load
+  const my = T.token;
+  setTimeout(() => {
+    if (my !== T.token) return;
+    cheer(document.getElementById("t-goal"), "checked in");
+    toast("Daily check-in", "Three days in a row.", "flame");
+  }, 1400);
+
+  // being made: ticks along in the mock
+  let done = MAKING.done;
+  const LESSONS = ["The Olympians", "Prometheus and fire", "The labours of Heracles", "The Trojan War", "Odysseus gets home"];
+  const draw = () => {
+    const n = MAKING.total;
+    document.getElementById("mk-segs").innerHTML = Array.from({ length: n }, (_, i) => `<i class="${i < done ? "d" : i === done ? "w" : ""}"></i>`).join("");
+    document.getElementById("mk-bar").style.width = Math.min(100, ((done + 0.5) / n) * 100) + "%";
+    document.getElementById("mk-left").textContent = `${done}/${n} written`;
+    document.getElementById("mk-eta").textContent = `~${Math.max(1, (n - done) * 1)}m left`;
+    document.getElementById("mk-cur").textContent = `Writing lesson ${done + 1} of ${n}: ${LESSONS[done]}`;
+    updSide("greek", { segs: "d".repeat(done) + "w" + "-".repeat(n - done - 1) });
+  };
+  draw();
+  ticker = setInterval(() => {
+    if (my !== T.token) return clearInterval(ticker);
+    done++;
+    if (done < MAKING.total) return draw();
+    clearInterval(ticker);
+    const card = document.getElementById("making");
+    document.getElementById("mk-segs").innerHTML = "<i class='n'></i>" + "<i></i>".repeat(MAKING.total - 1);
+    document.getElementById("mk-bar").style.width = "100%";
+    document.getElementById("mk-load")?.remove();
+    document.getElementById("mk-st").className = "st2 ready"; document.getElementById("mk-st").textContent = "ready";
+    document.getElementById("mk-cur").textContent = `${MAKING.total} lessons · about 1h 10m`;
+    document.getElementById("mk-left").textContent = "ready when you are";
+    document.getElementById("mk-eta").textContent = "just now";
+    updSide("greek", { status: "learning", segs: "-----", badge: "ready" });
+    card.classList.add("just-ready");
+    confettiAt(card, { count: 40, power: 0.8 });
+    toast("Greek Gods and Heroes is ready", "5 lessons · about 1h 10m", "sparkle");
+    baoSay("Greek Gods is ready too. No rush.", "cheer");
+  }, 3200);
+
+  // needs you
+  document.querySelectorAll("#nd-tiles .tile").forEach((b) => (b.onclick = async () => {
+    const box = document.getElementById("nd-tiles");
+    if (box.classList.contains("locked")) return;
+    box.classList.add("locked"); b.classList.add("picked");
+    if (b.dataset.a === "plan") { toast("Mock", "This opens the plan with that lesson highlighted.", "edit"); setTimeout(() => { box.classList.remove("locked"); b.classList.remove("picked"); }, 900); return; }
+    await wait(300);
+    box.classList.add("gone");
+    document.getElementById("nd-st").className = "st2 making"; document.getElementById("nd-st").textContent = "retrying";
+    document.getElementById("nd-say").querySelector("span:last-child").innerHTML = "Trying that one again…";
+    updSide("music", { status: "making", segs: "ddwdd", badge: "retrying" });
+    const seg = document.querySelectorAll("#nd-segs i")[2]; seg.removeAttribute("style"); seg.className = "w";
+    await wait(2600);
+    seg.className = "d";
+    document.getElementById("nd-st").className = "st2 ready"; document.getElementById("nd-st").textContent = "ready";
+    document.getElementById("nd-say").querySelector("span:last-child").innerHTML = "That one came out right this time. All 5 lessons are ready.";
+    updSide("music", { status: "learning", segs: "-----", badge: "ready" });
+    document.getElementById("needs-n").textContent = "0";
+    confettiAt(document.getElementById("needs"), { count: 30, power: 0.7 });
+    toast("Reading sheet music is ready", "5 lessons", "check");
+  }));
+  document.getElementById("clear").onclick = () => {
+    document.getElementById("older").classList.add("gone");
+    toast("Cleared", "4 old attempts removed", "check");
+  };
+}
+
+/* ---------- first run ---------- */
+async function firstRun() {
+  T.token++; clearInterval(ticker); T.autoScroll = true;
+  setBuddy({ streak: 0, minutes: 0, week: [0, 0, 0, 0, 0, 0, 0] });
+  sideFirst();
+  baoSay("New here? Me too. Let's pick something.", "idle");
+  home.innerHTML = `<div class="thread" id="thread"></div>`;
+  scrollEl.scrollTop = 0;
+  useThread(document.getElementById("thread"), scrollEl);
+  if (!(await bao("Hi, I'm Nibbles. What would you like to learn?", 450))) return;
+  const SUG = [["Norse mythology", "norse"], ["Reading sheet music", "music"], ["How sourdough works", "sourdough"], ["Basics of investing", "investing"]];
+  const el = block(`<div class="tcard">
+    <form class="field" id="topic-form">
+      <input id="topic" autocomplete="off" placeholder="A topic, a skill, anything you're curious about" />
+      <button class="btn primary" id="gobtn" disabled>Continue</button>
+    </form>
+    <p class="sugg-h">or try one of these</p>
+    <div class="sugg">${SUG.map(([s, ic], i) => `<button type="button" class="chip" style="--i:${i}">${courseIcon(ic)}${s}</button>`).join("")}</div>
+  </div>`);
+  block(`<div class="how">
+    <div style="--i:0"><span class="n">01</span><b>Tell me a topic</b><span>Anything. One line is enough.</span></div>
+    <div style="--i:1"><span class="n">02</span><b>Tap a few answers</b><span>So I know where to start. No typing.</span></div>
+    <div style="--i:2"><span class="n">03</span><b>I write your course</b><span>Short lessons and quick checks, with sources.</span></div>
+  </div>`);
+  const input = el.querySelector("#topic"), btn = el.querySelector("#gobtn");
+  input.focus();
+  input.oninput = () => (btn.disabled = !input.value.trim());
+  el.querySelectorAll(".chip").forEach((c) => (c.onclick = () => { input.value = c.textContent; btn.disabled = false; input.focus(); }));
+  el.querySelector("#topic-form").onsubmit = (e) => { e.preventDefault(); if (input.value.trim()) go("02b-new-course.html"); };
+}
+
+/* ---------- mock screens ---------- */
+const views = document.querySelectorAll(".mock .row-btns button");
+function show(v) {
+  views.forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+  (v === "first" ? firstRun : returning)();
+}
+views.forEach((b) => (b.onclick = () => show(b.dataset.v)));
+document.getElementById("new").onclick = () => go("02b-new-course.html");
+document.addEventListener("keydown", (e) => { if ((e.key === "n" || e.key === "N") && document.activeElement?.tagName !== "INPUT") go("02b-new-course.html"); });
+show("returning");
+</script>
+</body>
+</html>

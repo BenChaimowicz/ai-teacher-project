@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amethyst">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Knibbler · new course (mock)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  /* ---------- palettes (always dark; only accents change) ---------- */
+  :root, [data-theme="amethyst"] {
+    --bg: #0c0b14; --bg-2: #100f1b; --panel: #15141f; --panel-2: #1c1a2a;
+    --a: #a78bfa; --b: #7dd3fc; --on-a: #140f26;
+    --a-rgb: 167, 139, 250; --b-rgb: 125, 211, 252;
+    --bao-hi: #f5f3ff; --bao-lo: #c4b5fd; --bao-ear: #b4a3f7;
+  }
+  [data-theme="rose"] {
+    --bg: #110b0e; --bg-2: #160e12; --panel: #1b1217; --panel-2: #24171e;
+    --a: #fb7185; --b: #f9a8d4; --on-a: #2a0a12;
+    --a-rgb: 251, 113, 133; --b-rgb: 249, 168, 212;
+    --bao-hi: #fff1f2; --bao-lo: #fbb6c4; --bao-ear: #f49aae;
+  }
+  [data-theme="honey"] {
+    --bg: #100d09; --bg-2: #15110c; --panel: #1a1610; --panel-2: #231d15;
+    --a: #f5c451; --b: #c8935f; --on-a: #2a1d05;
+    --a-rgb: 245, 196, 81; --b-rgb: 200, 147, 95;
+    --bao-hi: #fdf3dc; --bao-lo: #e3b373; --bao-ear: #c8935f;
+  }
+  [data-theme="matcha"] {
+    --bg: #0a0f0c; --bg-2: #0e1410; --panel: #121a15; --panel-2: #18231c;
+    --a: #9ae6b4; --b: #fdba74; --on-a: #0b2414;
+    --a-rgb: 154, 230, 180; --b-rgb: 253, 186, 116;
+    --bao-hi: #fff7ed; --bao-lo: #f6c99a; --bao-ear: #eab17a;
+  }
+  [data-theme="slate"] {
+    --bg: #0d0f12; --bg-2: #111418; --panel: #161a1f; --panel-2: #1d2228;
+    --a: #cbd5e1; --b: #60a5fa; --on-a: #0f172a;
+    --a-rgb: 203, 213, 225; --b-rgb: 96, 165, 250;
+    --bao-hi: #f1f5f9; --bao-lo: #a8b4c4; --bao-ear: #94a3b8;
+  }
+
+  :root {
+    --text: #ecebf2; --muted: #a3a1b3; --faint: #6c6a7c;
+    --line: rgba(255, 255, 255, 0.07); --line-2: rgba(255, 255, 255, 0.12);
+    --a-soft: rgba(var(--a-rgb), 0.12); --a-line: rgba(var(--a-rgb), 0.35);
+    --b-soft: rgba(var(--b-rgb), 0.12);
+    --glow: 0 0 24px rgba(var(--a-rgb), 0.18);
+    --r: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Manrope", ui-sans-serif, system-ui, sans-serif; font-size: 15px;
+    -webkit-font-smoothing: antialiased; transition: background 0.3s;
+  }
+  button, input { font: inherit; color: inherit; border: 0; background: none; }
+  button { cursor: pointer; }
+
+  .app { display: grid; grid-template-columns: 264px 1fr; height: 100vh; }
+
+  /* ---------- sidebar ---------- */
+  .side {
+    background: var(--bg-2); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; padding: 20px 14px; gap: 22px; overflow-y: auto;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; font-weight: 800; font-size: 1.1rem; letter-spacing: -0.01em; }
+  .brand .bao { width: 30px; height: 30px; }
+  .new {
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+    padding: 10px 12px; border-radius: 10px; font-weight: 700;
+    background: var(--a-soft); border: 1px solid var(--a-line); color: var(--a);
+  }
+  .new:hover { background: rgba(var(--a-rgb), 0.18); }
+  .group h3 { font-size: 0.75rem; font-weight: 700; color: var(--faint); padding: 0 8px 6px; }
+  .item { display: block; width: 100%; text-align: left; padding: 9px 10px; border-radius: 9px; }
+  .item:hover { background: var(--panel); }
+  .item.active { background: var(--panel-2); }
+  .item .t { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .s { font-size: 0.78rem; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 8px; }
+  .mini-bar { flex: 1; max-width: 70px; height: 4px; border-radius: 9px; background: var(--line-2); overflow: hidden; }
+  .mini-bar i { display: block; height: 100%; background: var(--a); border-radius: inherit; }
+  .side-foot { margin-top: auto; padding: 0 4px; }
+  .side-foot .item .t { font-weight: 500; color: var(--muted); }
+
+  /* ---------- main ---------- */
+  .main { display: flex; flex-direction: column; min-width: 0; height: 100vh; }
+  .top {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 14px 28px; border-bottom: 1px solid var(--line);
+  }
+  .top .title { font-weight: 700; }
+  .steps { display: flex; gap: 6px; align-items: center; font-size: 0.78rem; color: var(--faint); }
+  .steps span { padding: 4px 10px; border-radius: 99px; }
+  .steps span.done { color: var(--muted); }
+  .steps span.now { color: var(--a); background: var(--a-soft); }
+  .steps i { width: 10px; height: 1px; background: var(--line-2); }
+
+  .scroll { flex: 1; overflow-y: auto; }
+  .thread { max-width: 720px; margin: 0 auto; padding: 36px 24px 24px; display: flex; flex-direction: column; gap: 6px; }
+
+  .row { display: flex; gap: 12px; align-items: flex-start; animation: in 0.3s ease-out both; }
+  .row + .row.bao-row { margin-top: 0; }
+  .row.gap { margin-top: 16px; }
+  .row .av { width: 34px; height: 34px; flex: none; }
+  .row .av.empty { visibility: hidden; }
+  .msg { line-height: 1.6; padding: 6px 0; max-width: 600px; }
+  .msg .faint { color: var(--muted); }
+
+  .row.me { justify-content: flex-end; }
+  .row.me .msg {
+    background: var(--panel-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 14px 14px 4px 14px;
+  }
+
+  .typing { display: inline-flex; gap: 4px; padding: 12px 0; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--a); opacity: 0.35; animation: dot 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: 0.15s; }
+  .typing i:nth-child(3) { animation-delay: 0.3s; }
+
+  /* cards inside the thread */
+  .card {
+    margin: 8px 0 4px 46px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--r); padding: 18px; animation: in 0.3s ease-out both;
+  }
+  .card h4 { font-size: 1.05rem; font-weight: 700; }
+  .card .sub { color: var(--muted); font-size: 0.86rem; margin-top: 4px; }
+
+  .lessons { list-style: none; margin-top: 14px; display: grid; gap: 4px; }
+  .lessons li { display: flex; align-items: center; gap: 12px; padding: 10px 10px; border-radius: 10px; }
+  .lessons li:hover { background: var(--panel-2); }
+  .lessons li.off .lt { color: var(--faint); text-decoration: line-through; }
+  .lessons .n { width: 22px; color: var(--faint); font-size: 0.82rem; text-align: right; }
+  .lessons .lt { flex: 1; font-weight: 600; font-size: 0.92rem; }
+  .lessons .lt small { display: block; font-weight: 500; color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+  .tag { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; color: var(--muted); background: var(--line); }
+  .tag.quiz { color: var(--b); background: var(--b-soft); }
+  .check {
+    width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--line-2); flex: none;
+    display: grid; place-items: center; transition: background 0.2s, border-color 0.2s;
+  }
+  .check.on { background: var(--a); border-color: var(--a); }
+  .check.on::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--on-a); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+
+  .seg { display: inline-flex; margin-top: 16px; padding: 3px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }
+  .seg button { padding: 7px 14px; border-radius: 8px; font-size: 0.86rem; font-weight: 600; color: var(--muted); }
+  .seg button.on { background: var(--panel-2); color: var(--text); }
+  .hint { font-size: 0.8rem; color: var(--faint); margin-top: 8px; }
+
+  .stages { list-style: none; margin-top: 14px; display: grid; gap: 10px; }
+  .stages li { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--faint); }
+  .stages li.done { color: var(--muted); }
+  .stages li.now { color: var(--text); font-weight: 600; }
+  .dotc { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line-2); flex: none; display: grid; place-items: center; }
+  .stages li.done .dotc { background: var(--a-soft); border-color: var(--a-line); }
+  .stages li.done .dotc::after { content: "✓"; font-size: 0.65rem; color: var(--a); }
+  .stages li.now .dotc { border-color: var(--a); box-shadow: var(--glow); }
+  .stages li.now .dotc::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--a); animation: pulse 1.2s infinite; }
+  .bar { margin-top: 16px; height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--a), var(--b)); box-shadow: 0 0 14px rgba(var(--b-rgb), 0.35); transition: width 0.8s ease; }
+  .meta { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--faint); margin-top: 8px; }
+
+  /* ---------- composer ---------- */
+  .composer { border-top: 1px solid var(--line); background: linear-gradient(180deg, transparent, rgba(0,0,0,0.15)); }
+  .composer-in { max-width: 720px; margin: 0 auto; padding: 18px 24px 22px; min-height: 96px; }
+
+  .field {
+    display: flex; gap: 8px; align-items: center; padding: 6px 6px 6px 16px;
+    background: var(--panel); border: 1px solid var(--line-2); border-radius: 14px; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .field:focus-within { border-color: var(--a-line); box-shadow: var(--glow); }
+  .field input { flex: 1; outline: none; padding: 8px 0; }
+  .field input::placeholder { color: var(--faint); }
+
+  .btn { padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 0.92rem; transition: filter 0.2s, background 0.2s, box-shadow 0.2s; }
+  .btn.primary { background: var(--a); color: var(--on-a); }
+  .btn.primary:hover { filter: brightness(1.08); box-shadow: var(--glow); }
+  .btn.primary:disabled { background: var(--panel-2); color: var(--faint); box-shadow: none; filter: none; cursor: default; }
+  .btn.ghost { color: var(--muted); border: 1px solid var(--line-2); }
+  .btn.ghost:hover { color: var(--text); background: var(--panel); }
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .sugg { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chip { padding: 7px 13px; border-radius: 99px; font-size: 0.85rem; color: var(--muted); border: 1px solid var(--line-2); }
+  .chip:hover { color: var(--text); border-color: var(--a-line); }
+
+  .opts { display: grid; gap: 8px; }
+  .opts.two { grid-template-columns: 1fr 1fr; }
+  .opt {
+    display: flex; align-items: center; gap: 12px; text-align: left;
+    padding: 12px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .opt:hover { border-color: var(--a-line); background: var(--panel-2); }
+  .opt kbd {
+    font: inherit; font-size: 0.75rem; font-weight: 700; color: var(--faint);
+    width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line-2); display: grid; place-items: center; flex: none;
+  }
+  .opt:hover kbd { color: var(--a); border-color: var(--a-line); }
+  .opt.unsure { color: var(--muted); }
+  .q-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .q-head b { font-weight: 700; }
+  .q-head span { font-size: 0.8rem; color: var(--faint); }
+
+  /* ---------- theme switcher ---------- */
+  .themes {
+    margin: 0 4px 10px; background: var(--panel); border: 1px dashed var(--line-2); border-radius: 12px; padding: 12px;
+  }
+  .themes p { font-size: 0.72rem; font-weight: 700; color: var(--faint); margin-bottom: 8px; }
+  .themes .sw { display: flex; gap: 6px; }
+  .themes .sw button {
+    width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; padding: 3px;
+  }
+  .themes .sw button[aria-pressed="true"] { border-color: var(--text); }
+  .themes .sw button span { display: block; width: 100%; height: 100%; border-radius: 50%; }
+  .themes .name { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+  .restart { margin-top: 10px; width: 100%; padding: 7px 10px; font-size: 0.8rem; }
+
+  /* ---------- Bao ---------- */
+  .bao svg { width: 100%; height: 100%; overflow: visible; display: block; }
+  .bao .hi { stop-color: var(--bao-hi); } .bao .lo { stop-color: var(--bao-lo); }
+  .bao .ear { fill: var(--bao-ear); } .bao .cheek { fill: var(--bao-hi); }
+  .bao .seed { fill: var(--b); } .bao .paw { fill: var(--bao-lo); }
+  .bao .eyes { animation: blink 5s infinite; transform-origin: center; transform-box: fill-box; }
+  .bao.working .body-g { animation: bob 1.4s ease-in-out infinite; transform-box: fill-box; }
+
+
+  /* ---------- stronger accent presence ---------- */
+  html[data-theme] {
+    --bg: color-mix(in srgb, var(--a) 5%, #0b0b0f);
+    --bg-2: color-mix(in srgb, var(--a) 8%, #0d0d12);
+    --panel: color-mix(in srgb, var(--a) 9%, #121217);
+    --panel-2: color-mix(in srgb, var(--a) 15%, #16161c);
+    --line: rgba(var(--a-rgb), 0.13);
+    --line-2: rgba(var(--a-rgb), 0.22);
+    --a-soft: rgba(var(--a-rgb), 0.16);
+    --a-line: rgba(var(--a-rgb), 0.45);
+    --b-soft: rgba(var(--b-rgb), 0.16);
+    --glow: 0 0 26px rgba(var(--a-rgb), 0.28);
+  }
+  body {
+    background:
+      radial-gradient(900px 520px at 85% -10%, rgba(var(--a-rgb), 0.16), transparent 65%),
+      radial-gradient(700px 480px at 30% 115%, rgba(var(--b-rgb), 0.11), transparent 65%),
+      var(--bg);
+  }
+  .side { background: linear-gradient(180deg, rgba(var(--a-rgb), 0.10), transparent 45%), var(--bg-2); }
+  .brand { background: linear-gradient(90deg, var(--a), var(--b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .new { background: var(--a); color: var(--on-a); border-color: transparent; box-shadow: var(--glow); }
+  .new:hover { background: var(--a); filter: brightness(1.08); }
+  .item.active { background: rgba(var(--a-rgb), 0.16); box-shadow: inset 3px 0 0 var(--a); }
+  .item.active .s { color: var(--a); }
+  .group h3 { color: rgba(var(--a-rgb), 0.7); }
+  .top { position: relative; border-bottom: 0; }
+  .top::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, rgba(var(--a-rgb), 0.5), rgba(var(--b-rgb), 0.35) 60%, transparent); }
+  .steps span.done { color: rgba(var(--a-rgb), 0.75); }
+  .steps span.now { color: var(--on-a); background: var(--a); box-shadow: var(--glow); }
+  .steps i { background: rgba(var(--a-rgb), 0.3); }
+  .row.me .msg {
+    background: linear-gradient(135deg, rgba(var(--a-rgb), 0.28), rgba(var(--b-rgb), 0.16));
+    border-color: rgba(var(--a-rgb), 0.4);
+  }
+  .row.me .msg .faint { color: rgba(255, 255, 255, 0.6); }
+  .row .av:not(.empty) { border-radius: 50%; background: rgba(var(--a-rgb), 0.14); box-shadow: 0 0 0 1px rgba(var(--a-rgb), 0.3), 0 0 16px rgba(var(--a-rgb), 0.2); padding: 2px; }
+  .card { background: linear-gradient(180deg, rgba(var(--a-rgb), 0.09), rgba(var(--b-rgb), 0.04)), var(--panel); border-color: rgba(var(--a-rgb), 0.24); }
+  .card h4 { color: var(--a); }
+  .tag { color: var(--a); background: var(--a-soft); }
+  .opt { background: rgba(var(--a-rgb), 0.07); border-color: rgba(var(--a-rgb), 0.2); }
+  .opt kbd { color: var(--a); border-color: rgba(var(--a-rgb), 0.35); }
+  .opt:hover { background: rgba(var(--a-rgb), 0.16); box-shadow: var(--glow); }
+  .chip { border-color: rgba(var(--a-rgb), 0.3); color: var(--text); background: rgba(var(--a-rgb), 0.06); }
+  .field { border-color: rgba(var(--a-rgb), 0.35); }
+  .composer { border-top-color: rgba(var(--a-rgb), 0.18); background: linear-gradient(180deg, rgba(var(--a-rgb), 0.04), rgba(var(--b-rgb), 0.05)); }
+  .btn.ghost { border-color: rgba(var(--a-rgb), 0.3); color: var(--text); }
+  .seg .on { background: var(--a-soft) !important; color: var(--a) !important; }
+  .mini-bar i { background: linear-gradient(90deg, var(--a), var(--b)); }
+  .q-head b { color: var(--a); }
+
+  @keyframes in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+  @keyframes dot { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+  @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="bao" data-bao></span>knibbler</div>
+    <button class="new" type="button" id="new">＋ New course</button>
+
+    <div class="group">
+      <h3>Learning</h3>
+      <button class="item" type="button"><div class="t">The square knot</div><div class="s"><span class="mini-bar"><i style="width:33%"></i></span>1 of 3</div></button>
+    </div>
+    <div class="group">
+      <h3>Being made</h3>
+      <button class="item active" type="button" id="side-current"><div class="t">New course</div><div class="s">Just started</div></button>
+    </div>
+    <div class="group">
+      <h3>Finished</h3>
+      <button class="item" type="button"><div class="t">Yggdrasil and the Nine Worlds</div><div class="s">Finished · 8/8 on the quiz</div></button>
+    </div>
+
+    <div class="side-foot">
+      <div class="themes" aria-label="Accent colours">
+        <p>MOCK · ACCENT COLOURS</p>
+        <div class="sw" id="sw"></div>
+        <div class="name" id="theme-name"></div>
+        <button class="btn ghost restart" type="button" id="restart">↻ Restart mock</button>
+      </div>
+      <button class="item" type="button"><div class="t">How you like to learn</div></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div class="title" id="title">New course</div>
+      <div class="steps" id="steps"></div>
+    </div>
+    <div class="scroll" id="scroll"><div class="thread" id="thread"></div></div>
+    <div class="composer"><div class="composer-in" id="composer"></div></div>
+  </main>
+</div>
+
+
+<script>
+/* ---------- Bao ---------- */
+let baoId = 0;
+function baoSVG() {
+  const id = "bao" + baoId++;
+  return `<svg viewBox="0 0 120 120" aria-hidden="true">
+    <defs><radialGradient id="${id}" cx="45%" cy="35%" r="70%"><stop offset="0" class="hi"/><stop offset="1" class="lo"/></radialGradient></defs>
+    <g class="body-g">
+      <circle cx="30" cy="40" r="11" class="ear"/><circle cx="30" cy="41" r="6" fill="#f9a8d4" opacity=".55"/>
+      <circle cx="90" cy="40" r="11" class="ear"/><circle cx="90" cy="41" r="6" fill="#f9a8d4" opacity=".55"/>
+      <ellipse cx="60" cy="72" rx="42" ry="37" fill="url(#${id})"/>
+      <ellipse cx="34" cy="82" rx="15" ry="13" class="cheek" opacity=".9"/>
+      <ellipse cx="86" cy="82" rx="15" ry="13" class="cheek" opacity=".9"/>
+      <g class="eyes">
+        <ellipse cx="45" cy="67" rx="7.5" ry="8.4" fill="#1a1433"/><ellipse cx="75" cy="67" rx="7.5" ry="8.4" fill="#1a1433"/>
+        <circle cx="47.4" cy="64.2" r="2.7" fill="#fff"/><circle cx="77.4" cy="64.2" r="2.7" fill="#fff"/>
+        <circle cx="42.4" cy="69.2" r="1.2" fill="#fff"/><circle cx="72.4" cy="69.2" r="1.2" fill="#fff"/>
+      </g>
+      <ellipse cx="33" cy="82" rx="6.5" ry="3.6" fill="#f9a8d4" opacity=".45"/><ellipse cx="87" cy="82" rx="6.5" ry="3.6" fill="#f9a8d4" opacity=".45"/>
+      <path d="M57 76 h6 l-3 3z" fill="#e8799f"/>
+      <path d="M55 80 q2.5 3 5 0 q2.5 3 5 0" stroke="#3b2a3b" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <ellipse cx="60" cy="97" rx="5" ry="7.5" class="seed"/>
+      <circle cx="53" cy="98" r="4.5" class="paw"/><circle cx="67" cy="98" r="4.5" class="paw"/>
+    </g>
+  </svg>`;
+}
+document.querySelectorAll("[data-bao]").forEach((el) => (el.innerHTML = baoSVG()));
+
+/* ---------- themes ---------- */
+const THEMES = [
+  ["amethyst", "Purple · light blue", "#a78bfa", "#7dd3fc"],
+  ["rose", "Red · pink", "#fb7185", "#f9a8d4"],
+  ["honey", "Yellow · brown", "#f5c451", "#c8935f"],
+  ["matcha", "Light green · orange", "#9ae6b4", "#fdba74"],
+  ["slate", "Grey · flashes of blue", "#cbd5e1", "#60a5fa"],
+];
+const sw = document.getElementById("sw");
+function setTheme(key) {
+  document.documentElement.dataset.theme = key;
+  localStorage.setItem("knibbler-theme", key);
+  sw.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === key)));
+  document.getElementById("theme-name").textContent = THEMES.find((t) => t[0] === key)[1];
+}
+THEMES.forEach(([k, label, a, b]) => {
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.dataset.k = k; btn.title = label;
+  btn.innerHTML = `<span style="background:linear-gradient(135deg, ${a} 50%, ${b} 50%)"></span>`;
+  btn.onclick = () => setTheme(k);
+  sw.appendChild(btn);
+});
+setTheme(localStorage.getItem("knibbler-theme") || "amethyst");
+
+/* ---------- thread helpers ---------- */
+const thread = document.getElementById("thread");
+const composer = document.getElementById("composer");
+const scroll = document.getElementById("scroll");
+let lastWasBao = false;
+let token = 0;
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const down = () => requestAnimationFrame(() => (scroll.scrollTop = scroll.scrollHeight));
+
+async function bao(html, { pause = 550 } = {}) {
+  const my = token;
+  const row = document.createElement("div");
+  row.className = "row bao-row" + (lastWasBao ? "" : " gap");
+  row.innerHTML = `<div class="av bao ${lastWasBao ? "empty" : ""}">${lastWasBao ? "" : baoSVG()}</div><div class="msg"><span class="typing"><i></i><i></i><i></i></span></div>`;
+  thread.appendChild(row); down();
+  lastWasBao = true;
+  await wait(pause);
+  if (my !== token) return;
+  row.querySelector(".msg").innerHTML = html; down();
+}
+
+function me(text) {
+  const row = document.createElement("div");
+  row.className = "row me gap";
+  row.innerHTML = `<div class="msg">${text}</div>`;
+  thread.appendChild(row); down();
+  lastWasBao = false;
+}
+
+function card(html) {
+  const el = document.createElement("div");
+  el.className = "card";
+  el.innerHTML = html;
+  thread.appendChild(el); down();
+  lastWasBao = false;
+  return el;
+}
+
+function setComposer(html) { composer.innerHTML = html; }
+
+const STEP_NAMES = ["Topic", "Goal", "Level", "Plan", "Making"];
+function setStep(i) {
+  document.getElementById("steps").innerHTML = STEP_NAMES.map((n, j) =>
+    `<span class="${j < i ? "done" : j === i ? "now" : ""}">${n}</span>`).join("<i></i>");
+}
+
+function options(list, onPick, { two = false, keys = true } = {}) {
+  setComposer(`<div class="opts ${two ? "two" : ""}">${list.map((o, i) =>
+    `<button type="button" class="opt ${o.unsure ? "unsure" : ""}" data-i="${i}">${keys ? `<kbd>${i + 1}</kbd>` : ""}${o.label}</button>`).join("")}</div>`);
+  composer.querySelectorAll(".opt").forEach((b) => (b.onclick = () => onPick(list[+b.dataset.i])));
+}
+
+document.addEventListener("keydown", (e) => {
+  if (document.activeElement?.tagName === "INPUT") return;
+  const n = Number(e.key);
+  if (n >= 1 && n <= 9) composer.querySelectorAll(".opt")[n - 1]?.click();
+});
+
+/* ---------- flow ---------- */
+const state = { subject: "", goal: "" };
+
+async function start() {
+  token++;
+  thread.innerHTML = ""; lastWasBao = false;
+  document.getElementById("title").textContent = "New course";
+  document.querySelector("#side-current .t").textContent = "New course";
+  document.querySelector("#side-current .s").textContent = "Just started";
+  setStep(0);
+  setComposer("");
+  await bao("Hi. What would you like to learn?");
+  setComposer(`
+    <form class="field" id="topic-form">
+      <input id="topic" autocomplete="off" placeholder="A topic, a skill, anything you're curious about" />
+      <button class="btn primary" id="go" disabled>Continue</button>
+    </form>
+    <div class="sugg">${["Norse mythology", "Reading sheet music", "How sourdough works", "Basics of investing"].map((s) => `<button type="button" class="chip">${s}</button>`).join("")}</div>`);
+  const input = document.getElementById("topic");
+  const go = document.getElementById("go");
+  input.focus();
+  input.oninput = () => (go.disabled = !input.value.trim());
+  composer.querySelectorAll(".chip").forEach((c) => (c.onclick = () => { input.value = c.textContent; go.disabled = false; input.focus(); }));
+  document.getElementById("topic-form").onsubmit = (e) => { e.preventDefault(); if (input.value.trim()) pickTopic(input.value.trim()); };
+}
+
+async function pickTopic(subject) {
+  state.subject = subject;
+  me(subject);
+  setComposer("");
+  document.getElementById("title").textContent = subject;
+  document.querySelector("#side-current .t").textContent = subject;
+  setStep(1);
+  await bao(`Good choice. What would you like to get out of it?`);
+  options([
+    { label: "Know the main stories and ideas" },
+    { label: "Understand how it all fits together" },
+    { label: "Be able to explain it to someone else" },
+    { label: "Go deep, including the original sources" },
+  ], pickGoal);
+}
+
+async function pickGoal(o) {
+  state.goal = o.label;
+  me(o.label);
+  setComposer("");
+  setStep(2);
+  await bao(`A few quick questions so I don't start too easy. <span class="faint">"Not sure" is always a fine answer.</span>`);
+  ask(0);
+}
+
+const QUESTIONS = [
+  { q: "Who is Odin?", a: ["The chief of the gods", "A giant who fights the gods", "The tree that holds the worlds"] },
+  { q: "What is Yggdrasil?", a: ["A great ash tree linking the worlds", "The hall where heroes feast", "Thor's hammer"] },
+  { q: "Where do most of the myths we know today come from?", a: ["Medieval Icelandic writings", "Viking runestones alone", "Roman historians"] },
+];
+
+function ask(i) {
+  const Q = QUESTIONS[i];
+  setComposer(`<div class="q-head"><b>${Q.q}</b><span>${i + 1} of ${QUESTIONS.length}</span></div><div class="opts" id="qopts"></div>`);
+  const box = document.getElementById("qopts");
+  [...Q.a.map((label) => ({ label })), { label: "Not sure", unsure: true }].forEach((o, j) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "opt" + (o.unsure ? " unsure" : "");
+    b.innerHTML = `<kbd>${j + 1}</kbd>${o.label}`;
+    b.onclick = async () => {
+      me(`<span class="faint">${Q.q}</span>&nbsp; ${o.label}`);
+      if (i + 1 < QUESTIONS.length) ask(i + 1);
+      else { setComposer(""); await afterLevel(); }
+    };
+    box.appendChild(b);
+  });
+}
+
+async function afterLevel() {
+  await bao("Thanks. You know the main figures, less so where the stories come from. I'll start there.");
+  options([
+    { label: "Sounds right" },
+    { label: "Start a bit easier" },
+    { label: "Skip ahead, go further" },
+  ], async (o) => { me(o.label); setComposer(""); await showPlan(); }, { two: false });
+}
+
+const PLAN = [
+  ["Gods, giants and the nine worlds", "Who's who, and where they live", "Read"],
+  ["Quick check", "Five questions", "Quiz"],
+  ["Where the myths come from", "The Eddas, the sagas, and who wrote them down", "Read"],
+  ["Quick check", "Five questions", "Quiz"],
+  ["Loki and the death of Baldr", "The story that sets the end in motion", "Read"],
+  ["Ragnarök", "How the Norse imagined the end, and what comes after", "Read"],
+];
+
+async function showPlan() {
+  setStep(3);
+  await bao("Here's a plan. Untick anything you'd rather skip.");
+  const el = card(`
+    <h4>Norse Mythology: Gods, Worlds and Sources</h4>
+    <p class="sub">${PLAN.length} lessons · about 1.5 hours</p>
+    <ul class="lessons">${PLAN.map(([t, s, k], i) => `
+      <li data-i="${i}"><span class="check on" role="checkbox" aria-checked="true" tabindex="0"></span><span class="n">${i + 1}</span>
+        <span class="lt">${t}<small>${s}</small></span><span class="tag ${k === "Quiz" ? "quiz" : ""}">${k}</span></li>`).join("")}</ul>
+    <div class="seg" role="radiogroup"><button type="button" class="on" data-m="step">Step by step</button><button type="button" data-m="free">Jump around</button></div>
+    <p class="hint" id="mode-hint">Lessons open in order. A quick check unlocks the next part.</p>`);
+  el.querySelectorAll(".lessons li").forEach((li) => (li.onclick = () => {
+    const c = li.querySelector(".check");
+    c.classList.toggle("on"); li.classList.toggle("off");
+    c.setAttribute("aria-checked", String(c.classList.contains("on")));
+  }));
+  el.querySelectorAll(".seg button").forEach((b) => (b.onclick = () => {
+    el.querySelectorAll(".seg button").forEach((x) => x.classList.toggle("on", x === b));
+    el.querySelector("#mode-hint").textContent = b.dataset.m === "step"
+      ? "Lessons open in order. A quick check unlocks the next part."
+      : "Every lesson is open from the start. You can't switch back to step by step later.";
+  }));
+  setComposer(`<div class="btns"><button type="button" class="btn primary" id="make">Make my course</button><button type="button" class="btn ghost" id="regoal">Change my goal</button></div>`);
+  document.getElementById("make").onclick = () => { me("Make my course"); setComposer(""); making(); };
+  document.getElementById("regoal").onclick = () => { me("Change my goal"); setComposer(""); pickTopic(state.subject); };
+}
+
+async function making() {
+  setStep(4);
+  document.querySelector("#side-current .s").textContent = "Writing…";
+  await bao("On it. This takes a few minutes. You can leave; I'll keep going.");
+  const el = card(`
+    <ul class="stages">
+      <li data-s="0"><span class="dotc"></span>Finding good sources</li>
+      <li data-s="1"><span class="dotc"></span><span class="st">Writing lessons</span></li>
+      <li data-s="2"><span class="dotc"></span>Checking it all fits together</li>
+    </ul>
+    <div class="bar"><i></i></div>
+    <div class="meta"><span class="cur"></span><span class="eta"></span></div>`);
+  const av = thread.querySelectorAll(".row.bao-row .av:not(.empty)");
+  av[av.length - 1]?.classList.add("working");
+  setComposer(`<div class="btns"><button type="button" class="btn ghost" id="home">Back to Home</button><button type="button" class="btn ghost" id="cancel">Stop making this course</button></div>`);
+  document.getElementById("cancel").onclick = () => { token++; me("Stop making this course"); setComposer(""); bao("Stopped. What's written so far is saved, and you can pick it up again anytime."); };
+  document.getElementById("home").onclick = () => alert("Mock: goes to Home. The course keeps cooking in the sidebar.");
+
+  const my = token;
+  const titles = PLAN.map((p) => p[0]);
+  const frames = [
+    [0, 4, "Reading up on the topic", "About 4 min left"],
+    [0, 10, "Reading up on the topic", "About 4 min left"],
+    ...titles.map((t, i) => [1, 15 + (i + 1) * 12, `Lesson ${i + 1} of ${titles.length}: ${t}`, `About ${Math.max(1, 4 - Math.floor(i * 0.7))} min left`]),
+    [2, 95, "Final read-through", "Almost done"],
+    [3, 100, "", ""],
+  ];
+  for (const [stage, pct, cur, eta] of frames) {
+    if (my !== token) return;
+    el.querySelectorAll(".stages li").forEach((li) => {
+      const s = +li.dataset.s;
+      li.className = s < stage ? "done" : s === stage ? "now" : "";
+    });
+    el.querySelector(".bar i").style.width = pct + "%";
+    el.querySelector(".cur").textContent = cur;
+    el.querySelector(".eta").textContent = eta;
+    await wait(1100);
+  }
+  if (my !== token) return;
+  av[av.length - 1]?.classList.remove("working");
+  document.querySelector("#side-current .s").textContent = "Ready";
+  await bao("Your course is ready.");
+  setComposer(`<div class="btns"><button type="button" class="btn primary" id="startl">Start lesson 1</button><button type="button" class="btn ghost">Back to Home</button></div>`);
+  document.getElementById("startl").onclick = () => alert("Mock: opens the lesson view (next mock).");
+}
+
+document.getElementById("restart").onclick = start;
+document.getElementById("new").onclick = start;
+start();
+</script>
+</body>
+</html>

@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amethyst">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Knibbler · study v2 (mock)</title>
+<link rel="icon" href="nibbles-logo.svg" />
+<link rel="stylesheet" href="kit.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" />
+<style>
+  /* ---------- sidebar: back row + course block ---------- */
+  .back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.84rem; font-weight: 700; padding: 4px 2px; }
+  .back svg { width: 15px; height: 15px; }
+  .back:hover { color: var(--text); }
+
+  .course { min-height: 0; display: flex; flex-direction: column; }
+  .course h2 { display: flex; align-items: center; gap: 9px; font-size: 0.95rem; font-weight: 800; line-height: 1.3; padding: 0 4px; min-width: 0; }
+  .course h2 .c-t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c-ic { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; color: var(--on-a); background: linear-gradient(135deg, var(--a), var(--b)); box-shadow: 0 0 12px rgba(var(--a-rgb), 0.35); }
+  .c-ic svg { width: 16px; height: 16px; }
+  .cstats { display: flex; gap: 10px; flex-wrap: wrap; padding: 6px 4px 0; font-family: var(--mono); font-size: 0.66rem; color: var(--faint); }
+  .cstats b { color: var(--text); font-weight: 500; }
+  .course .segs { padding: 0 4px; margin-top: 10px; }
+  .course .segs i { height: 6px; }
+
+  .outline { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; margin-top: 10px; }
+  .outline li > button { width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; padding: 6px 8px; border-radius: 9px; border: 1px solid transparent; }
+  .outline li > button:hover { background: rgba(var(--a-rgb), 0.07); }
+  .ol-idx { width: 18px; font-family: var(--mono); font-size: 0.66rem; color: var(--faint); flex: none; }
+  .ol-ic { width: 20px; height: 20px; border-radius: 50%; flex: none; display: grid; place-items: center; border: 1.5px solid var(--line-2); color: var(--faint); }
+  .ol-ic svg { width: 11px; height: 11px; }
+  .ol-t { flex: 1; min-width: 0; font-size: 0.84rem; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ol-score { font-family: var(--mono); font-size: 0.64rem; color: var(--faint); flex: none; }
+  .ol-meta { display: flex; gap: 6px; align-items: center; margin-top: 3px; font-family: var(--mono); font-size: 0.62rem; color: var(--faint); font-weight: 400; }
+  .ol-tag { padding: 0 5px; border-radius: 4px; border: 1px solid var(--line-2); }
+  .ol-tag.quiz { color: var(--b); border-color: rgba(var(--b-rgb), 0.35); }
+  .ol-dur { font-family: var(--mono); font-size: 0.64rem; color: var(--faint); flex: none; }
+  .outline li.done .ol-ic { background: var(--a-soft); border-color: var(--a-line); color: var(--a); }
+  .outline li.done .ol-t { color: var(--muted); }
+  .outline li.now > button { background: rgba(var(--a-rgb), 0.15); border-color: rgba(var(--a-rgb), 0.3); box-shadow: inset 3px 0 0 var(--a); }
+  .outline li.now .ol-idx { color: var(--a); }
+  .outline li.now .ol-ic { border-color: var(--a); box-shadow: var(--glow); }
+  .outline li.now .ol-ic::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--a); box-shadow: 0 0 8px var(--a); animation: pulse 1.6s infinite; }
+  .outline li.locked .ol-t { color: var(--faint); }
+  .outline li.added > button { box-shadow: inset 0 0 0 1px rgba(var(--b-rgb), 0.5); animation: added 1.8s ease-out; }
+  .new-badge { font-family: var(--mono); font-size: 0.6rem; font-weight: 700; color: var(--on-a); background: var(--b); padding: 1px 6px; border-radius: 5px; box-shadow: 0 0 10px rgba(var(--b-rgb), 0.5); }
+
+  .subs { list-style: none; margin: 2px 0 4px 46px; display: grid; gap: 1px; position: relative; }
+  .subs::before { content: ""; position: absolute; left: -16px; top: 2px; bottom: 8px; width: 1px; background: var(--line-2); }
+  .subs li { display: flex; align-items: center; gap: 8px; font-size: 0.74rem; color: var(--faint); padding: 1px 0; }
+  .subs li i { width: 13px; height: 13px; border-radius: 4px; border: 1px solid var(--line-2); display: grid; place-items: center; flex: none; transition: background 0.3s, border-color 0.3s; }
+  .subs li i svg { width: 9px; height: 9px; opacity: 0; color: var(--on-a); }
+  .subs li.read { color: var(--text); }
+  .subs li.read i { background: var(--a); border-color: var(--a); box-shadow: 0 0 8px rgba(var(--a-rgb), 0.5); }
+  .subs li.read i svg { opacity: 1; }
+  .subs li.just { animation: bump 0.45s ease-out; }
+
+  /* ---------- top bar ---------- */
+  .crumb { font-size: 0.86rem; color: var(--muted); }
+  .crumb b { color: var(--text); font-weight: 700; }
+  .pill { font-family: var(--mono); font-size: 0.7rem; padding: 5px 10px; border-radius: 99px; background: var(--a-soft); color: var(--a); }
+  .read-prog { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; z-index: 1; background: linear-gradient(90deg, var(--a), var(--b)); box-shadow: 0 0 10px rgba(var(--b-rgb), 0.6); transition: width 0.15s; }
+  .read-pct { font-family: var(--mono); font-size: 0.68rem; color: var(--faint); min-width: 34px; text-align: right; }
+
+  /* ---------- page ---------- */
+  .scroll { scroll-behavior: smooth; scrollbar-gutter: stable; }
+  .page { max-width: 700px; margin: 0 auto; padding: 44px 28px 140px; }
+  .kicker { font-family: var(--mono); font-size: 0.72rem; color: var(--a); }
+  .page h2.title { font-family: Manrope, ui-sans-serif, system-ui, sans-serif; font-weight: 800; font-size: 2.2rem; line-height: 1.2; margin-top: 8px; letter-spacing: -0.02em; }
+  .learn { margin-top: 14px; color: var(--muted); font-size: 0.95rem; line-height: 1.55; }
+  .learn b { color: var(--text); font-weight: 700; }
+  .meta-row { display: flex; gap: 14px; margin-top: 14px; font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+
+  .terms { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 18px; }
+  .terms > span { font-family: var(--mono); font-size: 0.66rem; color: var(--faint); margin-right: 4px; }
+  .term { position: relative; font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 99px; background: rgba(var(--a-rgb), 0.08); border: 1px solid rgba(var(--a-rgb), 0.25); cursor: help; }
+  .term:hover { border-color: var(--a); }
+  .term::after {
+    content: attr(data-def); position: absolute; left: 0; top: calc(100% + 8px); width: 230px; z-index: 5; pointer-events: none;
+    padding: 9px 11px; border-radius: 10px; font-size: 0.78rem; font-weight: 500; line-height: 1.45; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--a-line); box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.7);
+    opacity: 0; transform: translateY(-4px); transition: opacity 0.15s, transform 0.15s;
+  }
+  .term:hover::after { opacity: 1; transform: none; }
+
+  .prose { font-family: Manrope, ui-sans-serif, system-ui, sans-serif; font-size: 1.12rem; line-height: 1.8; color: var(--read); margin-top: 34px; }
+  .prose h3 { font-family: "Manrope", sans-serif; font-size: 1.15rem; font-weight: 800; color: var(--text); margin: 40px 0 10px; display: flex; align-items: center; gap: 10px; }
+  .prose h3 .sec-n { font-family: var(--mono); font-size: 0.7rem; font-weight: 500; color: var(--a); padding: 2px 6px; border-radius: 5px; background: var(--a-soft); }
+  .prose p + p { margin-top: 18px; }
+  .prose sup a { font-family: "Manrope", sans-serif; font-size: 0.7rem; color: var(--a); text-decoration: none; padding: 0 2px; }
+  .prose em { color: var(--text); }
+  .figure { margin: 28px 0; border-radius: 14px; border: 1px solid var(--line); overflow: hidden; background: linear-gradient(180deg, rgba(var(--a-rgb), 0.08), rgba(var(--b-rgb), 0.04)), var(--panel); }
+  .timeline { display: grid; grid-template-columns: repeat(4, 1fr); padding: 22px 18px 18px; gap: 6px; position: relative; }
+  .timeline::before { content: ""; position: absolute; left: 30px; right: 30px; top: 31px; height: 2px; background: linear-gradient(90deg, var(--a), var(--b)); opacity: 0.6; }
+  .tl { text-align: center; position: relative; }
+  .tl i { display: block; width: 14px; height: 14px; border-radius: 50%; margin: 0 auto; background: var(--bg); border: 2px solid var(--a); }
+  .tl.hl i { background: var(--a); box-shadow: var(--glow); }
+  .tl b { display: block; margin-top: 10px; font-family: var(--mono); font-size: 0.8rem; }
+  .tl span { display: block; color: var(--muted); font-size: 0.76rem; margin-top: 3px; line-height: 1.4; }
+  .figure figcaption { padding: 10px 18px; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--faint); }
+  .note { display: flex; gap: 12px; align-items: flex-start; margin: 26px 0; padding: 14px 16px; border-radius: 14px; background: rgba(var(--a-rgb), 0.08); border: 1px solid rgba(var(--a-rgb), 0.24); font-family: "Manrope", sans-serif; font-size: 0.92rem; line-height: 1.55; color: var(--text); }
+  .note .av { width: 34px; height: 34px; flex: none; }
+  .note b { color: var(--a); }
+  .sources { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 0.84rem; color: var(--muted); }
+  .sources h4 { font-family: var(--mono); font-size: 0.68rem; color: var(--faint); font-weight: 500; margin-bottom: 8px; }
+  .sources li { list-style: none; margin-top: 6px; }
+  .sources li b { font-family: var(--mono); color: var(--a); margin-right: 8px; font-weight: 500; }
+  .nib-area { margin-top: 40px; display: flex; flex-direction: column; gap: 6px; }
+
+  /* ---------- quiz ---------- */
+  .qcard { margin: 18px 0 0 48px; padding: 18px 20px; border-radius: 16px; animation: in 0.3s ease-out both; background: linear-gradient(160deg, rgba(var(--a-rgb), 0.16), rgba(var(--b-rgb), 0.05)), var(--panel); border: 1px solid rgba(var(--a-rgb), 0.32); }
+  .qc-head { display: flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+  .dots { display: flex; gap: 5px; }
+  .dots i { width: 22px; height: 5px; border-radius: 99px; background: var(--line-2); }
+  .dots i.on { background: var(--text); box-shadow: 0 0 8px rgba(255, 255, 255, 0.5); }
+  .dots i.good { background: var(--good); } .dots i.miss { background: var(--miss); }
+  .combo { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; color: var(--on-a); background: linear-gradient(135deg, var(--a), var(--b)); padding: 2px 9px 2px 6px; border-radius: 99px; animation: pop 0.4s cubic-bezier(.3, 1.4, .5, 1); box-shadow: 0 0 14px rgba(var(--a-rgb), 0.45); }
+  .combo svg { width: 12px; height: 12px; }
+  .qc-q { margin-top: 12px; font-family: Manrope, ui-sans-serif, system-ui, sans-serif; font-size: 1.4rem; font-weight: 700; line-height: 1.35; }
+
+  .score-card { margin: 18px 0 4px 48px; padding: 22px; border-radius: 18px; animation: pop 0.45s cubic-bezier(.3, 1.4, .5, 1) both; background: linear-gradient(160deg, rgba(var(--a-rgb), 0.12), rgba(var(--b-rgb), 0.04)), var(--panel); border: 1px solid rgba(var(--a-rgb), 0.3); }
+  .score-card.pass { background: linear-gradient(135deg, rgba(var(--a-rgb), 0.3), rgba(var(--b-rgb), 0.14)), var(--panel); border-color: var(--a-line); box-shadow: 0 16px 40px -18px rgba(var(--a-rgb), 0.7), var(--glow); }
+  .sc-top { display: flex; align-items: center; gap: 18px; }
+  .sc-num { display: flex; align-items: baseline; font-family: var(--mono); }
+  .sc-num b { font-size: 3.2rem; font-weight: 700; line-height: 1; background: linear-gradient(135deg, var(--a), var(--b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sc-num span { font-size: 1.3rem; color: var(--muted); margin-left: 2px; }
+  .sc-label { font-size: 1.2rem; font-weight: 800; }
+  .sc-sub { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+  .sc-res { display: flex; gap: 6px; margin-top: 16px; }
+  .sc-res i { flex: 1; height: 28px; border-radius: 8px; display: grid; place-items: center; font-style: normal; font-family: var(--mono); font-size: 0.72rem; }
+  .sc-res i.good { background: rgba(var(--good-rgb), 0.14); color: var(--good); border: 1px solid rgba(var(--good-rgb), 0.35); }
+  .sc-res i.miss { background: rgba(var(--miss-rgb), 0.1); color: var(--miss); border: 1px solid rgba(var(--miss-rgb), 0.35); }
+  .path-change { display: flex; gap: 12px; align-items: center; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--b-soft); border: 1px solid rgba(var(--b-rgb), 0.4); font-size: 0.9rem; line-height: 1.5; }
+  .path-change .plus { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--b); color: var(--bg); flex: none; }
+  .path-change .plus svg { width: 15px; height: 15px; }
+
+  /* ---------- complete ---------- */
+  .done-hero { text-align: center; padding-top: 18px; }
+  .done-hero .big { width: 140px; height: 140px; margin: 0 auto; position: relative; }
+  .done-hero .big::before { content: ""; position: absolute; inset: -22px; border-radius: 50%; background: radial-gradient(circle, rgba(var(--a-rgb), 0.4), transparent 65%); animation: pulse 2.8s ease-in-out infinite; }
+  .done-hero .big .bao { position: relative; width: 100%; height: 100%; display: block; }
+  .spark { position: absolute; color: var(--b); animation: pulse 1.6s ease-in-out infinite; font-size: 0.95rem; }
+  .done-hero .kicker { display: block; margin-top: 18px; }
+  .done-hero h2 { font-family: Manrope, ui-sans-serif, system-ui, sans-serif; font-weight: 800; font-size: 2.2rem; margin-top: 6px; letter-spacing: -0.02em; }
+  .done-hero .kicker .c-ic { display: inline-grid; width: 20px; height: 20px; border-radius: 6px; vertical-align: -5px; margin-right: 6px; }
+  .done-hero .kicker .c-ic svg { width: 12px; height: 12px; }
+  .done-hero p { color: var(--muted); margin-top: 8px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 28px; }
+  .stat { padding: 16px 10px; border-radius: 14px; background: linear-gradient(180deg, rgba(var(--a-rgb), 0.1), transparent), var(--panel); border: 1px solid var(--line-2); text-align: center; animation: pop 0.4s cubic-bezier(.3, 1.4, .5, 1) both; }
+  .stat b { display: block; font-family: var(--mono); font-size: 1.5rem; font-weight: 700; background: linear-gradient(90deg, var(--a), var(--b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stat span { color: var(--muted); font-size: 0.8rem; }
+  .badge-row { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--a-line); background: linear-gradient(135deg, rgba(var(--a-rgb), 0.18), rgba(var(--b-rgb), 0.08)); animation: pop 0.45s 0.5s cubic-bezier(.3, 1.4, .5, 1) both; }
+  .badge-row .medal { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; flex: none; color: var(--on-a); background: linear-gradient(135deg, var(--a), var(--b)); box-shadow: var(--glow); transform: rotate(-6deg); }
+  .badge-row .medal svg { width: 24px; height: 24px; }
+  .badge-row b { display: block; }
+  .badge-row span { font-size: 0.84rem; color: var(--muted); }
+  .badge-row .mono { margin-left: auto; font-size: 0.7rem; color: var(--a); }
+  .covered { margin-top: 26px; }
+  .covered h4 { font-family: var(--mono); font-size: 0.68rem; color: var(--faint); font-weight: 500; margin-bottom: 8px; }
+  .covered li { list-style: none; display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+  .covered li i { width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center; background: var(--a-soft); color: var(--a); flex: none; }
+  .covered li i svg { width: 11px; height: 11px; }
+  .covered li span { margin-left: auto; font-family: var(--mono); color: var(--faint); font-size: 0.68rem; }
+
+  /* ================= reading modes (see 05-reading-modes.md) ================= */
+  .app { --a-raw: var(--a); }
+  .page.reading {
+    --r-font: Manrope, ui-sans-serif, system-ui, sans-serif; --r-size: 18px; --r-lh: 1.75; --r-ls: 0em; --r-ws: 0em; --r-measure: 66;
+    color: var(--text); max-width: calc(var(--r-measure) * 0.56 * var(--r-size) + 56px); transition: background 0.3s;
+  }
+  .page.reading .prose { font-family: var(--r-font); font-size: var(--r-size); line-height: var(--r-lh); letter-spacing: var(--r-ls); word-spacing: var(--r-ws); }
+  .page.reading .prose p + p { margin-top: calc(var(--r-lh) * 0.55em); }
+  .page.reading .figure { font-family: "Manrope", sans-serif; letter-spacing: 0; word-spacing: 0; line-height: 1.5; }
+  .page.reading .note { letter-spacing: 0; word-spacing: 0; }
+  .page.reading.f-hyper .title, .page.reading.f-hyper .learn { font-family: "Atkinson Hyperlegible", sans-serif; }
+  .page.reading.f-serif .title { font-family: var(--serif); font-weight: 600; letter-spacing: -0.01em; }
+  .sec-more { display: none; }
+
+  /* page colour: Dim, and the optional light pages (Sepia, Paper). App chrome stays dark. */
+  .page.surf-dim { --read: #b4b2c0; --text: #cfcdd8; }
+  .page.light {
+    --a: color-mix(in srgb, var(--a-raw) 42%, #1b130b); --on-a: #ffffff;
+    --text: #23201c; --read: #2d2925; --muted: #625a52; --faint: #8a8178;
+    --line: rgba(40, 30, 20, 0.12); --line-2: rgba(40, 30, 20, 0.18);
+    --panel: color-mix(in srgb, var(--sheet) 90%, #6b5a44); --panel-2: color-mix(in srgb, var(--sheet) 82%, #6b5a44);
+    --bg: var(--sheet); --a-soft: rgba(var(--a-rgb), 0.2);
+    background: var(--sheet); border-radius: 22px; margin-top: 20px; margin-bottom: 40px;
+    box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+  .page.surf-sepia { --sheet: #f2e8d2; }
+  .page.surf-paper { --sheet: #f8f7f3; }
+  .page.light .term { background: rgba(255, 255, 255, 0.5); }
+  .page.light .term::after { background: #fffdf8; }
+  .page.light .note { background: rgba(var(--a-rgb), 0.14); border-color: rgba(var(--a-rgb), 0.45); }
+  .page.light .figure { background: rgba(255, 255, 255, 0.45); border-color: var(--line-2); }
+  .page.light .timeline::before { opacity: 1; }
+  .page.light .tile { background: rgba(255, 255, 255, 0.55); border-color: rgba(var(--a-rgb), 0.5); }
+  .page.light .tile.primary { background: var(--a); }
+  .page.light .tile.quiet { background: transparent; }
+  .page.light .trow.me .msg { background: rgba(var(--a-rgb), 0.22); }
+  .page.light.lay-skim .key { background: linear-gradient(transparent 58%, rgba(var(--a-rgb), 0.45) 58%); }
+
+  /* Focus: the sidebar tucks away (the menu button brings it back) and the header fades while you read;
+     the paragraph you're on stays lit. The header is never removed: it holds the menu, Home, Aa and exit. */
+  .top-home { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 11px 0 9px; border-radius: 9px; border: 1px solid var(--line); color: var(--muted); font-size: 0.82rem; font-weight: 700; }
+  .top-home svg { width: 15px; height: 15px; }
+  .top-home:hover { color: var(--text); background: var(--panel); }
+  .app:not(.side-closed) .top-home { display: none; }
+  .focus-exit { display: none; height: 34px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line-2); font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+  .focus-exit:hover { color: var(--text); border-color: var(--a-line); }
+  .app.focus .focus-exit { display: inline-flex; align-items: center; }
+  .app.focus .top { min-height: 48px; padding: 7px 20px; opacity: 0.4; transition: opacity 0.35s; }
+  .app.focus .top:hover, .app.focus .top:focus-within, .app.focus.awake .top, .app.focus.side-open .top { opacity: 1; }
+  .app.focus .pill, .app.focus .read-pct { display: none; }
+  .page.lay-focus { padding-top: 22vh; padding-bottom: 45vh; }
+  .page.lay-focus .fb { opacity: 0.22; transition: opacity 0.35s; }
+  .page.lay-focus .fb.lit { opacity: 1; }
+  .page.lay-focus .prose h3 { opacity: 0.5; }
+  .page.lay-focus .note:not(.open) { display: inline-flex; padding: 3px; gap: 0; border-radius: 99px; cursor: pointer; margin: 14px 0; opacity: 0.8; }
+  .page.lay-focus .note:not(.open) > span:last-child { display: none; }
+  .page.lay-focus .note:not(.open)::after { content: "✦"; font-size: 0.65rem; color: var(--a); align-self: center; padding: 0 9px 0 6px; }
+  .page.lay-focus .note.open { cursor: pointer; }
+
+  /* Book: two columns, one page at a time. */
+  .page.lay-book { max-width: 1140px; padding: 26px 44px 30px; }
+  .page.lay-book .book-view { overflow: hidden; }
+  .page.lay-book .flow { position: relative; column-count: 2; column-gap: 64px; column-fill: auto; transition: transform 0.45s cubic-bezier(.3, .8, .3, 1); }
+  .page.lay-book .flow .lhead, .page.lay-book .figure, .page.lay-book .note { break-inside: avoid; }
+  .page.lay-book .prose h3 { break-after: avoid; margin-top: 26px; }
+  .page.lay-book .prose { margin-top: 22px; }
+  .page.lay-book .title { font-size: 1.9rem; }
+  .page.lay-book .sources { margin-top: 26px; }
+  .book-nav { display: none; }
+  .page.lay-book .book-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .book-nav button { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; border: 1px solid var(--line-2); color: var(--text); background: rgba(var(--a-rgb), 0.07); }
+  .book-nav button:hover:not(:disabled) { border-color: var(--a); box-shadow: var(--glow); }
+  .book-nav button:disabled { opacity: 0.3; cursor: default; }
+  .book-nav button svg { width: 17px; height: 17px; }
+  .book-nav .pg { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); min-width: 110px; text-align: center; }
+  .book-nav .pg b { color: var(--a); font-weight: 700; }
+  .book-nav .dots { gap: 4px; }
+  .book-nav .dots i { width: 16px; }
+  .page.lay-book .nib-area { display: none; margin-top: 18px; }
+  .page.lay-book.last-page .nib-area { display: flex; }
+
+  /* Skim: compact, key sentences highlighted, sections folded. */
+  .page.lay-skim .prose h3 { margin-top: 26px; }
+  .page.lay-skim .key { color: var(--text); background: linear-gradient(transparent 58%, rgba(var(--a-rgb), 0.32) 58%); border-radius: 2px; }
+  .page.lay-skim .sec:not(.open) .rest, .page.lay-skim .sec:not(.open) .note, .page.lay-skim .sec:not(.open) .figure { display: none; }
+  .page.lay-skim .sec-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; font-family: var(--mono); font-size: 0.68rem; color: var(--a); padding: 3px 8px; border-radius: 99px; border: 1px solid var(--line-2); }
+  .page.lay-skim .sec-more:hover { border-color: var(--a); }
+
+  /* ---------- Aa button + panel ---------- */
+  .aa-btn { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line-2); color: var(--text); font-weight: 800; font-size: 0.92rem; }
+  .aa-btn small { font-family: var(--mono); font-size: 0.64rem; font-weight: 500; color: var(--a); }
+  .aa-btn:hover, .aa-btn[aria-expanded="true"] { border-color: var(--a); background: var(--a-soft); box-shadow: var(--glow); }
+  .aa-btn[hidden] { display: none; }
+  .rpanel {
+    position: fixed; top: 64px; right: 20px; z-index: 55; width: 392px; max-height: calc(100vh - 84px); overflow-y: auto;
+    padding: 16px; border-radius: 18px; border: 1px solid var(--a-line);
+    background: linear-gradient(160deg, rgba(var(--a-rgb), 0.14), rgba(var(--b-rgb), 0.04) 60%), var(--panel);
+    box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.85), var(--glow); animation: toast-in 0.3s cubic-bezier(.3, 1.4, .5, 1);
+  }
+  .rpanel[hidden] { display: none; }
+  .rp-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .rp-h b { font-size: 0.95rem; font-weight: 800; }
+  .rp-cur { font-family: var(--mono); font-size: 0.66rem; color: var(--on-a); background: var(--a); padding: 2px 8px; border-radius: 99px; }
+  .rp-cur.custom { color: var(--a); background: var(--a-soft); }
+  .presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .preset { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 9px 4px 8px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(0, 0, 0, 0.18); font-size: 0.74rem; font-weight: 700; transition: border-color 0.15s, transform 0.15s; }
+  .preset:hover { border-color: var(--a-line); transform: translateY(-1px); }
+  .preset.on { border-color: var(--a); background: var(--a-soft); box-shadow: 0 0 0 1px var(--a), var(--glow); color: var(--a); }
+  .preset svg { width: 40px; height: 30px; display: block; }
+  .preset svg .ln { fill: currentColor; opacity: 0.55; }
+  .preset svg .ln.hi { opacity: 1; fill: var(--a); }
+  .preset svg .ln.mk { fill: var(--a); opacity: 0.6; }
+  .preset-desc { margin-top: 8px; font-size: 0.78rem; color: var(--muted); min-height: 2.6em; line-height: 1.45; }
+  .rp-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+  .ctl { display: grid; grid-template-columns: 82px 1fr; align-items: center; gap: 10px; }
+  .ctl > span { font-family: var(--mono); font-size: 0.66rem; color: var(--faint); }
+  .segc { display: flex; padding: 3px; border-radius: 10px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); gap: 2px; }
+  .segc button { flex: 1; padding: 6px 4px; border-radius: 7px; font-size: 0.76rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .segc button:hover { color: var(--text); }
+  .segc button.on { background: var(--a-soft); color: var(--a); box-shadow: inset 0 0 0 1px var(--a-line); }
+  .segc button .opt-l { display: block; font-family: var(--mono); font-size: 0.54rem; font-weight: 500; color: var(--faint); margin-top: 1px; }
+  .sizer { display: flex; align-items: center; gap: 8px; }
+  .sizer button { width: 34px; height: 30px; border-radius: 8px; border: 1px solid var(--line-2); font-weight: 800; }
+  .sizer button:hover { border-color: var(--a); color: var(--a); }
+  .sizer .px { flex: 1; text-align: center; font-family: var(--mono); font-size: 0.78rem; color: var(--a); }
+  .sizer .px i { display: block; height: 3px; margin-top: 5px; border-radius: 9px; background: rgba(var(--a-rgb), 0.15); overflow: hidden; }
+  .sizer .px i b { display: block; height: 100%; background: linear-gradient(90deg, var(--a), var(--b)); }
+  .sizer button:first-child { font-size: 0.72rem; } .sizer button:last-child { font-size: 1rem; }
+  .toggle { justify-self: start; width: 42px; height: 24px; border-radius: 99px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line-2); position: relative; transition: background 0.2s; }
+  .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform 0.2s, background 0.2s; }
+  .toggle.on { background: var(--a-soft); border-color: var(--a); }
+  .toggle.on::after { transform: translateX(18px); background: var(--a); box-shadow: 0 0 8px var(--a); }
+  .surfs button { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .surfs .chipc { width: 22px; height: 14px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); }
+  .rp-foot { display: flex; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .pick-btn { flex: 1; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; border-radius: 12px; text-align: left; border: 1px solid var(--a-line); background: linear-gradient(135deg, rgba(var(--a-rgb), 0.2), rgba(var(--b-rgb), 0.08)); }
+  .pick-btn:hover { box-shadow: var(--glow); border-color: var(--a); }
+  .pick-btn .av { width: 32px; height: 32px; flex: none; }
+  .pick-btn b { display: block; font-size: 0.84rem; }
+  .pick-btn small { display: block; font-family: var(--mono); font-size: 0.62rem; color: var(--muted); }
+  .reset-btn { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); padding: 0 12px; border-radius: 12px; border: 1px solid var(--line-2); }
+  .reset-btn:hover { color: var(--text); border-color: var(--a-line); }
+  .rp-note { margin-top: 10px; font-family: var(--mono); font-size: 0.6rem; color: var(--faint); line-height: 1.5; }
+
+  /* ---------- Help me pick ---------- */
+  .picker { position: fixed; inset: 0; z-index: 65; display: grid; place-items: center; background: rgba(5, 5, 9, 0.6); backdrop-filter: blur(6px); animation: in 0.25s ease-out; }
+  .picker[hidden] { display: none; }
+  .pk-card { width: min(760px, calc(100vw - 40px)); padding: 20px 22px 22px; border-radius: 22px; border: 1px solid var(--a-line); background: linear-gradient(160deg, rgba(var(--a-rgb), 0.16), rgba(var(--b-rgb), 0.04) 60%), var(--panel); box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9), var(--glow); }
+  .pk-head { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+  .pk-head .dots i { width: 26px; }
+  .pk-head .x { margin-left: auto; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; border: 1px solid var(--line-2); color: var(--muted); }
+  .pk-head .x svg { width: 14px; height: 14px; }
+  .pk-body { margin-top: 6px; }
+  .pk-body .tiles { margin-left: 48px; }
+  .pk-body .tile { align-items: flex-start; padding: 16px 40px 16px 16px; }
+  .sample { display: block; font-size: 1.08rem; line-height: 1.7; color: var(--read); font-weight: 400; }
+  .sample-tag { display: block; font-family: var(--mono); font-size: 0.64rem; color: var(--a); margin-bottom: 6px; }
+  .pk-result { margin: 12px 0 0 48px; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--a-line); background: linear-gradient(135deg, rgba(var(--a-rgb), 0.22), rgba(var(--b-rgb), 0.08)); animation: pop 0.4s cubic-bezier(.3, 1.4, .5, 1) both; }
+  .pk-result .big-aa { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; background: var(--a); color: var(--on-a); font-size: 1.4rem; font-weight: 800; flex: none; }
+  .pk-result b { display: block; }
+  .pk-result span { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); }
+  .pk-result .btn { margin-left: auto; }
+
+  .prep { display: flex; align-items: center; gap: 10px; margin: 14px 0 0 48px; font-size: 0.88rem; color: var(--muted); animation: in 0.3s ease-out both; }
+
+  @keyframes added { 0% { background: rgba(var(--b-rgb), 0.35); } 100% { background: transparent; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="side">
+    <div class="side-in">
+      <div class="brand-row">
+        <button class="back" type="button" onclick="location.href='04-home.html'">← Home</button>
+        <span class="sys"><i></i>saved</span>
+      </div>
+      <div id="buddy-slot"></div>
+      <div class="course">
+        <div class="sec-h">course<span class="n" id="c-n"></span></div>
+        <h2 title="Norse Mythology: Gods, Worlds and Sources"><span class="c-ic" id="c-ic"></span><span class="c-t">Norse Mythology: Gods, Worlds and Sources</span></h2>
+        <div class="cstats" id="cstats"></div>
+        <div class="segs" id="csegs"></div>
+        <ul class="outline" id="outline"></ul>
+      </div>
+      <div class="mock">
+        <p>mock</p>
+        <div class="sw" id="sw"></div>
+        <div class="row-btns" id="views">
+          <button type="button" data-v="reading">reading</button>
+          <button type="button" data-v="quiz">quiz</button>
+          <button type="button" data-v="complete">complete</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <button class="icon-btn" type="button" id="toggle" title="Show or hide the sidebar" aria-label="Show or hide the sidebar"></button>
+      <button class="top-home" type="button" id="top-home" title="Back to Home"></button>
+      <div class="crumb" id="crumb"></div>
+      <div class="spacer"></div>
+      <span class="read-pct" id="read-pct"></span>
+      <span class="pill" id="pill"></span>
+      <button class="aa-btn" type="button" id="aa" aria-haspopup="dialog" aria-expanded="false" title="Reading modes">Aa <small id="aa-mode">comfort</small></button>
+      <button class="focus-exit" type="button" id="focus-exit" title="Leave Focus mode (Esc)">exit focus · esc</button>
+      <div class="read-prog" id="read-prog"></div>
+    </div>
+    <div class="scroll" id="scroll"><div class="page" id="page"></div></div>
+  </main>
+</div>
+
+
+<!-- reading modes panel -->
+<div class="rpanel" id="rpanel" role="dialog" aria-label="Reading modes" hidden>
+  <div class="rp-h"><b>Reading mode</b><span class="rp-cur" id="rp-cur">comfort</span></div>
+  <div class="presets" id="presets"></div>
+  <p class="preset-desc" id="preset-desc"></p>
+  <div class="rp-sec">
+    <div class="ctl"><span>font</span><div class="segc" id="c-font">
+      <button type="button" data-v="serif" style="font-family:var(--serif)">Serif</button>
+      <button type="button" data-v="sans" style="font-family:Manrope">Sans</button>
+      <button type="button" data-v="hyper" style="font-family:'Atkinson Hyperlegible'">Hyperlegible</button></div></div>
+    <div class="ctl"><span>size</span><div class="sizer"><button type="button" id="c-dn" aria-label="Smaller text">A−</button><span class="px"><span id="c-px">19px</span><i><b id="c-pxbar"></b></i></span><button type="button" id="c-up" aria-label="Larger text">A+</button></div></div>
+    <div class="ctl"><span>width</span><div class="segc" id="c-width">
+      <button type="button" data-v="narrow">narrow</button><button type="button" data-v="medium">medium</button><button type="button" data-v="wide">wide</button></div></div>
+    <div class="ctl"><span>line space</span><div class="segc" id="c-lh">
+      <button type="button" data-v="0">tight</button><button type="button" data-v="1">normal</button><button type="button" data-v="2">airy</button></div></div>
+    <div class="ctl"><span>letter space</span><button type="button" class="toggle" id="c-ls" aria-label="Extra letter spacing" aria-pressed="false"></button></div>
+    <div class="ctl"><span>page</span><div class="segc surfs" id="c-surf">
+      <button type="button" data-v="dark"><span class="chipc" style="background:#14131b"></span>Dark</button>
+      <button type="button" data-v="dim"><span class="chipc" style="background:#24232b"></span>Dim</button>
+      <button type="button" data-v="sepia"><span class="chipc" style="background:#f2e8d2"></span>Sepia<span class="opt-l">optional</span></button>
+      <button type="button" data-v="paper"><span class="chipc" style="background:#f8f7f3"></span>Paper<span class="opt-l">optional</span></button></div></div>
+  </div>
+  <p class="rp-note">Sepia and Paper are optional · light page. The app itself stays dark.</p>
+  <div class="rp-foot">
+    <button type="button" class="pick-btn" id="pick-open"><span class="av bao" id="pick-bao" aria-label="Nibbles"></span><span><b>Help me pick</b><small>3 quick rounds · about 30s</small></span></button>
+    <button type="button" class="reset-btn" id="r-reset">reset</button>
+  </div>
+</div>
+
+<!-- Help me pick -->
+<div class="picker" id="picker" hidden>
+  <div class="pk-card" role="dialog" aria-label="Help me pick a font">
+    <div class="pk-head"><span id="pk-round">round 1/3</span><span class="dots" id="pk-dots"><i></i><i></i><i></i></span><button type="button" class="x" id="pk-close" aria-label="Close"></button></div>
+    <div class="pk-body thread" id="pk-body" style="padding:0;max-width:none"></div>
+  </div>
+</div>
+
+<script src="kit.js"></script>
+<script>
+document.getElementById("toggle").innerHTML = icon("menu");
+const app = document.getElementById("app");
+document.getElementById("toggle").onclick = () => {
+  const closed = app.classList.toggle("side-closed");
+  app.classList.toggle("side-open", app.classList.contains("focus") && !closed);
+};
+document.getElementById("top-home").innerHTML = icon("home") + "Home";
+document.getElementById("top-home").onclick = () => (location.href = "04-home.html");
+document.getElementById("c-ic").innerHTML = courseIcon("norse");
+/* while reading in Focus the header fades; any mouse move or key brings it back */
+let awakeT;
+const wake = () => { app.classList.add("awake"); clearTimeout(awakeT); awakeT = setTimeout(() => app.classList.remove("awake"), 2200); };
+addEventListener("mousemove", wake); addEventListener("keydown", wake);
+document.getElementById("buddy-slot").outerHTML = buddyHTML();
+renderBuddy();
+initThemes(document.getElementById("sw"));
+
+/* ---------- course state ---------- */
+const SUBS = ["The Poetic Edda", "The Prose Edda", "Why this matters"];
+let LESSONS, subsRead;
+function resetLessons() {
+  LESSONS = [
+    { t: "Gods, giants and the nine worlds", k: "read", d: 6, s: "done" },
+    { t: "Quick check", k: "quiz", d: 3, s: "done", note: "5/5" },
+    { t: "Where the myths come from", k: "read", d: 8, s: "now", subs: true },
+    { t: "Quick check", k: "quiz", d: 3, s: "locked" },
+    { t: "Loki and the death of Baldr", k: "read", d: 9, s: "locked" },
+    { t: "Ragnarök", k: "read", d: 10, s: "locked" },
+  ];
+  subsRead = [false, false, false];
+}
+resetLessons();
+
+const pad = (n) => String(n).padStart(2, "0");
+const fmt = (m) => (m >= 60 ? `${Math.floor(m / 60)}h ${pad(m % 60)}m` : `${m}m`);
+
+function renderOutline() {
+  const done = LESSONS.filter((l) => l.s === "done").length;
+  const left = LESSONS.filter((l) => l.s !== "done").reduce((a, l) => a + l.d, 0);
+  const quizzes = LESSONS.filter((l) => l.k === "quiz" && l.note);
+  const avg = quizzes.length ? Math.round((quizzes.reduce((a, l) => { const [x, y] = l.note.split("/"); return a + x / y; }, 0) / quizzes.length) * 100) : null;
+  document.getElementById("c-n").textContent = `${done}/${LESSONS.length}`;
+  document.getElementById("cstats").innerHTML =
+    `<span><b>${done}/${LESSONS.length}</b> lessons</span><span><b>${left ? fmt(left) : "0m"}</b> left</span><span>quiz avg <b>${avg ?? "–"}%</b></span>`;
+  document.getElementById("csegs").innerHTML = LESSONS.map((l) => `<i class="${l.s === "done" ? "d" : l.s === "now" ? "n" : ""}"></i>`).join("");
+  document.getElementById("outline").innerHTML = LESSONS.map((l, i) => `
+    <li class="${l.s} ${l.added ? "added" : ""}"><button type="button">
+      <span class="ol-idx">${pad(i + 1)}</span>
+      <span class="ol-ic">${l.s === "done" ? icon("check") : l.s === "locked" ? icon("lock") : ""}</span>
+      <span class="ol-t" title="${l.t}">${l.t}</span>
+      ${l.added ? `<span class="new-badge">NEW</span>` : l.note ? `<span class="ol-score">${l.note}</span>` : `<span class="ol-dur">${l.d}m</span>`}
+    </button>
+    ${l.subs && l.s === "now" ? `<ul class="subs">${SUBS.map((s, j) => `<li id="sub-${j}" class="${subsRead[j] ? "read" : ""}"><i>${icon("check")}</i>${s}</li>`).join("")}</ul>` : ""}
+    </li>`).join("");
+}
+
+function setTop(crumb, pill) {
+  document.getElementById("crumb").innerHTML = crumb;
+  document.getElementById("pill").textContent = pill;
+  document.getElementById("read-pct").textContent = "";
+  document.getElementById("read-prog").style.width = "0";
+}
+
+/* ---------- views ---------- */
+/* what Nibbles says when clicked, per screen */
+const LINES_BY_VIEW = {
+  reading: ["Take your time. I'll quiz you at the end.", "Hover a key term for a quick definition.", "Aa changes how the text looks.", "The sources are at the bottom, if you're curious."],
+  quiz: ["No timer. Think it through.", "\"Not sure\" is a fine answer.", "You can look back at lesson 3 anytime."],
+  complete: ["You finished a whole course.", "Seven lessons. That's real progress.", "The sagas are a good next step."],
+};
+const page = document.getElementById("page");
+const scroll = document.getElementById("scroll");
+const views = document.getElementById("views");
+let curView = "reading";
+function show(v) {
+  T.token++;
+  curView = v;
+  T.autoScroll = v !== "complete";
+  scroll.onscroll = null;
+  /* reading modes only apply to the reading view; quiz and complete keep the default page */
+  page.className = "page"; page.removeAttribute("style");
+  if (app.classList.contains("focus")) app.classList.remove("side-closed");
+  app.classList.remove("focus", "side-open");
+  document.getElementById("aa").hidden = v !== "reading";
+  closePanel();
+  views.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+  scroll.style.scrollBehavior = "auto"; scroll.scrollTop = 0; scroll.style.scrollBehavior = "";
+  PLAYER.minutes = { reading: 12, quiz: 20, complete: 20 }[v];
+  renderBuddy();
+  nibblesLines(LINES_BY_VIEW[v]);
+  ({ reading, quiz, complete })[v]();
+  useThread(page.querySelector(".nib-area"), scroll);
+  if (v === "quiz") quizFlow(); if (v === "complete") completeFlow();
+}
+views.querySelectorAll("button").forEach((b) => (b.onclick = () => show(b.dataset.v)));
+
+/* ---------- reading ---------- */
+const R = { ends: [], half: false, my: 0, io: null, book: { page: 0, pages: 1, step: 1 } };
+
+function reading() {
+  resetLessons(); renderOutline();
+  setTop(`<span class="mono">03</span> · <b>Where the myths come from</b>`, "8 min read");
+  nibblesSay("Take your time. I'll quiz you at the end.", "idle");
+  const more = `<button type="button" class="sec-more">expand ↓</button>`;
+  page.innerHTML = `
+    <div class="book-view"><div class="flow" id="flow">
+      <header class="lhead fb">
+        <p class="kicker">lesson 03 · reading</p>
+        <h2 class="title">Where the myths come from</h2>
+        <p class="learn"><b>You'll learn:</b> what the Eddas and sagas are, who wrote them down, and why that matters when you read them.</p>
+        <div class="meta-row"><span>8 min</span><span>·</span><span>3 sections</span><span>·</span><span>3 sources</span></div>
+        <div class="terms"><span>key terms</span>
+          <button type="button" class="term" data-def="Two medieval Icelandic books: one of poems, one of prose. Our main source for the myths.">Edda</button>
+          <button type="button" class="term" data-def="The manuscript, from around 1270, that holds most of the Poetic Edda.">Codex Regius</button>
+          <button type="button" class="term" data-def="Icelandic poet and politician, around 1179–1241. Wrote the Prose Edda.">Snorri Sturluson</button>
+          <button type="button" class="term" data-def="A Norse court poet. Snorri wrote his Edda to teach young skalds.">skald</button>
+        </div>
+      </header>
+
+      <div class="prose">
+        <section class="sec">
+          <p class="fb"><span class="key">Almost everything we know about the Norse gods comes from a handful of books written in Iceland in the 1200s.</span><span class="rest"> Not from the Vikings themselves, who left few written stories, but from their descendants, writing two centuries after Iceland had become Christian.<sup><a href="#">1</a></sup></span></p>
+          ${more}
+        </section>
+
+        <section class="sec">
+          <h3 data-sec="0"><span class="sec-n">3.1</span>The Poetic Edda</h3>
+          <p class="fb"><span class="key">The <em>Poetic Edda</em> is a collection of anonymous poems about gods and heroes.</span><span class="rest"> Most of them survive in a single manuscript, the <em>Codex Regius</em>, made around 1270.<sup><a href="#">2</a></sup> The poems are older than the book, but nobody knows exactly how much older.</span></p>
+          <div class="note fb" title="Worth knowing"><span class="av bao" aria-label="Nibbles">${baoSVG()}</span><span><b>Worth knowing:</b> "Edda" may come from an Old Norse word for "great-grandmother", which suits a book of very old stories. Nobody is sure, though.</span></div>
+          ${more}
+        </section>
+
+        <section class="sec">
+          <h3 data-sec="1"><span class="sec-n">3.2</span>The Prose Edda</h3>
+          <p class="fb"><span class="rest">Around 1220, the Icelandic poet and politician </span><span class="key">Snorri Sturluson wrote the <em>Prose Edda</em>, a handbook for young poets.</span><span class="rest"> To explain the old poetic images, he retold the myths in plain prose, and in doing so </span><span class="key">he gave us the most complete version of Norse mythology we have.</span><sup class="rest"><a href="#">3</a></sup></p>
+          <figure class="figure fb">
+            <div class="timeline">
+              <div class="tl"><i></i><b>~800–1050</b><span>Viking Age. Stories passed on by word of mouth</span></div>
+              <div class="tl"><i></i><b>~1000</b><span>Iceland adopts Christianity</span></div>
+              <div class="tl hl"><i></i><b>~1220</b><span>Snorri writes the Prose Edda</span></div>
+              <div class="tl hl"><i></i><b>~1270</b><span>Codex Regius is copied</span></div>
+            </div>
+            <figcaption>Two centuries sit between the last pagan Vikings and the books we read today.</figcaption>
+          </figure>
+          ${more}
+        </section>
+
+        <section class="sec">
+          <h3 data-sec="2"><span class="sec-n">3.3</span>Why this matters</h3>
+          <p class="fb"><span class="key">The people who wrote these myths down were Christians, looking back at a religion their ancestors had left behind.</span><span class="rest"> Some details may be shaped by that distance, and Snorri sometimes explains the gods as famous ancient kings. </span><span class="key">Reading the myths well means keeping one eye on the story and one on who is telling it.</span></p>
+          ${more}
+        </section>
+      </div>
+
+      <div class="sources fb" id="sources">
+        <h4>sources</h4>
+        <ul>
+          <li><b>[1]</b>Christianization of Iceland, Wikipedia</li>
+          <li><b>[2]</b>Codex Regius, Wikipedia</li>
+          <li><b>[3]</b>Prose Edda, Wikipedia</li>
+        </ul>
+      </div>
+    </div></div>
+
+    <div class="book-nav">
+      <button type="button" id="pg-prev" aria-label="Previous page">${icon("back")}</button>
+      <span class="pg" id="pg-label"></span>
+      <button type="button" id="pg-next" aria-label="Next page">${icon("arrow")}</button>
+    </div>
+
+    <div class="nib-area"></div>`;
+
+  /* skim: fold / unfold a section */
+  page.querySelectorAll(".sec-more").forEach((b) => (b.onclick = () => {
+    const open = b.closest(".sec").classList.toggle("open");
+    b.textContent = open ? "collapse ↑" : "expand ↓";
+  }));
+  /* focus: Nibbles' notes fold into a marker; click to open */
+  page.querySelectorAll(".note").forEach((n) => (n.onclick = () => page.classList.contains("lay-focus") && n.classList.toggle("open")));
+  document.getElementById("pg-prev").onclick = () => turn(-1);
+  document.getElementById("pg-next").onclick = () => turn(1);
+
+  /* A section counts as read once the next heading (or the sources) scrolls into the top half. */
+  R.ends = [page.querySelector('[data-sec="1"]'), page.querySelector('[data-sec="2"]'), page.querySelector("#sources")];
+  R.half = false;
+  R.my = T.token;
+  scroll.onscroll = onReadScroll;
+
+  R.io = new IntersectionObserver(([e]) => {
+    if (!e.isIntersecting) return;
+    R.io.disconnect();
+    if (R.my === T.token) endOfLesson();
+  });
+  R.io.observe(page.querySelector(".nib-area"));
+  applyReading(true);
+}
+
+function onProgress(p) {
+  p = Math.max(0, Math.min(1, p));
+  document.getElementById("read-prog").style.width = p * 100 + "%";
+  document.getElementById("read-pct").textContent = Math.round(p * 100) + "%";
+  if (!R.half && p > 0.5) { R.half = true; nibblesSay("Halfway."); }
+}
+
+function tick(j) {
+  if (subsRead[j]) return;
+  subsRead[j] = true;
+  const li = document.getElementById("sub-" + j);
+  if (li) li.classList.add("read", "just");
+  cheer(sideOpen() && li ? li : R.ends[j], "section read");
+  if (subsRead.every(Boolean)) nibblesSay("All three sections. Nice and steady.");
+}
+
+function onReadScroll() {
+  if (R.my !== T.token || S.layout === "book") return;
+  onProgress(scroll.scrollTop / (scroll.scrollHeight - scroll.clientHeight || 1));
+  const line = scroll.getBoundingClientRect().top + scroll.clientHeight * 0.6;
+  R.ends.forEach((el, j) => { if (el.offsetParent && el.getBoundingClientRect().top <= line) tick(j); });
+  if (S.layout === "focus") focusLight();
+}
+
+/* Focus: light the block nearest the reading line, dim the rest. */
+function focusLight() {
+  const mid = scroll.getBoundingClientRect().top + scroll.clientHeight * 0.42;
+  let best = null, bd = Infinity;
+  page.querySelectorAll(".fb").forEach((b) => {
+    const r = b.getBoundingClientRect();
+    if (!r.height) return;
+    const d = r.top <= mid && r.bottom >= mid ? 0 : Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid));
+    if (d < bd) { bd = d; best = b; }
+  });
+  page.querySelectorAll(".fb").forEach((b) => b.classList.toggle("lit", b === best));
+}
+
+/* Book: CSS columns inside a clipped view; a page is two columns wide. */
+function layoutBook(keepPage) {
+  const view = page.querySelector(".book-view"), flow = page.querySelector(".flow");
+  flow.style.transform = "";
+  const W = view.clientWidth, G = 64;
+  const H = Math.max(320, Math.min(560, scroll.clientHeight - 26 - 30 - 18 - 14 - 40 - 10)); /* a spread, not a wall of text */
+  flow.style.height = H + "px";
+  R.book.step = W + G;
+  R.book.pages = Math.max(1, Math.ceil((flow.scrollWidth + G) / R.book.step - 0.02));
+  R.book.page = keepPage ? Math.min(R.book.page, R.book.pages - 1) : 0;
+  setPage(R.book.page, true);
+}
+function pageOf(el) { return Math.floor((el.offsetLeft + 2) / R.book.step); }
+function setPage(n, instant) {
+  const b = R.book, flow = page.querySelector(".flow");
+  b.step = page.querySelector(".book-view").clientWidth + 64; /* re-measure: width can change after layout */
+  b.pages = Math.max(1, Math.ceil((flow.scrollWidth + 64) / b.step - 0.02));
+  b.page = Math.max(0, Math.min(b.pages - 1, n));
+  if (instant) flow.style.transition = "none";
+  flow.style.transform = `translateX(${-b.page * b.step}px)`;
+  if (instant) { void flow.offsetWidth; flow.style.transition = ""; }
+  const last = b.page === b.pages - 1;
+  document.getElementById("pg-label").innerHTML = `page <b>${b.page + 1}</b> / ${b.pages}`;
+  document.getElementById("pg-prev").disabled = b.page === 0;
+  document.getElementById("pg-next").disabled = last;
+  page.classList.toggle("last-page", last);
+  onProgress(b.pages > 1 ? b.page / (b.pages - 1) : 1);
+  R.ends.forEach((el, j) => { if (pageOf(el) <= b.page) tick(j); });
+  if (last) reveal(page.querySelector(".nib-area"));
+}
+function turn(d) { if (S.layout === "book" && curView === "reading") setPage(R.book.page + d); }
+addEventListener("resize", () => { if (curView === "reading" && S.layout === "book") layoutBook(true); });
+
+function isFocus() { return app.classList.contains("focus"); }
+/* the little "section read" cheer rises from the sidebar tick when it's visible, else from the text */
+function sideOpen() { return !app.classList.contains("side-closed"); }
+
+/* ================= reading settings ================= */
+const LH = [1.55, 1.75, 1.95];
+const WIDTH = { narrow: 56, medium: 66, wide: 80 };
+const FONT = { serif: "var(--serif)", sans: "Manrope, ui-sans-serif, system-ui, sans-serif", hyper: "'Atkinson Hyperlegible', sans-serif" };
+const FONT_NAME = { serif: "Serif", sans: "Sans", hyper: "Hyperlegible" };
+const PRESETS = {
+  comfort: { name: "Comfort", layout: "scroll", font: "sans", size: 18, width: "medium", lh: 1, ls: false, desc: "Clean sans (Manrope), roomy lines, about 66 characters wide. Good for most reading." },
+  focus:   { name: "Focus", layout: "focus", font: "sans", size: 18, width: "medium", lh: 1, ls: false, desc: "Sidebar tucked away, header fades while you read. The paragraph you're on stays lit." },
+  spaced:  { name: "Spaced", layout: "scroll", font: "hyper", size: 20, width: "narrow", lh: 2, ls: true, desc: "Hyperlegible type with extra letter and line spacing. Easier for dyslexic or tired eyes." },
+  book:    { name: "Book", layout: "book", font: "serif", size: 18, width: "medium", lh: 1, ls: false, desc: "Two columns in a book serif, one page at a time. Turn pages with ← →, like an e-reader." },
+  skim:    { name: "Skim", layout: "skim", font: "sans", size: 16, width: "wide", lh: 0, ls: false, desc: "Compact, key sentences highlighted, sections folded. Good for review." },
+};
+const GLYPH = {
+  comfort: `<rect class="ln" x="4" y="5" width="32" height="2.4" rx="1"/><rect class="ln" x="4" y="11" width="30" height="2.4" rx="1"/><rect class="ln" x="4" y="17" width="32" height="2.4" rx="1"/><rect class="ln" x="4" y="23" width="22" height="2.4" rx="1"/>`,
+  focus:   `<rect class="ln" x="4" y="4" width="32" height="2" rx="1" opacity=".2"/><rect class="ln hi" x="4" y="11" width="32" height="3" rx="1.5"/><rect class="ln hi" x="4" y="16.5" width="26" height="3" rx="1.5"/><rect class="ln" x="4" y="24" width="30" height="2" rx="1" opacity=".2"/>`,
+  spaced:  `<rect class="ln" x="4" y="4" width="28" height="3" rx="1.5"/><rect class="ln" x="4" y="13" width="32" height="3" rx="1.5"/><rect class="ln" x="4" y="22" width="20" height="3" rx="1.5"/>`,
+  book:    `<rect class="ln" x="2" y="5" width="16" height="2" rx="1"/><rect class="ln" x="2" y="10" width="16" height="2" rx="1"/><rect class="ln" x="2" y="15" width="16" height="2" rx="1"/><rect class="ln" x="2" y="20" width="12" height="2" rx="1"/><rect class="ln" x="22" y="5" width="16" height="2" rx="1"/><rect class="ln" x="22" y="10" width="16" height="2" rx="1"/><rect class="ln" x="22" y="15" width="16" height="2" rx="1"/><rect class="ln" x="22" y="20" width="9" height="2" rx="1"/>`,
+  skim:    `<rect class="ln" x="4" y="4" width="32" height="2" rx="1"/><rect class="ln mk" x="3" y="8.5" width="26" height="4" rx="1"/><rect class="ln" x="4" y="9.5" width="24" height="2" rx="1"/><rect class="ln" x="4" y="16" width="30" height="2" rx="1"/><rect class="ln mk" x="3" y="20.5" width="20" height="4" rx="1"/><rect class="ln" x="4" y="21.5" width="18" height="2" rx="1"/>`,
+};
+const DEFAULTS = { preset: "comfort", ...pick(PRESETS.comfort), surface: "dark" };
+function pick(p) { return { layout: p.layout, font: p.font, size: p.size, width: p.width, lh: p.lh, ls: p.ls }; }
+let S = { ...DEFAULTS, ...JSON.parse(localStorage.getItem("knibbler-reading-v2") || "{}") };
+
+function matchPreset() {
+  return Object.keys(PRESETS).find((k) => { const p = PRESETS[k]; return ["layout", "font", "size", "width", "lh", "ls"].every((f) => p[f] === S[f]); });
+}
+
+function applyReading(fresh) {
+  localStorage.setItem("knibbler-reading-v2", JSON.stringify(S));
+  const m = matchPreset();
+  /* panel + top bar labels */
+  const label = m ? PRESETS[m].name : "Custom";
+  document.getElementById("rp-cur").textContent = m ? label.toLowerCase() : `custom · ${PRESETS[S.preset].name.toLowerCase()}-based`;
+  document.getElementById("rp-cur").classList.toggle("custom", !m);
+  document.getElementById("aa-mode").textContent = label.toLowerCase();
+  document.querySelectorAll(".preset").forEach((b) => b.classList.toggle("on", b.dataset.k === m));
+  document.getElementById("preset-desc").textContent = m ? PRESETS[m].desc : "Your own mix. Pick a mode above to go back to a preset.";
+  const segs = { "c-font": S.font, "c-width": S.width, "c-lh": String(S.lh), "c-surf": S.surface };
+  for (const [id, v] of Object.entries(segs)) document.querySelectorAll(`#${id} button`).forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+  document.getElementById("c-px").textContent = S.size + "px";
+  document.getElementById("c-pxbar").style.width = ((S.size - 14) / (26 - 14)) * 100 + "%";
+  const ls = document.getElementById("c-ls");
+  ls.classList.toggle("on", S.ls); ls.setAttribute("aria-pressed", String(S.ls));
+
+  if (curView !== "reading") return;
+  const wasBook = page.classList.contains("lay-book");
+  page.className = `page reading lay-${S.layout} surf-${S.surface} f-${S.font}${S.surface === "sepia" || S.surface === "paper" ? " light" : ""}`;
+  const st = page.style;
+  st.setProperty("--r-font", FONT[S.font]);
+  st.setProperty("--r-size", S.size + "px");
+  st.setProperty("--r-lh", LH[S.lh]);
+  st.setProperty("--r-ls", S.ls ? "0.05em" : "0em");
+  st.setProperty("--r-ws", S.ls ? "0.16em" : "0em");
+  st.setProperty("--r-measure", WIDTH[S.width]);
+  /* entering Focus tucks the sidebar away; leaving brings it back. The menu button works in both. */
+  const wasFocus = app.classList.contains("focus"), nowFocus = S.layout === "focus";
+  if (nowFocus && !wasFocus) { app.classList.add("side-closed"); app.classList.remove("side-open"); }
+  if (!nowFocus && wasFocus) app.classList.remove("side-closed", "side-open");
+  app.classList.toggle("focus", nowFocus);
+  if (S.layout !== "skim") page.querySelectorAll(".sec.open").forEach((s) => { s.classList.remove("open"); s.querySelector(".sec-more").textContent = "expand ↓"; });
+
+  const flow = page.querySelector(".flow");
+  if (S.layout === "book") {
+    requestAnimationFrame(() => layoutBook(wasBook && !fresh));
+  } else {
+    flow.style.height = ""; flow.style.transform = "";
+    page.classList.remove("last-page");
+    if (wasBook || fresh) { scroll.style.scrollBehavior = "auto"; scroll.scrollTop = 0; scroll.style.scrollBehavior = ""; }
+    requestAnimationFrame(onReadScroll);
+  }
+}
+
+/* change one fine control; the preset label turns into "Custom" if it no longer matches */
+function setS(patch) { S = { ...S, ...patch }; applyReading(); }
+function usePreset(k) { S = { ...S, preset: k, ...pick(PRESETS[k]) }; applyReading(); }
+
+/* ---------- panel ---------- */
+const panel = document.getElementById("rpanel"), aa = document.getElementById("aa");
+document.getElementById("presets").innerHTML = Object.entries(PRESETS).map(([k, p]) =>
+  `<button type="button" class="preset" data-k="${k}"><svg viewBox="0 0 40 30" aria-hidden="true">${GLYPH[k]}</svg>${p.name}</button>`).join("");
+document.querySelectorAll(".preset").forEach((b) => (b.onclick = () => usePreset(b.dataset.k)));
+document.querySelectorAll("#c-font button").forEach((b) => (b.onclick = () => setS({ font: b.dataset.v })));
+document.querySelectorAll("#c-width button").forEach((b) => (b.onclick = () => setS({ width: b.dataset.v })));
+document.querySelectorAll("#c-lh button").forEach((b) => (b.onclick = () => setS({ lh: +b.dataset.v })));
+document.querySelectorAll("#c-surf button").forEach((b) => (b.onclick = () => setS({ surface: b.dataset.v })));
+document.getElementById("c-ls").onclick = () => setS({ ls: !S.ls });
+document.getElementById("c-dn").onclick = () => setS({ size: Math.max(14, S.size - 1) });
+document.getElementById("c-up").onclick = () => setS({ size: Math.min(26, S.size + 1) });
+document.getElementById("r-reset").onclick = () => { S = { ...DEFAULTS }; applyReading(); };
+document.getElementById("pick-bao").innerHTML = baoSVG();
+
+function openPanel(anchor) {
+  panel.hidden = false;
+  const r = (anchor || aa).getBoundingClientRect();
+  panel.style.top = r.bottom + 10 + "px";
+  panel.style.right = Math.max(12, innerWidth - r.right) + "px";
+  aa.setAttribute("aria-expanded", "true");
+}
+function closePanel() { panel.hidden = true; aa.setAttribute("aria-expanded", "false"); }
+aa.onclick = () => (panel.hidden ? openPanel(aa) : closePanel());
+document.getElementById("focus-exit").onclick = exitFocus;
+function exitFocus() { setS({ preset: "comfort", layout: "scroll" }); }
+document.addEventListener("mousedown", (e) => {
+  if (panel.hidden || panel.contains(e.target) || aa.contains(e.target) || e.target.closest("#focus-exit")) return;
+  closePanel();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (!picker.hidden) return closePicker();
+    if (!panel.hidden) return closePanel();
+    if (isFocus()) return exitFocus();
+  }
+  if (!picker.hidden || curView !== "reading" || S.layout !== "book") return;
+  if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); turn(1); }
+  if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); turn(-1); }
+});
+
+/* ---------- Help me pick: three A/B rounds, then apply ---------- */
+const picker = document.getElementById("picker"), pkBody = document.getElementById("pk-body");
+document.getElementById("pk-close").innerHTML = icon("x");
+document.getElementById("pk-close").onclick = () => closePicker();
+document.getElementById("pick-open").onclick = () => { closePanel(); runPicker(); };
+let pkToken = 0;
+function closePicker() { pkToken++; picker.hidden = true; }
+const SAMPLE = "Snorri wrote his Edda for young poets. He retold the old myths in plain prose, so the poems would make sense to people who had never heard them.";
+
+function pkRow(html) {
+  const row = document.createElement("div");
+  row.className = "trow gap";
+  row.innerHTML = `<div class="av bao">${baoSVG()}</div><div class="msg">${html}</div>`;
+  pkBody.appendChild(row);
+}
+function pkRound(n, a, b) {
+  document.getElementById("pk-round").textContent = `round ${n}/3`;
+  document.querySelectorAll("#pk-dots i").forEach((d, i) => (d.className = i < n - 1 ? "good" : i === n - 1 ? "on" : ""));
+  const sample = (o) => `<span class="sample" style="font-family:${FONT[o.font]};${o.ls ? "letter-spacing:.05em;word-spacing:.16em;" : ""}">${SAMPLE}</span>`;
+  return new Promise((res) => {
+    const box = document.createElement("div");
+    box.className = "tiles";
+    box.innerHTML = [a, b].map((o, i) => `<button type="button" class="tile" data-i="${i}" style="--i:${i}"><span><span class="sample-tag">${"AB"[i]}</span>${sample(o)}</span><kbd>${i + 1}</kbd></button>`).join("");
+    pkBody.appendChild(box);
+    box.querySelectorAll(".tile").forEach((t) => (t.onclick = () => {
+      if (box.classList.contains("locked")) return;
+      box.classList.add("locked"); t.classList.add("picked");
+      setTimeout(() => res([a, b][+t.dataset.i]), 380);
+    }));
+  });
+}
+async function runPicker() {
+  const my = ++pkToken;
+  picker.hidden = false; pkBody.innerHTML = "";
+  pkRow(`Read both. Which one felt easier?`);
+  const r1 = await pkRound(1, { font: "serif" }, { font: "sans" });
+  if (my !== pkToken) return;
+  pkBody.innerHTML = ""; pkRow(`And these two?`);
+  const r2 = await pkRound(2, r1, { font: "hyper" });
+  if (my !== pkToken) return;
+  pkBody.innerHTML = ""; pkRow(`Last one. Same font, different spacing.`);
+  const r3 = await pkRound(3, { font: r2.font, ls: false }, { font: r2.font, ls: true });
+  if (my !== pkToken) return;
+  document.querySelectorAll("#pk-dots i").forEach((d) => (d.className = "good"));
+  pkBody.innerHTML = "";
+  const name = FONT_NAME[r3.font];
+  pkRow(`${name} suits you${r3.ls ? ", with a little extra space" : ""}. Applied.`);
+  const res = document.createElement("div");
+  res.className = "pk-result";
+  res.innerHTML = `<span class="big-aa" style="font-family:${FONT[r3.font]}">Aa</span><div><b>${name}${r3.ls ? " · spaced" : ""}</b><span>${S.size}px · saved for every lesson</span></div><button type="button" class="btn primary">Done</button>`;
+  pkBody.appendChild(res);
+  res.querySelector(".btn").onclick = closePicker;
+  setS({ font: r3.font, ls: r3.ls });
+  confettiAt(res.querySelector(".big-aa"), { count: 30, power: 0.8 });
+  cheer(res.querySelector(".big-aa"), "applied");
+  nibblesSay(`${name} it is.`, "cheer");
+}
+
+async function endOfLesson() {
+  if (!(await nibbles("That's the lesson. Ready for a quick check on it?"))) return;
+  const go = { label: "I've read it, start the quiz", desc: "5 questions · about 3 min", icon: "play", primary: true, go: true };
+  const { item, row } = await choose([go, { label: "Not yet, stay here", desc: "Keep reading. No rush.", icon: "book", quiet: true }]);
+  if (!item.go) {
+    if (!(await nibbles("No rush. I'll be here when you're ready."))) return;
+    const r = await choose([go], { cols: 1 });
+    return finishReading(r.row);
+  }
+  finishReading(row);
+}
+
+async function finishReading(row) {
+  const my = T.token;
+  subsRead = [true, true, true];
+  cheer(row, "lesson read");
+  addMinutes(8);
+  toast("Lesson read", "Where the myths come from · lesson 03 done", "book");
+  nibblesSay("Done reading. Nice pace.", "cheer");
+  await wait(700);
+  if (my !== T.token) return;
+  block(`<div class="prep">${loaderHTML({ size: 22, label: "Getting your quiz ready" })}<span>Getting your quiz ready…</span></div>`);
+  await wait(900);
+  if (my !== T.token) return;
+  LESSONS[2].s = "done"; LESSONS[3].s = "now";
+  show("quiz");
+}
+
+/* ---------- quiz ---------- */
+const QUIZ = [
+  { q: "Who wrote the Prose Edda?", a: ["Snorri Sturluson", "Odin", "An unknown Viking poet"], ok: 0, why: "Snorri Sturluson, around 1220, as a handbook for poets." },
+  { q: "When were most of the myths written down?", a: ["In the 1200s, after Iceland became Christian", "During the Viking raids of the 800s", "By Roman historians"], ok: 0, why: "In the 1200s, about two centuries after Iceland became Christian." },
+  { q: "What is the Poetic Edda?", a: ["A single history by one author", "A collection of anonymous poems", "A book of laws"], ok: 1, why: "A collection of anonymous poems, mostly preserved in the Codex Regius." },
+  { q: "Why read these sources with some care?", a: ["They were forged in the 1800s", "They were written by Christians, long after the Viking Age", "They survive only in Latin"], ok: 1, why: "They were written by Christians looking back two centuries, which may colour the details." },
+  { q: "What is the Codex Regius?", a: ["A runestone in Sweden", "A manuscript holding most of the Poetic Edda", "A Viking king's law code"], ok: 1, why: "The manuscript, from around 1270, that holds most Poetic Edda poems." },
+];
+
+function quiz() {
+  if (LESSONS[3].s !== "now") { resetLessons(); LESSONS[2].s = "done"; LESSONS[3].s = "now"; }
+  renderOutline();
+  setTop(`<span class="mono">04</span> · <b>Quick check</b>`, "5 questions");
+  nibblesSay("Five questions. No timer.", "idle");
+  page.innerHTML = `
+    <p class="kicker">lesson 04 · quiz</p>
+    <h2 class="title">Quick check</h2>
+    <p class="learn">Five questions on where the myths come from. Untimed, and you can look back at lesson 3 anytime.</p>
+    <div class="nib-area"></div>`;
+}
+
+const dotsHTML = (results, cur) => `<span class="dots">${QUIZ.map((_, i) =>
+  `<i class="${results[i] === true ? "good" : results[i] === false ? "miss" : i === cur ? "on" : ""}"></i>`).join("")}</span>`;
+
+async function quizFlow() {
+  const my = T.token;
+  if (!(await nibbles(`Let's see what stuck. Pick the best answer; <span class="faint">"Not sure" is fine.</span>`))) return;
+  const results = [];
+  let streak = 0;
+  for (let i = 0; i < QUIZ.length; i++) {
+    const Q = QUIZ[i];
+    block(`<div class="qcard">
+      <div class="qc-head"><span>question ${i + 1}/${QUIZ.length}</span>${dotsHTML(results, i)}${streak >= 2 ? `<span class="combo">${icon("flame")}${streak} in a row</span>` : ""}</div>
+      <div class="qc-q">${Q.q}</div>
+    </div>`);
+    const items = [...Q.a.map((label, j) => ({ label, j })), { label: "Not sure", j: -1, unsure: true }];
+    const { item, row } = await choose(items, { cols: 2, correct: Q.ok, judge: (it) => (it.unsure ? null : it.j === Q.ok ? "good" : "miss") });
+    if (my !== T.token) return;
+    const right = item.j === Q.ok;
+    results.push(right);
+    if (right) {
+      streak++;
+      cheer(row, "right");
+      if (streak === 3) nibblesSay("Three in a row.", "cheer");
+      else if (streak === 5) nibblesSay("Five for five.", "cheer");
+    } else {
+      streak = 0;
+      nibblesSay("That one's worth a second look.", "idle");
+    }
+    nibblesMood("think");
+    const said = await nibbles(right ? "Right." : item.unsure ? `No problem. ${Q.why}` : `Not quite. ${Q.why}`, 420);
+    nibblesMood("idle");
+    if (!said) return;
+  }
+
+  const score = results.filter(Boolean).length;
+  const passed = score / QUIZ.length >= 0.7;
+  const weak = !results[1] || !results[3];
+  LESSONS[3].note = `${score}/5`;
+  const card = block(`<div class="score-card ${passed ? "pass" : ""}">
+    <div class="sc-top">
+      <div class="sc-num"><b id="sc-n">0</b><span>/5</span></div>
+      <div><div class="sc-label">${passed ? "Passed" : "Not passed yet"}</div>
+      <div class="sc-sub">${passed ? "lesson 04 done · next one unlocked" : "you need 4 of 5 · try as often as you like"}</div></div>
+    </div>
+    <div class="sc-res">${results.map((r, i) => `<i class="${r ? "good" : "miss"}">${pad(i + 1)} ${r ? "✓" : "✕"}</i>`).join("")}</div>
+    ${weak ? `<div class="path-change"><span class="plus">${icon("plus")}</span><span>I added a short lesson, <b>Who wrote it down, and why it matters</b>, before Loki. It covers the part that tripped you up.</span></div>` : ""}
+  </div>`);
+  countTo(card.querySelector("#sc-n"), 0, score, 700);
+
+  if (passed) {
+    LESSONS[3].s = "done";
+    setTimeout(() => {
+      if (my !== T.token) return;
+      confettiAt(card, { count: 80, spread: 1.4 });
+      cheer(card.querySelector(".sc-num"), "passed");
+      toast("Quick check passed", `${score}/5 · lesson 04 done`, "trophy");
+      nibblesSay(`${score} of 5. Good work.`, "cheer");
+    }, 650);
+  } else {
+    nibblesSay("Close. Have another look and try again.", "idle");
+  }
+  if (weak) LESSONS.splice(4, 0, { t: "Who wrote it down, and why it matters", k: "read", d: 5, s: passed ? "now" : "locked", added: true });
+  else if (passed) LESSONS[4].s = "now";
+  setTimeout(() => my === T.token && renderOutline(), weak ? 900 : 0);
+
+  if (!(await nibbles(passed
+    ? (weak ? "Nicely done. One small detour, then on to Loki." : "All clear. On to Loki.")
+    : "Close. Have another look at the answers, then try again whenever you like.", 900))) return;
+  const next = passed
+    ? [{ label: weak ? "Start the short lesson" : "Next: Loki and the death of Baldr", desc: weak ? "Who wrote it down · 5 min" : "Reading · 9 min", icon: "play", primary: true },
+       { label: "Review my answers", desc: "Each question, with the why", icon: "eye", quiet: true }]
+    : [{ label: "Try again", desc: "Same topic, new order", icon: "refresh", primary: true },
+       { label: "Show the right answers", desc: "With a short why for each", icon: "eye" },
+       { label: "Back to lesson 3", desc: "Reread the tricky part", icon: "back", quiet: true }];
+  const { item } = await choose(next, { cols: next.length === 3 ? 1 : 2 });
+  if (item.label === "Try again") show("quiz");
+  else nibbles(`<span class="faint">Mock: ${item.label}.</span>`);
+}
+
+/* ---------- complete ---------- */
+function complete() {
+  LESSONS = [
+    { t: "Gods, giants and the nine worlds", k: "read", d: 6, s: "done" },
+    { t: "Quick check", k: "quiz", d: 3, s: "done", note: "5/5" },
+    { t: "Where the myths come from", k: "read", d: 8, s: "done" },
+    { t: "Quick check", k: "quiz", d: 3, s: "done", note: "4/5" },
+    { t: "Who wrote it down, and why it matters", k: "read", d: 5, s: "done" },
+    { t: "Loki and the death of Baldr", k: "read", d: 9, s: "done" },
+    { t: "Ragnarök", k: "read", d: 10, s: "done" },
+  ];
+  renderOutline();
+  setTop(`<b>Course complete</b>`, "7 of 7");
+  nibblesSay("You finished a whole course.", "cheer");
+  page.innerHTML = `
+    <div class="done-hero" id="hero">
+      <div class="big"><span class="bao cheer">${baoSVG()}</span>
+        <span class="spark" style="top:-4px;left:-12px">✦</span><span class="spark" style="top:22px;right:-20px;animation-delay:-.5s">✦</span><span class="spark" style="bottom:6px;left:-22px;animation-delay:-1s">✦</span>
+      </div>
+      <span class="kicker"><span class="c-ic">${courseIcon("norse")}</span>course complete · 7 of 7</span>
+      <h2>You finished Norse Mythology</h2>
+      <p>Gods, worlds, the sources behind them, and how it all ends.</p>
+    </div>
+    <div class="stats">
+      <div class="stat" style="animation-delay:.1s"><b data-to="7">0</b><span>lessons</span></div>
+      <div class="stat" style="animation-delay:.18s"><b data-to="9" data-suffix="/10">0</b><span>on quizzes</span></div>
+      <div class="stat" style="animation-delay:.26s"><b data-to="100" data-time>0m</b><span>spent learning</span></div>
+      <div class="stat" style="animation-delay:.34s"><b data-to="4">0</b><span>key ideas learned</span></div>
+    </div>
+    <div class="badge-row"><span class="medal">${icon("trophy")}</span><div><b>First course finished</b><span>New badge. It's on your profile.</span></div><span class="mono">badge 01</span></div>
+    <div class="covered">
+      <h4>what you can do now</h4>
+      <ul>
+        <li><i>${icon("check")}</i>Name the main gods and giants, and the nine worlds<span>lesson 01</span></li>
+        <li><i>${icon("check")}</i>Tell the Poetic Edda from the Prose Edda<span>lesson 03</span></li>
+        <li><i>${icon("check")}</i>Explain why the sources need careful reading<span>lesson 05</span></li>
+        <li><i>${icon("check")}</i>Retell the death of Baldr and Ragnarök<span>lessons 06–07</span></li>
+      </ul>
+    </div>
+    <div class="nib-area"></div>`;
+}
+
+async function completeFlow() {
+  const my = T.token;
+  page.querySelectorAll(".stat b").forEach((b) => {
+    const to = +b.dataset.to, t0 = performance.now();
+    const step = (t) => {
+      if (my !== T.token) return;
+      const p = Math.min(1, (t - t0) / 1100), v = Math.round(to * (1 - Math.pow(1 - p, 3)));
+      b.textContent = b.dataset.time != null ? fmt(v) : (b.dataset.prefix || "") + v + (b.dataset.suffix || "");
+      if (p < 1) requestAnimationFrame(step);
+    };
+    setTimeout(() => requestAnimationFrame(step), 300);
+  });
+  await wait(450);
+  if (my !== T.token) return;
+  const hero = page.querySelector("#hero .big");
+  confettiAt(hero, { count: 110, spread: 1.6, power: 1.2 });
+  await wait(700);
+  if (my !== T.token) return;
+  cheer(page.querySelector(".badge-row .medal"), "badge earned");
+  if (!(await nibbles("That's the whole course. Well done.", 900))) return;
+  if (!(await nibbles("Want to keep going?", 400))) return;
+  const { item } = await choose([
+    { label: "Go deeper: the heroic sagas", desc: "Völsunga saga, Njáls saga · picks up where this ends", icon: "layers", primary: true },
+    { label: "Something related: Greek mythology", desc: "Same style, a new set of gods", icon: "compass" },
+    { label: "Review a lesson", desc: "Any of the 7, quizzes included", icon: "eye" },
+    { label: "Back to Home", desc: "Your other courses", icon: "home", quiet: true },
+  ]);
+  nibbles(`<span class="faint">Mock: this would start a new course chat, already knowing what you've learned.</span>`);
+}
+
+show("reading");
+</script>
+</body>
+</html>

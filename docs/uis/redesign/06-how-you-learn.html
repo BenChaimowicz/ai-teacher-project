@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amethyst">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Knibbler · how you like to learn (mock)</title>
+<link rel="icon" type="image/svg+xml" href="nibbles-logo.svg" />
+<link rel="stylesheet" href="kit.css" />
+<style>
+  .top .title { font-weight: 800; }
+  .qprog { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
+  .qprog .segs { margin: 0; width: 180px; }
+  .qprog b { color: var(--a); font-weight: 700; }
+
+  /* thread + summary side by side */
+  .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; max-width: 1120px; margin: 0 auto; padding: 0 28px; }
+  .wrap .thread { max-width: 720px; width: 100%; margin: 0; padding: 28px 0 140px; }
+  @media (max-width: 1180px) { .wrap { grid-template-columns: 1fr; } .panel-col { display: none; } }
+
+  /* the live summary */
+  .panel-col { padding-top: 28px; }
+  .panel {
+    position: sticky; top: 24px; border-radius: 18px; padding: 16px; overflow: hidden;
+    background: linear-gradient(160deg, rgba(var(--a-rgb), 0.16), rgba(var(--b-rgb), 0.05) 70%), var(--panel);
+    border: 1px solid rgba(var(--a-rgb), 0.32); box-shadow: 0 16px 40px -22px rgba(var(--a-rgb), 0.6);
+  }
+  .panel .k { font-family: var(--mono); font-size: 0.68rem; color: var(--a); }
+  .panel h3 { font-size: 1.05rem; font-weight: 800; margin-top: 4px; }
+  .panel .hint { font-family: var(--mono); font-size: 0.64rem; color: var(--faint); margin-top: 4px; }
+  .plines { list-style: none; margin-top: 12px; display: grid; gap: 4px; }
+  .pline {
+    width: 100%; display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 8px; text-align: left;
+    padding: 7px 8px; border-radius: 10px; border: 1px solid transparent; transition: background 0.15s, border-color 0.15s;
+  }
+  .pline .pk { font-family: var(--mono); font-size: 0.64rem; color: var(--muted); }
+  .pline .pv { font-size: 0.82rem; font-weight: 600; color: var(--faint); }
+  .pline .pe { font-family: var(--mono); font-size: 0.6rem; color: var(--faint); opacity: 0; transition: opacity 0.15s; }
+  .pline.set .pv { color: var(--text); }
+  .pline.def .pv { color: var(--muted); font-weight: 500; }
+  .pline.def .pv::after { content: " · default"; font-family: var(--mono); font-size: 0.6rem; color: var(--faint); }
+  .pline.now { border-color: var(--a-line); background: rgba(var(--a-rgb), 0.1); }
+  .pline.now .pv { color: var(--a); }
+  .pline.fresh { animation: fresh 0.9s ease-out; }
+  .can-edit .pline.set:hover, .can-edit .pline.def:hover { background: rgba(var(--a-rgb), 0.1); border-color: var(--line-2); cursor: pointer; }
+  .can-edit .pline:hover .pe { opacity: 1; color: var(--a); }
+  .pline:disabled { cursor: default; }
+  .oneliner { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--line); font-size: 0.82rem; line-height: 1.5; color: var(--muted); }
+  .oneliner b { color: var(--text); font-weight: 700; }
+
+  /* tiny previews inside tiles */
+  .pv-wrap { display: flex; gap: 10px; align-items: center; }
+  .mini { display: inline-flex; gap: 3px; align-items: flex-end; margin-top: 7px; }
+  .mini i { width: 7px; border-radius: 2px; background: rgba(var(--a-rgb), 0.55); }
+  .tile.primary .mini i { background: rgba(0, 0, 0, 0.25); }
+  .skel { display: grid; gap: 3px; width: 54px; margin-top: 7px; }
+  .skel i { height: 4px; border-radius: 2px; background: rgba(var(--a-rgb), 0.3); }
+  .skel i.ex { height: 10px; background: rgba(var(--b-rgb), 0.55); border-radius: 3px; }
+  .skel i.s { width: 70%; }
+  .flowp { display: flex; gap: 3px; margin-top: 7px; align-items: center; }
+  .flowp i { width: 12px; height: 7px; border-radius: 2px; background: rgba(var(--a-rgb), 0.45); }
+  .flowp i.q { width: 7px; height: 7px; border-radius: 50%; background: var(--b); }
+  .flowp i.gap { width: 4px; background: transparent; }
+
+  /* multi-select */
+  .multi { margin: 10px 0 6px 48px; display: grid; gap: 10px; animation: in 0.3s ease-out both; }
+  .multi .tile .box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--line-2); flex: none; display: grid; place-items: center; transition: background 0.15s; }
+  .multi .tile.on { border-color: var(--a); background: rgba(var(--a-rgb), 0.2); }
+  .multi .tile.on .box { background: var(--a); border-color: var(--a); color: var(--on-a); }
+  .multi .tile .box svg { width: 13px; height: 13px; opacity: 0; }
+  .multi .tile.on .box svg { opacity: 1; }
+  .multi-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .multi.gone { opacity: 0; transition: opacity 0.25s; }
+
+  .note-line { font-size: 0.86rem; color: var(--muted); }
+
+  /* returning view */
+  .ret { max-width: 760px; margin: 0 auto; padding: 32px 28px 120px; }
+  .ret .head { display: flex; gap: 14px; align-items: center; }
+  .ret .head .av { width: 52px; height: 52px; flex: none; border-radius: 50%; background: rgba(var(--a-rgb), 0.14); box-shadow: 0 0 0 1px rgba(var(--a-rgb), 0.3), 0 0 18px rgba(var(--a-rgb), 0.25); padding: 3px; }
+  .ret h2 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; }
+  .ret .head p { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
+  .bigcard { margin-top: 20px; border-radius: 18px; padding: 8px; background: linear-gradient(160deg, rgba(var(--a-rgb), 0.14), rgba(var(--b-rgb), 0.04) 70%), var(--panel); border: 1px solid rgba(var(--a-rgb), 0.3); }
+  .bline { display: grid; grid-template-columns: 34px 120px 1fr auto; gap: 12px; align-items: center; padding: 12px 12px; border-radius: 12px; }
+  .bline + .bline { border-top: 1px solid var(--line); }
+  .bline .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--a); background: rgba(var(--a-rgb), 0.14); }
+  .bline .ic svg { width: 17px; height: 17px; }
+  .bline .bk { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+  .bline .bv { font-weight: 600; }
+  .bline .bv small { display: block; color: var(--muted); font-weight: 500; font-size: 0.8rem; margin-top: 1px; }
+  .bline .chg { font-family: var(--mono); font-size: 0.68rem; color: var(--a); padding: 5px 10px; border-radius: 99px; border: 1px solid var(--line-2); }
+  .bline .chg:hover { background: var(--a-soft); border-color: var(--a-line); }
+  .bline.fresh { animation: fresh 0.9s ease-out; }
+  .ret .thread { padding: 8px 0 0; max-width: none; }
+  .ret .tiles { margin-left: 0; }
+  .ret .trow .msg { max-width: 640px; }
+  .ret-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+  .ret-actions .again-wrap { flex: 1; display: grid; }
+  .more { position: relative; }
+  .more > button { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line-2); color: var(--muted); font-weight: 800; letter-spacing: 1px; }
+  .more > button:hover { color: var(--text); background: var(--panel); }
+  .more .menu { position: absolute; right: 0; bottom: 46px; min-width: 210px; padding: 6px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line-2); box-shadow: 0 14px 30px -12px rgba(0,0,0,.6); display: none; }
+  .more.open .menu { display: block; animation: in 0.2s ease-out; }
+  .more .menu button { width: 100%; text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 0.85rem; color: var(--muted); }
+  .more .menu button:hover { background: rgba(var(--a-rgb), 0.1); color: var(--text); }
+  .more .menu small { display: block; font-family: var(--mono); font-size: 0.6rem; color: var(--faint); margin-top: 2px; }
+
+  @keyframes fresh { 0% { background: rgba(var(--a-rgb), 0.3); } 100% { background: transparent; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="side">
+    <div class="side-in">
+      <div class="brand-row"><span class="wordmark">knibbler</span><span class="sys"><i></i>v0.2 · mock</span></div>
+      <div id="buddy-slot"></div>
+      <button class="new" type="button" onclick="location.href='02b-new-course.html'">＋ New course <kbd>N</kbd></button>
+      <div>
+        <div class="sec-h">your courses<span class="n">5</span></div>
+        <div class="clist" id="clist"></div>
+        <button type="button" class="see-all" onclick="location.href='04-home.html'">+1 finished · see all on Home →</button>
+      </div>
+      <div class="side-foot"><button type="button" class="ccard active" id="profile"><span class="cdot" style="background:transparent;box-shadow:none;border:1.5px solid var(--a)"></span><span class="t">How you like to learn</span><span class="st" id="profile-st">setting up</span></button></div>
+      <div class="mock">
+        <p>mock</p>
+        <div class="sw" id="sw"></div>
+        <div class="row-btns" id="views"><button type="button" data-v="first">first time</button><button type="button" data-v="returning">returning</button></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <button class="icon-btn" type="button" id="toggle" aria-label="Show or hide sidebar">☰</button>
+      <div class="title">How you like to learn</div>
+      <div class="spacer"></div>
+      <div class="qprog" id="qprog"></div>
+    </div>
+    <div class="scroll" id="scroll"><div id="view"></div></div>
+  </main>
+</div>
+
+<script src="kit.js"></script>
+<script>
+const app = document.getElementById("app");
+const view = document.getElementById("view");
+const scrollEl = document.getElementById("scroll");
+document.getElementById("toggle").onclick = () => app.classList.toggle("side-closed");
+initThemes(document.getElementById("sw"));
+nibblesLines(["A few quick taps, then I'll know how to teach you.", "No right answers here.", "You can change any of this later.", "Short or long, both are fine. It's your call."]);
+
+document.getElementById("clist").innerHTML = [
+  { id: "norse", title: "Norse Mythology", icon: "norse", status: "learning", segs: "dddn--" },
+  { id: "greek", title: "Greek Gods and Heroes", icon: "greek", status: "making", segs: "ddw--" },
+  { id: "music", title: "Reading sheet music", icon: "music", status: "needs", segs: "dd-dd" },
+  { id: "knot", title: "The square knot", icon: "knot", status: "learning", segs: "dn-" },
+].map((c) => courseCard(c, false)).join("");
+
+/* ---------- the seven questions (real dimensions from teaching-profile-copy.ts, said plainly).
+   No language question: lessons are English only for now, and the course-making LLM is told so. ---------- */
+const bars = (n) => `<span class="mini">${[...Array(5)].map((_, i) => `<i style="height:${i < n ? 6 + i * 2 : 3}px;${i < n ? "" : "opacity:.25"}"></i>`).join("")}</span>`;
+const skel = (exFirst) => `<span class="skel">${exFirst ? '<i class="ex"></i><i></i><i class="s"></i>' : '<i></i><i class="s"></i><i class="ex"></i>'}</span>`;
+const flow = (pat) => `<span class="flowp">${[...pat].map((c) => `<i class="${c === "q" ? "q" : c === " " ? "gap" : ""}"></i>`).join("")}</span>`;
+const lines = (n) => `<span class="skel">${[...Array(n)].map((_, i) => `<i class="${i === n - 1 ? "s" : ""}"></i>`).join("")}</span>`;
+const NOPREF = { label: "No preference", desc: "Use the default", quiet: true, icon: "shuffle", nopref: true };
+
+const QS = [
+  { key: "reading", short: "reading", ico: "book", multi: true, ask: "Anything that makes reading easier for you? Pick as many as you like.",
+    opts: [
+      { v: "plain_language", label: "Plain, direct wording", chip: "plain wording" },
+      { v: "short_headed_paragraphs", label: "Short paragraphs with clear headings", chip: "short paragraphs" },
+      { v: "inline_definitions", label: "Explain new terms where they first appear", chip: "terms explained" },
+    ], def: "nothing extra" },
+  { key: "size", short: "lesson size", ico: "layers", ask: "How much should one lesson cover?",
+    opts: [
+      { v: "compact", label: "One key idea", desc: `Short and focused${bars(1)}`, chip: "short", line: "short lessons" },
+      { v: "standard", label: "A few connected ideas", desc: `The usual${bars(3)}`, chip: "standard", line: "standard lessons" },
+      { v: "extended", label: "The fuller story", desc: `Longer, fewer breaks${bars(5)}`, chip: "long", line: "longer lessons" },
+    ], nopref: true, def: "standard" },
+  { key: "pacing", short: "pacing", ico: "list", ask: "How should a lesson move along?",
+    opts: [
+      { v: "manual", label: "Pause after each section", desc: `I tap Continue when ready${flow("x x x")}`, icon: "stop", chip: "section by section", line: "a pause after each section" },
+      { v: "continuous", label: "One continuous page", desc: `I scroll at my own pace${flow("xxxxx")}`, icon: "easier", chip: "continuous" },
+    ], nopref: true, def: "continuous" },
+  { key: "order", short: "examples", ico: "eye", ask: "When there's a good example, what comes first?",
+    opts: [
+      { v: "example_first", label: "The example", desc: `Then the idea behind it${skel(true)}`, chip: "examples first", line: "examples first" },
+      { v: "principle_first", label: "The idea", desc: `Then an example of it${skel(false)}`, chip: "idea first", line: "idea before example" },
+    ], nopref: { label: "Whatever suits the topic", desc: "I'll pick per lesson", quiet: true, icon: "shuffle", nopref: true }, def: "suits the topic" },
+  { key: "cadence", short: "quizzes", ico: "target", ask: "How often would you like a quick check?",
+    opts: [
+      { v: "every_reading", label: "After every lesson", desc: `Little and often${flow("xqxqxq")}`, chip: "after every lesson", line: "a quiz after every lesson" },
+      { v: "every_2_to_3_readings", label: "Every 2–3 lessons", desc: `A bit more reading first${flow("xxqxxq")}`, chip: "every 2–3 lessons" },
+      { v: "module_end", label: "At the end of each part", desc: `Read a whole part, then check${flow("xxxxxq")}`, chip: "end of each part", line: "a quiz at the end of each part" },
+    ], nopref: true, def: "every 2–3 lessons" },
+  { key: "timing", short: "answers", ico: "clock", ask: "In a quiz, when should I show the answer?",
+    opts: [
+      { v: "per_item", label: "Right after each question", desc: "You see how you did as you go", icon: "check", chip: "after each question", line: "feedback after each question" },
+      { v: "end_of_quiz", label: "After the whole quiz", desc: "All the answers together at the end", icon: "list", chip: "at the end", line: "feedback at the end of a quiz" },
+    ], nopref: true, def: "after each question" },
+  { key: "depth", short: "explanations", ico: "help", ask: "And how much explanation with each answer?",
+    opts: [
+      { v: "brief", label: "Brief", desc: `The answer and one sentence why${lines(1)}`, chip: "brief", line: "brief explanations" },
+      { v: "standard", label: "Standard", desc: `A short explanation, and why other choices miss${lines(2)}`, chip: "standard" },
+      { v: "detailed", label: "Detailed", desc: `A fuller explanation with an example${lines(4)}`, chip: "detailed", line: "detailed explanations" },
+    ], nopref: true, def: "standard" },
+];
+/* Nibbles reacts only now and then, in one short line. */
+const REACT = { reading: (picked) => picked.length ? "Noted. I'll write that way." : null };
+
+let ANS = {};  // key -> { chip, line?, picked?, def?: true }
+let mode = "first", done = false, busy = false;
+
+function oneliner() {
+  const parts = [];
+  const pick = (k, fallback) => (ANS[k] && !ANS[k].def && ANS[k].line) || fallback;
+  parts.push(pick("size", "standard lessons"));
+  parts.push(pick("order", "examples when they help"));
+  parts.push(pick("timing", "feedback after each question"));
+  if (ANS.pacing && !ANS.pacing.def && ANS.pacing.line) parts.push(ANS.pacing.line);
+  if (ANS.reading?.picked?.length) parts.push(ANS.reading.chip);
+  return parts.join(" · ");
+}
+
+/* ---------- progress in the top bar ---------- */
+function setProg(i) {
+  const n = QS.length;
+  document.getElementById("qprog").innerHTML = i == null ? "" :
+    `<span><b>${Math.min(i + 1, n)}</b> of ${n}</span><span class="segs">${QS.map((_, j) => `<i class="${j < i ? "d" : j === i ? "n" : ""}"></i>`).join("")}</span>`;
+}
+
+/* ---------- live summary panel ---------- */
+function panelHTML() {
+  return `<div class="panel ${done ? "can-edit" : ""}" id="panel">
+    <div class="k">${done ? "your settings" : "building as you go"}</div>
+    <h3>How you like to learn</h3>
+    <div class="hint">${done ? "tap a line to change it" : "you can change any of this later"}</div>
+    <ul class="plines">${QS.map((q, i) => `<li><button type="button" class="pline" data-k="${q.key}" data-i="${i}"><span class="pk">${q.short}</span><span class="pv"></span><span class="pe">change</span></button></li>`).join("")}</ul>
+    <div class="oneliner" id="oneliner" ${done ? "" : "hidden"}></div>
+  </div>`;
+}
+function renderPanel(current, freshKey) {
+  const p = document.getElementById("panel");
+  if (!p) return;
+  p.classList.toggle("can-edit", done);
+  p.querySelector(".k").textContent = done ? "your settings" : "building as you go";
+  p.querySelector(".hint").textContent = done ? "tap a line to change it" : "you can change any of this later";
+  p.querySelectorAll(".pline").forEach((el) => {
+    const a = ANS[el.dataset.k];
+    el.className = "pline" + (a ? (a.def ? " def" : " set") : "") + (el.dataset.k === current ? " now" : "") + (el.dataset.k === freshKey ? " fresh" : "");
+    el.querySelector(".pv").textContent = a ? a.chip : el.dataset.k === current ? "…" : "–";
+    el.disabled = !done;
+  });
+  const ol = document.getElementById("oneliner");
+  ol.hidden = !done;
+  ol.innerHTML = `<b>In short:</b> ${oneliner()}`;
+}
+
+/* ---------- asking one question ---------- */
+async function ask(q, { prefix = "" } = {}) {
+  if (!(await bao(prefix + q.ask, 420))) return null;
+  if (q.multi) return askMulti(q);
+  const items = q.opts.map((o) => ({ ...o, icon: o.icon || q.ico }));
+  if (q.nopref) items.push(q.nopref === true ? { ...NOPREF } : { ...q.nopref });
+  const cols = items.length === 2 ? 2 : items.length === 4 ? 2 : 1;
+  const { item, row } = await choose(items, { cols });
+  return { ans: item.nopref ? { chip: q.def, def: true } : { chip: item.chip, line: item.line, v: item.v }, row, item };
+}
+function askMulti(q) {
+  const my = T.token;
+  return new Promise((resolve) => {
+    const box = block(`<div class="multi">
+      ${q.opts.map((o, i) => `<button type="button" class="tile" data-i="${i}" style="--i:${i}"><span class="box">${icon("check")}</span><span class="tt">${o.label}</span><kbd>${i + 1}</kbd></button>`).join("")}
+      <div class="multi-actions">
+        <button type="button" class="tile primary" data-act="done" style="--i:3"><span class="ti">${icon("arrow")}</span><span><span class="tt">That's it</span><span class="td" id="mcount">Pick any above</span></span></button>
+        <button type="button" class="tile quiet" data-act="none" style="--i:4"><span class="ti">${icon("x")}</span><span><span class="tt">None of these</span><span class="td">Nothing extra needed</span></span></button>
+      </div></div>`);
+    const picked = new Set();
+    const cnt = box.querySelector("#mcount");
+    box.querySelectorAll("[data-i]").forEach((b) => (b.onclick = () => {
+      const i = +b.dataset.i;
+      picked.has(i) ? picked.delete(i) : picked.add(i);
+      b.classList.toggle("on", picked.has(i));
+      cnt.textContent = picked.size ? `${picked.size} picked` : "Pick any above";
+    }));
+    const finish = async (none) => {
+      if (my !== T.token) return;
+      const list = none ? [] : [...picked].sort().map((i) => q.opts[i]);
+      box.classList.add("gone"); await wait(250); box.remove();
+      const row = me(list.length ? list.map((o) => o.label).join(" · ") : "None of these");
+      resolve({ ans: { chip: list.length ? list.map((o) => o.chip).join(", ") : "nothing extra", picked: list.map((o) => o.v) }, row });
+    };
+    box.querySelector('[data-act="done"]').onclick = () => finish(picked.size === 0);
+    box.querySelector('[data-act="none"]').onclick = () => finish(true);
+  });
+}
+
+/* ---------- first time ---------- */
+async function first(again = false) {
+  T.token++; mode = "first"; done = false; busy = false; ANS = {}; T.autoScroll = true;
+  markView("first");
+  Object.assign(PLAYER, { streak: 3 });
+  document.getElementById("buddy-slot").innerHTML = buddyHTML(); renderBuddy();
+  baoSay("Seven quick taps, then I'll know how to teach you.", "idle");
+  document.getElementById("profile-st").textContent = "setting up";
+  view.innerHTML = `<div class="wrap"><div class="thread" id="thread"></div><div class="panel-col">${panelHTML()}</div></div>`;
+  useThread(document.getElementById("thread"), scrollEl);
+  scrollEl.scrollTop = 0;
+  setProg(null); renderPanel();
+
+  if (again) {
+    if (!(await bao("Sure. From the top. Same seven questions."))) return;
+    return runFrom(0);
+  }
+  if (!(await bao("Before your first lesson: a few quick choices about how I teach you."))) return;
+  if (!(await bao(`<span class="faint">No right answers. You can change any of this later.</span>`, 380))) return;
+  const my = T.token;
+  const { item } = await choose([
+    { label: "Let's do it", desc: "About 1 minute · 7 questions", icon: "play", primary: true },
+    { label: "Use the defaults for now", desc: "Good for most people. Change it anytime.", quiet: true, icon: "arrow", defaults: true },
+  ], { cols: 2 });
+  if (my !== T.token) return;
+  if (item.defaults) {
+    QS.forEach((q) => (ANS[q.key] = { chip: q.def, def: true }));
+    renderPanel();
+    await bao("Done. I'll use the defaults, and you can change them here anytime.");
+    return finish(false);
+  }
+  await runFrom(0);
+}
+
+async function runFrom(start) {
+  const my = T.token;
+  for (let i = start; i < QS.length; i++) {
+    const q = QS[i];
+    setProg(i); renderPanel(q.key);
+    const say = i === 3 ? "Halfway there." : i === QS.length - 1 ? "Last one." : PLAYER_SAY[i];
+    if (say) baoSay(say, "idle");
+    const res = await ask(q);
+    if (!res || my !== T.token) return;
+    ANS[q.key] = res.ans;
+    renderPanel(null, q.key);
+    cheer(res.row.querySelector(".msg") || res.row);
+    const r = REACT[q.key]?.(res.ans.picked || []);
+    if (r && !(await bao(r, 360))) return;
+  }
+  setProg(QS.length);
+  await finish(true);
+}
+const PLAYER_SAY = { 1: "Take your time.", 5: "Nearly there." };
+
+async function finish(celebrate) {
+  const my = T.token;
+  done = true;
+  document.getElementById("profile-st").textContent = "edit";
+  renderPanel();
+  setProg(null);
+  if (!(await bao("That's everything. I'll teach this way from your next lesson."))) return;
+  const card = block(`<div class="tcard"><div class="k" style="font-family:var(--mono);font-size:.68rem;color:var(--a)">in short</div><div style="margin-top:6px;font-weight:700;line-height:1.5">${oneliner()}</div><div class="sub">Tap any line on the right to change it.</div></div>`);
+  if (celebrate) {
+    confettiAt(card, { count: 60 });
+    cheer(card, "all set");
+    setTimeout(() => toast("All set", "Your next lesson uses these.", "check"), 400);
+    baoSay("Got it. I'll teach your way.", "cheer");
+  } else baoSay("Defaults for now. Change them anytime.", "idle");
+  if (my !== T.token) return;
+  const { item } = await choose([
+    { label: "Start learning", desc: "Back to Home", icon: "play", primary: true, go: true },
+    { label: "Change something", desc: "Pick a line to redo", icon: "edit", quiet: true },
+  ], { cols: 2, echo: false });
+  if (my !== T.token) return;
+  if (item.go) location.href = "04-home.html";
+  else changeMenu();
+}
+
+/* Re-ask just one question inline. */
+async function redo(key, { after } = {}) {
+  if (busy) return;
+  busy = true;
+  T.token++;
+  document.querySelectorAll(".tiles:not(.locked), .multi").forEach((b) => b.remove());
+  const q = QS.find((x) => x.key === key);
+  renderPanel(key);
+  const res = await ask(q, { prefix: "Sure. " });
+  if (!res) { busy = false; return; }
+  ANS[key] = res.ans;
+  renderPanel(null, key);
+  if (after) after(key);
+  await bao("Updated.", 300);
+  busy = false;
+  if (mode === "first") offerMore();
+}
+async function offerMore() {
+  const my = T.token;
+  const { item } = await choose([
+    { label: "Start learning", desc: "Back to Home", icon: "play", primary: true, go: true },
+    { label: "Change something else", icon: "edit", quiet: true },
+  ], { cols: 2, echo: false });
+  if (my !== T.token) return;
+  if (item.go) location.href = "04-home.html"; else changeMenu();
+}
+async function changeMenu() {
+  const my = T.token;
+  document.querySelectorAll(".tiles").forEach((b) => b.remove());
+  if (!(await bao("Which one?", 300))) return;
+  const { item } = await choose(QS.map((q) => ({ label: q.short[0].toUpperCase() + q.short.slice(1), desc: ANS[q.key]?.chip || q.def, icon: q.ico, key: q.key })), { cols: 2, echo: false });
+  if (my !== T.token) return;
+  document.querySelectorAll(".tiles.locked").forEach((b) => b.remove());
+  redo(item.key);
+}
+
+/* chips in the panel */
+view.addEventListener("click", (e) => {
+  const line = e.target.closest(".pline");
+  if (line && done && !line.disabled) redo(line.dataset.k);
+});
+
+/* ---------- returning ---------- */
+const RET = {
+  reading: { chip: "short paragraphs", picked: ["short_headed_paragraphs"] },
+  size: { chip: "short", line: "short lessons" }, pacing: { chip: "continuous" },
+  order: { chip: "examples first", line: "examples first" }, cadence: { chip: "every 2–3 lessons" },
+  timing: { chip: "after each question", line: "feedback after each question" }, depth: { chip: "standard" },
+};
+const SUBS = { reading: "how lessons are written", size: "how much one lesson covers", pacing: "how a lesson moves along", order: "what comes first", cadence: "how often you get a quick check", timing: "when quiz answers show", depth: "how much each answer explains" };
+
+function returning() {
+  T.token++; mode = "returning"; done = true; busy = false; T.autoScroll = true;
+  markView("returning"); setProg(null);
+  ANS = JSON.parse(JSON.stringify(RET));
+  Object.assign(PLAYER, { streak: 3 });
+  document.getElementById("buddy-slot").innerHTML = buddyHTML(); renderBuddy();
+  baoSay("This is how I teach you now. Change anything.", "idle");
+  document.getElementById("profile-st").textContent = "edit";
+  view.innerHTML = `<div class="ret">
+    <div class="head"><span class="av bao">${baoSVG()}</span><div><h2>How you like to learn</h2><p id="ret-line"></p></div></div>
+    <div class="bigcard" id="bigcard"></div>
+    <div class="ret-actions">
+      <div class="again-wrap"><button type="button" class="tile" id="again"><span class="ti">${icon("refresh")}</span><span><span class="tt">Run through it again</span><span class="td">All seven questions · about 1 minute</span></span></button></div>
+      <div class="more" id="more"><button type="button" aria-label="More">···</button>
+        <div class="menu"><button type="button" id="reset">Reset to defaults<small>applies to courses you start next</small></button></div></div>
+    </div>
+    <div class="thread" id="thread"></div>
+  </div>`;
+  useThread(document.getElementById("thread"), scrollEl);
+  scrollEl.scrollTop = 0;
+  renderBig();
+  document.getElementById("again").onclick = () => first(true);
+  const more = document.getElementById("more");
+  more.querySelector("button").onclick = (e) => { e.stopPropagation(); more.classList.toggle("open"); };
+  document.addEventListener("click", () => more.classList.remove("open"), { once: true });
+  document.getElementById("reset").onclick = async () => {
+    more.classList.remove("open");
+    QS.forEach((q) => (ANS[q.key] = { chip: q.def, def: true }));
+    renderBig();
+    T.token++; document.getElementById("thread").innerHTML = ""; T.lastWasBao = false;
+    await bao("Back to the defaults. Courses you already have stay as they are.");
+  };
+}
+function renderBig(freshKey) {
+  document.getElementById("ret-line").innerHTML = oneliner();
+  document.getElementById("bigcard").innerHTML = QS.map((q) => {
+    const a = ANS[q.key];
+    return `<div class="bline ${q.key === freshKey ? "fresh" : ""}"><span class="ic">${icon(q.ico)}</span><span class="bk">${q.short}</span>
+      <span class="bv">${a.chip}${a.def ? ' <span style="font-family:var(--mono);font-size:.62rem;color:var(--faint)">· default</span>' : ""}<small>${SUBS[q.key]}</small></span>
+      <button type="button" class="chg" data-k="${q.key}">change</button></div>`;
+  }).join("");
+  document.querySelectorAll("#bigcard .chg").forEach((b) => (b.onclick = () => {
+    document.getElementById("thread").innerHTML = ""; T.lastWasBao = false;
+    redo(b.dataset.k, { after: (k) => renderBig(k) });
+  }));
+}
+
+/* ---------- mock switch ---------- */
+function markView(v) { document.querySelectorAll("#views button").forEach((b) => b.classList.toggle("on", b.dataset.v === v)); }
+document.querySelectorAll("#views button").forEach((b) => (b.onclick = () => (b.dataset.v === "first" ? first() : returning())));
+first();
+</script>
+</body>
+</html>
