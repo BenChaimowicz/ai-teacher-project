@@ -137,7 +137,7 @@ test("Free jump: disclaimer, later Lessons open before a pass, no way back to li
   const lessons = await openLessons(page);
   await lessons.getByRole("link", { name: FOLLOW_UP_TITLE }).click();
   await expect(page).toHaveURL(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
-  await page.getByRole("button", { name: "Mark complete" }).click();
+  await page.getByRole("button", { name: "I've read it" }).click();
   await expect(page.getByText("The square knot · 1 / 3")).toBeVisible();
 
   await page.getByRole("button", { name: "Course menu" }).click();
