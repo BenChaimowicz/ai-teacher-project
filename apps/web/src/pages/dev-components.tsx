@@ -1,6 +1,7 @@
 import { BookOpen, Compass, Footprints, Rocket, Shuffle } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
+import { LearnShowcase } from "@/components/learn/learn-showcase.tsx";
 import { ShellTitle } from "@/components/shell/app-shell.tsx";
 import { PalettePicker } from "@/components/shell/palette-picker.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -382,6 +383,8 @@ export function ComponentsPage() {
           </Button>
         </div>
       </Section>
+
+      <LearnShowcase />
 
       <Dialog
         open={dialogOpen}

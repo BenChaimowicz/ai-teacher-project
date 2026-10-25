@@ -323,6 +323,7 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
 .l-qopts .k-tile:has(input:disabled):hover { transform: none; box-shadow: none; border-color: rgba(var(--a-rgb), 0.28); }
 .l-qopts .k-tile:has(input:checked) { border-color: var(--a); box-shadow: 0 0 0 2px var(--a), var(--glow); }
 .l-qopts .k-tile.dim { opacity: 0.45; }
+.l-qopts .k-tile.miss:has(input:checked) { box-shadow: 0 0 0 2px var(--miss) !important; }
 .l-qopts .k-tile:has(input:focus-visible) { outline: 2px solid var(--a); outline-offset: 2px; }
 .l-radio { appearance: none; -webkit-appearance: none; margin: 0; width: 20px; height: 20px; flex: none; border-radius: 50%; border: 2px solid var(--a-line); background: rgba(0, 0, 0, 0.2); display: grid; place-items: center; cursor: inherit; }
 .l-radio:checked { border-color: var(--a); }

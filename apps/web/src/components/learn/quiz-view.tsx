@@ -56,7 +56,7 @@ type QuestionProps = {
  * One question card: the prompt, four answer tiles (radios), Check (per-item timing), the verdict, and
  * the right answer with why. A right answer glows green; a wrong one shakes and the right one lights up.
  */
-function QuestionCard({ item, index, total, streak, results, chosen, locked, canCheck, result, revealed, busy, onAnswer, onCheck }: QuestionProps) {
+export function QuestionCard({ item, index, total, streak, results, chosen, locked, canCheck, result, revealed, busy, onAnswer, onCheck }: QuestionProps) {
   const card = useRef<HTMLFieldSetElement>(null);
   const lastResult = useRef(result);
   const qid = `q-${item.id}`;
@@ -147,7 +147,7 @@ function QuestionCard({ item, index, total, streak, results, chosen, locked, can
 /**
  * The submitted score: a count-up, pass or not, one chip per question, and Retake.
  */
-function ScoreCard({ score, passed, results, busy, onRetake, celebrate }: { score: QuizScore; passed: boolean; results: boolean[]; busy: boolean; onRetake: () => void; celebrate: boolean }) {
+export function ScoreCard({ score, passed, results, busy, onRetake, celebrate }: { score: QuizScore; passed: boolean; results: boolean[]; busy: boolean; onRetake: () => void; celebrate: boolean }) {
   const card = useRef<HTMLDivElement>(null);
   const shown = useCountUp(score.correct, 700, 150);
   const needed = Math.ceil(score.total * 0.7);
