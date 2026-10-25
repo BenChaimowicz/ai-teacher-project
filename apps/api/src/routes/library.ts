@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { courseRequests, publishedCourses } from "@senoy/db";
 import { studyLinksByCourseId } from "../lib/study.ts";
@@ -21,7 +21,9 @@ export async function libraryRoutes(app: FastifyInstance) {
         })
         .from(courseRequests)
         // A published Request is listed as its Course.
-        .where(and(eq(courseRequests.learnerId, learnerId), ne(courseRequests.status, "published")));
+        .where(and(eq(courseRequests.learnerId, learnerId), ne(courseRequests.status, "published")))
+        // Newest first, so a Learner who started the same subject again lands on the latest Request.
+        .orderBy(desc(courseRequests.createdAt), desc(courseRequests.id));
 
       const courses = await app.db
         .select({
@@ -29,7 +31,8 @@ export async function libraryRoutes(app: FastifyInstance) {
           title: publishedCourses.title,
         })
         .from(publishedCourses)
-        .where(eq(publishedCourses.learnerId, learnerId));
+        .where(eq(publishedCourses.learnerId, learnerId))
+        .orderBy(desc(publishedCourses.publishedAt), desc(publishedCourses.id));
 
       const links = await studyLinksByCourseId(
         app.db,
@@ -81,7 +84,9 @@ export async function libraryRoutes(app: FastifyInstance) {
         })
         .from(courseRequests)
         // A published Request is listed as its Course.
-        .where(and(eq(courseRequests.learnerId, learnerId), ne(courseRequests.status, "published")));
+        .where(and(eq(courseRequests.learnerId, learnerId), ne(courseRequests.status, "published")))
+        // Newest first, so a Learner who started the same subject again lands on the latest Request.
+        .orderBy(desc(courseRequests.createdAt), desc(courseRequests.id));
 
       const courses = await app.db
         .select({
@@ -89,7 +94,8 @@ export async function libraryRoutes(app: FastifyInstance) {
           title: publishedCourses.title,
         })
         .from(publishedCourses)
-        .where(eq(publishedCourses.learnerId, learnerId));
+        .where(eq(publishedCourses.learnerId, learnerId))
+        .orderBy(desc(publishedCourses.publishedAt), desc(publishedCourses.id));
 
       const links = await studyLinksByCourseId(
         app.db,
