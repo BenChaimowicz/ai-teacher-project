@@ -78,8 +78,6 @@ a.k-tile { text-decoration: none; }
 .l-how span { display: block; color: var(--text-muted); font-size: 0.8rem; margin-top: 3px; line-height: 1.45; }
 
 /* ---------- Course outline (Study sidebar) ---------- */
-/* the shell's outline slot is classed `outline`, which Tailwind also uses as a utility */
-.k-side .outline { outline: none; }
 .l-course { display: flex; flex-direction: column; min-height: 0; }
 .l-course h2 { display: flex; align-items: center; gap: 9px; font-size: 0.95rem; font-weight: 800; line-height: 1.3; padding: 0 4px; min-width: 0; }
 .l-course h2 .c-t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -209,7 +209,3 @@ label.mk-lesson:focus-within { outline: 2px solid var(--a); outline-offset: 1px;
   .mk-bline .bk { display: none; }
   .mk-ret { padding: 22px 16px 120px; }
 }
-
-/* Tiles lift 2px on hover. This keeps the pointer over a lifted tile, so a pointer resting on its bottom edge can't
-   make it jitter between hovered and not (found in browser tests; the kit's .k-tile could adopt it). */
-.mk-page .k-tile::before, .mk-profile .k-tile::before, .mk-ret .k-tile::before { content: ""; position: absolute; inset: 0 0 -4px 0; }

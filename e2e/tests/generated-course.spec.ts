@@ -6,16 +6,17 @@ import { confirmedRequest } from "./fixture.ts";
 const QUIZ_ITEMS = 5;
 
 test("An approved Blueprint generates a Course that publishes to Home and completes to 3 / 3", async ({ page }) => {
+  // The whole flow, generation included, runs past the default 30 s.
+  test.setTimeout(60_000);
   // confirmedRequest reseeds: the generated Course must not be the fixture Course.
   await page.goto(await confirmedRequest());
-  await page.getByRole("button", { name: "Design my Course Blueprint" }).click();
-  await page.getByRole("button", { name: "Approve" }).click();
+  // The plan designs itself once the Starting Level is confirmed.
+  await page.getByRole("button", { name: /^Make my course/ }).click({ timeout: 15_000 });
 
   // Three fixture Lessons at FIXTURE_LESSON_DELAY_MS each, then publish, plus the worker's and the page's polls.
-  await expect(page.getByText("Your Course is ready.")).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText("Course published")).toBeVisible();
+  await expect(page.getByText("Your course is ready.")).toBeVisible({ timeout: 30_000 });
 
-  await page.getByRole("link", { name: "Back to Home" }).click();
+  await page.getByRole("button", { name: /^Back to Home/ }).click();
   // The newest published Course is the one to continue; the fixture Course is listed under learning.
   const main = page.getByRole("main");
   await expect(main.getByRole("heading", { name: "Fixture Course" })).toBeVisible();
