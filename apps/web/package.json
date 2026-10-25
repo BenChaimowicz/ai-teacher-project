@@ -8,6 +8,10 @@
     "preview": "vite preview --host 127.0.0.1 --port 5173"
   },
   "dependencies": {
+    "@fontsource-variable/literata": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
     "@radix-ui/react-slot": "^1.2.3",
     "@senoy/db": "workspace:*",
     "class-variance-authority": "^0.7.1",

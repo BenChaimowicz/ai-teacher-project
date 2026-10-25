@@ -3,31 +3,35 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        destructive: "bg-red-700 text-white hover:bg-red-700/90",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3",
-        lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
-      },
+/*
+ * Kit button (styles in src/styles/kit.css, `.k-btn`).
+ * `default`, `outline`, `destructive` are kept as aliases so older screens keep compiling.
+ */
+const buttonVariants = cva("k-btn", {
+  variants: {
+    variant: {
+      primary: "primary",
+      default: "primary",
+      secondary: "secondary",
+      ghost: "ghost",
+      outline: "ghost",
+      quiet: "quiet",
+      destructive: "danger",
+      danger: "danger",
+      link: "link",
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    size: {
+      default: "",
+      sm: "sm",
+      lg: "lg",
+      icon: "icon",
     },
   },
-);
+  defaultVariants: {
+    variant: "primary",
+    size: "default",
+  },
+});
 
 type ButtonProps = ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -35,11 +39,19 @@ type ButtonProps = ComponentProps<"button"> &
   };
 
 /**
- * shadcn button. Use `asChild` to render a Link with button styles.
+ * Button. Use `asChild` to render a Link with button styles.
+ * Variants: primary (default), secondary, ghost, quiet, danger, link. Sizes: default, sm, lg, icon.
  */
-function Button({ className, variant, size, asChild = false, ...props }: ButtonProps) {
+function Button({ className, variant, size, asChild = false, type, ...props }: ButtonProps) {
   const Comp = asChild ? Slot : "button";
-  return <Comp data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+  return (
+    <Comp
+      data-slot="button"
+      type={asChild ? undefined : (type ?? "button")}
+      className={cn(buttonVariants({ variant, size }), className)}
+      {...props}
+    />
+  );
 }
 
 export { Button, buttonVariants };

@@ -1,11 +1,50 @@
-import { useEffect, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Navigate, useParams } from "react-router-dom";
 import { isPassingScore } from "@senoy/db/quiz";
-import { Button } from "@/components/ui/button.tsx";
+import { QUIZ_METHOD_ID } from "@senoy/db/reading-lesson";
+import { Check, Compass, Eye, Home, Layers } from "lucide-react";
+import { useCompanion, useCompanionLines } from "@/components/companion/companion-provider.tsx";
+import { CountUp } from "@/components/learn/count-up.tsx";
+import { LinkTiles, type LinkTile } from "@/components/learn/link-tiles.tsx";
+import { ShellTitle } from "@/components/shell/app-shell.tsx";
+import { ChatThread, NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { CourseIcon } from "@/components/ui/course-icon.tsx";
+import { PageLoader } from "@/components/ui/loader.tsx";
+import { Nibbles } from "@/components/ui/nibbles.tsx";
+import { ErrorState } from "@/components/ui/states.tsx";
+import { pickCourseIcon } from "@/lib/brand-marks.ts";
+import { cheer, confettiAt } from "@/lib/cheer.ts";
 import type { CourseSummary } from "@/lib/study-types.ts";
+import "@/components/learn/learn.css";
+
+const LINES = ["You finished a whole course.", "That's real progress.", "Going deeper is a good next step."];
 
 /**
- * Course-complete screen: what the Course covered, Quiz results, and the way back to Home.
+ * Stat tiles: real numbers that count up. No points or levels.
+ * @param summary - Course summary
+ */
+function stats(summary: CourseSummary) {
+  const lessons = summary.modules.flatMap((module) => module.lessons);
+  const readings = lessons.filter((lesson) => lesson.teachingMethod !== QUIZ_METHOD_ID).length;
+  const taken = summary.quizzes.filter((quiz) => quiz.best);
+  const correct = taken.reduce((sum, quiz) => sum + (quiz.best?.correct ?? 0), 0);
+  const total = taken.reduce((sum, quiz) => sum + (quiz.best?.total ?? 0), 0);
+  const passed = summary.quizzes.filter((quiz) => quiz.best && isPassingScore(quiz.best)).length;
+  const rows: { to: number; label: string; format?: (n: number) => string }[] = [
+    { to: lessons.length, label: "lessons" },
+    { to: readings, label: readings === 1 ? "reading" : "readings" },
+  ];
+  if (summary.quizzes.length) {
+    rows.push({ to: passed, label: "quizzes passed", format: (n) => `${n}/${summary.quizzes.length}` });
+    rows.push({ to: total ? Math.round((correct / total) * 100) : 0, label: "best quiz scores", format: (n) => `${n}%` });
+  } else {
+    rows.push({ to: summary.modules.length, label: summary.modules.length === 1 ? "module" : "modules" });
+  }
+  return rows;
+}
+
+/**
+ * Course complete: a celebration, the real stats, what was covered with Quiz results, and next steps.
  * A Course that is not complete yet sends the Learner back to Study.
  */
 export function CourseCompletePage() {
@@ -13,6 +52,10 @@ export function CourseCompletePage() {
   const [summary, setSummary] = useState<CourseSummary | null>(null);
   const [notComplete, setNotComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nextShown, setNextShown] = useState(false);
+  const hero = useRef<HTMLDivElement>(null);
+  const { say } = useCompanion();
+  useCompanionLines(LINES);
 
   useEffect(() => {
     if (!courseId) return;
@@ -39,68 +82,116 @@ export function CourseCompletePage() {
     };
   }, [courseId]);
 
+  useEffect(() => {
+    if (!summary) return;
+    const timer = window.setTimeout(() => {
+      if (!hero.current) return;
+      confettiAt(hero.current, { count: 110, spread: 1.6, power: 1.2 });
+      cheer(hero.current, "course done");
+      say("You finished a whole course.", "cheer");
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [summary, say]);
+
   if (notComplete && courseId) return <Navigate to={`/study/${courseId}`} replace />;
+  if (error) return <ErrorState title="The summary didn't load">{error}</ErrorState>;
+  if (!summary) return <PageLoader />;
+
+  const lessons = summary.modules.flatMap((module) => module.lessons);
+  const quizByLesson = new Map(summary.quizzes.map((quiz) => [quiz.lessonId, quiz]));
+  const title = summary.course.title;
+  const next: LinkTile[] = [
+    {
+      to: `/new-course-request?topic=${encodeURIComponent(title)}`,
+      label: `Go deeper: ${title}`,
+      description: "A new course that picks up where this one ends",
+      icon: <Layers />,
+      tone: "primary",
+    },
+    { to: "/new-course-request", label: "Something new", description: "Tell me another topic", icon: <Compass /> },
+    { to: `/study/${summary.course.id}`, label: "Review Lessons", description: `Any of the ${lessons.length}, quizzes included`, icon: <Eye /> },
+    { to: "/", label: "Back to Home", description: "Your other courses", icon: <Home />, tone: "quiet" },
+  ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <Button asChild variant="ghost">
-          <Link to="/">Workspace</Link>
-        </Button>
-      </header>
-      {error ? <p className="p-8 text-sm text-red-400">{error}</p> : null}
-      {!error && !summary ? <p className="p-8 text-sm text-muted-foreground">Loading…</p> : null}
-      {summary ? (
-        <main className="mx-auto w-full max-w-3xl p-8">
-          <p className="text-sm text-muted-foreground">Course complete</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{summary.course.title}</h1>
-          <p className="mt-2 text-muted-foreground">You worked toward: {summary.course.learningGoal}</p>
+    <div className="l-done">
+      <ShellTitle>Course complete</ShellTitle>
+      <div className="l-done-hero">
+        <div className="big" ref={hero} aria-hidden="true">
+          <Nibbles size={140} mood="cheer" />
+          <span className="l-spark" style={{ top: -4, left: -12 }}>
+            ✦
+          </span>
+          <span className="l-spark" style={{ top: 22, right: -20, animationDelay: "-.5s" }}>
+            ✦
+          </span>
+          <span className="l-spark" style={{ bottom: 6, left: -22, animationDelay: "-1s" }}>
+            ✦
+          </span>
+        </div>
+        <p className="l-kicker">
+          <span className="c-ic" aria-hidden="true">
+            <CourseIcon name={pickCourseIcon(title)} size={12} />
+          </span>
+          course complete · {lessons.length} of {lessons.length}
+        </p>
+        <h1>You finished {title}</h1>
+        <p>You worked toward: {summary.course.learningGoal}</p>
+      </div>
 
-          <section className="mt-10">
-            <h2 className="text-xl font-semibold tracking-tight">What you covered</h2>
-            {summary.modules.map((module) => (
-              <div key={module.id} className="mt-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{module.title}</p>
-                <ul className="mt-2 grid gap-2">
-                  {module.lessons.map((lesson) => (
-                    <li key={lesson.id} className="rounded-lg border border-border bg-card p-3">
-                      <p className="font-medium">{lesson.title}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{lesson.lessonGoal}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </section>
-
-          {summary.quizzes.length > 0 ? (
-            <section className="mt-10">
-              <h2 className="text-xl font-semibold tracking-tight">Quiz results</h2>
-              <ul className="mt-4 grid gap-2">
-                {summary.quizzes.map((quiz) => (
-                  <li key={quiz.lessonId} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3 text-sm">
-                    <span className="font-medium">{quiz.title}</span>
-                    <span>
-                      {quiz.best
-                        ? `Best score ${quiz.best.correct} / ${quiz.best.total}${isPassingScore(quiz.best) ? " · Passed" : ""}`
-                        : "Not taken"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
-          <div className="mt-10 flex flex-wrap gap-2">
-            <Button asChild>
-              <Link to="/">Back to Home</Link>
-            </Button>
-            <Button asChild variant="ghost">
-              <Link to={`/study/${summary.course.id}`}>Review Lessons</Link>
-            </Button>
+      <div className="l-stats">
+        {stats(summary).map((stat, index) => (
+          <div key={stat.label} className="l-stat" style={{ "--i": index } as CSSProperties}>
+            <b>
+              <CountUp to={stat.to} format={stat.format} delayMs={300} durationMs={1100} />
+            </b>
+            <span>{stat.label}</span>
           </div>
-        </main>
-      ) : null}
+        ))}
+      </div>
+
+      <section className="l-covered" aria-labelledby="covered-h">
+        <h2 id="covered-h" className="k-sec-h">
+          what you covered
+        </h2>
+        {summary.modules.map((module) => (
+          <div key={module.id}>
+            {summary.modules.length > 1 ? <p className="l-mod">{module.title}</p> : null}
+            <ul>
+              {module.lessons.map((lesson) => {
+                const quiz = quizByLesson.get(lesson.id);
+                const passed = quiz?.best ? isPassingScore(quiz.best) : false;
+                return (
+                  <li key={lesson.id}>
+                    <i aria-hidden="true">
+                      <Check />
+                    </i>
+                    <span className="min-w-0">
+                      {lesson.title}
+                      <span className="g">{lesson.lessonGoal}</span>
+                    </span>
+                    {quiz ? (
+                      <span className={passed ? "r pass" : "r"}>
+                        {quiz.best ? `Best score ${quiz.best.correct} / ${quiz.best.total}${passed ? " · Passed" : ""}` : "Not taken"}
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </section>
+
+      <ChatThread label="What's next">
+        <NibblesLine typing delayMs={900} mood="cheer">
+          That's the whole course. Well done.
+        </NibblesLine>
+        <NibblesLine typing continued delayMs={1300} onShown={() => setNextShown(true)}>
+          Want to keep going?
+        </NibblesLine>
+      </ChatThread>
+      {nextShown ? <LinkTiles tiles={next} label="Next steps" /> : null}
     </div>
   );
 }

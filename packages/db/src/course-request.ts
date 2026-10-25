@@ -5,6 +5,11 @@ export type ValidityResult = {
   reason: string;
   safeReframe: string | null;
   question: string | null;
+  /**
+   * With a clarification: 2-4 short answers the Learner can tap instead of typing (SEN-87). Missing on decisions saved
+   * before options existed, and on every pass or reject.
+   */
+  answerOptions?: string[];
 };
 
 /** The single targeted clarification and the Learner's latest response. */

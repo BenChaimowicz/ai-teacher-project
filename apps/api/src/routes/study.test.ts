@@ -120,7 +120,6 @@ async function testApp(answers: Record<string, unknown> = {}, quizBody: QuizBody
     quiz: () => call("GET", quiz),
     answer: (itemId: string, optionId: string) => call("PUT", `${quiz}/answers/${itemId}`, { optionId }),
     check: (itemId: string) => call("POST", `${quiz}/answers/${itemId}/check`),
-    reveal: (itemId: string) => call("POST", `${quiz}/answers/${itemId}/reveal`),
     submit: () => call("POST", `${quiz}/submit`),
     retake: () => call("POST", `${quiz}/retake`),
     complete: (lessonId: string) => call("POST", `${base}/lessons/${lessonId}/complete`),
@@ -185,17 +184,39 @@ test("Per-item timing: Check locks an answer and gives right/wrong; Submit needs
     const wrong = first.options.find((option) => option.id !== first.correctOptionId)!;
     const saved = await t.answer(first.id, wrong.id);
     assert.deepEqual(saved.body.quiz.attempt.results, {}, "No feedback before Check.");
-    assert.equal((await t.reveal(first.id)).status, 409, "No answer before feedback.");
 
     const checked = await t.check(first.id);
     assert.deepEqual(checked.body.quiz.attempt.results, { [first.id]: false });
     assert.equal((await t.answer(first.id, first.correctOptionId)).status, 409, "Checked answers are locked.");
     assert.equal((await t.submit()).status, 400, "Submit waits on every item.");
+  } finally {
+    await t.app.close();
+  }
+});
 
-    const revealed = await t.reveal(first.id);
-    assert.deepEqual(revealed.body, {
-      answer: { itemId: first.id, correctOptionId: first.correctOptionId, explanation: first.explanations.standard },
+test("Per-item timing: an item's answer key arrives with its Check, never before", async () => {
+  const t = await testApp();
+  try {
+    const [first, second] = SEEDED_QUIZ_BODY.items;
+    assert.ok(first && second);
+    const leaks = (body: unknown, item: typeof first) =>
+      JSON.stringify(body).includes(`"correctOptionId":"${item.correctOptionId}"`) || JSON.stringify(body).includes(item.explanations.standard);
+
+    assert.ok(!leaks((await t.quiz()).body, first), "No key before any answer.");
+    assert.ok(!JSON.stringify((await t.study()).body).includes("correctOptionId"), "Study never sends keys.");
+    const wrong = first.options.find((option) => option.id !== first.correctOptionId)!;
+    const saved = await t.answer(first.id, wrong.id);
+    assert.deepEqual(saved.body.quiz.attempt.answerKeys, {}, "Answering alone reveals nothing.");
+    assert.ok(!leaks(saved.body, first));
+    assert.ok(!leaks((await t.quiz()).body, first), "Nor does reloading the draft.");
+
+    const checked = await t.check(first.id);
+    assert.deepEqual(checked.body.quiz.attempt.answerKeys, {
+      [first.id]: { itemId: first.id, correctOptionId: first.correctOptionId, explanation: first.explanations.standard },
     });
+    assert.ok(!(second.id in checked.body.quiz.attempt.answerKeys), "Unchecked items stay hidden.");
+    assert.equal((await t.quiz()).body.quiz.attempt.answerKeys[first.id].correctOptionId, first.correctOptionId, "Kept on reload.");
+    assert.equal((await t.app.inject({ method: "POST", url: `/api/courses/${SEEDED_COURSE_ID}/lessons/${SEEDED_QUIZ_LESSON_ID}/quiz/answers/${first.id}/reveal` })).statusCode, 404, "No separate reveal step.");
   } finally {
     await t.app.close();
   }
@@ -236,18 +257,6 @@ test("Fail, retake, pass: best score is kept, Progress never drops, and the next
   }
 });
 
-test("Correct answers close once the best score is 100%", async () => {
-  const t = await testApp();
-  try {
-    await answerAll(t, 5, true);
-    const perfect = await t.submit();
-    assert.equal(perfect.body.quiz.answersOpen, false);
-    assert.equal((await t.reveal("q1")).status, 409);
-  } finally {
-    await t.app.close();
-  }
-});
-
 test("End-of-quiz timing: no Check; every item gets right/wrong after Submit", async () => {
   const t = await testApp({ feedbackTiming: { status: "selected", value: "end_of_quiz" } });
   try {
@@ -256,8 +265,12 @@ test("End-of-quiz timing: no Check; every item gets right/wrong after Submit", a
     assert.equal((await t.check("q1")).status, 409);
     const before = await t.quiz();
     assert.deepEqual(before.body.quiz.attempt.results, {}, "No feedback before Submit.");
+    assert.deepEqual(before.body.quiz.attempt.answerKeys, {}, "No answer keys before Submit.");
+    assert.ok(!JSON.stringify(before.body).includes("correctOptionId"));
     const after = await t.submit();
     assert.equal(Object.keys(after.body.quiz.attempt.results).length, 5);
+    assert.equal(Object.keys(after.body.quiz.attempt.answerKeys).length, 5, "Every key arrives with Submit.");
+    assert.equal(after.body.quiz.attempt.answerKeys.q5.correctOptionId, SEEDED_QUIZ_BODY.items[4]!.correctOptionId);
     assert.equal(after.body.quiz.attempt.results.q1, true);
     assert.equal(after.body.quiz.attempt.results.q5, false);
   } finally {
@@ -274,9 +287,9 @@ test("An attempt keeps the timing it started with; Feedback detail follows the c
       feedbackDepth: { status: "selected", value: "detailed" },
     });
     assert.equal((await t.quiz()).body.quiz.feedbackTiming, "per_item");
-    assert.equal((await t.check("q1")).status, 200);
-    const revealed = await t.reveal("q1");
-    assert.equal(revealed.body.answer.explanation, SEEDED_QUIZ_BODY.items[0]!.explanations.detailed);
+    const checked = await t.check("q1");
+    assert.equal(checked.status, 200);
+    assert.equal(checked.body.quiz.attempt.answerKeys.q1.explanation, SEEDED_QUIZ_BODY.items[0]!.explanations.detailed);
   } finally {
     await t.app.close();
   }

@@ -5,7 +5,6 @@ import {
   checkQuizItem,
   getQuiz,
   retakeQuiz,
-  revealQuizAnswer,
   submitQuiz,
   type QuizRequest,
 } from "../lib/quiz-play.ts";
@@ -132,11 +131,6 @@ export async function studyRoutes(app: FastifyInstance, options: StudyRoutesOpti
   app.post(`${quiz}/answers/:itemId/check`, (request, reply) => {
     const { itemId } = request.params as { itemId: string };
     return send(request, reply, "check answer", () => checkQuizItem(store, quizRequest(request), itemId));
-  });
-
-  app.post(`${quiz}/answers/:itemId/reveal`, (request, reply) => {
-    const { itemId } = request.params as { itemId: string };
-    return send(request, reply, "show answer", () => revealQuizAnswer(store, quizRequest(request), itemId));
   });
 
   app.post(`${quiz}/submit`, (request, reply) =>

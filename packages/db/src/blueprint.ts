@@ -45,10 +45,21 @@ export type BlueprintModule = {
   slots: BlueprintSlot[];
 };
 
+/** Why the Learner marked plan Lessons as not relevant; the reason is optional (spec §4.4). */
+export const IRRELEVANT_REASONS = ["already_know", "not_my_goal"] as const;
+
+/** One reason for marking plan Lessons as not relevant. */
+export type IrrelevantReason = (typeof IRRELEVANT_REASONS)[number];
+
+/** The Learner's marks on a Blueprint under review. The next Blueprint run revises from them, then they are gone. */
+export type BlueprintFeedback = { irrelevantSlotIds: string[]; reason: IrrelevantReason | null };
+
 /** The Module and Lesson sequence for the remaining gap alone. */
 export type CourseBlueprint = {
   courseTitle: string;
   modules: BlueprintModule[];
+  /** Set on a draft while its revision from the Learner's review is queued (SEN-87). */
+  learnerFeedback?: BlueprintFeedback;
 };
 
 /** The binary verdict of a Judge check (spec §6.1). */
