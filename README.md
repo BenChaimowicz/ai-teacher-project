@@ -13,7 +13,7 @@ pnpm db:seed
 pnpm run apps
 ```
 
-Then open `http://127.0.0.1:5173`. That one command starts the Vite Workspace, the Fastify API, the worker that generates Courses, and the Operator-only Usage Console at `http://127.0.0.1:5174` (its own API on `CONSOLE_API_PORT`, default 3100). To run only the Usage Console:
+Then open `http://127.0.0.1:5173`. That one command starts the Vite Workspace, the Fastify API, the worker that generates Courses, and the Operator-only Usage Console at `http://127.0.0.1:5174` (its own API on `CONSOLE_API_PORT`, default 3100). In a terminal it opens a dashboard: the servers are listed on the left, the selected server's logs on the right. Use ↑/↓ to select, space to start or stop a server, `r` to restart, `a`/`x` to start or stop all, and `q` to quit (which stops everything). `pnpm apps:plain` runs the same servers with interleaved logs instead. To run only the Usage Console:
 
 ```bash
 pnpm dash
