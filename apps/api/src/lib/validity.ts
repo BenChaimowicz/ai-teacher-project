@@ -16,6 +16,10 @@ Hard prohibitions. Reject requested outcomes that operationally facilitate viole
 
 Named copyrighted works. A Learning Goal that names a song, book, or film passes. Clarify or reject only when the requested outcome is the protected copy itself (generate the chart, paste the lyrics, embed the film). Naming the Course after the work is not a copyright issue. No request-time copyright speech. Operational illegal enablement is still rejected under the hard rules.`;
 
+/** How many tap-to-choose answers a clarification offers. */
+const MIN_ANSWER_OPTIONS = 2;
+const MAX_ANSWER_OPTIONS = 4;
+
 const OUTCOME_CATEGORIES = [
   "ordinary", "violence", "weapon_construction", "self_harm", "abuse", "exploitation",
   "serious_crime", "illegal_conduct", "pornographic_arousal", "protected_copy",
@@ -36,6 +40,8 @@ export type ValidityExtraction = {
   clarificationResolved: boolean | null;
   confirmedUnsupportedPremise: string | null;
   question: string | null;
+  /** With a question, the answers the Learner taps; empty without one. */
+  answerOptions: string[];
   explanation: string;
 };
 
@@ -55,7 +61,7 @@ export interface ValidityGate {
 const EXTRACTION_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["outcomes", "learnability", "clarificationResolved", "confirmedUnsupportedPremise", "question", "explanation"],
+  required: ["outcomes", "learnability", "clarificationResolved", "confirmedUnsupportedPremise", "question", "answerOptions", "explanation"],
   properties: {
     outcomes: {
       type: "array",
@@ -89,6 +95,10 @@ const EXTRACTION_SCHEMA = {
     question: {
       type: ["string", "null"],
       description: "One targeted question to distinguish the ambiguous or unsupported framing. Null when no clarification is needed. Never ask a second question after an unresolved clarification.",
+    },
+    answerOptions: {
+      type: "array", maxItems: MAX_ANSWER_OPTIONS, items: { type: "string" },
+      description: "With a question: 2-4 short answers the Learner can tap instead of typing, each a distinct framing that would resolve the question, written in the Learner's voice (for example \"Unicorns in myths and stories\"). Include the unsupported or prohibited framing too when it is a real possibility, so the Learner can confirm it. Empty when question is null.",
     },
     explanation: { type: "string", description: "Brief explanation of the extracted intent and learnability; no operational harmful instructions." },
   },
@@ -142,6 +152,8 @@ function parseValidityExtraction(raw: unknown): ValidityExtraction {
       (row.clarificationResolved !== null && typeof row.clarificationResolved !== "boolean") ||
       (row.confirmedUnsupportedPremise !== null && (typeof row.confirmedUnsupportedPremise !== "string" || !row.confirmedUnsupportedPremise.trim())) ||
       (row.question !== null && (typeof row.question !== "string" || !row.question.trim())) ||
+      !Array.isArray(row.answerOptions) || row.answerOptions.length > MAX_ANSWER_OPTIONS ||
+      row.answerOptions.some((option) => typeof option !== "string" || !option.trim()) ||
       typeof row.explanation !== "string" || !row.explanation.trim()) {
     throw new ModelError("invalid_output");
   }
@@ -154,7 +166,8 @@ function parseValidityExtraction(raw: unknown): ValidityExtraction {
   if (row.confirmedUnsupportedPremise !== null && (row.learnability !== "unsupported" || row.clarificationResolved !== true)) {
     throw new ModelError("invalid_output");
   }
-  return row as ValidityExtraction;
+  const extraction = row as ValidityExtraction;
+  return { ...extraction, answerOptions: extraction.question ? [...new Set(extraction.answerOptions.map((option) => option.trim()))] : [] };
 }
 
 /** Static reasons and replacements cannot accidentally reproduce a model's harmful suggestion. */
@@ -221,7 +234,8 @@ export function createValidityGate(generator?: Generator): ValidityGate {
             // A clarify needs a question to ask; a prohibition rejects first, so it needs none.
             const prohibited = extracted.outcomes.some((outcome) => outcome.category !== "ordinary" && outcome.mode === "operational");
             const needsClarification = extracted.learnability !== "learnable" || extracted.outcomes.some((outcome) => outcome.mode === "ambiguous");
-            if (!prohibited && needsClarification && !input.clarification && !extracted.question) throw rejectedOutput();
+            if (!prohibited && needsClarification && !input.clarification &&
+                (!extracted.question || extracted.answerOptions.length < MIN_ANSWER_OPTIONS)) throw rejectedOutput();
             return extracted;
           },
         });
@@ -235,6 +249,7 @@ export function createValidityGate(generator?: Generator): ValidityGate {
               policyVersion: VALIDITY_POLICY_VERSION, outcome: "clarify",
               reason: "The answer has not resolved the original question. Please answer that same question.",
               safeReframe: null, question: input.clarification.question,
+              answerOptions: extraction.answerOptions.length >= MIN_ANSWER_OPTIONS ? extraction.answerOptions : [],
             };
           }
           if (extraction.confirmedUnsupportedPremise !== null) {
@@ -254,6 +269,7 @@ export function createValidityGate(generator?: Generator): ValidityGate {
             policyVersion: VALIDITY_POLICY_VERSION, outcome: "clarify",
             reason: "The goal needs one clarification to distinguish a learnable framing from an unsupported premise or prohibited outcome.",
             safeReframe: null, question,
+            answerOptions: extraction.answerOptions.length >= MIN_ANSWER_OPTIONS ? extraction.answerOptions : [],
           };
         }
         return {

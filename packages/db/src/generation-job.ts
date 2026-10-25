@@ -42,5 +42,7 @@ export type GenerationView = {
   lessonNumber: number | null;
   lessonTitle: string | null;
   finishedLessons: number;
+  /** Which Blueprint slots are written, so the Waiting screen can tick them (Readings are written before Quizzes). */
+  finishedSlotIds: string[];
   totalLessons: number;
 };

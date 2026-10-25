@@ -229,7 +229,7 @@ test("Approve persists the approved snapshot and Sequence mode, then queues one 
     assert.equal(stored.approved!.sequenceMode, "free_jump");
     assert.deepEqual(jobs().map((job) => [job.courseRequestId, job.learnerId, job.status]), [[requestRow.id, requestRow.learnerId, "queued"]]);
     assert.deepEqual(approved.json().generation, {
-      status: "queued", stage: null, lessonNumber: null, lessonTitle: null, finishedLessons: 0, totalLessons: stored.draft.modules.flatMap((module) => module.slots).length,
+      status: "queued", stage: null, lessonNumber: null, lessonTitle: null, finishedLessons: 0, finishedSlotIds: [], totalLessons: stored.draft.modules.flatMap((module) => module.slots).length,
     });
 
     assert.equal((await app.inject({ method: "POST", url: `${url}/approve`, payload: { sequenceMode: "linear" } })).statusCode, 409);
@@ -344,6 +344,53 @@ test("Retry queues a failed job again on the same Blueprint and clears the reaso
     assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/retry` })).statusCode, 409, "Retrying cannot fix a sequence.");
     assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/resume` })).statusCode, 409);
     assert.equal(requestRow.status, "generation_failed");
+  } finally {
+    await app.close();
+  }
+});
+
+test("Marking Lessons as not relevant queues a redesign from the marks; the new plan replaces the old and keeps the Sequence mode", async () => {
+  const { app, rows, inputs, jobs, url, requestRow, designBlueprint, runBlueprintJob } = await testApp();
+  try {
+    await designBlueprint();
+    await app.inject({ method: "PUT", url: `${url}/sequence-mode`, payload: { sequenceMode: "free_jump" } });
+    for (const payload of [{}, { irrelevantSlotIds: [] }, { irrelevantSlotIds: ["nope"] }, { irrelevantSlotIds: ["slot1", "slot2", "slot3"] },
+      { irrelevantSlotIds: ["slot1"], reason: "bored" }]) {
+      assert.equal((await app.inject({ method: "POST", url: `${url}/revise`, payload })).statusCode, 400, JSON.stringify(payload));
+    }
+    const queued = await app.inject({ method: "POST", url: `${url}/revise`, payload: { irrelevantSlotIds: ["slot1"], reason: "already_know" } });
+    assert.equal(queued.statusCode, 202, queued.body);
+    assert.equal(queued.json().courseRequest.status, "blueprint_preparing");
+    assert.deepEqual(jobs("blueprint").map((job) => job.status), ["queued"], "The same Blueprint job is queued again.");
+    const during = await app.inject({ method: "GET", url });
+    assert.equal(during.json().blueprint.blueprint.modules[0].slots[0].title, "Reading: Capability 4", "The reviewed plan shows while it is redone.");
+    assert.ok(!/learnerFeedback/.test(during.body));
+
+    assert.equal(await runBlueprintJob(), null);
+    assert.deepEqual(inputs[1]!.revision?.feedback, { irrelevantSlotIds: ["slot1"], reason: "already_know" });
+    assert.equal(inputs[1]!.revision?.previousBlueprint.modules[0]!.slots[0]!.title, "Reading: Capability 4");
+    assert.equal(requestRow.status, "blueprint_review");
+    const reviewed = (await app.inject({ method: "GET", url })).json().blueprint;
+    assert.deepEqual(reviewed.blueprint.modules[0].slots.map((slot: { title: string }) => slot.title).slice(0, 2), ["Reading: Capability 5", "Reading: Capability 6"]);
+    assert.equal(reviewed.sequenceMode, "free_jump");
+    assert.equal(rows.get(courseBlueprints)!.length, 1, "The redesign replaces the draft.");
+    assert.equal((rows.get(courseBlueprints)![0] as typeof courseBlueprints.$inferSelect).draft.learnerFeedback, undefined);
+  } finally {
+    await app.close();
+  }
+});
+
+test("A redesign that fails returns to review with the plan as it was and says so", async () => {
+  const { app, url, requestRow, designBlueprint, runBlueprintJob } = await testApp();
+  try {
+    await designBlueprint();
+    await app.inject({ method: "POST", url: `${url}/revise`, payload: { irrelevantSlotIds: ["slot2"] } });
+    assert.ok(await runBlueprintJob({ async build() { throw new Error("provider down"); } }) instanceof Error);
+    assert.equal(requestRow.status, "blueprint_review");
+    assert.match(String(requestRow.failureReason), /couldn't redo the plan/);
+    const view = (await app.inject({ method: "GET", url })).json().blueprint;
+    assert.equal(view.blueprint.modules[0].slots[1].title, "Reading: Capability 5");
+    assert.equal((await app.inject({ method: "POST", url: `${url}/approve`, payload: { sequenceMode: "linear" } })).statusCode, 200, "Make it as it is.");
   } finally {
     await app.close();
   }

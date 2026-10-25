@@ -16,6 +16,7 @@ import {
   type GenerationView,
   type SequenceMode,
 } from "@senoy/db";
+import { IRRELEVANT_REASONS, type BlueprintFeedback, type IrrelevantReason } from "@senoy/db/blueprint";
 import { enqueueJob } from "../lib/generation-job.ts";
 import { studyLinksByCourseId } from "../lib/study.ts";
 import { recordProductEvent } from "../lib/usage-tracking.ts";
@@ -63,6 +64,21 @@ function sequenceModeField(body: unknown): SequenceMode | null {
   return sequenceMode === "linear" || sequenceMode === "free_jump" ? sequenceMode : null;
 }
 
+/**
+ * Reads the Learner's marks from the body: slot ids of this draft, at least one marked and at least one kept, and an
+ * optional reason. Null when invalid.
+ * @param body - Request body
+ * @param slotIds - The draft's slot ids
+ */
+function feedbackField(body: unknown, slotIds: string[]): BlueprintFeedback | null {
+  const { irrelevantSlotIds, reason } = bodyFields(body);
+  if (!Array.isArray(irrelevantSlotIds) || irrelevantSlotIds.some((id) => typeof id !== "string" || !slotIds.includes(id))) return null;
+  const marked = [...new Set(irrelevantSlotIds as string[])];
+  if (marked.length === 0 || marked.length >= slotIds.length) return null;
+  if (reason !== undefined && reason !== null && !IRRELEVANT_REASONS.some((known) => known === reason)) return null;
+  return { irrelevantSlotIds: marked, reason: (reason as IrrelevantReason | null | undefined) ?? null };
+}
+
 /** Where a Learner can queue a stopped job again, and the Request status each leaves the Request in. */
 type Requeueable = Partial<Record<GenerationJobStatus, CourseRequestStatus>>;
 
@@ -106,6 +122,7 @@ async function generationView(db: Database, requestId: string, blueprint: Bluepr
     lessonNumber: index >= 0 ? index + 1 : null,
     lessonTitle: index >= 0 ? slots[index]!.title : null,
     finishedLessons: finished.length,
+    finishedSlotIds: finished.map((row) => row.slotId),
     totalLessons: slots.length,
   };
 }
@@ -209,6 +226,38 @@ export async function blueprintRoutes(app: FastifyInstance) {
       return { courseRequest: row, blueprint: learnerView(saved) };
     } catch (error) {
       return fail(reply, request.log, "sequence-mode", request.params.requestId, error, "Failed to save the Sequence mode.");
+    }
+  });
+
+  app.post<RequestParams>("/api/course-requests/:requestId/blueprint/revise", async (request, reply) => {
+    try {
+      const learnerId = request.currentLearner.id;
+      const row = await ownedRequest(request.params.requestId, learnerId, reply);
+      if (!row) return reply;
+      if (row.status !== "blueprint_review") return reply.code(409).send({ error: "This Blueprint is not awaiting review." });
+      const current = await blueprintOf(row.id);
+      if (!current || current.approved) return reply.code(409).send({ error: "This Blueprint is not awaiting review." });
+      const feedback = feedbackField(request.body, blueprintSlots(current.draft).map((slot) => slot.id));
+      if (!feedback) return reply.code(400).send({ error: "Mark at least one Lesson as not relevant, and keep at least one." });
+      // The marks, the status, and the queued job land together; the worker redesigns from the marks (spec §4.4, §5.1).
+      const preparing = await app.db.transaction(async (transaction) => {
+        const [marked] = await transaction.update(courseBlueprints).set({ draft: { ...current.draft, learnerFeedback: feedback } })
+          .where(and(eq(courseBlueprints.id, current.id), isNull(courseBlueprints.approved))).returning({ id: courseBlueprints.id });
+        if (!marked) throw new RequestChangedError();
+        const [moved] = await transaction.update(courseRequests).set({ status: "blueprint_preparing", failureReason: null }).where(and(
+          eq(courseRequests.id, row.id), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, "blueprint_review"),
+        )).returning(requestFields);
+        if (!moved) throw new RequestChangedError();
+        await enqueueJob(transaction, { courseRequestId: row.id, learnerId, kind: "blueprint" });
+        return moved;
+      }).catch((error: unknown) => {
+        if (error instanceof RequestChangedError) return null;
+        throw error;
+      });
+      if (!preparing) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+      return reply.code(202).send({ courseRequest: preparing });
+    } catch (error) {
+      return fail(reply, request.log, "revise", request.params.requestId, error, "Failed to revise the Course Blueprint.");
     }
   });
 
