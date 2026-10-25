@@ -28,4 +28,4 @@ An **Aa** button in the lesson top bar opens a small panel. It has presets (one 
 
 **"Help me pick":** Bao offers a short font test based on point 2: "Read both. Which one felt easier?", three rounds, two samples each, then that font is applied. This is the same tap-to-choose pattern used everywhere else.
 
-**Decision needed:** the app is always dark, and that doesn't change. But *Sepia* and *Paper* would be light **reading surfaces inside a dark app**, because the evidence favours offering a light page. Keep them, or ship dark-only?
+**Decided (2026-10-25):** the app is always dark, and *Sepia* and *Paper* ship as light **reading surfaces inside a dark app**, because the evidence favours offering a light page. Dark is the default page colour. All five modes ship, with Comfort the default.
