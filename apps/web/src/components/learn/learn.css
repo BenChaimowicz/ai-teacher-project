@@ -78,6 +78,8 @@ a.k-tile { text-decoration: none; }
 .l-how span { display: block; color: var(--text-muted); font-size: 0.8rem; margin-top: 3px; line-height: 1.45; }
 
 /* ---------- Course outline (Study sidebar) ---------- */
+/* the shell's outline slot is classed `outline`, which Tailwind also uses as a utility */
+.k-side .outline { outline: none; }
 .l-course { display: flex; flex-direction: column; min-height: 0; }
 .l-course h2 { display: flex; align-items: center; gap: 9px; font-size: 0.95rem; font-weight: 800; line-height: 1.3; padding: 0 4px; min-width: 0; }
 .l-course h2 .c-t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -152,6 +154,7 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
 .l-prose p + p { margin-top: calc(var(--r-lh) * 0.55em); }
 /* citations: a small number that never breaks the line; the source shows on hover or focus */
 .l-cite { position: relative; display: inline-block; vertical-align: super; line-height: 1; margin-left: 1px; padding: 0 2px; font-family: var(--font-ui); font-size: 0.62em; font-weight: 700; letter-spacing: 0; color: var(--a); text-decoration: none; border-radius: 4px; }
+.l-cite-sep { display: inline-block; vertical-align: super; line-height: 1; font-size: 0.62em; color: var(--a); }
 .l-cite:hover, .l-cite:focus-visible { background: var(--a-soft); }
 .l-cite::after {
   content: attr(data-title); position: absolute; left: 50%; bottom: calc(100% + 8px); width: max-content; max-width: 260px; z-index: 5; pointer-events: none;

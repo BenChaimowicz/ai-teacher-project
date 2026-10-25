@@ -43,9 +43,18 @@ type ProseProps = { text: string; sources: Map<number, NumberedSource>; onCite: 
 function Prose({ text, sources, onCite }: ProseProps) {
   return (
     <>
-      {text.split(/(\[\d+\])/g).map((part, index) => {
+      {text.replace(/\s+(?=\[\d+\])/g, "").split(/(\[\d+\])/g).map((part, index, parts) => {
         const match = /^\[(\d+)\]$/.exec(part);
-        if (!match) return <span key={index}>{part}</span>;
+        if (!match) {
+          if (part === "" && index > 0 && index < parts.length - 1) {
+            return (
+              <span key={index} className="l-cite-sep" aria-hidden="true">
+                ,
+              </span>
+            );
+          }
+          return <span key={index}>{part}</span>;
+        }
         const n = Number(match[1]);
         const source = sources.get(n);
         return (

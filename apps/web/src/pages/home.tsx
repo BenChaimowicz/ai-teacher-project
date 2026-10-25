@@ -225,7 +225,7 @@ function TodayStrip({ lessonsDone }: { lessonsDone: number }) {
 function NeedsCard({ row }: { row: Row }) {
   const copy = needsCopy(row.item.status);
   const tiles: LinkTile[] = row.item.href
-    ? [{ to: row.item.href, label: copy.action, description: copy.hint, icon: copy.retry ? <RefreshCw /> : <ArrowRight />, tone: "primary" }]
+    ? [{ to: row.item.href, label: copy.action, description: copy.hint, icon: copy.retry ? <RefreshCw /> : <ArrowRight />, tone: copy.retry ? "primary" : "default" }]
     : [];
   return (
     <div className="k-ccard l-needs">
