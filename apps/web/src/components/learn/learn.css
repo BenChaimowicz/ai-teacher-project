@@ -153,8 +153,8 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
 .l-prose h2 .sec-n { font-family: var(--font-code); font-size: 0.7rem; font-weight: 500; color: var(--a); padding: 2px 6px; border-radius: 5px; background: var(--a-soft); flex: none; }
 .l-prose p + p { margin-top: calc(var(--r-lh) * 0.55em); }
 /* citations: a small number that never breaks the line; the source shows on hover or focus */
-.l-cite { position: relative; display: inline-block; vertical-align: super; line-height: 1; margin-left: 1px; padding: 0 2px; font-family: var(--font-ui); font-size: 0.62em; font-weight: 700; letter-spacing: 0; color: var(--a); text-decoration: none; border-radius: 4px; }
-.l-cite-sep { display: inline-block; vertical-align: super; line-height: 1; font-size: 0.62em; color: var(--a); }
+.l-cite { position: relative; display: inline; vertical-align: super; line-height: 1; margin-left: 1px; padding: 0 2px; font-family: var(--font-ui); font-size: 0.62em; font-weight: 700; letter-spacing: 0; color: var(--a); text-decoration: none; border-radius: 4px; }
+.l-cite-sep { display: inline; vertical-align: super; line-height: 1; font-size: 0.62em; color: var(--a); }
 .l-cite:hover, .l-cite:focus-visible { background: var(--a-soft); }
 .l-cite::after {
   content: attr(data-title); position: absolute; left: 50%; bottom: calc(100% + 8px); width: max-content; max-width: 260px; z-index: 5; pointer-events: none;
