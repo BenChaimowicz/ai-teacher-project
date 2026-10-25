@@ -90,7 +90,7 @@ Lines are one or two short sentences: kind, low-key, never childish or chatty. U
 | `logoMarkup`, `cappedNibblesMarkup` | `brand-marks.ts` | SVG strings behind `Logo`, `Loader` and the favicon. |
 | `PALETTES`, `PaletteKey`, `usePalette()`, `applyPalette(key)`, `initPalette()`, `readPalette()` | `theme.ts` | `data-theme` on `<html>`, saved in localStorage; the favicon follows. |
 | `cheer(el, text?)`, `confetti(x, y, opts?)`, `confettiAt(el, opts?)`, `prefersReducedMotion()` | `cheer.ts` | Rewards: a small burst plus a floating "✓ text" chip. Keep it to real moments (lesson read, right answer, course done). |
-| `CourseListItem`, `CourseListStatus`, `LibraryItem`, `toCourseListItem(item)`, `sidebarCourses(items)` | `course-list.ts` | Maps `/api/library` rows to plain words: `learning`, `making`, `needs`, `done`, `stopped`. Glossary statuses stay in code. |
+| `CourseListItem`, `CourseListStatus`, `LibraryItem`, `toCourseListItem(item)`, `sidebarCourses(items)`, `notifyLibraryChanged()` | `course-list.ts` | Maps `/api/library` rows to plain words: `learning`, `making`, `needs`, `done`, `stopped`. Glossary statuses stay in code. The sidebar list reloads on navigation, on window focus, every 5 s while a course is being made or a Course Request is open, and when a screen calls `notifyLibraryChanged()` after an action that changes a status. |
 | `DAILY_GOAL_MINUTES`, `addStudyMinutes(n)`, `readActivity()`, `ActivitySummary` | `study-activity.ts` | Local streak and minutes for the companion card. |
 
 ## Rules for screens
