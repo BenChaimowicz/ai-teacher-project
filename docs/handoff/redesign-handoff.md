@@ -7,7 +7,7 @@ Written 2026-10-25, at the end of a long session, so a new session (on another c
 | Ticket | Branch | PR | State |
 | --- | --- | --- | --- |
 | SEN-52 Redesign: inspiration and direction | `yardenfarag/sen-52-redesign-inspiration-and-direction` | #26 → `main` | Done apart from the ACs listed in §5. Waiting for Ben's review. |
-| SEN-86 Redesign: design system and app shell | `yardenfarag/sen-86-redesign-design-system-and-app-shell` (stacked on SEN-52) | draft PR → SEN-52 branch | **In progress.** Tokens, components and shell are in. `tsc` and `vite build` pass. Not yet checked visually, and e2e hasn't been run. |
+| SEN-86 Redesign: design system and app shell | `yardenfarag/sen-86-redesign-design-system-and-app-shell` (stacked on SEN-52) | #27 → SEN-52 branch | **Done** (2026-10-25, second session): reference page, contract README, visual pass, e2e 16/16, typecheck and unit tests pass. Ready for review. |
 | SEN-87 Rebuild the make-a-Course screens (includes SEN-56) | not started | — | Waiting on SEN-86. |
 | SEN-88 Rebuild the learning screens | not started | — | Waiting on SEN-86. |
 
@@ -124,7 +124,7 @@ Superseded: `01`, `02`, `03` (kept for comparison).
 - **Favicon:** `public/nibbles-logo.svg`. Check that the palette-following favicon is wired in.
 - **Existing pages** re-skinned only as far as needed to sit in the shell: `study.tsx`, `course-complete.tsx`, `course-request-control.tsx`, `confirm-dialog.tsx`. Behaviour and API calls are unchanged.
 
-**Left to do for SEN-86:**
+**Left to do for SEN-86:** all done in the second session (commits `b2df95a`, `27a2c76`, `4da8052`). Kept for the record:
 
 1. **Component reference page:** `pages/dev-components.tsx` at `/dev/components` is a placeholder. It should show every component in every state, plus the palette picker.
 2. **Contract README:** write `apps/web/src/components/README.md` (component names, props, file paths). This is the contract for the SEN-87 and SEN-88 agents.
@@ -147,6 +147,13 @@ Superseded: `01`, `02`, `03` (kept for comparison).
 7. **Finish the PR:** mark it ready, against the SEN-52 branch.
 
 **SEN-86 out of scope:** rebuilding flows (SEN-87/88), reading modes, the conversational profile, backend or schema changes, and LLM-picked course icons (a follow-up).
+
+**Found in the visual pass, worth knowing for SEN-87/88:**
+
+- `.k-tile`'s entrance animation used fill `both`, which held `opacity`/`transform` and silently broke hover, locked-group dimming and disabled tiles. Entrance animations on elements that later change state must use `backwards`.
+- `--faint` is now `#908ea1` (AA on `--panel` in every palette).
+- `e2e/run.ts` now works on Windows (pnpm is spawned through a shell). Docker Desktop must be running.
+- `confirmedRequest()` in `e2e/tests/fixture.ts` resets the database; use `addWaitingRequests(n)` to add more.
 
 ## 5. SEN-52 acceptance criteria not met (listed in PR #26)
 
