@@ -344,7 +344,7 @@ export type OpsModelEndpoint = {
 
 /** One configured model role and every host that could serve it. */
 export type OpsSetupModel = {
-  role: "generator" | "generator_fallback" | "judge" | "judge_fallback";
+  role: "generator" | "generator_fallback" | "lesson_generator" | "lesson_generator_fallback" | "judge" | "judge_fallback";
   modelId: string;
   /** Hosts we ask OpenRouter to try first, in order. Empty = OpenRouter chooses. */
   preferredProviders: string[];

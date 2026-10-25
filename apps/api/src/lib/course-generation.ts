@@ -30,6 +30,7 @@ import {
   lessonEvidence,
   LessonUnresearchableError,
   ReadingFailedError,
+  type CheckedReading,
   type PriorLesson,
   type ReadingGenerator,
 } from "./reading-generation.ts";
@@ -262,17 +263,25 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
           const { lesson, judge, rejectedSources, authorModelIds, judgeModelId } = await withPipelineEvent("reading", {
             label: slot.title, detail: { slotId: slot.id, position },
           }, async (step) => {
-            const checked = await generator.generate({
-              courseTitle: approved.blueprint.courseTitle,
-              learningGoal: request.learningGoal,
-              slot,
-              priorLessons: [...priorLessons],
-              profile,
-              packs,
-            });
+            let checked: CheckedReading;
+            try {
+              checked = await generator.generate({
+                courseTitle: approved.blueprint.courseTitle,
+                learningGoal: request.learningGoal,
+                slot,
+                priorLessons: [...priorLessons],
+                profile,
+                packs,
+              });
+            } catch (error) {
+              // Rejected drafts are saved nowhere else, so the event keeps every draft, edit, and verdict, pass or fail.
+              if (error instanceof ReadingFailedError) step.setDetail({ rejectedSources: error.rejectedSources, rounds: error.rounds });
+              throw error;
+            }
             step.setDetail({
               repairs: checked.repairs, judgePass: checked.judge.pass, rejectedSources: checked.rejectedSources.length,
               authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
+              rounds: checked.rounds,
             });
             return checked;
           });

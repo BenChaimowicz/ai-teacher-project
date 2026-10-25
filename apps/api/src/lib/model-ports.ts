@@ -29,6 +29,8 @@ export type ModelPortsOptions = {
   config?: ModelConfig;
   transport?: StructuredTransport;
   log?: ModelPortsLog;
+  /** Which models write: the Generator pair, or the Lesson pair for Readings and Quizzes (ADR 0018). */
+  authors?: "generator" | "lesson";
 };
 
 /** Every Judge call reasons at high effort unless the request sets its own (ADR 0010). */
@@ -67,40 +69,47 @@ async function attempt<T>(role: ModelCallFrame["role"], attempts: Attempt[], cal
 /**
  * The primary model twice, then the fallback once, skipping any model the caller rules out.
  * @param primary - The configured model, with its preferred hosts
- * @param fallback - The configured fallback; its hosts are left to OpenRouter
+ * @param fallback - The configured fallback, with its preferred hosts, if any
  * @param excluded - Models that may not make this call
  */
-function attempts(primary: Attempt, fallback: string, excluded: readonly string[] = []): Attempt[] {
+function attempts(primary: Attempt, fallback: Attempt | null, excluded: readonly string[] = []): Attempt[] {
   const allowed = (modelId: string) => !excluded.some((author) => author.trim() === modelId.trim());
   const list = allowed(primary.modelId) ? [primary, primary] : [];
-  if (fallback.trim() && fallback.trim() !== primary.modelId.trim() && allowed(fallback)) list.push({ modelId: fallback });
+  if (fallback?.modelId.trim() && fallback.modelId.trim() !== primary.modelId.trim() && allowed(fallback.modelId)) list.push(fallback);
   return list;
 }
 
 /**
  * Creates the domain ports backed by one transport, without making provider calls. `fallbackGenerator` is the
- * configured second author, for steps the spec repeats with another model after a failed check.
+ * configured second author, for steps the spec repeats with another model after a failed check. With
+ * `authors: "lesson"`, the two authors are the Lesson pair (ADR 0018).
  */
 export function createModelPorts(options: ModelPortsOptions = {}): { generator: Generator; fallbackGenerator: Generator; judge: Judge } {
   const config = options.config ?? loadModelConfig();
   const transport = options.transport ?? createTrackedTransport();
   const log = options.log ?? console;
+  const [primaryModel, fallbackModel] = options.authors === "lesson"
+    ? [config.lessonGeneratorModel, config.lessonGeneratorFallbackModel]
+    : [config.generatorModel, config.generatorFallbackModel];
+  // The preferred hosts were measured for the Generator model, so they go with that model in whichever role it writes.
+  const author = (modelId: string): Attempt => ({
+    modelId, ...(modelId.trim() === config.generatorModel.trim() ? { providerOrder: config.generatorProviderOrder } : {}),
+  });
   return {
     generator: {
-      modelId: config.generatorModel,
+      modelId: primaryModel,
       /** Sends structured authoring work through the shared transport. */
       generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
-        const primary = { modelId: config.generatorModel, providerOrder: config.generatorProviderOrder };
-        return attempt("generator", attempts(primary, config.generatorFallbackModel),
+        return attempt("generator", attempts(author(primaryModel), author(fallbackModel)),
           (next) => transport.complete(next.modelId, request, next.providerOrder), log);
       },
     },
     fallbackGenerator: {
-      modelId: config.generatorFallbackModel,
-      /** The provider order names the primary author's hosts, so the fallback uses default routing. */
+      modelId: fallbackModel,
+      /** Makes the call twice at most on its own model: a second author is already the fallback. */
       generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
-        return attempt("fallback_generator", attempts({ modelId: config.generatorFallbackModel }, ""),
-          (next) => transport.complete(next.modelId, request), log);
+        return attempt("fallback_generator", attempts(author(fallbackModel), null),
+          (next) => transport.complete(next.modelId, request, next.providerOrder), log);
       },
     },
     judge: {
@@ -108,7 +117,7 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
       /** Refuses self-judgment before any provider call or spend. */
       async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
         const { authorModelIds, ...structured } = request;
-        const allowed = attempts({ modelId: config.judgeModel }, config.judgeFallbackModel, authorModelIds);
+        const allowed = attempts({ modelId: config.judgeModel }, { modelId: config.judgeFallbackModel }, authorModelIds);
         if (authorModelIds.length === 0 || authorModelIds.some((author) => !author.trim()) || allowed.length === 0) {
           throw new Error("[model-ports: judge] Judge must use a different model from the author");
         }

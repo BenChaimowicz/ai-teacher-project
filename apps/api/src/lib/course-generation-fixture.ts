@@ -52,6 +52,7 @@ export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGenerati
           repairs: 0,
           authorModelIds: ["fixture/author"],
           judgeModelId: "fixture/judge",
+          rounds: [],
           rejectedSources: [],
           lesson: {
             slotId: slot.id, teachingMethod: "reading", title: slot.title, lessonGoal: slot.lessonGoal,

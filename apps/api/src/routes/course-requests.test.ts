@@ -72,8 +72,16 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
     select: (fields?: Record<string, PgColumn>) => ({
       from: (table: unknown) => ({
         where: (condition: SQL) => {
-          const result = table === courseRequests ? rows.filter((row) => matches(row, condition)).map((row) => project(row, fields)) : [];
-          return Object.assign(Promise.resolve(result), { limit: async (count: number) => result.slice(0, count) });
+          const matched = table === courseRequests ? rows.filter((row) => matches(row, condition)) : [];
+          const result = matched.map((row) => project(row, fields));
+          return Object.assign(Promise.resolve(result), {
+            limit: async (count: number) => result.slice(0, count),
+            /** Supports only the newest-first order the Library asks for. */
+            orderBy: async (...order: SQL[]) => {
+              assert.match(dialect.sqlToQuery(order[0]!).sql, /"(created|published)_at" desc/);
+              return [...matched].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map((row) => project(row, fields));
+            },
+          });
         },
       }),
     }),
@@ -202,6 +210,23 @@ test("Saved Course Request can be reopened from Library and Open items", async (
     const reopened = await app.inject({ method: "GET", url: `/api/course-requests/${courseRequest.id}` });
     assert.equal(reopened.statusCode, 200);
     assert.deepEqual(reopened.json(), { courseRequest });
+  } finally {
+    await app.close();
+  }
+});
+
+test("Library and Open items list the newest Course Request first, so a repeated subject opens the latest one", async () => {
+  const { app, rows } = await testApp();
+  try {
+    for (const learningGoal of ["The oldest attempt.", "The middle attempt.", "The newest attempt."]) {
+      await app.inject({ method: "POST", url: "/api/course-requests", payload: { subject: "Norse mythology", learningGoal } });
+    }
+    // Saved out of order, as rows come back from Postgres without an ORDER BY.
+    rows.forEach((row, index) => { row.createdAt = new Date(Date.UTC(2026, 9, 24, 16, [5, 1, 9][index])); });
+    for (const url of ["/api/library", "/api/open-items"]) {
+      const items = (await app.inject({ method: "GET", url })).json().items as { learningGoal: string }[];
+      assert.deepEqual(items.map((item) => item.learningGoal), ["The newest attempt.", "The oldest attempt.", "The middle attempt."], url);
+    }
   } finally {
     await app.close();
   }

@@ -134,6 +134,8 @@ export function tryLabel(attempt: number): string {
 export const SETUP_ROLE_LABEL: Record<string, string> = {
   generator: "Generator",
   generator_fallback: "Fallback Generator",
+  lesson_generator: "Lesson Generator",
+  lesson_generator_fallback: "Fallback Lesson Generator",
   judge: "Judge",
   judge_fallback: "Fallback Judge",
 };

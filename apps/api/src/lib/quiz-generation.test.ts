@@ -225,3 +225,28 @@ test("The author may not judge its own Quiz", async () => {
     /Judge must use a different model/,
   );
 });
+
+test("When the author's repairs run out, the fallback author writes a fresh Quiz with its own repairs", async () => {
+  const ambiguous = { pass: false, failedChecks: ["single_correct_answer"], reasons: ["Item 2 has two right options."] };
+  const { generator, calls } = scriptedGenerator(authored());
+  const fallback = scriptedGenerator(authored());
+  const fallbackGenerator: Generator = {
+    modelId: "fixture/fallback",
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
+      return { ...(await fallback.generator.generateStructured(request)), modelId: "fixture/fallback" };
+    },
+  };
+  const { judge, calls: judgeCalls } = scriptedJudge(ambiguous, ambiguous, ambiguous, ambiguous, PASS);
+  const checked = await createQuizGenerator({ generator, fallbackGenerator, judge }).generate(INPUT);
+
+  assert.equal(calls.length, 3);
+  assert.equal(fallback.calls.length, 2, "A fresh draft and one repair.");
+  assert.equal((fallback.calls[0]!.input as { revision?: unknown }).revision, undefined, "The fallback does not repair the failed Quiz.");
+  assert.deepEqual(judgeCalls.at(-1)!.authorModelIds, ["fixture/fallback"]);
+  assert.deepEqual(checked.authorModelIds, ["fixture/fallback"]);
+  assert.equal(checked.repairs, 1);
+
+  const failing = scriptedJudge(ambiguous);
+  await assert.rejects(createQuizGenerator({ generator, fallbackGenerator, judge: failing.judge }).generate(INPUT), QuizFailedError);
+  assert.equal(failing.calls.length, 6, "Three Quizzes from each author, then the Course fails.");
+});

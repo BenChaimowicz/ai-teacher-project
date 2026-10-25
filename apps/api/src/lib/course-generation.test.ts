@@ -65,6 +65,7 @@ function recordingGenerator(fail = false) {
         repairs: 0,
         authorModelIds: ["fixture/author"],
         judgeModelId: "fixture/judge",
+        rounds: [],
         rejectedSources: [{ sourceId: "src_bbbbbbbbbb", url: "https://shop.example/blog", reason: "A shop's blog." }],
         lesson: {
           slotId: input.slot.id, teachingMethod: "reading", title: input.slot.title, lessonGoal: input.slot.lessonGoal,

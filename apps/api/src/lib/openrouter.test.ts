@@ -242,21 +242,24 @@ test("An invalid structured response records whether it was unparseable, off-sch
   }
 });
 
-/** Transport answering from a script of outcomes, one per call, recording which model each call went to. */
+/** Transport answering from a script of outcomes, one per call, recording which model and hosts each call went to. */
 function scriptedTransport(...outcomes: (ModelError | number)[]) {
   const models: string[] = [];
+  const hosts: (string[] | undefined)[] = [];
   const transport: StructuredTransport = {
-    async complete<T>(modelId: string, request: StructuredRequest<T>) {
+    async complete<T>(modelId: string, request: StructuredRequest<T>, providerOrder?: string[]) {
       models.push(modelId);
+      hosts.push(providerOrder);
       const outcome = outcomes.shift();
       if (outcome instanceof ModelError) throw outcome;
       return request.parse({ score: outcome ?? 1 });
     },
   };
-  return { transport, models };
+  return { transport, models, hosts };
 }
 
 const PORTS_CONFIG = { generatorModel: "fixture/author", generatorFallbackModel: "fixture/fallback", generatorProviderOrder: [],
+  lessonGeneratorModel: "fixture/fallback", lessonGeneratorFallbackModel: "fixture/author",
   judgeModel: "fixture/judge", judgeFallbackModel: "fixture/fallback" };
 const quiet = { warn: () => {} };
 
@@ -306,4 +309,25 @@ test("The Judge never falls back to a model that wrote the artifact, and uses it
   const reviewer = createModelPorts({ config: PORTS_CONFIG, transport: primaryWrote.transport, log: quiet }).judge;
   assert.deepEqual(await reviewer.judge({ ...REQUEST, authorModelIds: ["fixture/judge"] }), { value: 0.5, modelId: "fixture/fallback" });
   assert.deepEqual(primaryWrote.models, ["fixture/fallback"]);
+});
+
+test("Lessons are written by the Lesson pair, and the Generator's preferred hosts go with its model in either role", async () => {
+  const config = { ...PORTS_CONFIG, generatorProviderOrder: ["alibaba"] };
+  const bad = () => new ModelError("invalid_output", { invalidCause: "unparseable" });
+  const lesson = scriptedTransport(bad(), bad(), 0.5, 0.5);
+  const ports = createModelPorts({ config, transport: lesson.transport, log: quiet, authors: "lesson" });
+  assert.equal(ports.generator.modelId, "fixture/fallback");
+  assert.equal(ports.fallbackGenerator.modelId, "fixture/author");
+  assert.deepEqual(await ports.generator.generateStructured(REQUEST), { value: 0.5, modelId: "fixture/author" });
+  await ports.fallbackGenerator.generateStructured(REQUEST);
+  assert.deepEqual(lesson.models, ["fixture/fallback", "fixture/fallback", "fixture/author", "fixture/author"]);
+  assert.deepEqual(lesson.hosts, [undefined, undefined, ["alibaba"], ["alibaba"]]);
+
+  const other = scriptedTransport(0.5, 0.5);
+  const generatorPorts = createModelPorts({ config, transport: other.transport, log: quiet });
+  assert.equal(generatorPorts.generator.modelId, "fixture/author");
+  await generatorPorts.generator.generateStructured(REQUEST);
+  await generatorPorts.fallbackGenerator.generateStructured(REQUEST);
+  assert.deepEqual(other.models, ["fixture/author", "fixture/fallback"]);
+  assert.deepEqual(other.hosts, [["alibaba"], undefined]);
 });

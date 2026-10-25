@@ -46,7 +46,7 @@ describe("createSetupReader", () => {
     }) as unknown as typeof fetch;
     const read = createSetupReader({ env: { GENERATOR_MODEL: "a/x", GENERATOR_PROVIDER_ORDER: "alibaba" }, fetch: fakeFetch });
     const setup = await read();
-    assert.deepEqual(setup.models.map((model) => model.role), ["generator", "generator_fallback", "judge", "judge_fallback"]);
+    assert.deepEqual(setup.models.map((model) => model.role), ["generator", "generator_fallback", "lesson_generator", "lesson_generator_fallback", "judge", "judge_fallback"]);
     assert.equal(setup.models[0]!.modelId, "a/x");
     assert.deepEqual(setup.models[0]!.preferredProviders, ["alibaba"]);
     assert.equal(setup.models[0]!.endpoints?.[0]?.provider, "OpenAI");
