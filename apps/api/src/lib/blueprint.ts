@@ -75,7 +75,7 @@ Place quizzes by "quizCadence", counting the reading Lessons since the previous 
 - module_end: one quiz, as the last Lesson.
 The last Lesson is always a quiz. Each quiz assesses every reading since the previous quiz, and may also assess earlier readings it builds on.
 For each Lesson:
-- title: short and Learner-facing.
+- title: short and Learner-facing: the idea the Lesson teaches, in plain words a newcomer understands; never a label like "Introduction" or "Part 2".
 - lessonGoal: one Learner-facing sentence naming the capability this Lesson is for, phrased as what the Learner will be able to do. Distinct from the Learning Goal and from every other Lesson's goal. A quiz's goal names the capability the Learner shows by passing it (for example "Identify a chord's quality by ear and name it"), never the act of testing ("Test your knowledge of…", "Check your understanding of…").
 - objectives: the detailed checklist of capabilities the Lesson covers, each a short "can do" phrase. Every factual statement in an objective must be accurate; prefer wording that does not assert a disputable fact. A quiz lists 1-${MAX_QUIZ_OBJECTIVES} objectives, all taught in the readings it assesses.
 - topicTags: ${MIN_TOPIC_TAGS}-${MAX_TOPIC_TAGS} lowercase slugs (a-z, 0-9, hyphens) drawn from the objectives.
