@@ -102,8 +102,9 @@
   transition: transform 0.16s, box-shadow 0.2s, border-color 0.2s, opacity 0.25s, background 0.2s;
   animation: k-pop 0.38s var(--ease-pop) backwards; animation-delay: calc(var(--i, 0) * 55ms);
 }
-/* Extends the hit area below a lifted tile, so a pointer resting on its bottom edge can't flicker hover on and off. */
-.k-tile::before { content: ""; position: absolute; inset: 0 0 -4px 0; }
+/* Extends the hit area below a lifted tile, so a pointer resting on its bottom edge can't flicker hover on and off.
+   z-index -1 keeps it under the tile's content (e.g. a quiz radio), which must stay clickable. */
+.k-tile::before { content: ""; position: absolute; inset: 0 0 -4px 0; z-index: -1; }
 .k-tile:hover { transform: translateY(-2px); border-color: var(--a); box-shadow: 0 10px 26px -10px rgba(var(--a-rgb), 0.6), var(--glow); }
 .k-tile:active { transform: translateY(0) scale(0.98); }
 .k-tile:disabled { cursor: not-allowed; opacity: 0.45; background: var(--panel); border-style: dashed; border-color: var(--line); box-shadow: none; transform: none; }
