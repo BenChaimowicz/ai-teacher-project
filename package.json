@@ -4,7 +4,8 @@
   "type": "module",
   "packageManager": "pnpm@10.15.0",
   "scripts": {
-    "apps": "pnpm --parallel --filter @senoy/web --filter @senoy/api --filter @senoy/worker --filter @senoy/console dev",
+    "apps": "node scripts/apps.mjs",
+    "apps:plain": "pnpm --parallel --filter @senoy/web --filter @senoy/api --filter @senoy/worker --filter @senoy/console dev",
     "dash": "pnpm --filter @senoy/console dev",
     "check": "pnpm typecheck && pnpm test",
     "test:e2e": "pnpm --filter @senoy/e2e test",
