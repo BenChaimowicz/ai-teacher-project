@@ -6,6 +6,7 @@ import { QUIZ_METHOD_ID, type ReadingBody } from "@senoy/db/reading-lesson";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
 import { createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
+import { QUIZ_STYLE } from "./teaching-style.ts";
 
 /** Writing items and three explanation levels with reasoning can run past the transport's 60 s default. */
 const AUTHOR_TIMEOUT_MS = 5 * 60 * 1000;
@@ -73,12 +74,13 @@ Each item has four options with exactly one marked correct; write every option o
 Exactly one option is right. Distractors are plausible to a Learner who skimmed or misread the Lessons, but clearly wrong by the Lessons; never "all of the above", "none of the above", or a near-copy of the answer. Make each distractor a mistake a real Learner could make from the Lessons: two similar terms confused, a point credited to the wrong source, an order reversed, a neighbouring fact; never an event or property the Lessons give no hint of. Keep the four options alike in length and form so the answer does not stand out.
 Each item explains why the answer is right, at three levels: brief is one sentence; standard is two or three sentences; detailed also says why the tempting distractors are wrong. Every sentence of an explanation, including what it says about a distractor, restates the Lessons and adds nothing: no extra detail, cause, or inference, such as who made, knew, or used what, or what something consists of. Credit a point only to the source the Lessons credit it to, never to more. A distractor is wrong because of the Lesson statement it contradicts, never because of what other sources supposedly lack. When the Lessons only say what a distractor is instead, say that and stop. Give the options the ids opt1, opt2, opt3, and opt4. Options are shuffled after you write them, so to mention an option in an explanation write its id in braces in place of its text, like "{opt3} is the boiling point, not the freezing point"; the mention is replaced with the option's text, so do not also write the text. Never refer to an option by letter or position ("option A", "the third one"). Before saying why a distractor is wrong, check each part of it against the Lessons: when it mixes right and wrong parts, name the wrong part, and never call a right part wrong. Before you finish, reread every explanation and remove any claim you cannot point to in the Lessons.
 Ask about ideas rather than one sentence's wording where the Lessons allow it. No two items ask the same thing.
+${QUIZ_STYLE}
 If the input has "revision", an independent review rejected your previousDraft for the listed problems; items are numbered from 1. Rewrite the Quiz so every problem is fixed, and keep what was not criticised.`;
 
 const JUDGE_PROMPT = `You independently review one Quiz before it is saved. You did not write it.
 "lessons" are the only material a Learner studied before the Quiz. Judge against them, not your own knowledge. Fail a check only for a clear problem, not for style.
 - objective_coverage: an objective of the slot has no item that assesses it.
-- answerable_from_lessons: an item needs a fact the lessons do not state, or its keyed answer is not what the lessons say.
+- answerable_from_lessons: an item needs a fact the lessons do not state, or its keyed answer is not what the lessons say. A plainly invented situation in a prompt is fine when its keyed answer follows from the lessons alone.
 - single_correct_answer: by the lessons, an item's keyed option is wrong, or another option is also right or defensibly right.
 - plausible_distractors: a distractor is absurd, a joke, "all/none of the above", or so unlike the others that the answer is obvious.
 - explanation_support: an explanation states something the lessons do not support or contradicts the key.

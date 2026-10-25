@@ -4,6 +4,7 @@ import type { BlueprintSlot } from "@senoy/db/blueprint";
 import { parseQuizBody } from "@senoy/db/quiz";
 import type { Generator, Judge, StructuredRequest, ModelReply } from "./model-ports.ts";
 import { createQuizGenerator, QuizFailedError, type AssessedLesson, type QuizInput } from "./quiz-generation.ts";
+import { QUIZ_STYLE } from "./teaching-style.ts";
 
 const READING_SLOT: BlueprintSlot = {
   id: "slot1", method: "reading", title: "The World Tree", lessonGoal: "Describe how Yggdrasil connects the Nine Worlds.",
@@ -115,6 +116,16 @@ test("The author and Judge read the assessed Lesson without Citation markers; th
   assert.deepEqual(shown.lessons, told.lessons);
   assert.equal(shown.items.length, 6);
   assert.equal(shown.items[0]!.options[shown.items[0]!.key], "Right 1");
+});
+
+test("The author writes to the style guide, and the Judge accepts an invented situation the Lessons answer", async () => {
+  const { generator, calls } = scriptedGenerator(authored());
+  const { judge, calls: judgeCalls } = scriptedJudge();
+  await createQuizGenerator({ generator, judge }).generate(INPUT);
+
+  assert.ok(calls[0]!.systemPrompt.includes(QUIZ_STYLE));
+  assert.match(judgeCalls[0]!.systemPrompt, /invented situation in a prompt is fine when its keyed answer follows from the lessons alone/);
+  assert.doesNotMatch(QUIZ_STYLE, /norse|yggdrasil/i, "Prompts stay subject-neutral (ADR 0011).");
 });
 
 test("A Judge failure is repaired once: the author sees its draft and the reasons", async () => {
