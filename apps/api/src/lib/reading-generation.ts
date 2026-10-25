@@ -43,8 +43,21 @@ export type ReadingInput = {
 export type RejectedSource = { sourceId: string; url: string; reason: string };
 
 /**
- * A reading Lesson that passed the Code checks and the Judge, how many repairs it took, which Sources were vetted out,
- * every model that wrote a draft of it, and the model that passed it (ADR 0015).
+ * One draft or repair of a Reading, as its Pipeline Event records it: who wrote it, what it was, and what failed it.
+ * A first draft keeps its sections with Source ID markers; a repair keeps its edits and the ones that matched nothing.
+ * `problems` is empty for the round that passed.
+ */
+export type ReadingRound = {
+  modelId: string;
+  draft?: AuthoredSection[];
+  edits?: RepairEdit[];
+  skipped?: string[];
+  problems: string[];
+};
+
+/**
+ * A reading Lesson that passed the Code checks and the Judge, how many repairs its passing draft took, which Sources
+ * were vetted out, every model that wrote a draft of it, the model that passed it (ADR 0015), and every round written.
  */
 export type CheckedReading = {
   lesson: ReadingLessonDraft;
@@ -53,21 +66,24 @@ export type CheckedReading = {
   rejectedSources: RejectedSource[];
   authorModelIds: string[];
   judgeModelId: string;
+  rounds: ReadingRound[];
 };
 
-/** The reading still failed system validation after its repairs. */
+/** The reading still failed system validation after its repairs, and after the fallback author's when there is one. */
 export class ReadingFailedError extends Error {
   /**
    * @param codeFailures - Code check problems; empty when only the Judge failed
    * @param judge - Judge verdict, when the Judge ran
    * @param lesson - The rejected Lesson, when one was written
    * @param rejectedSources - Sources vetted out before writing
+   * @param rounds - Every draft and repair written, by every author
    */
   constructor(
     public readonly codeFailures: string[],
     public readonly judge: JudgeResult | null,
     public readonly lesson: ReadingLessonDraft | null = null,
     public readonly rejectedSources: RejectedSource[] = [],
+    public readonly rounds: ReadingRound[] = [],
   ) {
     const reasons = codeFailures.length ? codeFailures : [...(judge?.failedChecks ?? []), ...(judge?.reasons ?? [])];
     super(`[reading-generation: generate] Reading Lesson failed ${codeFailures.length ? "Code" : "Judge"} checks || ${reasons.join(" || ")}`);
@@ -257,7 +273,7 @@ export function lessonEvidence(packs: SourcePack[]): Map<string, Evidence> {
 }
 
 /** Sections as the author wrote them, with Source ID markers still in the prose. */
-type AuthoredSection = { heading: string; paragraphs: string[] };
+export type AuthoredSection = { heading: string; paragraphs: string[] };
 
 /** What a repair attempt is told: its rejected draft, the numbering problems refer to, and the problems. */
 type Revision = { previousDraft: AuthoredSection[]; numberedSources: { n: number; sourceId: string }[]; problems: string[] };
@@ -369,22 +385,27 @@ export function numberCitations(sections: AuthoredSection[], evidence: Map<strin
 }
 
 /** Dependencies of the generator; omitted ports are created lazily from config. */
-export type ReadingGeneratorOptions = { generator?: Generator; judge?: Judge };
+export type ReadingGeneratorOptions = { generator?: Generator; fallbackGenerator?: Generator; judge?: Judge };
 
 /**
- * Creates a lazy reading generator: `generateCitedReading` (spec §5.4), then the Code checks, then one Judge pass.
+ * Creates a lazy reading generator: `generateCitedReading` (spec §5.4), then the Code checks, then one Judge pass, with
+ * repairs; when those run out, the fallback author writes a fresh draft with its own repairs (ADR 0017).
  * @param options - Injected ports; tests pass fixtures
  */
 export function createReadingGenerator(options: ReadingGeneratorOptions = {}): ReadingGenerator {
-  /** Resolves ports on first use. */
+  /** Resolves ports on first use. Tests that inject `generator` and `judge` get no fallback unless they inject one. */
   function ports() {
-    const created = options.generator && options.judge ? null : createModelPorts();
-    return { generator: options.generator ?? created!.generator, judge: options.judge ?? created!.judge };
+    const created = options.generator && options.judge ? null : createModelPorts({ authors: "lesson" });
+    return {
+      generator: options.generator ?? created!.generator,
+      fallbackGenerator: options.fallbackGenerator ?? created?.fallbackGenerator ?? null,
+      judge: options.judge ?? created!.judge,
+    };
   }
 
   return {
     async generate(input) {
-      const { generator, judge } = ports();
+      const { generator, fallbackGenerator, judge } = ports();
       if (generator.modelId.trim() === judge.modelId.trim()) {
         throw new Error("[reading-generation: generate] Judge must use a different model from the author");
       }
@@ -417,11 +438,6 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
         sourceId: source.sourceId, title: source.title, url: source.url, host: source.host, preferred: source.preferred, excerpts,
       }));
       const retrievalUrls = new Set(input.packs.flatMap((pack) => pack.sources.map((source) => source.url)));
-      let revision: Revision | null = null;
-      let failure: ReadingFailedError | null = null;
-      // A repair keeps what was not criticised, so every model that wrote a draft is an author of the next.
-      const authors = new Set<string>();
-
       const brief = {
         courseTitle: input.courseTitle,
         learningGoal: input.learningGoal,
@@ -430,88 +446,116 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
         profile: input.profile,
         sources,
       };
+      const rounds: ReadingRound[] = [];
 
-      for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
-        // The first attempt writes the Lesson; a repair returns edits to its previous draft and nothing else.
-        let authored: AuthoredSection[];
-        let author: string;
-        let missed = false;
-        let skipped: string[] = [];
-        if (!revision) {
-          ({ value: authored, modelId: author } = await generator.generateStructured({
-            systemPrompt: AUTHOR_PROMPT,
-            input: brief,
-            schemaName: "cited_reading",
-            timeoutMs: AUTHOR_TIMEOUT_MS,
+      /**
+       * Writes a first draft with `writer`, then repairs it within the budget (spec §6.1).
+       * @throws ReadingFailedError when the last repair still fails, carrying every round so far
+       */
+      async function writeWith(writer: Generator): Promise<CheckedReading> {
+        let revision: Revision | null = null;
+        let failure: ReadingFailedError | null = null;
+        // A repair keeps what was not criticised, so every model that wrote a draft is an author of the next.
+        const authors = new Set<string>();
+        for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
+          // The first attempt writes the Lesson; a repair returns edits to its previous draft and nothing else.
+          let authored: AuthoredSection[];
+          let author: string;
+          let missed = false;
+          let skipped: string[] = [];
+          let repairEdits: RepairEdit[] = [];
+          if (!revision) {
+            ({ value: authored, modelId: author } = await writer.generateStructured({
+              systemPrompt: AUTHOR_PROMPT,
+              input: brief,
+              schemaName: "cited_reading",
+              timeoutMs: AUTHOR_TIMEOUT_MS,
+              reasoningEffort: REASONING_EFFORT,
+              schema: AUTHOR_SCHEMA,
+              parse: parseAuthoredSections,
+            }) as ModelReply<AuthoredSection[]>);
+          } else {
+            const { value: edits, modelId }: ModelReply<RepairEdit[]> = await writer.generateStructured({
+              systemPrompt: REPAIR_PROMPT,
+              input: { ...brief, ...revision },
+              schemaName: "cited_reading_repair",
+              timeoutMs: AUTHOR_TIMEOUT_MS,
+              reasoningEffort: REASONING_EFFORT,
+              schema: REPAIR_SCHEMA,
+              parse: parseRepairEdits,
+            });
+            repairEdits = edits;
+            const repaired = applyRepairEdits(revision.previousDraft, edits);
+            authored = repaired.sections;
+            author = modelId;
+            missed = repaired.applied === 0;
+            skipped = repaired.skipped;
+          }
+          authors.add(author);
+          const round: ReadingRound = { modelId: author, ...(revision ? { edits: repairEdits, skipped } : { draft: authored }), problems: [] };
+          rounds.push(round);
+          const lesson: ReadingLessonDraft = {
+            slotId: slot.id,
+            teachingMethod: READING_METHOD_ID,
+            title: slot.title,
+            lessonGoal: slot.lessonGoal,
+            objectives: slot.objectives,
+            topicTags: slot.topicTags,
+            lineage: null,
+            ...numberCitations(authored, evidence),
+          };
+          const numberedSources = lesson.sources.map(({ n, sourceId }) => ({ n, sourceId }));
+
+          // A repair that changed nothing is not judged again: the next one gets the same problems and is told why, and
+          // the last real verdict stays the failure.
+          if (missed) {
+            round.problems = [NO_EDIT_APPLIED];
+            revision = { previousDraft: authored, numberedSources, problems: [NO_EDIT_APPLIED, ...revision!.problems.filter((problem) => problem !== NO_EDIT_APPLIED)] };
+            continue;
+          }
+          const codeFailures = readingCodeFailures(lesson, retrievalUrls);
+          if (codeFailures.length) {
+            round.problems = codeFailures;
+            failure = new ReadingFailedError(codeFailures, null, lesson, rejectedSources, rounds);
+            revision = { previousDraft: authored, numberedSources, problems: [...codeFailures, ...skippedEditsNote(skipped)] };
+            continue;
+          }
+
+          const { value: verdict, modelId: judgeModelId } = await judge.judge({
+            systemPrompt: JUDGE_PROMPT,
+            input: {
+              slot: { lessonGoal: slot.lessonGoal, objectives: slot.objectives },
+              priorLessons: input.priorLessons,
+              lesson: lesson.body,
+              sources: lesson.sources.map(({ n, sourceId, title, url, publisher }) => {
+                const { source, excerpts } = evidence.get(sourceId)!;
+                return { n, title, url, host: publisher, preferred: source.preferred, excerpts };
+              }),
+            },
+            schemaName: "reading_lesson_review",
+            timeoutMs: JUDGE_TIMEOUT_MS,
             reasoningEffort: REASONING_EFFORT,
-            schema: AUTHOR_SCHEMA,
-            parse: parseAuthoredSections,
-          }) as ModelReply<AuthoredSection[]>);
-        } else {
-          const { value: edits, modelId }: ModelReply<RepairEdit[]> = await generator.generateStructured({
-            systemPrompt: REPAIR_PROMPT,
-            input: { ...brief, ...revision },
-            schemaName: "cited_reading_repair",
-            timeoutMs: AUTHOR_TIMEOUT_MS,
-            reasoningEffort: REASONING_EFFORT,
-            schema: REPAIR_SCHEMA,
-            parse: parseRepairEdits,
+            schema: judgeSchema(READING_JUDGE_CHECKS),
+            parse: judgeParser(READING_JUDGE_CHECKS),
+            authorModelIds: [...authors],
           });
-          const repaired = applyRepairEdits(revision.previousDraft, edits);
-          authored = repaired.sections;
-          author = modelId;
-          missed = repaired.applied === 0;
-          skipped = repaired.skipped;
+          if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, rejectedSources, authorModelIds: [...authors], judgeModelId, rounds };
+          round.problems = verdict.reasons.length ? verdict.reasons : verdict.failedChecks;
+          failure = new ReadingFailedError([], verdict, lesson, rejectedSources, rounds);
+          revision = { previousDraft: authored, numberedSources, problems: [...(verdict.reasons.length ? verdict.reasons : verdict.failedChecks), ...skippedEditsNote(skipped)] };
         }
-        authors.add(author);
-        const lesson: ReadingLessonDraft = {
-          slotId: slot.id,
-          teachingMethod: READING_METHOD_ID,
-          title: slot.title,
-          lessonGoal: slot.lessonGoal,
-          objectives: slot.objectives,
-          topicTags: slot.topicTags,
-          lineage: null,
-          ...numberCitations(authored, evidence),
-        };
-        const numberedSources = lesson.sources.map(({ n, sourceId }) => ({ n, sourceId }));
-
-        // A repair that changed nothing is not judged again: the next one gets the same problems and is told why, and
-        // the last real verdict stays the failure.
-        if (missed) {
-          revision = { previousDraft: authored, numberedSources, problems: [NO_EDIT_APPLIED, ...revision!.problems.filter((problem) => problem !== NO_EDIT_APPLIED)] };
-          continue;
-        }
-        const codeFailures = readingCodeFailures(lesson, retrievalUrls);
-        if (codeFailures.length) {
-          failure = new ReadingFailedError(codeFailures, null, lesson, rejectedSources);
-          revision = { previousDraft: authored, numberedSources, problems: [...codeFailures, ...skippedEditsNote(skipped)] };
-          continue;
-        }
-
-        const { value: verdict, modelId: judgeModelId } = await judge.judge({
-          systemPrompt: JUDGE_PROMPT,
-          input: {
-            slot: { lessonGoal: slot.lessonGoal, objectives: slot.objectives },
-            priorLessons: input.priorLessons,
-            lesson: lesson.body,
-            sources: lesson.sources.map(({ n, sourceId, title, url, publisher }) => {
-              const { source, excerpts } = evidence.get(sourceId)!;
-              return { n, title, url, host: publisher, preferred: source.preferred, excerpts };
-            }),
-          },
-          schemaName: "reading_lesson_review",
-          timeoutMs: JUDGE_TIMEOUT_MS,
-          reasoningEffort: REASONING_EFFORT,
-          schema: judgeSchema(READING_JUDGE_CHECKS),
-          parse: judgeParser(READING_JUDGE_CHECKS),
-          authorModelIds: [...authors],
-        });
-        if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, rejectedSources, authorModelIds: [...authors], judgeModelId };
-        failure = new ReadingFailedError([], verdict, lesson, rejectedSources);
-        revision = { previousDraft: authored, numberedSources, problems: [...(verdict.reasons.length ? verdict.reasons : verdict.failedChecks), ...skippedEditsNote(skipped)] };
+        throw failure!;
       }
-      throw failure!;
+
+      try {
+        return await writeWith(generator);
+      } catch (error) {
+        // Repairs that did not converge are not a verdict on the evidence: the fallback author writes a fresh draft
+        // from the same Sources, with its own repair budget (ADR 0017).
+        const fallback = fallbackGenerator?.modelId.trim() && fallbackGenerator.modelId.trim() !== generator.modelId.trim() ? fallbackGenerator : null;
+        if (!(error instanceof ReadingFailedError) || !fallback) throw error;
+        return writeWith(fallback);
+      }
     },
   };
 }

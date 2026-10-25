@@ -292,3 +292,53 @@ test("The author never judges its own Lesson", async () => {
   await assert.rejects(createReadingGenerator({ generator, judge }).generate(INPUT), /different model/);
   assert.equal(calls.length, 0);
 });
+
+test("A failed Reading carries every round: the first draft's text, each repair's edits, and what failed each", async () => {
+  const miss = edits(["A sentence the draft never had.", "Anything."]);
+  const { generator } = scriptedGenerator(authored(), "fixture/author", TOUCH, miss);
+  const { judge } = scriptedJudge(UNSUPPORTED);
+  await assert.rejects(createReadingGenerator({ generator, judge }).generate(INPUT), (error: unknown) => {
+    assert.ok(error instanceof ReadingFailedError);
+    assert.deepEqual(error.rounds.map((round) => round.modelId), ["fixture/author", "fixture/author", "fixture/author"]);
+    assert.deepEqual(error.rounds[0]!.draft, authored().sections);
+    assert.deepEqual(error.rounds[1]!.edits, TOUCH.edits);
+    assert.deepEqual(error.rounds[2]!.skipped, ["A sentence the draft never had."]);
+    assert.deepEqual(error.rounds.map((round) => round.problems[0]), [UNSUPPORTED.reasons[0], UNSUPPORTED.reasons[0], error.rounds[2]!.problems[0]]);
+    assert.match(error.rounds[2]!.problems[0]!, /None of your edits changed previousDraft/);
+    return true;
+  });
+});
+
+test("When the author's repairs run out, the fallback author writes a fresh draft from the same Sources", async () => {
+  const { generator } = scriptedGenerator(authored(), "fixture/author", TOUCH);
+  const { generator: fallbackGenerator, calls: fallbackCalls } = scriptedGenerator(authored("Yggdrasil is the world tree [src_aaaaaaaaaa]."), "fixture/fallback");
+  const { judge, calls: judgeCalls } = scriptedJudge(UNSUPPORTED, "fixture/judge", UNSUPPORTED, UNSUPPORTED, PASS);
+  const checked = await createReadingGenerator({ generator, fallbackGenerator, judge }).generate(INPUT);
+
+  assert.deepEqual(fallbackCalls.map((call) => call.schemaName), ["cited_reading"], "A fresh draft, not a repair of the failed one.");
+  assert.equal((fallbackCalls[0]!.input as { previousDraft?: unknown }).previousDraft, undefined);
+  assert.equal((fallbackCalls[0]!.input as { sources: unknown[] }).sources.length, 2);
+  assert.deepEqual(judgeCalls.at(-1)!.authorModelIds, ["fixture/fallback"], "The failed drafts are not part of this Lesson.");
+  assert.deepEqual(checked.authorModelIds, ["fixture/fallback"]);
+  assert.equal(checked.repairs, 0);
+  assert.deepEqual(checked.rounds.map((round) => [round.modelId, round.problems.length]),
+    [["fixture/author", 1], ["fixture/author", 1], ["fixture/author", 1], ["fixture/fallback", 0]]);
+});
+
+test("The fallback author gets its own repairs, and its failure carries both authors' rounds", async () => {
+  const { generator } = scriptedGenerator(authored(), "fixture/author", TOUCH);
+  const { generator: fallbackGenerator, calls: fallbackCalls } = scriptedGenerator(authored(), "fixture/fallback", TOUCH);
+  const { judge } = scriptedJudge(UNSUPPORTED);
+  await assert.rejects(createReadingGenerator({ generator, fallbackGenerator, judge }).generate(INPUT), (error: unknown) =>
+    error instanceof ReadingFailedError && error.rounds.length === 6 && error.rounds.at(-1)!.modelId === "fixture/fallback");
+  assert.deepEqual(fallbackCalls.map((call) => call.schemaName), ["cited_reading", "cited_reading_repair", "cited_reading_repair"]);
+});
+
+test("A fallback that is the author's own model is not a second author", async () => {
+  const { generator, calls } = scriptedGenerator(authored(), "fixture/author", TOUCH);
+  const { generator: fallbackGenerator, calls: fallbackCalls } = scriptedGenerator(authored(), "fixture/author");
+  const { judge } = scriptedJudge(UNSUPPORTED);
+  await assert.rejects(createReadingGenerator({ generator, fallbackGenerator, judge }).generate(INPUT), ReadingFailedError);
+  assert.equal(calls.length, 3);
+  assert.equal(fallbackCalls.length, 0);
+});

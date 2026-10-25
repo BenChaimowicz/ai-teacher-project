@@ -62,7 +62,7 @@ TypeScript full-stack web app. One seeded Learner; no authentication. Every Lear
 
 Anthropic is not on the Generator or Judge path and is not a required secret. Claude remains off both paths.
 
-Optional server-only model overrides: `GENERATOR_MODEL`, `GENERATOR_FALLBACK_MODEL`, `JUDGE_MODEL`, and `JUDGE_FALLBACK_MODEL`. Defaults are resolved in the shared model configuration; a model change must preserve author/Judge independence. An invalid or incomplete reply is retried once on the same model, then once on the configured fallback; the Judge never falls back to a model that wrote the artifact (ADR 0015).
+Optional server-only model overrides: `GENERATOR_MODEL`, `GENERATOR_FALLBACK_MODEL`, `LESSON_GENERATOR_MODEL`, `LESSON_GENERATOR_FALLBACK_MODEL`, `JUDGE_MODEL`, and `JUDGE_FALLBACK_MODEL`. Defaults are resolved in the shared model configuration; a model change must preserve author/Judge independence. An invalid or incomplete reply is retried once on the same model, then once on the configured fallback; the Judge never falls back to a model that wrote the artifact (ADR 0015).
 
 **Conceptual records (not SQL).**
 
@@ -369,6 +369,8 @@ Domain **Generator** port. Model IDs live in shared server configuration, not on
 | --- | --- | --- |
 | Leading writer | `deepseek/deepseek-v4-pro` | Shared strict JSON-schema Chat Completions transport |
 | Fallback writer | `openai/gpt-6.1-sol` | Same transport; selection belongs to the calling generation stage |
+| Lesson writer (Readings and Quizzes) | `openai/gpt-6.1-sol` | Same transport (ADR 0018) |
+| Lesson fallback writer | `deepseek/deepseek-v4-pro` | Writes a fresh draft once the Lesson writer's repairs run out (ADR 0017) |
 
 Claude is not a Generator fallback. No direct DeepSeek/OpenAI text adapters are required. Structured calls use `response_format: json_schema`, strict mode, `provider.require_parameters: true`, application-side output validation, and no search tools or plugins. Invalid output, refusal, interruption, or timeout is a provider failure, never a passing validity decision.
 
@@ -471,7 +473,7 @@ type JudgeResult = {
 
 If Test-course protocol finds missed factual errors, bump Judge SKU in config (`luna` → `gpt-6.1-sol`) without changing the pairing rule — never to the authoring model.
 
-**Repair budget.** Two regenerations per slot after the first failed validate (initial generate + two repairs). A Reading repair edits only the passages the failed checks name and keeps every other sentence verbatim, so a repair cannot add new problems elsewhere in the Lesson (ADR 0016). A third failure on that slot is terminal: keep unpublished Lessons before it; Course Request fails; Retry refreshes that slot’s budget on the same approved Blueprint; Revise request discards unpublished Lessons. No Course-wide repair pool. Retrieval’s 2–3 query reformulations and the one media vision repair stay inside generate and do not draw on this number. A Judge **fail** consumes a regeneration of the artifact, not a second Judge SKU, unless the Judge call itself errored.
+**Repair budget.** Two regenerations per slot after the first failed validate (initial generate + two repairs). A Reading repair edits only the passages the failed checks name and keeps every other sentence verbatim, so a repair cannot add new problems elsewhere in the Lesson (ADR 0016). A third failure on a Reading or Quiz slot sends it to the Lesson fallback writer, which writes a fresh draft from the same Sources or Lessons with its own two repairs (ADR 0017); only a failure after those is terminal: keep unpublished Lessons before it; Course Request fails; Retry refreshes that slot’s budget on the same approved Blueprint; Revise request discards unpublished Lessons. No Course-wide repair pool. Retrieval’s 2–3 query reformulations and the one media vision repair stay inside generate and do not draw on this number. A Judge **fail** consumes a regeneration of the artifact, not a second Judge SKU, unless the Judge call itself errored.
 
 ### 6.2 Blueprint (before Learner review)
 

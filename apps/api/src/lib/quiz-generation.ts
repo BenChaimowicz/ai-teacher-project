@@ -38,7 +38,7 @@ export type QuizInput = {
 /** A Quiz that passed the Code checks and the Judge, how many repairs it took, and its models (ADR 0015). */
 export type CheckedQuiz = { lesson: QuizLessonDraft; judge: JudgeResult; repairs: number; authorModelIds: string[]; judgeModelId: string };
 
-/** The Quiz still failed system validation after its repairs. */
+/** The Quiz still failed system validation after its repairs, and after the fallback author's when there is one. */
 export class QuizFailedError extends Error {
   /**
    * @param codeFailures - Code check problems; empty when only the Judge failed
@@ -249,7 +249,7 @@ function lessonsForPrompt(assessed: AssessedLesson[]) {
 type Revision = { previousDraft: AuthoredItem[]; problems: string[] };
 
 /** Dependencies of the generator; omitted ports are created lazily from config. */
-export type QuizGeneratorOptions = { generator?: Generator; judge?: Judge };
+export type QuizGeneratorOptions = { generator?: Generator; fallbackGenerator?: Generator; judge?: Judge };
 
 /**
  * Creates a lazy Quiz generator: `generateStructured` from the assessed Lessons (spec §5.4), then the Code checks, then
@@ -257,95 +257,115 @@ export type QuizGeneratorOptions = { generator?: Generator; judge?: Judge };
  * @param options - Injected ports; tests pass fixtures
  */
 export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGenerator {
-  /** Resolves ports on first use. */
+  /** Resolves ports on first use. Tests that inject `generator` and `judge` get no fallback unless they inject one. */
   function ports() {
-    const created = options.generator && options.judge ? null : createModelPorts();
-    return { generator: options.generator ?? created!.generator, judge: options.judge ?? created!.judge };
+    const created = options.generator && options.judge ? null : createModelPorts({ authors: "lesson" });
+    return {
+      generator: options.generator ?? created!.generator,
+      fallbackGenerator: options.fallbackGenerator ?? created?.fallbackGenerator ?? null,
+      judge: options.judge ?? created!.judge,
+    };
   }
 
   return {
     async generate(input) {
-      const { generator, judge } = ports();
+      const { generator, fallbackGenerator, judge } = ports();
       if (generator.modelId.trim() === judge.modelId.trim()) {
         throw new Error("[quiz-generation: generate] Judge must use a different model from the author");
       }
       const { slot } = input;
       const lessons = lessonsForPrompt(input.assessed);
       const checkpointed = new Set(input.assessed.map((lesson) => lesson.slotId));
-      let revision: Revision | null = null;
-      let failure: QuizFailedError | null = null;
-      // A repair keeps what was not criticised, so every model that wrote a draft is an author of the next.
-      const authors = new Set<string>();
 
-      for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
-        const { value: authored, modelId: author }: ModelReply<AuthoredItem[]> = await generator.generateStructured({
-          systemPrompt: AUTHOR_PROMPT,
-          input: {
-            courseTitle: input.courseTitle,
-            learningGoal: input.learningGoal,
-            slot: { title: slot.title, lessonGoal: slot.lessonGoal, objectives: slot.objectives },
-            lessons,
-            profile: input.profile,
-            ...(revision ? { revision } : {}),
-          },
-          schemaName: "quiz_items",
-          timeoutMs: AUTHOR_TIMEOUT_MS,
-          reasoningEffort: REASONING_EFFORT,
-          schema: authorSchema(slot.objectives),
-          parse: parseAuthoredItems,
-        });
-        authors.add(author);
-        const lesson: QuizLessonDraft = {
-          slotId: slot.id,
-          teachingMethod: QUIZ_METHOD_ID,
-          title: slot.title,
-          lessonGoal: slot.lessonGoal,
-          objectives: slot.objectives,
-          topicTags: slot.topicTags,
-          lineage: null,
-          sources: [],
-          citations: [],
-          body: { items: placeOptions(authored) },
-        };
+      /**
+       * Writes a Quiz with `writer`, then regenerates it within the budget (spec §6.1).
+       * @throws QuizFailedError when the last regeneration still fails
+       */
+      const writeWith = async (writer: Generator): Promise<CheckedQuiz> => {
+        let revision: Revision | null = null;
+        let failure: QuizFailedError | null = null;
+        // A repair keeps what was not criticised, so every model that wrote a draft is an author of the next.
+        const authors = new Set<string>();
 
-        const targeted = new Set(authored.map((item) => item.objective));
-        const codeFailures = [
-          ...quizCodeFailures(lesson, input.slots, checkpointed),
-          ...mentionFailures(authored),
-          ...slot.objectives.filter((objective) => !targeted.has(objective)).map((objective) => `No item assesses the objective "${objective}".`),
-        ];
-        if (codeFailures.length) {
-          failure = new QuizFailedError(codeFailures, null, lesson);
-          revision = { previousDraft: authored, problems: codeFailures };
-          continue;
+        for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
+          const { value: authored, modelId: author }: ModelReply<AuthoredItem[]> = await writer.generateStructured({
+            systemPrompt: AUTHOR_PROMPT,
+            input: {
+              courseTitle: input.courseTitle,
+              learningGoal: input.learningGoal,
+              slot: { title: slot.title, lessonGoal: slot.lessonGoal, objectives: slot.objectives },
+              lessons,
+              profile: input.profile,
+              ...(revision ? { revision } : {}),
+            },
+            schemaName: "quiz_items",
+            timeoutMs: AUTHOR_TIMEOUT_MS,
+            reasoningEffort: REASONING_EFFORT,
+            schema: authorSchema(slot.objectives),
+            parse: parseAuthoredItems,
+          });
+          authors.add(author);
+          const lesson: QuizLessonDraft = {
+            slotId: slot.id,
+            teachingMethod: QUIZ_METHOD_ID,
+            title: slot.title,
+            lessonGoal: slot.lessonGoal,
+            objectives: slot.objectives,
+            topicTags: slot.topicTags,
+            lineage: null,
+            sources: [],
+            citations: [],
+            body: { items: placeOptions(authored) },
+          };
+
+          const targeted = new Set(authored.map((item) => item.objective));
+          const codeFailures = [
+            ...quizCodeFailures(lesson, input.slots, checkpointed),
+            ...mentionFailures(authored),
+            ...slot.objectives.filter((objective) => !targeted.has(objective)).map((objective) => `No item assesses the objective "${objective}".`),
+          ];
+          if (codeFailures.length) {
+            failure = new QuizFailedError(codeFailures, null, lesson);
+            revision = { previousDraft: authored, problems: codeFailures };
+            continue;
+          }
+
+          const { value: verdict, modelId: judgeModelId } = await judge.judge({
+            systemPrompt: JUDGE_PROMPT,
+            input: {
+              slot: { lessonGoal: slot.lessonGoal, objectives: slot.objectives },
+              lessons,
+              items: lesson.body.items.map((item, index) => ({
+                n: index + 1,
+                objective: authored[index]!.objective,
+                prompt: item.prompt,
+                options: Object.fromEntries(item.options.map((option) => [option.id, option.text])),
+                key: item.correctOptionId,
+                explanations: item.explanations,
+              })),
+            },
+            schemaName: "quiz_review",
+            timeoutMs: JUDGE_TIMEOUT_MS,
+            reasoningEffort: REASONING_EFFORT,
+            schema: judgeSchema(QUIZ_JUDGE_CHECKS),
+            parse: judgeParser(QUIZ_JUDGE_CHECKS),
+            authorModelIds: [...authors],
+          });
+          if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, authorModelIds: [...authors], judgeModelId };
+          failure = new QuizFailedError([], verdict, lesson);
+          revision = { previousDraft: authored, problems: verdict.reasons.length ? verdict.reasons : verdict.failedChecks };
         }
+        throw failure!;
+      };
 
-        const { value: verdict, modelId: judgeModelId } = await judge.judge({
-          systemPrompt: JUDGE_PROMPT,
-          input: {
-            slot: { lessonGoal: slot.lessonGoal, objectives: slot.objectives },
-            lessons,
-            items: lesson.body.items.map((item, index) => ({
-              n: index + 1,
-              objective: authored[index]!.objective,
-              prompt: item.prompt,
-              options: Object.fromEntries(item.options.map((option) => [option.id, option.text])),
-              key: item.correctOptionId,
-              explanations: item.explanations,
-            })),
-          },
-          schemaName: "quiz_review",
-          timeoutMs: JUDGE_TIMEOUT_MS,
-          reasoningEffort: REASONING_EFFORT,
-          schema: judgeSchema(QUIZ_JUDGE_CHECKS),
-          parse: judgeParser(QUIZ_JUDGE_CHECKS),
-          authorModelIds: [...authors],
-        });
-        if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, authorModelIds: [...authors], judgeModelId };
-        failure = new QuizFailedError([], verdict, lesson);
-        revision = { previousDraft: authored, problems: verdict.reasons.length ? verdict.reasons : verdict.failedChecks };
+      try {
+        return await writeWith(generator);
+      } catch (error) {
+        // As for a Reading: the fallback author writes a fresh Quiz from the same Lessons, with its own budget (ADR 0017).
+        const fallback = fallbackGenerator?.modelId.trim() && fallbackGenerator.modelId.trim() !== generator.modelId.trim() ? fallbackGenerator : null;
+        if (!(error instanceof QuizFailedError) || !fallback) throw error;
+        return writeWith(fallback);
       }
-      throw failure!;
     },
   };
 }
