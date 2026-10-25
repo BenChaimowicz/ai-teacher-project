@@ -1,0 +1,88 @@
+/*
+ * App shell (SEN-86): sidebar on every screen, top bar, Study header. The sidebar never scrolls.
+ */
+
+.k-app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); height: 100vh; height: 100dvh; transition: grid-template-columns var(--dur) ease; }
+.k-app[data-sidebar="closed"] { grid-template-columns: 0 minmax(0, 1fr); }
+
+.k-skip {
+  position: fixed; left: 12px; top: -60px; z-index: 100; padding: 10px 14px; border-radius: 10px;
+  background: var(--a); color: var(--on-a); font-weight: 800; text-decoration: none; transition: top var(--dur-fast);
+}
+.k-skip:focus { top: 12px; }
+
+.k-side {
+  position: relative; overflow: hidden; border-right: 1px solid var(--line); min-width: 0;
+  background:
+    linear-gradient(180deg, rgba(var(--a-rgb), 0.12), transparent 40%),
+    repeating-linear-gradient(0deg, rgba(var(--a-rgb), 0.035) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(90deg, rgba(var(--a-rgb), 0.035) 0 1px, transparent 1px 22px),
+    var(--bg-2);
+}
+.k-app[data-sidebar="closed"] .k-side { border-right-color: transparent; visibility: hidden; }
+.k-side-in { width: var(--sidebar-w); height: 100%; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+.k-side .brand-row { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; flex: none; }
+.k-side .k-new {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px 12px; border-radius: 12px; font-weight: 800; flex: none;
+  background: linear-gradient(135deg, var(--a), color-mix(in srgb, var(--a) 70%, var(--b))); color: var(--on-a); box-shadow: var(--glow); text-decoration: none; border: 0; cursor: pointer;
+}
+.k-side .k-new:hover { filter: brightness(1.08); }
+.k-side .k-new:disabled { opacity: 0.6; cursor: default; }
+.k-side .k-new svg { width: 16px; height: 16px; }
+.k-side .courses { flex: none; display: flex; flex-direction: column; min-height: 0; }
+.k-side .k-empty-line { font-size: 0.82rem; color: var(--text-muted); padding: 4px 9px; line-height: 1.5; }
+.k-side .outline { flex: 1; min-height: 0; overflow: hidden auto; scrollbar-width: thin; }
+.k-side .foot { margin-top: auto; flex: none; display: flex; align-items: center; gap: 6px; }
+.k-side .foot .k-foot-link {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 8px 9px; border-radius: 10px; color: var(--text); text-decoration: none; font-weight: 600; font-size: 0.85rem;
+  border: 1px solid transparent;
+}
+.k-side .foot .k-foot-link svg { width: 16px; height: 16px; color: var(--a); flex: none; }
+.k-side .foot .k-foot-link:hover { background: rgba(var(--a-rgb), 0.08); border-color: var(--line); }
+.k-side .foot .k-foot-link.active { border-color: var(--a-line); background: rgba(var(--a-rgb), 0.14); box-shadow: inset 3px 0 0 var(--a); }
+
+/* palette picker (sidebar footer) */
+.k-palette { position: relative; flex: none; }
+.k-palette > button { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; border: 1px solid var(--line); background: none; cursor: pointer; }
+.k-palette > button:hover { background: var(--panel); }
+.k-palette .sw-dot { width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%); box-shadow: 0 0 10px rgba(var(--a-rgb), 0.5); }
+.k-palette .pop {
+  position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 40; width: 228px; padding: 12px; border-radius: 14px;
+  background: var(--panel); border: 1px solid var(--a-line); box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.8), var(--glow); animation: k-pop 0.25s var(--ease-pop);
+}
+.k-palette .pop p { font-family: var(--font-code); font-size: 0.66rem; color: var(--faint); margin-bottom: 8px; }
+.k-palette .sws { display: flex; gap: 6px; }
+.k-palette .sws button { width: 32px; height: 32px; border-radius: 50%; padding: 3px; border: 2px solid transparent; background: none; cursor: pointer; }
+.k-palette .sws button[aria-checked="true"] { border-color: var(--text); }
+.k-palette .sws span { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.k-palette .name { margin-top: 8px; font-size: 0.8rem; color: var(--text-muted); }
+
+/* main column */
+.k-main { display: flex; flex-direction: column; min-width: 0; height: 100vh; height: 100dvh; }
+.k-top { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 20px; min-height: 56px; flex: none; }
+.k-top::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, rgba(var(--a-rgb), 0.5), rgba(var(--b-rgb), 0.35) 60%, transparent); }
+.k-top .k-toggle { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--text-muted); border: 1px solid var(--line); background: none; cursor: pointer; flex: none; }
+.k-top .k-toggle:hover { color: var(--text); background: var(--panel); }
+.k-top .k-toggle svg { width: 18px; height: 18px; }
+.k-top .k-home { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 10px; color: var(--text-muted); font-weight: 600; font-size: 0.86rem; text-decoration: none; border: 1px solid var(--line); flex: none; }
+.k-top .k-home:hover { color: var(--text); background: var(--panel); }
+.k-top .k-home svg { width: 15px; height: 15px; }
+.k-top .title { flex: 1; min-width: 0; font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.k-top .title:has(.slot:not(:empty)) .default-title { display: none; }
+.k-top .actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.k-top .read-prog { position: absolute; left: 0; bottom: 0; height: 2px; z-index: 1; background: linear-gradient(90deg, var(--a), var(--b)); box-shadow: 0 0 10px rgba(var(--b-rgb), 0.6); transition: width 0.2s linear; }
+.k-content { flex: 1; min-height: 0; overflow-y: auto; outline: none; }
+.k-content > .k-page { padding: 32px 28px 64px; }
+
+.k-drawer-backdrop { display: none; }
+
+/* phone and small tablet: the sidebar becomes an overlay drawer */
+@media (max-width: 899px) {
+  .k-app, .k-app[data-sidebar="closed"] { grid-template-columns: minmax(0, 1fr); }
+  .k-side { position: fixed; inset: 0 auto 0 0; z-index: 60; width: min(var(--sidebar-w), 88vw); transform: translateX(-102%); transition: transform var(--dur) ease, visibility 0s linear var(--dur); visibility: hidden; box-shadow: 20px 0 60px -20px rgba(0, 0, 0, 0.8); }
+  .k-side-in { width: 100%; }
+  .k-app[data-sidebar="open"] .k-side { transform: none; visibility: visible; transition: transform var(--dur) ease; }
+  .k-app[data-sidebar="open"] .k-drawer-backdrop { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(0, 0, 0, 0.55); border: 0; animation: k-fade 0.2s ease-out; }
+  .k-top { padding: 8px 12px; }
+  .k-content > .k-page { padding: 22px 16px 48px; }
+}

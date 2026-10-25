@@ -9,12 +9,13 @@ import { cn } from "@/lib/utils";
 
 /**
  * New Course Request control that blocks until the Teaching Profile is saved.
+ * `sidebar` is the shell's primary "New course" button.
  */
 export function CourseRequestControl({
   variant,
   children,
 }: {
-  variant: "nav" | "button";
+  variant: "nav" | "button" | "sidebar";
   children: ReactNode;
 }) {
   const { loading, present } = useTeachingProfile();
@@ -24,9 +25,9 @@ export function CourseRequestControl({
   const dialog = (
     <ConfirmDialog
       open={open}
-      title="Teaching Profile comes first"
+      title="First, how you like to learn"
       body={COURSE_REQUEST_BLOCKED}
-      confirmLabel="Go to Teaching Profile"
+      confirmLabel="Set it up"
       cancelLabel="Not now"
       onConfirm={() => {
         setOpen(false);
@@ -35,6 +36,24 @@ export function CourseRequestControl({
       onCancel={() => setOpen(false)}
     />
   );
+
+  if (variant === "sidebar") {
+    if (present) {
+      return (
+        <Link to="/new-course-request" className="k-new">
+          {children}
+        </Link>
+      );
+    }
+    return (
+      <>
+        <button type="button" className="k-new" disabled={loading} onClick={() => setOpen(true)}>
+          {children}
+        </button>
+        {dialog}
+      </>
+    );
+  }
 
   if (variant === "nav") {
     if (present) {

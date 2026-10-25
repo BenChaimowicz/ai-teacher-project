@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, NavLink, useParams } from "react-router-dom";
 import { courseCompletePath, nextLessonId, studyPath } from "@senoy/db/progress";
-import { Lock, MoreHorizontal } from "lucide-react";
-import { ConfirmDialog } from "@/components/confirm-dialog.tsx";
+import { Check, Lock, MoreHorizontal } from "lucide-react";
+import { ShellActions, ShellOutline, ShellTitle } from "@/components/shell/app-shell.tsx";
+import { ConfirmDialog } from "@/components/ui/dialog.tsx";
+import { PageLoader } from "@/components/ui/loader.tsx";
+import { ErrorState } from "@/components/ui/states.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
 import { requestJson } from "@/lib/api.ts";
@@ -19,14 +22,13 @@ function allLessons(modules: StudyModule[]): StudyLesson[] {
 }
 
 /**
- * Study chrome for a published Course. Workspace sidebar is hidden.
+ * Study for a published Course. The shell shows the outline in the sidebar and the title in the header.
  */
 export function StudyPage() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
   const { record, loading: profileLoading } = useTeachingProfile();
   const [payload, setPayload] = useState<StudyPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lessonsOpen, setLessonsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmFreeJump, setConfirmFreeJump] = useState(false);
   const [switching, setSwitching] = useState(false);
@@ -92,24 +94,11 @@ export function StudyPage() {
   }
 
   if (error) {
-    return (
-      <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <header className="flex items-center gap-2 border-b border-border px-3 py-2">
-          <Button asChild variant="ghost">
-            <Link to="/">Workspace</Link>
-          </Button>
-        </header>
-        <p className="p-8 text-sm text-red-400">{error}</p>
-      </div>
-    );
+    return <ErrorState title="This course didn't open">{error}</ErrorState>;
   }
 
   if (!payload || !courseId || profileLoading) {
-    return (
-      <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <p className="p-8 text-sm text-muted-foreground">Loading…</p>
-      </div>
-    );
+    return <PageLoader label="Getting your lesson ready…" />;
   }
 
   if (!visible || visible.locked) {
@@ -117,27 +106,14 @@ export function StudyPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <Button asChild variant="ghost">
-          <Link to="/">Workspace</Link>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          aria-expanded={lessonsOpen}
-          aria-controls="study-lessons"
-          onClick={() => setLessonsOpen((open) => !open)}
-        >
-          {lessonsOpen ? "Hide lessons" : "Lessons"}
-        </Button>
-        <p className="min-w-0 flex-1 truncate text-sm">
-          {payload.course.title} · {payload.progress.completed} / {payload.progress.total}
-        </p>
+    <>
+      <ShellTitle>
+        {payload.course.title} · {payload.progress.completed} / {payload.progress.total}
+      </ShellTitle>
+      <ShellActions>
         <div className="relative">
           <Button
-            type="button"
-            variant="ghost"
+            variant="quiet"
             size="icon"
             aria-label="Course menu"
             aria-haspopup="menu"
@@ -149,13 +125,13 @@ export function StudyPage() {
           {menuOpen ? (
             <div
               role="menu"
-              className="absolute right-0 top-full z-40 mt-1 w-64 rounded-lg border border-border bg-card p-1 shadow-xl"
+              className="absolute right-0 top-full z-40 mt-1 w-64 rounded-xl border border-border bg-card p-1 shadow-xl"
             >
               {payload.course.sequenceMode === "linear" ? (
                 <button
                   type="button"
                   role="menuitem"
-                  className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-accent"
                   onClick={() => {
                     setMenuOpen(false);
                     setSwitchError(null);
@@ -170,7 +146,51 @@ export function StudyPage() {
             </div>
           ) : null}
         </div>
-      </header>
+      </ShellActions>
+      <ShellOutline>
+        <nav id="study-lessons" aria-label="Lessons" className="px-1">
+          <p className="k-sec-h">
+            course<span className="n">
+              {payload.progress.completed}/{payload.progress.total}
+            </span>
+          </p>
+          {payload.modules.map((module) => (
+            <div key={module.id} className="mb-3">
+              <p className="px-2 text-xs font-semibold text-muted-foreground">{module.title}</p>
+              <ul className="mt-1 grid gap-0.5">
+                {module.lessons.map((lesson) => (
+                  <li key={lesson.id}>
+                    {lesson.locked ? (
+                      <span
+                        aria-disabled="true"
+                        title="Locked until you pass the Quiz before it"
+                        className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm text-faint"
+                      >
+                        {lesson.title}
+                        <Lock aria-label="Locked" className="size-3.5 shrink-0" />
+                      </span>
+                    ) : (
+                      <NavLink
+                        end
+                        to={`/study/${courseId}/lessons/${lesson.id}`}
+                        className={({ isActive }) =>
+                          cn(
+                            "flex items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground",
+                            isActive && "border-[var(--a-line)] bg-[var(--a-soft)] text-foreground",
+                          )
+                        }
+                      >
+                        {lesson.completed ? <Check aria-hidden="true" className="size-3.5 shrink-0 text-a" /> : null}
+                        <span className="min-w-0 truncate">{lesson.title}</span>
+                      </NavLink>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+      </ShellOutline>
       <ConfirmDialog
         open={confirmFreeJump}
         title="Switch to free jump?"
@@ -179,76 +199,36 @@ export function StudyPage() {
         busy={switching}
         onConfirm={() => void switchToFreeJump()}
         onCancel={() => setConfirmFreeJump(false)}
-        extra={switchError ? <p className="mt-3 text-sm text-red-400">{switchError}</p> : null}
+        extra={switchError ? <p className="mt-3 text-sm text-miss">{switchError}</p> : null}
       />
-      <div className="flex min-h-0 flex-1">
-        {lessonsOpen ? (
-          <nav id="study-lessons" className="w-64 shrink-0 overflow-y-auto border-r border-border p-3" aria-label="Lessons">
-            {payload.modules.map((module) => (
-              <div key={module.id} className="mb-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{module.title}</p>
-                <ul className="mt-2 grid gap-1">
-                  {module.lessons.map((lesson) => (
-                    <li key={lesson.id}>
-                      {lesson.locked ? (
-                        <span
-                          aria-disabled="true"
-                          title="Locked until you pass the Quiz before it"
-                          className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground/60"
-                        >
-                          {lesson.title}
-                          <Lock aria-label="Locked" className="size-3.5 shrink-0" />
-                        </span>
-                      ) : (
-                        <NavLink
-                          end
-                          to={`/study/${courseId}/lessons/${lesson.id}`}
-                          className={({ isActive }) =>
-                            cn(
-                              "block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                              isActive && "bg-accent text-foreground",
-                            )
-                          }
-                        >
-                          {lesson.title}
-                        </NavLink>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </nav>
+      <article className="mx-auto max-w-[720px]">
+        <h1 className="text-3xl font-bold tracking-tight">{visible.title}</h1>
+        <p className="mt-2 max-w-xl text-muted-foreground">{visible.lessonGoal}</p>
+        {Play ? (
+          <Play
+            courseId={courseId}
+            lesson={visible}
+            sectionAdvance={sectionAdvance}
+            onPayload={setPayload}
+          />
+        ) : (
+          <p className="mt-8 text-sm text-muted-foreground">This teaching method cannot be shown yet.</p>
+        )}
+        {visible.completed ? (
+          <div className="mt-8 border-t border-border pt-6">
+            {payload.course.completedAt && !nextId ? (
+              <Button asChild>
+                <Link to={courseCompletePath(courseId)}>Finish Course</Link>
+              </Button>
+            ) : nextId ? (
+              <Button asChild>
+                <Link to={studyPath(courseId, nextId)}>Next Lesson</Link>
+              </Button>
+            ) : null}
+          </div>
         ) : null}
-        <main className="min-w-0 flex-1 overflow-y-auto p-8">
-          <h1 className="text-3xl font-semibold tracking-tight">{visible.title}</h1>
-          <p className="mt-2 max-w-xl text-muted-foreground">{visible.lessonGoal}</p>
-          {Play ? (
-            <Play
-              courseId={courseId}
-              lesson={visible}
-              sectionAdvance={sectionAdvance}
-              onPayload={setPayload}
-            />
-          ) : (
-            <p className="mt-8 text-sm text-muted-foreground">This teaching method cannot be shown yet.</p>
-          )}
-          {visible.completed ? (
-            <div className="mt-8 border-t border-border pt-6">
-              {payload.course.completedAt && !nextId ? (
-                <Button asChild>
-                  <Link to={courseCompletePath(courseId)}>Finish Course</Link>
-                </Button>
-              ) : nextId ? (
-                <Button asChild>
-                  <Link to={studyPath(courseId, nextId)}>Next Lesson</Link>
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </main>
-      </div>
-    </div>
+      </article>
+    </>
   );
 }
 
@@ -281,24 +261,11 @@ export function StudyIndexPage() {
   }, [courseId]);
 
   if (error) {
-    return (
-      <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <header className="flex items-center gap-2 border-b border-border px-3 py-2">
-          <Button asChild variant="ghost">
-            <Link to="/">Workspace</Link>
-          </Button>
-        </header>
-        <p className="p-8 text-sm text-red-400">{error}</p>
-      </div>
-    );
+    return <ErrorState title="This course didn't open">{error}</ErrorState>;
   }
 
   if (!to) {
-    return (
-      <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <p className="p-8 text-sm text-muted-foreground">Loading…</p>
-      </div>
-    );
+    return <PageLoader label="Getting your lesson ready…" />;
   }
 
   return <Navigate to={to} replace />;

@@ -1,24 +1,94 @@
+@import "@fontsource-variable/manrope";
+@import "@fontsource-variable/literata";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/700.css";
+@import "@fontsource/atkinson-hyperlegible/400.css";
+@import "@fontsource/atkinson-hyperlegible/700.css";
 @import "tailwindcss";
+@import "./styles/kit.css" layer(components);
+@import "./styles/shell.css" layer(components);
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Design tokens (SEN-86), lifted from docs/uis/redesign/kit.css.
+ * Always dark. A palette is an accent pair (--a, --b) picked with data-theme on <html>;
+ * every surface derives from the accent so the whole app tints with it.
+ */
+:root,
+[data-theme="amethyst"] {
+  --a: #a78bfa; --b: #7dd3fc; --on-a: #140f26; --a-rgb: 167, 139, 250; --b-rgb: 125, 211, 252;
+  --nib-hi: #f5f3ff; --nib-lo: #c4b5fd; --nib-ear: #b4a3f7;
+}
+[data-theme="rose"] {
+  --a: #fb7185; --b: #f9a8d4; --on-a: #2a0a12; --a-rgb: 251, 113, 133; --b-rgb: 249, 168, 212;
+  --nib-hi: #fff1f2; --nib-lo: #fbb6c4; --nib-ear: #f49aae;
+}
+[data-theme="honey"] {
+  --a: #f5c451; --b: #c8935f; --on-a: #2a1d05; --a-rgb: 245, 196, 81; --b-rgb: 200, 147, 95;
+  --nib-hi: #fdf3dc; --nib-lo: #e3b373; --nib-ear: #c8935f;
+}
+[data-theme="matcha"] {
+  --a: #9ae6b4; --b: #fdba74; --on-a: #0b2414; --a-rgb: 154, 230, 180; --b-rgb: 253, 186, 116;
+  --nib-hi: #fff7ed; --nib-lo: #f6c99a; --nib-ear: #eab17a;
+}
+[data-theme="slate"] {
+  --a: #cbd5e1; --b: #60a5fa; --on-a: #0f172a; --a-rgb: 203, 213, 225; --b-rgb: 96, 165, 250;
+  --nib-hi: #f1f5f9; --nib-lo: #a8b4c4; --nib-ear: #94a3b8;
+}
+
 :root {
-  --background: oklch(0.145 0.015 250);
-  --foreground: oklch(0.96 0.01 250);
-  --card: oklch(0.18 0.015 250);
-  --card-foreground: oklch(0.96 0.01 250);
-  --primary: oklch(0.8 0.04 230);
-  --primary-foreground: oklch(0.18 0.02 250);
-  --secondary: oklch(0.24 0.015 250);
-  --secondary-foreground: oklch(0.96 0.01 250);
-  --muted: oklch(0.24 0.015 250);
-  --muted-foreground: oklch(0.72 0.02 250);
-  --accent: oklch(0.28 0.02 250);
-  --accent-foreground: oklch(0.96 0.01 250);
-  --border: oklch(0.3 0.015 250);
-  --input: oklch(0.3 0.015 250);
-  --ring: oklch(0.72 0.04 230);
-  --radius: 0.625rem;
+  /* surfaces derive from the accent */
+  --bg: color-mix(in srgb, var(--a) 5%, #0b0b0f);
+  --bg-2: color-mix(in srgb, var(--a) 8%, #0d0d12);
+  --panel: color-mix(in srgb, var(--a) 9%, #121217);
+  --panel-2: color-mix(in srgb, var(--a) 15%, #16161c);
+  --line: rgba(var(--a-rgb), 0.13);
+  --line-2: rgba(var(--a-rgb), 0.22);
+  --a-soft: rgba(var(--a-rgb), 0.16);
+  --a-line: rgba(var(--a-rgb), 0.45);
+  --b-soft: rgba(var(--b-rgb), 0.16);
+  --glow: 0 0 26px rgba(var(--a-rgb), 0.28);
+
+  /* text: muted and faint both pass AA on --bg for their sizes */
+  --text: #ecebf2;
+  --read: #dddbe6;
+  --text-muted: #a9a7b8;
+  --faint: #7c7a8c;
+  --good: #86efac; --good-rgb: 134, 239, 172;
+  --miss: #fda4af; --miss-rgb: 253, 164, 175;
+
+  --font-ui: "Manrope Variable", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-code: "JetBrains Mono", ui-monospace, monospace;
+  --font-book: "Literata Variable", "Literata", Georgia, serif;
+  --font-legible: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+
+  /* motion */
+  --dur-fast: 150ms;
+  --dur: 250ms;
+  --dur-slow: 450ms;
+  --ease-pop: cubic-bezier(0.3, 1.4, 0.5, 1);
+
+  --sidebar-w: 308px;
+
+  /* shadcn names, mapped onto the tokens so older screens follow the palette */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--panel);
+  --card-foreground: var(--text);
+  --primary: var(--a);
+  --primary-foreground: var(--on-a);
+  --secondary: var(--panel-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--panel-2);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--panel-2);
+  --accent-foreground: var(--text);
+  --border: var(--line-2);
+  --input: var(--line-2);
+  --ring: var(--a);
+  --radius: 0.75rem;
 }
 
 @theme inline {
@@ -37,11 +107,36 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-md: calc(var(--radius) - 2px);
+
+  --color-a: var(--a);
+  --color-b: var(--b);
+  --color-on-a: var(--on-a);
+  --color-bg-2: var(--bg-2);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-faint: var(--faint);
+  --color-read: var(--read);
+  --color-good: var(--good);
+  --color-miss: var(--miss);
+
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-code);
+  --font-serif: var(--font-book);
+  --font-legible: var(--font-legible);
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
+  --shadow-glow: var(--glow);
 }
 
-* {
-  border-color: var(--border);
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 
 html,
@@ -51,8 +146,29 @@ body,
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
   margin: 0;
-  font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(900px 520px at 85% -10%, rgba(var(--a-rgb), 0.16), transparent 65%),
+    radial-gradient(700px 480px at 30% 115%, rgba(var(--b-rgb), 0.1), transparent 65%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--a);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

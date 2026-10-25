@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { isPassingScore } from "@senoy/db/quiz";
+import { ShellTitle } from "@/components/shell/app-shell.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { PageLoader } from "@/components/ui/loader.tsx";
+import { ErrorState } from "@/components/ui/states.tsx";
 import type { CourseSummary } from "@/lib/study-types.ts";
 
 /**
@@ -42,16 +45,12 @@ export function CourseCompletePage() {
   if (notComplete && courseId) return <Navigate to={`/study/${courseId}`} replace />;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <Button asChild variant="ghost">
-          <Link to="/">Workspace</Link>
-        </Button>
-      </header>
-      {error ? <p className="p-8 text-sm text-red-400">{error}</p> : null}
-      {!error && !summary ? <p className="p-8 text-sm text-muted-foreground">Loading…</p> : null}
+    <>
+      {error ? <ErrorState title="The summary didn't load">{error}</ErrorState> : null}
+      {!error && !summary ? <PageLoader /> : null}
       {summary ? (
-        <main className="mx-auto w-full max-w-3xl p-8">
+        <div className="mx-auto w-full max-w-3xl">
+          <ShellTitle>{summary.course.title}</ShellTitle>
           <p className="text-sm text-muted-foreground">Course complete</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">{summary.course.title}</h1>
           <p className="mt-2 text-muted-foreground">You worked toward: {summary.course.learningGoal}</p>
@@ -99,8 +98,8 @@ export function CourseCompletePage() {
               <Link to={`/study/${summary.course.id}`}>Review Lessons</Link>
             </Button>
           </div>
-        </main>
+        </div>
       ) : null}
-    </div>
+    </>
   );
 }
