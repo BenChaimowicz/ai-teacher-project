@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const STAGES = ["Finding good sources", "Writing lessons", "Checking it all fits together"] as const;
 
 /** Which stage is in progress: 0–2, or 3 once published. */
-function stageIndex(status: CourseRequestStatus, generation: GenerationView | null) {
+function stageIndex(status: CourseRequestStatus, generation: GenerationView | null, failureReason: string | null) {
   if (status === "published") return 3;
   if (!generation) return 0;
   if (generation.stage === "publish") return 2;
@@ -19,6 +19,8 @@ function stageIndex(status: CourseRequestStatus, generation: GenerationView | nu
   if (generation.stage === "research") return 0;
   // Not running (queued, stopped, failed): stages before the next unwritten Lesson are done.
   if (generation.finishedLessons >= generation.totalLessons && generation.totalLessons > 0) return 2;
+  // Research runs for every Lesson before writing starts, so a stop is in writing unless it says otherwise.
+  if (status === "generation_failed") return /research/i.test(failureReason ?? "") ? 0 : 1;
   return generation.finishedLessons > 0 ? 1 : 0;
 }
 
@@ -55,22 +57,24 @@ type MakingCardProps = {
   view: BlueprintView;
   generation: GenerationView | null;
   status: CourseRequestStatus;
+  /** Why a failed run stopped, to mark the right stage. */
+  failureReason?: string | null;
 };
 
 /**
  * The waiting screen's card: the three stages, a bar, what is being written now, and every Lesson ticked as it is
  * written, so a half-hour run shows steady progress. Says plainly that the Learner can leave.
  */
-export function MakingCard({ view, generation, status }: MakingCardProps) {
+export function MakingCard({ view, generation, status, failureReason = null }: MakingCardProps) {
   const slots = view.blueprint.modules.flatMap((module) => module.slots);
   const running = status === "generating";
   const stopped = status === "generation_cancelled" || status === "generation_failed";
-  const stage = stageIndex(status, generation);
+  const stage = stageIndex(status, generation, failureReason);
   const pct = Math.round(share(status, generation) * 100);
   const finished = new Set(generation?.finishedSlotIds ?? []);
   const writingTitle = running && generation?.stage === "lesson" ? generation.lessonTitle : null;
   // A failed run stopped at the first Lesson not yet written, in writing order (Readings, then Quizzes).
-  const stoppedAt = status === "generation_failed"
+  const stoppedAt = status === "generation_failed" && stage === 1
     ? [...slots.filter((slot) => slot.method === "reading"), ...slots.filter((slot) => slot.method !== "reading")].find((slot) => !finished.has(slot.id))?.id
     : undefined;
 

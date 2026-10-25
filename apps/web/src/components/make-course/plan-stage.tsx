@@ -331,15 +331,15 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
     // Retry needs a failed or interrupted job; a plan that can't reach the goal needs a new start instead (spec §5.1).
     const retryable = generation?.status === "failed" || generation?.status === "interrupted";
     const tiles: OptionTile[] = [
-      ...(retryable ? [{ id: "retry", label: "Retry", description: "Keeps the lessons already written", icon: <RefreshCw />, tone: "primary" as const }] : []),
-      { id: "revise", label: "Revise request", description: "Start again from the topic; this one stays as it is", icon: <Pencil />, tone: retryable ? "default" : "primary" },
+      ...(retryable ? [{ id: "retry", label: "Retry", description: "Keeps what's written", icon: <RefreshCw />, tone: "primary" as const }] : []),
+      { id: "revise", label: "Revise request", description: "Start again from the topic", icon: <Pencil />, tone: retryable ? "default" : "primary" },
       homeTile,
     ];
     return (
       <>
         {history}
         <NibblesLine mood="think"><span role="alert">{record.failureReason ?? "I couldn't finish making this course."}</span></NibblesLine>
-        <MakingCard view={view} generation={generation} status={record.status} />
+        <MakingCard view={view} generation={generation} status={record.status} failureReason={record.failureReason} />
         <OptionTiles key={`${record.status}-t6`}
           label="Couldn't finish"
           resetKey={attempt}
