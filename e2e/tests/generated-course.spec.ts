@@ -28,7 +28,6 @@ test("An approved Blueprint generates a Course that publishes to Home and comple
   await page.getByRole("button", { name: "Mark complete" }).click();
   await expect(page.getByText("Fixture Course · 1 / 3")).toBeVisible();
 
-  await page.getByRole("button", { name: "Lessons" }).click();
   const lessons = page.getByRole("navigation", { name: "Lessons" });
   await lessons.getByRole("link", { name: "Reading: Fixture capability 5" }).click();
   await expect(page.getByText("Fixture prose for Reading: Fixture capability 5.")).toBeVisible();

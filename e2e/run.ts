@@ -43,13 +43,16 @@ try {
   await waitForPostgres();
 
   const env = { ...process.env, DATABASE_URL: `postgres://postgres:${password}@127.0.0.1:${port}/senoy` };
-  const migrate = spawnSync("pnpm", ["--filter", "@senoy/db", "migrate"], { env, stdio: "inherit" });
+  // On Windows pnpm is a .cmd shim, which spawnSync only finds through a shell.
+  const shell = process.platform === "win32";
+  const migrate = spawnSync("pnpm", ["--filter", "@senoy/db", "migrate"], { env, stdio: "inherit", shell });
   if (migrate.status !== 0) throw new Error("Migrations failed.");
 
   const run = spawnSync("pnpm", ["exec", "playwright", "test", ...process.argv.slice(2)], {
     cwd: here,
     env,
     stdio: "inherit",
+    shell,
   });
   status = run.status ?? 1;
 } catch (error) {

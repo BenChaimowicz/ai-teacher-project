@@ -26,7 +26,8 @@ async function retake(page: Page) {
  * @param page - Playwright page
  */
 async function openLessons(page: Page) {
-  await page.getByRole("button", { name: "Lessons" }).click();
+  // The Course outline sits in the sidebar, open by default on desktop.
+  await expect(page.getByRole("button", { name: "Hide lessons" })).toBeVisible();
   return page.getByRole("navigation", { name: "Lessons" });
 }
 
