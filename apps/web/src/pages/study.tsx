@@ -1,17 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, NavLink, useParams } from "react-router-dom";
-import { courseCompletePath, nextLessonId, studyPath } from "@senoy/db/progress";
-import { Check, Lock, MoreHorizontal } from "lucide-react";
-import { ShellActions, ShellOutline, ShellTitle } from "@/components/shell/app-shell.tsx";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, useParams } from "react-router-dom";
+import { nextLessonId } from "@senoy/db/progress";
+import { parseReadingBody, READING_METHOD_ID } from "@senoy/db/reading-lesson";
+import { MoreHorizontal } from "lucide-react";
+import { useCompanionLines } from "@/components/companion/companion-provider.tsx";
+import { CourseOutline } from "@/components/learn/course-outline.tsx";
+import { FinishLine } from "@/components/learn/finish-line.tsx";
+import { ReadingPanel } from "@/components/learn/reading-panel.tsx";
+import { StudyChromeProvider, useStudyChrome } from "@/components/learn/study-chrome.tsx";
+import { ShellActions, ShellOutline, ShellTitle, useShell } from "@/components/shell/app-shell.tsx";
+import { Button } from "@/components/ui/button.tsx";
 import { ConfirmDialog } from "@/components/ui/dialog.tsx";
 import { PageLoader } from "@/components/ui/loader.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
-import { Button } from "@/components/ui/button.tsx";
 import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
 import { requestJson } from "@/lib/api.ts";
 import type { StudyLesson, StudyModule, StudyPayload } from "@/lib/study-types.ts";
-import { cn } from "@/lib/utils";
 import { renderForTeachingMethod } from "@/teaching-methods/register.ts";
+
+const READING_LINES = [
+  "Take your time. There's a short check after the reading.",
+  "Hover a small number to see its source.",
+  "Aa changes how the text looks.",
+  "The sources are at the bottom, if you're curious.",
+];
+const QUIZ_LINES = ["No timer. Think it through.", "Earlier lessons stay open while you work.", "A wrong answer is just something to look at again."];
 
 /**
  * Flatten Lessons in Course order.
@@ -22,14 +35,122 @@ function allLessons(modules: StudyModule[]): StudyLesson[] {
 }
 
 /**
- * Study for a published Course. The shell shows the outline in the sidebar and the title in the header.
+ * Focus mode: tuck the sidebar away while it is on (and bring it back after), fade the header until
+ * the pointer or a key wakes it, and let Esc leave Focus. The header itself never goes away.
+ * @param on - Focus is the current layout
+ * @param exit - Leaves Focus
+ */
+function useFocusMode(on: boolean, exit: () => void) {
+  const { sidebarOpen, setSidebarOpen } = useShell();
+  const openRef = useRef(sidebarOpen);
+  openRef.current = sidebarOpen;
+  const exitRef = useRef(exit);
+  exitRef.current = exit;
+  const setOpenRef = useRef(setSidebarOpen);
+  setOpenRef.current = setSidebarOpen;
+
+  useEffect(() => {
+    if (!on) return;
+    const root = document.documentElement;
+    root.dataset.readFocus = "1";
+    const closedByFocus = openRef.current && !matchMedia("(max-width: 899px)").matches;
+    if (closedByFocus) setOpenRef.current(false);
+    let timer = 0;
+    const wake = () => {
+      root.dataset.readAwake = "1";
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => delete root.dataset.readAwake, 2200);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !document.querySelector(".k-dialog, .l-rpanel")) exitRef.current();
+      else wake();
+    };
+    window.addEventListener("mousemove", wake);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(timer);
+      delete root.dataset.readFocus;
+      delete root.dataset.readAwake;
+      window.removeEventListener("mousemove", wake);
+      document.removeEventListener("keydown", onKey);
+      if (closedByFocus) setOpenRef.current(true);
+    };
+  }, [on]);
+}
+
+/**
+ * The course menu in the Study header (free jump).
+ */
+function CourseMenu({ linear, onFreeJump }: { linear: boolean; onFreeJump: () => void }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (wrap.current && !wrap.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, [open]);
+
+  return (
+    <div className="l-menu" ref={wrap}>
+      <Button variant="quiet" size="icon" aria-label="Course menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        <MoreHorizontal />
+      </Button>
+      {open ? (
+        <div role="menu" aria-label="Course">
+          {linear ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onFreeJump();
+              }}
+            >
+              Switch to free jump
+            </button>
+          ) : (
+            <p className="note">Free jump is on. Every Lesson is open.</p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Study for a published Course: the Course page (outline) in the sidebar, the Lesson in the main area,
+ * and a header that is always there (sidebar toggle, Home, title, Aa, course menu).
  */
 export function StudyPage() {
+  return (
+    <StudyChromeProvider>
+      <StudyScreen />
+    </StudyChromeProvider>
+  );
+}
+
+/**
+ * The Study screen inside the chrome provider.
+ */
+function StudyScreen() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
   const { record, loading: profileLoading } = useTeachingProfile();
+  const { settings, applyMode, sectionsRead } = useStudyChrome();
   const [payload, setPayload] = useState<StudyPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmFreeJump, setConfirmFreeJump] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
@@ -60,6 +181,15 @@ export function StudyPage() {
 
   const lessons = useMemo(() => (payload ? allLessons(payload.modules) : []), [payload]);
   const visible = lessons.find((row) => row.id === lessonId) ?? null;
+  const isReading = visible?.teachingMethod === READING_METHOD_ID;
+  useCompanionLines(isReading ? READING_LINES : QUIZ_LINES);
+  useFocusMode(Boolean(visible && !visible.locked && isReading && settings.layout === "focus"), () => applyMode("comfort"));
+
+  const sections = useMemo(() => {
+    if (!visible || !isReading) return [];
+    return parseReadingBody(visible.body)?.sections.map((section) => section.heading) ?? [];
+  }, [visible, isReading]);
+
   const Play = visible ? renderForTeachingMethod(visible.teachingMethod) : null;
   const nextId =
     visible && payload
@@ -69,6 +199,7 @@ export function StudyPage() {
           visible.id,
         )
       : null;
+  const next = lessons.find((row) => row.id === nextId) ?? null;
 
   /**
    * One-way switch to free jump. Linear cannot be restored.
@@ -78,13 +209,8 @@ export function StudyPage() {
     setSwitching(true);
     setSwitchError(null);
     try {
-      const next = await requestJson<StudyPayload>(
-        `/api/courses/${courseId}/sequence-mode`,
-        "PUT",
-        { mode: "free_jump" },
-        "Could not switch to free jump",
-      );
-      setPayload(next);
+      const updated = await requestJson<StudyPayload>(`/api/courses/${courseId}/sequence-mode`, "PUT", { mode: "free_jump" }, "Could not switch to free jump");
+      setPayload(updated);
       setConfirmFreeJump(false);
     } catch (caught: unknown) {
       setSwitchError(caught instanceof Error ? caught.message : "Could not switch to free jump");
@@ -105,91 +231,41 @@ export function StudyPage() {
     return <Navigate to={`/study/${courseId}/lessons/${payload.currentLessonId}`} replace />;
   }
 
+  const lessonNumber = lessons.indexOf(visible) + 1;
+  const finish = visible.completed ? (
+    <FinishLine courseId={courseId} next={next} courseComplete={Boolean(payload.course.completedAt)} />
+  ) : null;
+
   return (
     <>
       <ShellTitle>
-        {payload.course.title} · {payload.progress.completed} / {payload.progress.total}
+        <span className="l-crumb">
+          <span>
+            {payload.course.title} · {payload.progress.completed} / {payload.progress.total}
+          </span>
+          <span className="sep" aria-hidden="true">
+            ›
+          </span>
+          <b>{visible.title}</b>
+        </span>
       </ShellTitle>
       <ShellActions>
-        <div className="relative">
-          <Button
-            variant="quiet"
-            size="icon"
-            aria-label="Course menu"
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <MoreHorizontal />
-          </Button>
-          {menuOpen ? (
-            <div
-              role="menu"
-              className="absolute right-0 top-full z-40 mt-1 w-64 rounded-xl border border-border bg-card p-1 shadow-xl"
-            >
-              {payload.course.sequenceMode === "linear" ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-accent"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setSwitchError(null);
-                    setConfirmFreeJump(true);
-                  }}
-                >
-                  Switch to free jump
-                </button>
-              ) : (
-                <p className="px-3 py-2 text-sm text-muted-foreground">Free jump is on. Every Lesson is open.</p>
-              )}
-            </div>
-          ) : null}
-        </div>
+        {isReading ? <ReadingPanel /> : null}
+        {isReading && settings.layout === "focus" ? (
+          <button type="button" className="l-focus-exit" onClick={() => applyMode("comfort")}>
+            exit focus · esc
+          </button>
+        ) : null}
+        <CourseMenu
+          linear={payload.course.sequenceMode === "linear"}
+          onFreeJump={() => {
+            setSwitchError(null);
+            setConfirmFreeJump(true);
+          }}
+        />
       </ShellActions>
       <ShellOutline>
-        <nav id="study-lessons" aria-label="Lessons" className="px-1">
-          <p className="k-sec-h">
-            course<span className="n">
-              {payload.progress.completed}/{payload.progress.total}
-            </span>
-          </p>
-          {payload.modules.map((module) => (
-            <div key={module.id} className="mb-3">
-              <p className="px-2 text-xs font-semibold text-muted-foreground">{module.title}</p>
-              <ul className="mt-1 grid gap-0.5">
-                {module.lessons.map((lesson) => (
-                  <li key={lesson.id}>
-                    {lesson.locked ? (
-                      <span
-                        aria-disabled="true"
-                        title="Locked until you pass the Quiz before it"
-                        className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm text-faint"
-                      >
-                        {lesson.title}
-                        <Lock aria-label="Locked" className="size-3.5 shrink-0" />
-                      </span>
-                    ) : (
-                      <NavLink
-                        end
-                        to={`/study/${courseId}/lessons/${lesson.id}`}
-                        className={({ isActive }) =>
-                          cn(
-                            "flex items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground",
-                            isActive && "border-[var(--a-line)] bg-[var(--a-soft)] text-foreground",
-                          )
-                        }
-                      >
-                        {lesson.completed ? <Check aria-hidden="true" className="size-3.5 shrink-0 text-a" /> : null}
-                        <span className="min-w-0 truncate">{lesson.title}</span>
-                      </NavLink>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </nav>
+        <CourseOutline payload={payload} activeLessonId={visible.id} sections={sections} sectionsRead={sectionsRead} />
       </ShellOutline>
       <ConfirmDialog
         open={confirmFreeJump}
@@ -201,33 +277,23 @@ export function StudyPage() {
         onCancel={() => setConfirmFreeJump(false)}
         extra={switchError ? <p className="mt-3 text-sm text-miss">{switchError}</p> : null}
       />
-      <article className="mx-auto max-w-[720px]">
-        <h1 className="text-3xl font-bold tracking-tight">{visible.title}</h1>
-        <p className="mt-2 max-w-xl text-muted-foreground">{visible.lessonGoal}</p>
-        {Play ? (
-          <Play
-            courseId={courseId}
-            lesson={visible}
-            sectionAdvance={sectionAdvance}
-            onPayload={setPayload}
-          />
-        ) : (
+      {Play ? (
+        <Play
+          key={visible.id}
+          courseId={courseId}
+          lesson={visible}
+          sectionAdvance={sectionAdvance}
+          onPayload={setPayload}
+          lessonNumber={lessonNumber}
+          finish={finish}
+        />
+      ) : (
+        <div className="mx-auto max-w-[720px]">
+          <h1 className="text-3xl font-bold tracking-tight">{visible.title}</h1>
           <p className="mt-8 text-sm text-muted-foreground">This teaching method cannot be shown yet.</p>
-        )}
-        {visible.completed ? (
-          <div className="mt-8 border-t border-border pt-6">
-            {payload.course.completedAt && !nextId ? (
-              <Button asChild>
-                <Link to={courseCompletePath(courseId)}>Finish Course</Link>
-              </Button>
-            ) : nextId ? (
-              <Button asChild>
-                <Link to={studyPath(courseId, nextId)}>Next Lesson</Link>
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </article>
+          {finish}
+        </div>
+      )}
     </>
   );
 }

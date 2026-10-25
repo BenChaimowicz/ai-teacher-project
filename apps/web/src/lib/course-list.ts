@@ -1,5 +1,13 @@
 import { pickCourseIcon, type CourseIconName } from "@/lib/brand-marks.ts";
 
+/** Window event that makes the sidebar course list reload; fire it with `notifyLibraryChanged()`. */
+export const LIBRARY_CHANGED_EVENT = "knibbler:library-changed";
+
+/** Tells the sidebar course list to reload, e.g. after an action that changes a course's status. */
+export function notifyLibraryChanged() {
+  window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT));
+}
+
 /** A row from `/api/library`: a published Course or an unpublished Course Request. */
 export type LibraryItem = {
   id: string;

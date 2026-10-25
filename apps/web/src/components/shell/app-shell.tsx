@@ -148,7 +148,7 @@ export function AppShell({ variant }: { variant: ShellVariant }) {
             </div>
             <CompanionCard />
             {study ? (
-              <div className="outline" ref={setOutlineEl} />
+              <div className="k-outline" ref={setOutlineEl} />
             ) : (
               <>
                 <CourseRequestControl variant="sidebar">

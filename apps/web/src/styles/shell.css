@@ -31,7 +31,7 @@
 .k-side .k-new svg { width: 16px; height: 16px; }
 .k-side .courses { flex: none; display: flex; flex-direction: column; min-height: 0; }
 .k-side .k-empty-line { font-size: 0.82rem; color: var(--text-muted); padding: 4px 9px; line-height: 1.5; }
-.k-side .outline { flex: 1; min-height: 0; overflow: hidden auto; scrollbar-width: thin; }
+.k-side .k-outline { flex: 1; min-height: 0; overflow: hidden auto; scrollbar-width: thin; }
 .k-side .foot { margin-top: auto; flex: none; display: flex; align-items: center; gap: 6px; }
 .k-side .foot .k-foot-link {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 8px 9px; border-radius: 10px; color: var(--text); text-decoration: none; font-weight: 600; font-size: 0.85rem;

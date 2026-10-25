@@ -8,14 +8,16 @@ test("Next Lesson walks the fixture Course to the Course-complete screen, and Ho
   await resetFixture();
   await page.goto("/");
 
-  const card = page.getByRole("link", { name: `Published ${SEEDED_COURSE.title}` });
-  await expect(card).toContainText("Progress 0 / 3 Lessons");
-  await expect(page.getByRole("main").getByRole("link", { name: "New Course Request" })).toBeVisible();
-  await card.click();
+  // Home: the course to continue comes first, with its progress, and New course is right there.
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: SEEDED_COURSE.title })).toBeVisible();
+  await expect(main.getByText("0 of 3 lessons")).toBeVisible();
+  await expect(main.getByRole("link", { name: /Start something new/ })).toBeVisible();
+  await main.getByRole("link", { name: /^Continue/ }).click();
 
   await expect(page.getByText(`${SEEDED_COURSE.title} · 0 / 3`)).toBeVisible();
   await expect(page.getByRole("link", { name: "Next Lesson" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Mark complete" }).click();
+  await page.getByRole("button", { name: "I've read it" }).click();
   await page.getByRole("link", { name: "Next Lesson" }).click();
   await expect(page).toHaveURL(lessonUrl(SEEDED_QUIZ_LESSON_ID));
 
@@ -25,19 +27,19 @@ test("Next Lesson walks the fixture Course to the Course-complete screen, and Ho
   await page.getByRole("link", { name: "Next Lesson" }).click();
   await expect(page).toHaveURL(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
 
-  await page.getByRole("button", { name: "Mark complete" }).click();
+  await page.getByRole("button", { name: "I've read it" }).click();
   await expect(page.getByText(`${SEEDED_COURSE.title} · 3 / 3`)).toBeVisible();
   await page.getByRole("link", { name: "Finish Course" }).click();
 
   await expect(page).toHaveURL(`/study/${SEEDED_COURSE_ID}/complete`);
-  await expect(page.getByText("Course complete")).toBeVisible();
-  await expect(page.getByRole("heading", { name: SEEDED_COURSE.title })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `You finished ${SEEDED_COURSE.title}` })).toBeVisible();
   await expect(page.getByText("Explain why a square knot holds under tension.")).toBeVisible();
   await expect(page.getByText("Best score 4 / 5 · Passed")).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to Home" }).click();
-  const completed = page.getByRole("link", { name: `Completed ${SEEDED_COURSE.title}` });
-  await expect(completed).toContainText("Progress 3 / 3 Lessons");
+  await page.getByRole("link", { name: /Back to Home/ }).click();
+  const completed = page.getByRole("main").getByRole("link", { name: new RegExp(SEEDED_COURSE.title) });
+  await expect(completed).toContainText("3 of 3 lessons");
+  await expect(completed).toContainText("done");
   await completed.click();
   await expect(page).toHaveURL(`/study/${SEEDED_COURSE_ID}/complete`);
 });

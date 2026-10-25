@@ -16,22 +16,23 @@ test("An approved Blueprint generates a Course that publishes to Home and comple
   await expect(page.getByText("Course published")).toBeVisible();
 
   await page.getByRole("link", { name: "Back to Home" }).click();
-  const generated = page.getByRole("link", { name: "Published Fixture Course" });
-  await expect(generated).toBeVisible();
-  await expect(page.getByRole("link", { name: `Published ${SEEDED_COURSE.title}` })).toBeVisible();
+  // The newest published Course is the one to continue; the fixture Course is listed under learning.
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: "Fixture Course" })).toBeVisible();
+  await expect(main.getByRole("link", { name: new RegExp(SEEDED_COURSE.title) })).toBeVisible();
   await expect(page.getByText("Generating your Course")).toHaveCount(0);
   await expect(page.getByText("Drum kit"), "The published Request is listed as its Course.").toHaveCount(0);
 
-  await generated.click();
+  await main.getByRole("link", { name: /^Continue/ }).click();
   await expect(page.getByText("Fixture Course · 0 / 3")).toBeVisible();
   await expect(page.getByText("Fixture prose for Reading: Fixture capability 4.")).toBeVisible();
-  await page.getByRole("button", { name: "Mark complete" }).click();
+  await page.getByRole("button", { name: "I've read it" }).click();
   await expect(page.getByText("Fixture Course · 1 / 3")).toBeVisible();
 
   const lessons = page.getByRole("navigation", { name: "Lessons" });
   await lessons.getByRole("link", { name: "Reading: Fixture capability 5" }).click();
   await expect(page.getByText("Fixture prose for Reading: Fixture capability 5.")).toBeVisible();
-  await page.getByRole("button", { name: "Mark complete" }).click();
+  await page.getByRole("button", { name: "I've read it" }).click();
   await expect(page.getByText("Fixture Course · 2 / 3")).toBeVisible();
 
   await lessons.getByRole("link", { name: "Quiz: Fixture capability 4 and Fixture capability 5" }).click();
