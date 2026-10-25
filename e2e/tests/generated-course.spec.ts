@@ -8,13 +8,14 @@ const QUIZ_ITEMS = 5;
 test("An approved Blueprint generates a Course that publishes to Home and completes to 3 / 3", async ({ page }) => {
   // confirmedRequest reseeds: the generated Course must not be the fixture Course.
   await page.goto(await confirmedRequest());
-  // The plan designs itself (SEN-87); making the Course is the Learner's one tap.
-  await page.getByRole("button", { name: /^Make my course/ }).click({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Design my Course Blueprint" }).click();
+  await page.getByRole("button", { name: "Approve" }).click();
 
   // Three fixture Lessons at FIXTURE_LESSON_DELAY_MS each, then publish, plus the worker's and the page's polls.
-  await expect(page.getByText("Your course is ready.")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Your Course is ready.")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Course published")).toBeVisible();
 
-  await page.getByRole("button", { name: /^Back to Home/ }).click();
+  await page.getByRole("link", { name: "Back to Home" }).click();
   const generated = page.getByRole("link", { name: "Published Fixture Course" });
   await expect(generated).toBeVisible();
   await expect(page.getByRole("link", { name: `Published ${SEEDED_COURSE.title}` })).toBeVisible();

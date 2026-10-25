@@ -33,6 +33,8 @@ test("Waiting shows the current lesson and ticks finished ones; Stop keeps them 
 });
 
 test("A lesson that fails its checks says why; Retry writes it again and the Course publishes", async ({ page }) => {
+  // Two failed runs and a full one, at FIXTURE_LESSON_DELAY_MS per Lesson.
+  test.setTimeout(60_000);
   // The fixture fails each Reading's first attempt for this goal (FAIL_ONCE_MARKER); the uuid keeps the goal unique.
   await page.goto(await confirmedRequest(`Play Iris by the Goo Goo Dolls [fail-once] ${randomUUID()}`));
   await makeCourse(page);

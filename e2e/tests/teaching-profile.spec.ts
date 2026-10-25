@@ -60,7 +60,7 @@ test("First run asks seven tapped questions with a live summary, saves the SEN-3
 
   await panel.getByRole("button", { name: /^Change lesson size/ }).click();
   await tap(page, "How much should one lesson cover?", /^The fuller story/);
-  await expect(page.getByText(/^Updated\./)).toBeVisible();
+  await expect(page.getByText(/Updated. Pacing/)).toBeVisible();
   await expect(panel.getByText("long", { exact: true })).toBeVisible();
   expect((await savedAnswers())?.contentScope).toEqual({ status: "selected", value: "extended" });
 
@@ -89,7 +89,7 @@ test("Returning shows each setting with a change button; a change saves at once,
 
   await page.getByRole("button", { name: "Change pacing" }).click();
   await tap(page, "How should a lesson move along?", /^Pause after each section/);
-  await expect(page.getByText(/^Updated\./)).toBeVisible();
+  await expect(page.getByText(/Updated. Pacing/)).toBeVisible();
   await expect(settings.getByText("section by section")).toBeVisible();
   const answers = await savedAnswers();
   expect(answers?.sectionAdvance).toEqual({ status: "selected", value: "manual" });

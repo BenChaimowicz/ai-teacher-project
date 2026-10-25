@@ -1,5 +1,5 @@
 import { BookOpen, Layers, MessageCircle, Wrench } from "lucide-react";
-import { useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { LearnerEcho, NibblesLine } from "@/components/ui/chat-thread.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
@@ -88,6 +88,8 @@ export function TopicField({ initial = "", onSubmit }: TopicFieldProps) {
 type ComposeFlowProps = {
   /** Prefills the topic (Revise request reopens the field with it). */
   initialSubject?: string;
+  /** A topic already chosen elsewhere (Home's first-run field, "Go deeper"): skip straight to the goal. */
+  presetTopic?: string;
   /** Saves the Request; throws with plain-language copy on failure. */
   onCompose: (subject: string, learningGoal: string) => Promise<void>;
   /** Called with the topic once it is set, e.g. for the top bar title and steps. */
@@ -98,8 +100,13 @@ type ComposeFlowProps = {
  * Compose: what to learn (typed), then what to get out of it (tapped). Saving the Request is the next step's job;
  * the Validity check then starts by itself.
  */
-export function ComposeFlow({ initialSubject, onCompose, onTopic }: ComposeFlowProps) {
-  const [subject, setSubject] = useState<string | null>(null);
+export function ComposeFlow({ initialSubject, presetTopic, onCompose, onTopic }: ComposeFlowProps) {
+  const preset = presetTopic?.trim() ? presetTopic.trim().slice(0, 200) : null;
+  const [subject, setSubject] = useState<string | null>(preset);
+  useEffect(() => {
+    if (preset) onTopic?.(preset);
+    // Only the topic the screen opened with.
+  }, []);
   const [goal, setGoal] = useState<OptionTile<string> | null>(null);
   const [goalShown, setGoalShown] = useState(false);
   const [saving, setSaving] = useState(false);

@@ -69,3 +69,12 @@ test("Without How you like to learn, New course offers to set it up first", asyn
   await expect(page.getByRole("button", { name: /^Set it up/ })).toBeVisible();
   await expect(page.getByLabel("What would you like to learn?")).toHaveCount(0);
 });
+
+test("A topic chosen elsewhere (?topic=) skips straight to the goal", async ({ page }) => {
+  await resetFixture();
+  await page.goto("/new-course-request?topic=Sourdough%20bread");
+  await expect(page.getByLabel("What would you like to learn?")).toHaveCount(0);
+  await expect(page.getByRole("log").getByText(/^You: ?Sourdough bread$/)).toBeVisible();
+  await page.getByRole("group", { name: "What would you like to get out of it?" }).getByRole("button", { name: /^Go deep/ }).click();
+  await expect(page).toHaveURL(/\/course-requests\//);
+});

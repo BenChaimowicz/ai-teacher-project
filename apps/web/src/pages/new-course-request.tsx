@@ -17,7 +17,7 @@ const LINES = ["Pick anything. I'll handle the rest.", "A few taps and I'll make
 
 /**
  * New course: the topic (typed), then the goal (tapped). Saving opens the Request, where the Validity check starts by
- * itself. Waits for "How you like to learn" first. `?subject=` prefills the topic (Start again from a failed Course).
+ * itself. Waits for "How you like to learn" first. `?subject=` prefills the topic field; `?topic=` (from Home and Course complete) skips to the goal.
  */
 export function NewCourseRequestPage() {
   const { loading, present, error, refresh } = useTeachingProfile();
@@ -66,7 +66,7 @@ export function NewCourseRequestPage() {
       {topic ? <ShellTitle>{topic}</ShellTitle> : null}
       <ShellActions><FlowSteps current={topic ? 1 : 0} /></ShellActions>
       <ChatThread>
-        <ComposeFlow initialSubject={params.get("subject") ?? undefined} onCompose={compose} onTopic={setTopic} />
+        <ComposeFlow initialSubject={params.get("subject") ?? undefined} presetTopic={params.get("topic") ?? undefined} onCompose={compose} onTopic={setTopic} />
       </ChatThread>
     </div>
   );
