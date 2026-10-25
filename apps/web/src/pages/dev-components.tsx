@@ -265,6 +265,7 @@ export function ComponentsPage() {
         <div className="space-y-6">
           <Cell label="quiz (judge + correctId) · cols 2 · flush">
             <OptionTiles
+              className="w-full"
               label="Who carries Mjölnir?"
               options={QUIZ_OPTIONS}
               flush
@@ -279,10 +280,10 @@ export function ComponentsPage() {
             </Button>
           </Cell>
           <Cell label="cols 3 · primary, quiet, disabled · no keys">
-            <OptionTiles label="Three columns" options={THREE_COL} cols={3} flush keyboard={false} resetKey={tilesReset} onPick={() => undefined} />
+            <OptionTiles className="w-full" label="Three columns" options={THREE_COL} cols={3} flush keyboard={false} resetKey={tilesReset} onPick={() => undefined} />
           </Cell>
           <Cell label="cols 1">
-            <OptionTiles label="One column" options={PACE_OPTIONS.slice(0, 2)} cols={1} flush keyboard={false} resetKey={tilesReset} onPick={() => undefined} />
+            <OptionTiles className="w-full max-w-md" label="One column" options={PACE_OPTIONS.slice(0, 2)} cols={1} flush keyboard={false} resetKey={tilesReset} onPick={() => undefined} />
           </Cell>
         </div>
       </Section>
@@ -327,6 +328,7 @@ export function ComponentsPage() {
           <CourseCard course={SAMPLE_COURSES[1]!} sub="Writing lesson 3 of 5" segments={["done", "done", "writing", "todo", "todo"]} />
           <CourseCard course={SAMPLE_COURSES[2]!} sub="A quick question before I plan it" />
           <CourseCard course={SAMPLE_COURSES[3]!} metaLeft="finished" metaRight="5 lessons" />
+          <CourseCard course={SAMPLE_COURSES[4]!} sub="Stopped while writing" />
         </div>
       </Section>
 

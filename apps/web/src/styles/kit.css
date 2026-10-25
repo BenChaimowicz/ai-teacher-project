@@ -51,6 +51,8 @@
 .k-field input, .k-field textarea { flex: 1; min-width: 0; outline: none; padding: 8px 0; background: none; border: 0; color: inherit; font: inherit; }
 .k-field input::placeholder, .k-field textarea::placeholder { color: var(--faint); }
 .k-field[data-invalid="true"] { border-color: var(--miss); }
+.k-field:has(:disabled) { opacity: 0.55; cursor: not-allowed; border-style: dashed; }
+.k-field :disabled { cursor: not-allowed; }
 
 /* ---------- card ---------- */
 .k-card { border-radius: 16px; padding: 18px; background: linear-gradient(180deg, rgba(var(--a-rgb), 0.09), rgba(var(--b-rgb), 0.03)), var(--panel); border: 1px solid rgba(var(--a-rgb), 0.24); }
@@ -82,6 +84,7 @@
 .k-tcard.flush { margin-left: 0; }
 .k-tcard h4 { font-size: 1.05rem; font-weight: 800; color: var(--a); }
 .k-tcard .sub { color: var(--text-muted); font-size: 0.86rem; margin-top: 4px; }
+.k-tcard .sub + * { margin-top: 14px; }
 
 /* ---------- option tiles ---------- */
 .k-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0 6px 48px; transition: opacity 0.3s, max-height 0.35s, margin 0.35s; max-height: 1200px; }
@@ -97,10 +100,12 @@
   background: linear-gradient(160deg, rgba(var(--a-rgb), 0.13), rgba(var(--b-rgb), 0.04)), var(--panel);
   border: 1px solid rgba(var(--a-rgb), 0.28); color: var(--text); cursor: pointer; font: inherit;
   transition: transform 0.16s, box-shadow 0.2s, border-color 0.2s, opacity 0.25s, background 0.2s;
-  animation: k-pop 0.38s var(--ease-pop) both; animation-delay: calc(var(--i, 0) * 55ms);
+  animation: k-pop 0.38s var(--ease-pop) backwards; animation-delay: calc(var(--i, 0) * 55ms);
 }
 .k-tile:hover { transform: translateY(-2px); border-color: var(--a); box-shadow: 0 10px 26px -10px rgba(var(--a-rgb), 0.6), var(--glow); }
 .k-tile:active { transform: translateY(0) scale(0.98); }
+.k-tile:disabled { cursor: not-allowed; opacity: 0.45; background: var(--panel); border-style: dashed; border-color: var(--line); box-shadow: none; transform: none; }
+.k-tile:disabled .ti { filter: grayscale(1); }
 .k-tile .ti { width: 38px; height: 38px; border-radius: 11px; flex: none; display: grid; place-items: center; color: var(--a); background: rgba(var(--a-rgb), 0.16); border: 1px solid rgba(var(--a-rgb), 0.25); }
 .k-tile .ti svg { width: 19px; height: 19px; }
 .k-tile .tt { display: block; font-weight: 700; font-size: 0.95rem; line-height: 1.35; }
@@ -154,11 +159,13 @@
 .k-cdot.making { background: var(--b); box-shadow: 0 0 8px rgba(var(--b-rgb), 0.6); animation: k-pulse 1.4s infinite; }
 .k-cdot.needs { background: var(--miss); box-shadow: 0 0 8px rgba(var(--miss-rgb), 0.6); }
 .k-cdot.done { background: var(--good); box-shadow: none; }
+.k-cdot.stopped { background: var(--faint); box-shadow: none; }
 .k-cico { position: relative; width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: 7px; color: var(--a); background: rgba(var(--a-rgb), 0.14); border: 1px solid rgba(var(--a-rgb), 0.22); }
 .k-cico svg { width: 15px; height: 15px; }
 .k-cico.making { color: var(--b); background: var(--b-soft); border-color: rgba(var(--b-rgb), 0.3); }
 .k-cico.needs { color: var(--miss); background: rgba(var(--miss-rgb), 0.1); border-color: rgba(var(--miss-rgb), 0.3); }
 .k-cico.done { color: var(--good); background: rgba(var(--good-rgb), 0.1); border-color: rgba(var(--good-rgb), 0.25); }
+.k-cico.stopped { color: var(--faint); background: rgba(255, 255, 255, 0.04); border-color: var(--line); }
 .k-cico .k-cdot { position: absolute; right: -3px; bottom: -3px; border: 2px solid var(--bg-2); box-sizing: content-box; }
 .k-cbar { width: 34px; height: 4px; border-radius: 99px; background: rgba(var(--a-rgb), 0.16); overflow: hidden; flex: none; }
 .k-cbar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--a), var(--b)); transition: width 0.6s; }
@@ -174,12 +181,14 @@ a.k-ccard:hover { border-color: var(--a-line); transform: translateY(-1px); box-
 .k-ccard .cov.making { background: linear-gradient(135deg, var(--b), color-mix(in srgb, var(--b) 60%, var(--a))); }
 .k-ccard .cov.needs { background: var(--miss); }
 .k-ccard .cov.done { background: var(--good); }
+.k-ccard .cov.stopped { background: var(--panel-2); color: var(--faint); }
 .k-ccard .t { font-weight: 800; font-size: 1rem; line-height: 1.3; }
 .k-ccard .sub { color: var(--text-muted); font-size: 0.84rem; margin-top: 2px; }
 .k-ccard .badge { margin-left: auto; font-family: var(--font-code); font-size: 0.68rem; padding: 2px 8px; border-radius: 6px; color: var(--a); background: var(--a-soft); white-space: nowrap; align-self: flex-start; }
 .k-ccard .badge.making { color: var(--b); background: var(--b-soft); }
 .k-ccard .badge.needs { color: var(--miss); background: rgba(var(--miss-rgb), 0.12); }
 .k-ccard .badge.done { color: var(--good); background: rgba(var(--good-rgb), 0.12); }
+.k-ccard .badge.stopped { color: var(--faint); background: rgba(255, 255, 255, 0.05); }
 .k-ccard .k-segs { margin-top: 14px; }
 .k-ccard .m { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-family: var(--font-code); font-size: 0.68rem; color: var(--faint); }
 
