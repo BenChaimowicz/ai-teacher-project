@@ -2,7 +2,7 @@ import { ArrowRight, Home, MoreHorizontal, Pencil, Play, RefreshCw, Sparkles } f
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCompanion, useCompanionLines } from "@/components/companion/companion-provider.tsx";
-import { ThreadEnd, WorkingLine } from "@/components/make-course/flow.tsx";
+import { FlowTitle, ThreadEnd, WorkingLine } from "@/components/make-course/flow.tsx";
 import { ProfileAsk } from "@/components/make-course/profile-ask.tsx";
 import {
   PROFILE_QUESTIONS,
@@ -15,7 +15,7 @@ import {
   type ProfileField,
 } from "@/components/make-course/profile-questions.tsx";
 import { ProfileSettingsCard, ProfileSummaryPanel } from "@/components/make-course/profile-summary.tsx";
-import { ShellActions } from "@/components/shell/app-shell.tsx";
+import { ShellActions, ShellTitle } from "@/components/shell/app-shell.tsx";
 import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { ChatThread, LearnerEcho, CompanionLine, ThreadCard } from "@/components/ui/chat-thread.tsx";
@@ -347,6 +347,7 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
   if (mode === "returning") {
     return (
       <div className="mk-ret">
+        <ShellTitle><FlowTitle>How you like to learn</FlowTitle></ShellTitle>
         <div className="head">
           <span className="av"><Jongi size={46} tile="round" /></span>
           <div>
@@ -398,6 +399,7 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
 
   return (
     <div className="mk-profile">
+      <ShellTitle><FlowTitle>How you like to learn</FlowTitle></ShellTitle>
       {progress}
       {conversation}
       <div className="mk-panel-col">

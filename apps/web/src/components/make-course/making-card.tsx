@@ -3,6 +3,7 @@ import type { CourseRequestStatus } from "@senoy/db/course-request";
 import { ThreadCard } from "@/components/ui/chat-thread.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { Loader } from "@/components/ui/loader.tsx";
+import { ProgressBar } from "@/components/ui/progress.tsx";
 import { pickCourseIcon } from "@/lib/brand-marks.ts";
 import type { BlueprintView, GenerationView } from "@/lib/course-request-types.ts";
 import { cn } from "@/lib/utils";
@@ -79,7 +80,7 @@ export function MakingCard({ view, generation, status, failureReason = null }: M
     : undefined;
 
   return (
-    <ThreadCard>
+    <ThreadCard className="mk-making">
       <div className="flex items-start justify-between gap-3">
         <ol className="mk-stages" aria-label="Stages">
           {STAGES.map((name, index) => {
@@ -98,9 +99,7 @@ export function MakingCard({ view, generation, status, failureReason = null }: M
           <span className="mk-pct" aria-hidden="true">{pct}%</span>
         </span>
       </div>
-      <div className={cn("mk-bigbar", running && "live")} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="How much is done">
-        <i style={{ width: `${pct}%` }} />
-      </div>
+      <ProgressBar value={pct / 100} label="How much is done" />
       <div className="mk-meta">
         <span className="cur" role="status">{nowLine(status, generation)}</span>
         <span>{generation ? `${generation.finishedLessons}/${generation.totalLessons} written` : `0/${slots.length} written`}</span>
@@ -114,7 +113,9 @@ export function MakingCard({ view, generation, status, failureReason = null }: M
             <li key={slot.id} className={cn(done && "done", now && "now", miss && "miss")}>
               <span className="mk-dot" aria-hidden="true">{done ? <Check /> : miss ? <X /> : null}</span>
               <span className="min-w-0 flex-1">{slot.title}</span>
-              <span className="st">{done ? "written" : now ? "writing now" : miss ? "stopped here" : "waiting"}</span>
+              <span className={cn("k-rib", done ? "done" : now ? "making" : miss ? "needs" : "stopped")}>
+                {done ? "written" : now ? "writing now" : miss ? "stopped here" : "waiting"}
+              </span>
             </li>
           );
         })}
