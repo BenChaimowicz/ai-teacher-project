@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { QUIZ_METHOD_ID } from "@senoy/db/reading-lesson";
 import { ArrowRight, BookOpen, Flame, Play, Plus, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { useCompanion, useCompanionLines } from "@/components/companion/companion-provider.tsx";
@@ -11,7 +11,7 @@ import { CourseCard } from "@/components/ui/course-card.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { PageLoader, Loader } from "@/components/ui/loader.tsx";
 import { Jongi } from "@/components/companion/jongi.tsx";
-import { ProgressRing, SegmentedProgress, type SegmentState } from "@/components/ui/progress.tsx";
+import { ProgressBar, ProgressRing } from "@/components/ui/progress.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
 import { COMPANION_NAME, type CourseIconName } from "@/lib/brand-marks.ts";
 import { toCourseListItem, type CourseListItem, type LibraryItem } from "@/lib/course-list.ts";
@@ -125,46 +125,51 @@ function Section({ id, title, count, children }: { id: string; title: string; co
 }
 
 /**
- * The course to continue: icon, next Lesson, a ring for how much is done, and one segment per Lesson.
+ * The course to continue, the focal sheet: a bookmark ribbon, the course, the next Lesson, a ribbon bar
+ * for how much is done, and the one button that picks it up again.
  */
 function ContinueHero({ row, study }: { row: Row; study: StudyPayload | null }) {
   const progress = row.item.progress ?? { completed: 0, total: 0 };
   const lessons = study ? study.modules.flatMap((module) => module.lessons) : [];
   const current = lessons.find((lesson) => lesson.id === study?.currentLessonId) ?? null;
-  const segments: SegmentState[] = lessons.length
-    ? lessons.map((lesson) => (lesson.completed ? "done" : lesson.id === current?.id ? "now" : "todo"))
-    : Array.from({ length: progress.total }, (_, index) => (index < progress.completed ? "done" : "todo"));
+  const currentNumber = current ? lessons.indexOf(current) + 1 : 0;
   const quizzes = lessons.filter((lesson) => lesson.teachingMethod === QUIZ_METHOD_ID);
   const value = progress.total ? progress.completed / progress.total : 0;
+  const kind = current?.teachingMethod === QUIZ_METHOD_ID ? "quiz" : "reading";
   return (
     <div className="l-hero">
-      <div className="l-hero-in">
-        <span className="l-cover" aria-hidden="true">
-          <CourseIcon name={row.course.icon} size={34} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <span className="l-kicker">continue</span>
-          <h2>{row.item.title}</h2>
-          {current ? (
-            <p className="nx">
-              Next: <b>{current.title}</b> · {current.teachingMethod === QUIZ_METHOD_ID ? "quiz" : "reading"}
-            </p>
+      <span className="l-bm" aria-hidden="true" />
+      <div className="tx">
+        <span className="k-rib">{current ? `lesson ${currentNumber} of ${lessons.length} · ${kind}` : `${progress.completed}/${progress.total}`}</span>
+        <h2>{row.item.title}</h2>
+        {current ? (
+          <p className="nx">
+            Next: <b>{current.title}</b> · {kind}
+          </p>
+        ) : null}
+        <ProgressBar value={value} label={`${progress.completed} of ${progress.total} lessons done`} />
+        <div className="m">
+          <span>
+            {progress.completed} of {progress.total} lessons
+          </span>
+          {quizzes.length ? (
+            <span>
+              {quizzes.filter((lesson) => lesson.completed).length} of {quizzes.length} quizzes passed
+            </span>
           ) : null}
         </div>
-        <ProgressRing value={value} size={84} stroke={7} label={`${progress.completed} of ${progress.total} lessons done`}>
-          <CountUp to={Math.round(value * 100)} format={(n) => `${n}%`} />
-        </ProgressRing>
-      </div>
-      <SegmentedProgress segments={segments} label={`${progress.completed} of ${progress.total} lessons done`} />
-      <div className="m">
-        <span>
-          {progress.completed} of {progress.total} lessons
-        </span>
-        {quizzes.length ? (
-          <span>
-            {quizzes.filter((lesson) => lesson.completed).length} of {quizzes.length} quizzes passed
-          </span>
+        {row.item.href ? (
+          <div className="cta">
+            <Button asChild>
+              <Link to={row.item.href}>
+                <Play /> {current ? `Continue ${kind === "quiz" ? "the quiz" : "reading"}` : "Continue"}
+              </Link>
+            </Button>
+          </div>
         ) : null}
+      </div>
+      <div className="art" aria-hidden="true">
+        <CourseIcon name={row.course.icon} size={52} />
       </div>
     </div>
   );
@@ -190,7 +195,7 @@ function TodayStrip({ lessonsDone }: { lessonsDone: number }) {
         </div>
       </div>
       <div className="l-tbox" style={{ "--i": 1 } as CSSProperties}>
-        <span className="ic" aria-hidden="true">
+        <span className="ic streak" aria-hidden="true">
           <Flame />
         </span>
         <div>
@@ -257,8 +262,40 @@ function CourseCardBody({ course, sub }: { course: CourseListItem; sub?: ReactNo
         <p className="t">{course.title}</p>
         {sub ? <p className="sub">{sub}</p> : null}
       </div>
-      <span className={`badge ${course.status}`}>{course.badge}</span>
+      <span className={`k-rib badge ${course.status}`}>{course.badge}</span>
     </div>
+  );
+}
+
+/**
+ * A finished course: a recessed row on the shelf, linking back to it.
+ */
+function DoneRow({ row }: { row: Row }) {
+  const progress = row.item.progress ?? { completed: 0, total: 0 };
+  const inner = (
+    <>
+      <span className="l-cover done" aria-hidden="true">
+        <CourseIcon name={row.course.icon} size={18} />
+      </span>
+      <span className="tx">
+        <b>{row.course.title}</b>
+        <small>
+          Finished · {progress.completed} of {progress.total} lessons
+        </small>
+      </span>
+      <span className="k-rib done">{row.course.badge}</span>
+      {row.course.href ? (
+        <span className="rv" aria-hidden="true">
+          Revisit
+        </span>
+      ) : null}
+    </>
+  );
+  if (!row.course.href) return <div className="l-done-row">{inner}</div>;
+  return (
+    <Link to={row.course.href} className="l-done-row">
+      {inner}
+    </Link>
   );
 }
 
@@ -419,16 +456,8 @@ export function HomePage() {
   else if (groups.making.length) line = `${greeting()}. I'm still making ${groups.making[0]!.item.title}. I'll have it ready soon.`;
   else line = `${greeting()}. Everything here is finished. What's next?`;
 
+  // Continue lives on the hero sheet; these are the other ways on.
   const tiles: LinkTile[] = [];
-  if (resume?.item.href) {
-    tiles.push({
-      to: resume.item.href,
-      label: "Continue",
-      description: current ? `${current.title} · ${current.teachingMethod === QUIZ_METHOD_ID ? "quiz" : "reading"}` : resume.item.title,
-      icon: <Play />,
-      tone: "primary",
-    });
-  }
   tiles.push({ to: "/new-course-request", label: "Start something new", description: `Tell ${COMPANION_NAME} a topic`, icon: <Plus /> });
   tiles.push({ to: "/teaching-profile", label: "How you like to learn", description: "Change how lessons feel", icon: <SlidersHorizontal />, tone: "quiet" });
 
@@ -439,86 +468,89 @@ export function HomePage() {
           {line}
         </CompanionLine>
       </ChatThread>
-      {resume ? <ContinueHero row={resume} study={study} /> : null}
-      {tilesShown ? <LinkTiles tiles={tiles} label="What to do now" cols={3} /> : null}
+      {resume ? (
+        <>
+          <p className="k-sec-h">continue</p>
+          <ContinueHero row={resume} study={study} />
+        </>
+      ) : null}
+      {tilesShown ? <LinkTiles tiles={tiles} label="What to do now" cols={2} /> : null}
 
       <TodayStrip lessonsDone={lessonsDone} />
 
-      {groups.learning.length ? (
-        <Section id="home-learning" title="learning" count={groups.learning.length}>
-          <div className="l-grid2">
-            {groups.learning.map((row) => (
-              <CourseCard
-                key={row.course.key}
-                course={row.course}
-                metaLeft={`${row.item.progress?.completed ?? 0} of ${row.item.progress?.total ?? 0} lessons`}
-              />
-            ))}
-          </div>
-        </Section>
-      ) : null}
-
-      {groups.making.length ? (
-        <Section id="home-making" title="being made" count={groups.making.length}>
-          <div className="l-stack">
-            {groups.making.map((row) => (
-              <CourseCard
-                key={row.course.key}
-                className="l-making"
-                course={row.course}
-                sub={
-                  <span className="flex items-center gap-2">
-                    <Loader size={18} />
-                    {MAKING_LINE[row.item.status] ?? "Working on it"}
-                  </span>
-                }
-                metaLeft="you can leave; it keeps going"
-              />
-            ))}
-          </div>
-        </Section>
-      ) : null}
-
-      {groups.needs.length || groups.older.length ? (
-        <Section id="home-needs" title="needs you" count={groups.needs.length}>
-          <div className="l-stack">
-            {groups.needs.map((row) => (
-              <NeedsCard key={row.course.key} row={row} />
-            ))}
-          </div>
-          {groups.older.length ? (
-            <>
-              <div className="l-older">
-                <span className="grow">
-                  {groups.older.length} older {groups.older.length === 1 ? "attempt" : "attempts"}, stopped or started again
-                </span>
-                <button type="button" aria-expanded={showOlder} aria-controls="home-older" onClick={() => setShowOlder((open) => !open)}>
-                  {showOlder ? "hide them" : "show them"}
-                </button>
+      {groups.learning.length || groups.making.length || groups.needs.length || groups.older.length ? (
+        <div className="l-groups">
+          {groups.learning.length ? (
+            <Section id="home-learning" title="learning" count={groups.learning.length}>
+              <div className="l-stack">
+                {groups.learning.map((row) => (
+                  <CourseCard
+                    key={row.course.key}
+                    course={row.course}
+                    metaLeft={`${row.item.progress?.completed ?? 0} of ${row.item.progress?.total ?? 0} lessons`}
+                  />
+                ))}
               </div>
-              {showOlder ? (
-                <div id="home-older" className="l-stack mt-2">
-                  {groups.older.map((row) => (
-                    <CourseCard key={row.course.key} course={row.course} sub={row.item.learningGoal} />
-                  ))}
-                </div>
-              ) : null}
-            </>
+            </Section>
           ) : null}
-        </Section>
+
+          {groups.making.length ? (
+            <Section id="home-making" title="being made" count={groups.making.length}>
+              <div className="l-stack">
+                {groups.making.map((row) => (
+                  <CourseCard
+                    key={row.course.key}
+                    className="l-making"
+                    course={row.course}
+                    sub={
+                      <span className="flex items-center gap-2">
+                        <Loader size={18} />
+                        {MAKING_LINE[row.item.status] ?? "Working on it"}
+                      </span>
+                    }
+                    metaLeft="you can leave; it keeps going"
+                  />
+                ))}
+              </div>
+            </Section>
+          ) : null}
+
+          {groups.needs.length || groups.older.length ? (
+            <Section id="home-needs" title="needs you" count={groups.needs.length}>
+              <div className="l-stack">
+                {groups.needs.map((row) => (
+                  <NeedsCard key={row.course.key} row={row} />
+                ))}
+              </div>
+              {groups.older.length ? (
+                <>
+                  <div className="l-older">
+                    <span className="grow">
+                      {groups.older.length} older {groups.older.length === 1 ? "attempt" : "attempts"}, stopped or started again
+                    </span>
+                    <button type="button" aria-expanded={showOlder} aria-controls="home-older" onClick={() => setShowOlder((open) => !open)}>
+                      {showOlder ? "hide them" : "show them"}
+                    </button>
+                  </div>
+                  {showOlder ? (
+                    <div id="home-older" className="l-stack mt-2">
+                      {groups.older.map((row) => (
+                        <CourseCard key={row.course.key} course={row.course} sub={row.item.learningGoal} />
+                      ))}
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+            </Section>
+          ) : null}
+        </div>
       ) : null}
 
       {groups.done.length ? (
         <Section id="home-done" title="finished" count={groups.done.length}>
-          <div className="l-grid2">
+          <div className="l-rows">
             {groups.done.map((row) => (
-              <div key={row.course.key}>
-                <CourseCard
-                  course={row.course}
-                  sub={`Finished · ${row.item.progress?.total ?? 0} lessons`}
-                  metaLeft={`${row.item.progress?.completed ?? 0} of ${row.item.progress?.total ?? 0} lessons`}
-                />
-              </div>
+              <DoneRow key={row.course.key} row={row} />
             ))}
           </div>
         </Section>
