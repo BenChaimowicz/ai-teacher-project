@@ -5,7 +5,7 @@
  */
 
 /** The companion's name lives here only. */
-export const COMPANION_NAME = "Nibbles";
+export const COMPANION_NAME = "Jongi";
 
 /** Product name (silent k). */
 export const PRODUCT_NAME = "Knibbler";

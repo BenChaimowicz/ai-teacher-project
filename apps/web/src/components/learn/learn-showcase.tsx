@@ -10,6 +10,7 @@ import { ReadingPanel } from "@/components/learn/reading-panel.tsx";
 import { ReadingView } from "@/components/learn/reading-view.tsx";
 import { StudyChromeProvider } from "@/components/learn/study-chrome.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { COMPANION_NAME } from "@/lib/brand-marks.ts";
 import type { StudyLesson, StudyPayload } from "@/lib/study-types.ts";
 import "@/components/learn/learn.css";
 
@@ -79,7 +80,7 @@ export function LearnShowcase() {
           label="Sample tiles"
           tiles={[
             { to: "#", label: "Continue", description: "Where the myths come from", icon: <Play />, tone: "primary" },
-            { to: "#", label: "Start something new", description: "Tell Nibbles a topic", icon: <Plus /> },
+            { to: "#", label: "Start something new", description: `Tell ${COMPANION_NAME} a topic`, icon: <Plus /> },
             { to: "#", label: "Not now", description: "Quiet tone", tone: "quiet" },
           ]}
         />

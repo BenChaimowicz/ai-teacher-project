@@ -6,9 +6,10 @@ import { addStudyMinutes, readActivity, type ActivitySummary } from "@/lib/study
 /** Low-key lines for when a screen sets none. Kind, brief, never childish. */
 export const DEFAULT_COMPANION_LINES = [
   "I'm here if you need me.",
+  "Saved your place. No rush.",
   "Small steps add up.",
   "A short break helps things stick.",
-  "Curious about something? We can make a course of it.",
+  "Curious about something? Tell me a topic. I'll handle the rest.",
   "No rush. Go at your pace.",
 ];
 
