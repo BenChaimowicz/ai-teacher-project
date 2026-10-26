@@ -21,6 +21,8 @@ const UNRESOLVED = "The answer has not resolved the original question.";
  */
 export function RequestHistory({ record }: { record: CourseRequestRecord }) {
   if (record.status === "draft") return null;
+  // The goal as typed: focusing (SEN-90) may have rewritten learningGoal.
+  const typedGoal = record.focus?.originalGoal ?? record.learningGoal;
   return (
     <>
       {record.revisedFromId ? (
@@ -30,9 +32,13 @@ export function RequestHistory({ record }: { record: CourseRequestRecord }) {
       ) : null}
       <CompanionLine>What would you like to learn?</CompanionLine>
       <LearnerEcho>{record.subject}</LearnerEcho>
-      <CompanionLine>What would you like to get out of it?</CompanionLine>
-      {/* The goal as typed: focusing (SEN-90) may have rewritten learningGoal. */}
-      <LearnerEcho>{record.focus?.originalGoal ?? record.learningGoal}</LearnerEcho>
+      {/* Requests from before SEN-90 tapped a separate goal; newer ones typed one line that is both. */}
+      {typedGoal !== record.subject ? (
+        <>
+          <CompanionLine>What would you like to get out of it?</CompanionLine>
+          <LearnerEcho>{typedGoal}</LearnerEcho>
+        </>
+      ) : null}
       {record.clarification ? (
         <>
           <CompanionLine><b>{record.clarification.question}</b></CompanionLine>
@@ -86,7 +92,7 @@ export function ValidityStage({ record }: StageProps) {
           <p className="mk-note mb-2"><Link className="mk-link" to={`/course-requests/${record.revisedFromId}`}>View original request</Link></p>
         ) : null}
         <ComposeFlow
-          initialSubject={record.subject}
+          initialSubject={record.learningGoal}
           onCompose={async (subject, learningGoal) => {
             await requestAction(`/${record.id}`, "PATCH", { subject, learningGoal }, "Could not save your changes. Please try again.");
           }}

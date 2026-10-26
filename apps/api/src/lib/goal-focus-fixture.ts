@@ -37,6 +37,14 @@ function fixtureQuestions(round: number): FocusQuestion[] {
 }
 
 /**
+ * The fixture's broad-overview goal.
+ * @param subject - The subject as typed, with the marker
+ */
+export function fixtureBroadGoal(subject: string): string {
+  return `Get the big picture of ${subject.replace(/\[broad\]/i, "").trim()} and how its main parts fit together.`;
+}
+
+/**
  * Deterministic focuser for browser tests (`DIAGNOSTIC_FIXTURE=1`): no provider calls. A subject containing "[broad]"
  * is asked one round of two questions, then gets a proposal built from the answers; a "not quite" asks the same two
  * questions again. Every other goal is precise.
@@ -46,11 +54,12 @@ export function createFixtureGoalFocuser(): GoalFocuser {
     async next({ subject, rounds, notQuite }): Promise<FocusTurn> {
       if (!subject.toLowerCase().includes(FIXTURE_BROAD_MARKER)) return { kind: "precise" };
       const last = rounds.at(-1);
-      if (notQuite || !last?.answers) return { kind: "ask", questions: fixtureQuestions(rounds.length + 1) };
+      if (notQuite || !last?.answers) return { kind: "ask", questions: fixtureQuestions(rounds.length + 1), broadGoal: fixtureBroadGoal(subject) };
       const answerTo = (index: number) => last.answers?.find((answer) => answer.questionId === last.questions[index]?.id)?.answer ?? "";
       const part = answerTo(0);
       return {
         kind: "propose",
+        broadGoal: fixtureBroadGoal(subject),
         proposal: {
           learningGoal: fixtureFocusedGoal(subject, part),
           scope: { inScope: [part, answerTo(1)], outOfScope: [...FIXTURE_FOCUS_OUT_OF_SCOPE] },

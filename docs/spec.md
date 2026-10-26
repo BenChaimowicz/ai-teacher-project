@@ -111,7 +111,7 @@ One screen for every unpublished status. The body follows status; these are not 
 
 | Status surface | What the Learner does |
 | --- | --- |
-| Compose | Subject + Learning Goal. |
+| Compose | One typed line: a topic ("Norse mythology") or what the Learner wants to be able to do. It is saved as the subject and as the Learning Goal as typed. There is no generic goal question; Goal focusing asks what part and how deep, with options built from the subject. A topic picked elsewhere (Home, Go deeper) is saved straight away. |
 | Validity | Pass, one clarification, or reject. Reject: plain-language reason, safe reframe, **Revise request** (editable new Request). Rejected stays in history. No appeal. |
 | Focus | Nothing, if the goal is already precise. Otherwise a few tap-to-choose questions per round (each with **Something else** and **A broad overview is fine**), then the proposed goal with what it covers and leaves out: **That's it**, **Not quite** (while rounds remain), or **A broad overview is fine**. |
 | Assessment | Honesty copy; eight three-option items plus **I don’t know**. |
@@ -227,11 +227,11 @@ The Learner creates a Course Request by selecting a subject and stating a Learni
 
 Validity decides whether a request is real and learnable; it does not decide which part of a subject the Learner means. **Goal focusing** runs after Validity **pass** and before the Starting Level diagnostic, on every Course Request. Validity's one clarification stays separate: it settles learnability, focusing settles scope (ADR 0020).
 
-**Detect.** The Generator rates the goal on three questions: does it name a facet of the subject, a depth or purpose (overview, be able to do or retell it, analyse it), and a finish line? The rating is structured output and code decides: only a goal that answers all three is **precise**, and a precise goal passes straight through with nothing asked. "Name the Æsir and Vanir and how they are related" is precise; "explain the main stories and figures in the Norse mythic corpus" is not.
+**Detect.** A bare topic is never precise. The Generator rates the goal on three questions: does it name a facet of the subject, a depth or purpose (overview, be able to do or retell it, analyse it), and a finish line? The rating is structured output and code decides: only a goal that answers all three is **precise**, and a precise goal passes straight through with nothing asked. "Name the Æsir and Vanir and how they are related" is precise; "explain the main stories and figures in the Norse mythic corpus" is not.
 
 **Ask.** Up to three rounds of one to three questions each. Each question offers two to five answers built from the subject's real facets, plus **Something else** (a short typed answer) and **A broad overview is fine**. Each round narrows what earlier answers left open, and stops once facet, depth, and finish line are clear. After the last round the Course Guide must propose.
 
-**Result.** The Course Guide proposes a rewritten Learning Goal plus a **Goal scope**: in scope and out of scope, each a short list of facets. **That's it** confirms it, and the rewritten goal becomes the Request's Learning Goal; the goal as typed stays recorded. **Not quite** asks another round while rounds remain. **A broad overview is fine**, at any point, keeps the goal as typed with no scope, recorded as a deliberate broad overview.
+**Result.** The Course Guide proposes a rewritten Learning Goal plus a **Goal scope**: in scope and out of scope, each a short list of facets. **That's it** confirms it, and the rewritten goal becomes the Request's Learning Goal; the goal as typed stays recorded. **Not quite** asks another round while rounds remain. **A broad overview is fine**, at any point, records a deliberate broad overview with no scope. Its Learning Goal is a one-sentence broad-overview goal the Course Guide writes from what was typed when it first asks (a bare topic is not a goal sentence).
 
 **Statuses.** `validity_passed` (first turn runs automatically), `awaiting_focus_answers`, `awaiting_focus_confirmation`, then `goal_focused`, from which the diagnostic starts. Status is explicit, not derived from the stored focus.
 

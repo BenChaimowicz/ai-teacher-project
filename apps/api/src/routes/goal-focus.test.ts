@@ -18,6 +18,7 @@ import type { DiagnosticBuilder } from "../lib/diagnostic.ts";
 import type { GoalFocuser } from "../lib/goal-focus.ts";
 import {
   createFixtureGoalFocuser,
+  fixtureBroadGoal,
   FIXTURE_FOCUS_DEPTH_OPTIONS,
   FIXTURE_FOCUS_DEPTH_QUESTION,
   FIXTURE_FOCUS_OUT_OF_SCOPE,
@@ -219,7 +220,7 @@ test("Not quite opens another round that records the proposal it answers, and is
   } finally { await exhausted.app.close(); }
 });
 
-test("Skip from either open status records a broad overview and keeps the goal as typed", async () => {
+test("Skip from either open status records a broad overview with the Course Guide's broad-overview goal", async () => {
   for (const status of ["awaiting_focus_answers", "awaiting_focus_confirmation"] as const) {
     const { app, url } = await testApp();
     try {
@@ -229,7 +230,8 @@ test("Skip from either open status records a broad overview and keeps the goal a
       assert.equal(skipped.statusCode, 200, skipped.body);
       const { courseRequest } = skipped.json();
       assert.equal(courseRequest.status, "goal_focused");
-      assert.equal(courseRequest.learningGoal, ORIGINAL_GOAL);
+      assert.equal(courseRequest.learningGoal, fixtureBroadGoal(courseRequest.subject));
+      assert.equal(courseRequest.focus.originalGoal, ORIGINAL_GOAL);
       assert.equal(courseRequest.focus.outcome, "broad_overview");
       assert.equal(courseRequest.focus.scope, null);
       assert.equal(courseRequest.focus.proposal, null);
@@ -291,7 +293,7 @@ test("A focuser that asks with no rounds left is treated as a failure, not saved
   focus.rounds[MAX_FOCUS_ROUNDS - 1]!.answers = null;
   const { app, url, row } = await testApp({
     status: "awaiting_focus_answers", focus,
-    focuser: { async next() { return { kind: "ask", questions: [{ id: "x", question: "More?", options: ["A", "B"] }] }; } },
+    focuser: { async next() { return { kind: "ask", questions: [{ id: "x", question: "More?", options: ["A", "B"] }], broadGoal: null }; } },
   });
   try {
     const response = await app.inject({

@@ -78,6 +78,11 @@ export type GoalFocus = {
   rounds: FocusRound[];
   /** Open while `awaiting_focus_confirmation`; kept after confirming as the record of what was confirmed. */
   proposal: FocusProposal | null;
+  /**
+   * The goal a deliberate broad overview uses: one sentence the Course Guide writes from the typed goal when it first asks,
+   * since a bare topic is not a goal sentence. Missing on a precise goal; `originalGoal` stands in when missing.
+   */
+  broadGoal?: string;
   /** The confirmed scope every later stage reads; null unless `focused`. */
   scope: GoalScope | null;
 };

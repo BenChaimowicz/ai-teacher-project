@@ -1,11 +1,9 @@
-import { BookOpen, Layers, MessageCircle, Wrench } from "lucide-react";
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { LearnerEcho, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { Input } from "@/components/ui/input.tsx";
-import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
-import { ThreadEnd, WorkingLine } from "@/components/make-course/flow.tsx";
+import { ThreadEnd, WorkingLine, useAutoStep } from "@/components/make-course/flow.tsx";
 import { cheer } from "@/lib/cheer.ts";
 import type { CourseIconName } from "@/lib/brand-marks.ts";
 
@@ -17,31 +15,17 @@ const SUGGESTIONS: [string, CourseIconName][] = [
   ["Basics of investing", "investing"],
 ];
 
-/**
- * What the Learner can want from a Course. The pick becomes the Learning Goal, worded around the topic, so the topic
- * stays the only free text (spec §3).
- * @param subject - The topic as typed
- */
-export function goalOptions(subject: string): OptionTile<string>[] {
-  return [
-    { id: "big-picture", label: "Get the big picture", description: "The main ideas, and how they fit together", icon: <BookOpen />,
-      value: `Understand the main ideas of ${subject} and how they fit together.` },
-    { id: "explain", label: "Be able to explain it", description: "Well enough to tell someone else", icon: <MessageCircle />,
-      value: `Explain the key ideas of ${subject} clearly to someone else.` },
-    { id: "use", label: "Use it in practice", description: "Apply it to real situations", icon: <Wrench />,
-      value: `Apply ${subject} in practical, real situations.` },
-    { id: "deep", label: "Go deep", description: "Detail, nuance and where it comes from", icon: <Layers />,
-      value: `Understand ${subject} in depth, including the details, debates and sources behind it.` },
-  ];
-}
-
 type TopicFieldProps = {
   initial?: string;
   onSubmit: (subject: string) => void;
 };
 
+/** Longest topic or goal the field takes. */
+const MAX_TOPIC_LENGTH = 300;
+
 /**
- * The topic field: the only place the Learner types (spec §3), with a few topics to try.
+ * The topic field: where the Learner says what to learn, as a topic or as what they want to be able to do (spec §3),
+ * with a few topics to try.
  */
 export function TopicField({ initial = "", onSubmit }: TopicFieldProps) {
   const [value, setValue] = useState(initial);
@@ -61,8 +45,8 @@ export function TopicField({ initial = "", onSubmit }: TopicFieldProps) {
           name="subject"
           autoComplete="off"
           autoFocus
-          maxLength={200}
-          placeholder="A topic, a skill, anything you're curious about"
+          maxLength={MAX_TOPIC_LENGTH}
+          placeholder="A topic, or what you want to be able to do"
           value={value}
           onChange={(event) => setValue(event.target.value)}
         />
@@ -88,7 +72,7 @@ export function TopicField({ initial = "", onSubmit }: TopicFieldProps) {
 type ComposeFlowProps = {
   /** Prefills the topic (Revise request reopens the field with it). */
   initialSubject?: string;
-  /** A topic already chosen elsewhere (Home's first-run field, "Go deeper"): skip straight to the goal. */
+  /** A topic already chosen elsewhere (Home's first-run field, "Go deeper"): saved straight away. */
   presetTopic?: string;
   /** Saves the Request; throws with plain-language copy on failure. */
   onCompose: (subject: string, learningGoal: string) => Promise<void>;
@@ -97,42 +81,41 @@ type ComposeFlowProps = {
 };
 
 /**
- * Compose: what to learn (typed), then what to get out of it (tapped). Saving the Request is the next step's job;
- * the Validity check then starts by itself.
+ * Compose: what to learn, typed once. The text is both the subject and the Learning Goal as typed; Goal focusing asks
+ * what part and how deep, with options built from the subject, so there is no generic goal question here (SEN-90).
+ * Saving the Request is the next step's job; the Validity check then starts by itself.
  */
 export function ComposeFlow({ initialSubject, presetTopic, onCompose, onTopic }: ComposeFlowProps) {
-  const preset = presetTopic?.trim() ? presetTopic.trim().slice(0, 200) : null;
+  const preset = presetTopic?.trim() ? presetTopic.trim().slice(0, MAX_TOPIC_LENGTH) : null;
   const [subject, setSubject] = useState<string | null>(preset);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /** Saves the Request with the typed text as subject and goal. */
+  async function save(topic: string) {
+    setSaving(true);
+    setError(null);
+    try {
+      await onCompose(topic, topic);
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "Could not save your course. Please try again.");
+      setSaving(false);
+    }
+  }
+
+  function pickTopic(topic: string) {
+    setSubject(topic);
+    onTopic?.(topic);
+    window.setTimeout(() => cheer(document.querySelector(".mk-topic-echo .k-msg"), "topic set"), 30);
+    void save(topic);
+  }
+
   useEffect(() => {
     if (preset) onTopic?.(preset);
     // Only the topic the screen opened with.
   }, []);
-  const [goal, setGoal] = useState<OptionTile<string> | null>(null);
-  const [goalShown, setGoalShown] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
-
-  function pickTopic(topic: string) {
-    setSubject(topic);
-    setGoalShown(false);
-    onTopic?.(topic);
-    window.setTimeout(() => cheer(document.querySelector(".mk-topic-echo .k-msg"), "topic set"), 30);
-  }
-
-  async function pickGoal(option: OptionTile<string>) {
-    if (!subject || !option.value) return;
-    setGoal(option);
-    setSaving(true);
-    setError(null);
-    try {
-      await onCompose(subject, option.value);
-    } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "Could not save your course. Please try again.");
-      setSaving(false);
-      setAttempt((n) => n + 1);
-    }
-  }
+  // A topic chosen elsewhere was already typed or picked there; save it once.
+  useAutoStep(preset ? `compose:${preset}` : null, () => save(preset!));
 
   return (
     <>
@@ -142,32 +125,21 @@ export function ComposeFlow({ initialSubject, presetTopic, onCompose, onTopic }:
       ) : (
         <>
           <div className="mk-topic-echo"><LearnerEcho>{subject}</LearnerEcho></div>
-          <CompanionLine typing key={subject} onShown={() => setGoalShown(true)}>
-            Good choice. What would you like to get out of it?
-          </CompanionLine>
-          {goalShown ? (
+          {saving ? <CompanionLine mood="think"><WorkingLine>Saving it…</WorkingLine></CompanionLine> : null}
+          {error ? (
             <>
-              <OptionTiles
-                label="What would you like to get out of it?"
-                options={goalOptions(subject)}
-                resetKey={attempt}
-                onPick={(option) => pickGoal(option)}
-              />
-              {!goal || error ? (
-                <div className="mk-back">
-                  <Button variant="link" size="sm" onClick={() => { setSubject(null); setGoal(null); onTopic?.(null); }}>
-                    Change the topic
-                  </Button>
-                </div>
-              ) : null}
+              <CompanionLine mood="think"><span role="alert">{error}</span></CompanionLine>
+              <div className="mk-back">
+                <Button size="sm" onClick={() => void save(subject)}>Try again</Button>
+                <Button variant="link" size="sm" onClick={() => { setSubject(null); setError(null); onTopic?.(null); }}>
+                  Change the topic
+                </Button>
+              </div>
             </>
           ) : null}
-          {goal && !error ? <LearnerEcho>{goal.label}</LearnerEcho> : null}
-          {saving ? <CompanionLine mood="think"><WorkingLine>Saving it…</WorkingLine></CompanionLine> : null}
-          {error ? <CompanionLine mood="think"><span role="alert">{error}</span> <span className="mk-faint">Pick again to retry.</span></CompanionLine> : null}
         </>
       )}
-      <ThreadEnd watch={`${subject}|${goalShown}|${goal?.id}|${saving}|${error}`} />
+      <ThreadEnd watch={`${subject}|${saving}|${error}`} />
     </>
   );
 }

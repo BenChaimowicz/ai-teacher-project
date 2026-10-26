@@ -88,6 +88,8 @@ function applyTurn(focus: GoalFocus, turn: FocusTurn, notQuite?: FocusProposal):
     if (focus.rounds.length > 0 || notQuite) throw new Error("A precise goal was reported after focusing began.");
     return { focus: { ...focus, outcome: "precise", proposal: null, scope: null }, status: "goal_focused" };
   }
+  // The first broad-overview goal written is kept: it is what a skip at any point falls back on.
+  if (!focus.broadGoal && turn.broadGoal) focus = { ...focus, broadGoal: turn.broadGoal };
   if (turn.kind === "ask") {
     if (focus.rounds.length >= MAX_FOCUS_ROUNDS || turn.questions.length === 0) throw new Error("Questions were asked with no rounds left.");
     const round = focus.rounds.length + 1;
@@ -246,7 +248,7 @@ export async function goalFocusRoutes(app: FastifyInstance, options: GoalFocusOp
       }
       // A deliberate broad overview: the goal stays exactly as the Learner typed it, with no scope.
       const focus: GoalFocus = { ...row.focus, outcome: "broad_overview", proposal: null, scope: null };
-      const updated = await save(row, request.currentLearner.id, { status: "goal_focused", focus, learningGoal: row.focus.originalGoal });
+      const updated = await save(row, request.currentLearner.id, { status: "goal_focused", focus, learningGoal: row.focus.broadGoal ?? row.focus.originalGoal });
       if (!updated) return reply.code(409).send({ error: CHANGED_MESSAGE });
       recordFocused(request.currentLearner.id, row.id, focus);
       return { courseRequest: updated };

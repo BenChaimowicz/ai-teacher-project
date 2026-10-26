@@ -67,10 +67,10 @@ test("Nearly everything right offers a short course or a new goal, and Too easy 
   await expect(page.getByRole("button", { name: /^Make me a short course/ })).toHaveCount(0);
 });
 
-test("Change my goal reopens the topic in a new Request linked to the original", async ({ page }) => {
+test("Change my goal reopens the goal in a new Request linked to the original", async ({ page }) => {
   await page.goto(await passedRequest());
   for (let n = 1; n <= 8; n += 1) await answer(page, n, true);
   await page.getByRole("button", { name: /^Change my goal/ }).click();
-  await expect(page.getByLabel("What would you like to learn?")).toHaveValue("Drum kit");
+  await expect(page.getByLabel("What would you like to learn?")).toHaveValue("Play Iris by the Goo Goo Dolls");
   await expect(page.getByRole("link", { name: "View original request" })).toBeVisible();
 });

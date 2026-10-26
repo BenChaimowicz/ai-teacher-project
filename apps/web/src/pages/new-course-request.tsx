@@ -16,8 +16,9 @@ import { ErrorState } from "@/components/ui/states.tsx";
 const LINES = ["Pick anything. I'll handle the rest.", "A few taps and I'll make the plan.", "You can change the plan before I write it.", "No rush."];
 
 /**
- * New course: the topic (typed), then the goal (tapped). Saving opens the Request, where the Validity check starts by
- * itself. Waits for "How you like to learn" first. `?subject=` prefills the topic field; `?topic=` (from Home and Course complete) skips to the goal.
+ * New course: what to learn, typed once (Goal focusing asks the rest). Saving opens the Request, where the Validity check
+ * starts by itself. Waits for "How you like to learn" first. `?subject=` prefills the field; `?topic=` (from Home and
+ * Course complete) saves straight away.
  */
 export function NewCourseRequestPage() {
   const { loading, present, error, refresh } = useTeachingProfile();

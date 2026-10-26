@@ -29,8 +29,8 @@ export type FocusTurnInput = {
  */
 export type FocusTurn =
   | { kind: "precise" }
-  | { kind: "ask"; questions: FocusQuestion[] }
-  | { kind: "propose"; proposal: FocusProposal };
+  | { kind: "ask"; questions: FocusQuestion[]; broadGoal: string | null }
+  | { kind: "propose"; proposal: FocusProposal; broadGoal: string | null };
 
 /** Decides whether a Learning Goal is specific enough to design one Course for, and questions the Learner until it is. */
 export interface GoalFocuser {
@@ -58,6 +58,7 @@ export type FocusExtraction = {
   rubric: FocusRubric;
   questions: { question: string; options: string[] }[];
   proposal: FocusProposal | null;
+  broadGoal: string | null;
 };
 
 /** Which turn is being decided; each stage encodes what it may return in its provider schema. */
@@ -111,9 +112,13 @@ const PROPOSAL_SCHEMA = {
 const TURN_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["rubric", "questions", "proposal"],
+  required: ["rubric", "questions", "proposal", "broadGoal"],
   properties: {
     rubric: RUBRIC_SCHEMA,
+    broadGoal: {
+      type: ["string", "null"],
+      description: "When the goal is not precise: one Learner-facing sentence for a broad overview of what they typed, for if they skip the questions. Null when precise.",
+    },
     questions: {
       type: "array", maxItems: MAX_FOCUS_QUESTIONS, items: QUESTION_SCHEMA,
       description: `0-${MAX_FOCUS_QUESTIONS} questions for this round. Empty when proposing or when the goal is already precise.`,
@@ -150,7 +155,7 @@ Rubric. Judge the Learning Goal, together with every answer the Learner has give
 1. facet: does it name which part of the subject the Course is about (for example a sub-area, a set of works, a technique family, the theory versus the practice, the history versus the present)?
 2. depth: does it say how deep to go or what for (an overview; being able to do, retell, or use it; or analysing and evaluating it)?
 3. finishLine: could you tell when the Learner has reached it?
-Report each as true or false in rubric. A goal that already answers all three is precise: never question a goal that already says what it wants. For a precise goal on the first turn, return empty questions and a null proposal. For example, "learn about bread" is broad; "bake a sandwich loaf with commercial yeast from scratch and tell when it is done" is precise.
+Report each as true or false in rubric. The Learner may have typed only a topic: a bare topic names no facet, depth or finish line, so it is never precise. A goal that already answers all three is precise: never question a goal that already says what it wants. For a precise goal on the first turn, return empty questions and a null proposal. For example, "learn about bread" is broad; "bake a sandwich loaf with commercial yeast from scratch and tell when it is done" is precise.
 
 Questions. When something is still open, ask 1-${MAX_FOCUS_QUESTIONS} short questions in this round and set proposal to null. Build every question and option from this subject's real facets, not generic categories. Write options as short answers in the Learner's voice. Each question narrows what earlier answers left open; never re-ask something already answered. Prefer fewer questions. Stop asking as soon as facet, depth and finish line are clear. Do not include options such as "Something else" or "Broad overview": the app adds those itself. roundsLeft says how many more rounds you may ask; when it is 0 you must propose.
 
@@ -236,7 +241,7 @@ function parseQuestions(raw: unknown): FocusExtraction["questions"] {
  */
 export function parseFocusExtraction(raw: unknown): FocusExtraction {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new ModelError("invalid_output");
-  const row = raw as { rubric?: unknown; questions?: unknown; proposal?: unknown };
+  const row = raw as { rubric?: unknown; questions?: unknown; proposal?: unknown; broadGoal?: unknown };
   if (Object.keys(row).length !== TURN_SCHEMA.required.length ||
       Object.keys(row).some((key) => !TURN_SCHEMA.required.some((field) => field === key))) throw new ModelError("invalid_output");
   const rubric = row.rubric as Partial<Record<keyof FocusRubric, unknown>> | undefined;
@@ -248,6 +253,7 @@ export function parseFocusExtraction(raw: unknown): FocusExtraction {
     rubric: { facet: rubric.facet, depth: rubric.depth, finishLine: rubric.finishLine },
     questions: parseQuestions(row.questions),
     proposal: row.proposal === null ? null : parseProposal(row.proposal),
+    broadGoal: row.broadGoal === null ? null : text(row.broadGoal, MAX_GOAL_LENGTH),
   };
 }
 
@@ -258,10 +264,12 @@ export function parseFocusExtraction(raw: unknown): FocusExtraction {
  * @param input - The turn being decided
  */
 export function decideFocusTurn(extraction: FocusExtraction, input: FocusTurnInput): FocusTurn {
-  const { rubric, questions, proposal } = extraction;
+  const { rubric, questions, proposal, broadGoal } = extraction;
   const clear = rubric.facet && rubric.depth && rubric.finishLine;
   const firstTurn = input.rounds.length === 0 && !input.notQuite;
   if (questions.length > 0 && proposal) throw rejectedOutput();
+  // Skipping on the first round needs a broad-overview goal to stand on.
+  if (firstTurn && !(rubric.facet && rubric.depth && rubric.finishLine) && !broadGoal) throw rejectedOutput();
   // Precise is decided here, from the rubric, and only before anything was asked.
   if (firstTurn && clear) {
     if (questions.length > 0 || proposal) throw rejectedOutput();
@@ -274,10 +282,10 @@ export function decideFocusTurn(extraction: FocusExtraction, input: FocusTurnInp
     // nor is asking with no rounds left.
     if ((clear && !input.notQuite) || input.rounds.length >= MAX_FOCUS_ROUNDS) throw rejectedOutput();
     const round = input.rounds.length + 1;
-    return { kind: "ask", questions: questions.map((question, index) => ({ id: `r${round}q${index + 1}`, ...question })) };
+    return { kind: "ask", questions: questions.map((question, index) => ({ id: `r${round}q${index + 1}`, ...question })), broadGoal };
   }
   if (!proposal) throw rejectedOutput();
-  return { kind: "propose", proposal };
+  return { kind: "propose", proposal, broadGoal };
 }
 
 /**

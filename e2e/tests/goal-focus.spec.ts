@@ -5,12 +5,11 @@ import { resetFixture } from "./fixture.ts";
 const PART = "Which part do you want the course to be about?";
 const DEPTH = "How deep should it go?";
 
-/** Types a topic and taps "Get the big picture" on New course. */
+/** Types what to learn on New course. */
 async function compose(page: Page, topic: string) {
   await page.goto("/new-course-request");
   await page.getByLabel("What would you like to learn?").fill(topic);
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("group", { name: "What would you like to get out of it?" }).getByRole("button", { name: /^Get the big picture/ }).click();
   await expect(page).toHaveURL(/\/course-requests\//);
 }
 
@@ -30,7 +29,8 @@ test("A precise goal asks nothing and goes straight on to the Starting Level che
 test("A broad goal is focused by tapping, the proposal is confirmed, and the thread keeps the typed goal and the focus", async ({ page }) => {
   await resetFixture();
   await compose(page, "[broad] Philosophy of mind");
-  const typedGoal = "Understand the main ideas of [broad] Philosophy of mind and how they fit together.";
+  // What was typed is the topic and the goal as typed; it stays at the top after the goal is rewritten.
+  const typedGoal = /^You: ?\[broad\] Philosophy of mind$/;
   const focusedGoal = "Explain how the parts fit together in Philosophy of mind";
 
   // One question at a time, tap to choose; "Something else" and the way out are always there.
@@ -73,5 +73,9 @@ test("A broad overview is fine skips focusing and goes on to the Starting Level 
   await expect(levelQuestion(page)).toBeVisible({ timeout: 15_000 });
   const thread = page.getByRole("log");
   await expect(thread.getByText(/^You: ?A broad overview is fine$/)).toBeVisible();
+  // A skip keeps a real goal sentence, not the bare topic (fixture: apps/api/src/lib/goal-focus-fixture.ts).
+  const request = await page.request.get(`/api/course-requests/${page.url().split("/").at(-1)}`);
+  const { courseRequest } = await request.json() as { courseRequest: { learningGoal: string } };
+  expect(courseRequest.learningGoal).toBe("Get the big picture of Philosophy of mind and how its main parts fit together.");
   await expect(page.getByText("Here's the course I'd make:")).toHaveCount(0);
 });

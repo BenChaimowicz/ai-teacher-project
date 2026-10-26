@@ -4,35 +4,35 @@ import { resetFixture } from "./fixture.ts";
 /** The fixture gate's clarification (apps/api/src/lib/validity-fixture.ts). */
 const QUESTION = "Do you mean unicorns in myths and stories, or caring for a real animal?";
 
-/** Types a topic and taps a goal on New course. */
-async function compose(page: Page, topic: string, goal: RegExp) {
+/** Types what to learn on New course; that one line is the topic and the goal as typed. */
+async function compose(page: Page, topic: string) {
   await page.goto("/new-course-request");
   await page.getByLabel("What would you like to learn?").fill(topic);
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("group", { name: "What would you like to get out of it?" }).getByRole("button", { name: goal }).click();
 }
 
-test("The topic is typed, the goal is tapped, and the checks that need no Learner start by themselves", async ({ page }) => {
+test("What to learn is typed once, with no generic goal question, and the checks that need no Learner start by themselves", async ({ page }) => {
   await resetFixture();
-  await compose(page, "Drum kit", /^Get the big picture/);
+  await compose(page, "Drum kit");
   await expect(page).toHaveURL(/\/course-requests\//);
   // Validity passes and the Starting Level check is prepared, with no button in between.
   await expect(page.getByRole("group", { name: "Question 1 of 8" })).toBeVisible({ timeout: 10_000 });
   const thread = page.getByRole("log");
   await expect(thread.getByText(/^You: ?Drum kit$/)).toBeVisible();
-  await expect(thread.getByText("Understand the main ideas of Drum kit and how they fit together.")).toBeVisible();
+  await expect(thread.getByText("What would you like to get out of it?")).toHaveCount(0);
 });
 
 test("A suggestion fills the topic in one tap", async ({ page }) => {
   await resetFixture();
   await page.goto("/new-course-request");
   await page.getByRole("button", { name: "Norse mythology" }).click();
-  await expect(page.getByRole("group", { name: "What would you like to get out of it?" })).toBeVisible();
+  await expect(page).toHaveURL(/\/course-requests\//);
+  await expect(page.getByRole("log").getByText(/^You: ?Norse mythology$/)).toBeVisible();
 });
 
 test("A clarification is answered by tapping, and a learnable framing passes", async ({ page }) => {
   await resetFixture();
-  await compose(page, "How to feed unicorns", /^Use it in practice/);
+  await compose(page, "How to feed unicorns");
   const answers = page.getByRole("group", { name: QUESTION });
   await expect(answers).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole("textbox")).toHaveCount(0);
@@ -42,7 +42,7 @@ test("A clarification is answered by tapping, and a learnable framing passes", a
 
 test("Confirming the unsupported framing declines the request; Revise request reopens the topic and the original stays", async ({ page }) => {
   await resetFixture();
-  await compose(page, "How to feed unicorns", /^Use it in practice/);
+  await compose(page, "How to feed unicorns");
   await page.getByRole("group", { name: QUESTION }).getByRole("button", { name: "Caring for a real unicorn" }).click({ timeout: 10_000 });
   await expect(page.getByText("I can't make this one.")).toBeVisible();
   await expect(page.getByText(/What I could do instead: Study the premise as mythology/)).toBeVisible();
@@ -57,7 +57,7 @@ test("Confirming the unsupported framing declines the request; Revise request re
 
 test("A check that can't finish says so and offers Try again", async ({ page }) => {
   await resetFixture();
-  await compose(page, "[unavailable] drums", /^Go deep/);
+  await compose(page, "[unavailable] drums");
   await expect(page.getByRole("alert")).toContainText("could not finish", { timeout: 10_000 });
   await expect(page.getByRole("button", { name: /^Try again/ })).toBeVisible();
 });
@@ -70,11 +70,10 @@ test("Without How you like to learn, New course offers to set it up first", asyn
   await expect(page.getByLabel("What would you like to learn?")).toHaveCount(0);
 });
 
-test("A topic chosen elsewhere (?topic=) skips straight to the goal", async ({ page }) => {
+test("A topic chosen elsewhere (?topic=) is saved straight away", async ({ page }) => {
   await resetFixture();
   await page.goto("/new-course-request?topic=Sourdough%20bread");
   await expect(page.getByLabel("What would you like to learn?")).toHaveCount(0);
-  await expect(page.getByRole("log").getByText(/^You: ?Sourdough bread$/)).toBeVisible();
-  await page.getByRole("group", { name: "What would you like to get out of it?" }).getByRole("button", { name: /^Go deep/ }).click();
   await expect(page).toHaveURL(/\/course-requests\//);
+  await expect(page.getByRole("log").getByText(/^You: ?Sourdough bread$/)).toBeVisible();
 });
