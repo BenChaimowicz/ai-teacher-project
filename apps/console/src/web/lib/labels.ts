@@ -42,6 +42,7 @@ export const BASIS_LABEL: Record<CostBasis, string> = { actual: "Exact", estimat
 /** Step names (Pipeline Event kinds). */
 export const KIND_LABEL: Record<PipelineEventKind, string> = {
   validity: "Checking the request",
+  goal_focus: "Focusing the goal",
   diagnostic: "Placement questions",
   fact_check: "Fact check",
   blueprint: "Course plan",

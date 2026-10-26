@@ -63,7 +63,7 @@ function fixtureBuilder(fail: Failure = null) {
 }
 
 /** Runs the real routes on in-memory storage with one Course Request in `status`. */
-async function testApp(status: CourseRequestStatus = "validity_passed", fail: Failure = null) {
+async function testApp(status: CourseRequestStatus = "goal_focused", fail: Failure = null) {
   const learner = savedLearner();
   const { db, rows, inserts } = fakeDb([courseRequests, startingLevelDiagnostics, lessonCompletions]);
   const { builder, gapInputs } = fixtureBuilder(fail);
@@ -107,8 +107,8 @@ test("Starting the diagnostic prepares eight items and never sends keys, warrant
   }
 });
 
-test("A diagnostic only starts after the Validity gate passes, once", async () => {
-  for (const status of ["awaiting_validity", "rejected", "assessment_ready"] as const) {
+test("A diagnostic only starts once the Learning Goal is settled, once", async () => {
+  for (const status of ["awaiting_validity", "rejected", "validity_passed", "awaiting_focus_answers", "awaiting_focus_confirmation", "assessment_ready"] as const) {
     const { app, url } = await testApp(status);
     try {
       assert.equal((await app.inject({ method: "POST", url })).statusCode, 409);
@@ -119,12 +119,12 @@ test("A diagnostic only starts after the Validity gate passes, once", async () =
 });
 
 test("A provider failure returns the Request to where it started, with a reason and Try again", async () => {
-  const { app, url, requestRow } = await testApp("validity_passed", "provider");
+  const { app, url, requestRow } = await testApp("goal_focused", "provider");
   try {
     const response = await app.inject({ method: "POST", url });
     assert.equal(response.statusCode, 200, "The failure is a saved state, not a lost request.");
-    assert.deepEqual([response.json().courseRequest.status, response.json().courseRequest.failureReason], ["validity_passed", PREPARE_FAILED_REASON]);
-    assert.equal(requestRow.status, "validity_passed");
+    assert.deepEqual([response.json().courseRequest.status, response.json().courseRequest.failureReason], ["goal_focused", PREPARE_FAILED_REASON]);
+    assert.equal(requestRow.status, "goal_focused");
     assert.equal(requestRow.failureReason, PREPARE_FAILED_REASON);
   } finally {
     await app.close();
@@ -132,7 +132,7 @@ test("A provider failure returns the Request to where it started, with a reason 
 });
 
 test("A set failing its checks with both Generators is assessment-failed; Retry diagnostic is the one way on", async () => {
-  const { app, url, requestRow } = await testApp("validity_passed", "checks");
+  const { app, url, requestRow } = await testApp("goal_focused", "checks");
   try {
     const failed = await app.inject({ method: "POST", url });
     assert.deepEqual([failed.json().courseRequest.status, failed.json().courseRequest.failureReason], ["assessment_failed", ASSESSMENT_FAILED_REASON]);
@@ -161,8 +161,8 @@ test("A check left preparing by an API restart can be started again", async () =
   const { app, url, requestRow } = await testApp("assessment_preparing");
   try {
     const reopened = await app.inject({ method: "GET", url });
-    assert.deepEqual([reopened.json().courseRequest.status, reopened.json().courseRequest.failureReason], ["validity_passed", PREPARE_INTERRUPTED_REASON]);
-    assert.equal(requestRow.status, "validity_passed");
+    assert.deepEqual([reopened.json().courseRequest.status, reopened.json().courseRequest.failureReason], ["goal_focused", PREPARE_INTERRUPTED_REASON]);
+    assert.equal(requestRow.status, "goal_focused");
     const started = await app.inject({ method: "POST", url });
     assert.deepEqual([started.json().courseRequest.status, started.json().courseRequest.failureReason], ["assessment_ready", null]);
   } finally {
@@ -181,7 +181,7 @@ test("A check still being prepared by this process is left alone", async () => {
   await app.register(startingLevelRoutes, {
     diagnosticBuilder: { async build() { await gate; return structuredClone(draft); }, async writeGapStatement() { return "Gap"; } },
   });
-  const [request] = await db.insert(courseRequests).values({ learnerId: learner.id, subject: "Drums", learningGoal: "Play", status: "validity_passed" }).returning();
+  const [request] = await db.insert(courseRequests).values({ learnerId: learner.id, subject: "Drums", learningGoal: "Play", status: "goal_focused" }).returning();
   const url = `/api/course-requests/${request!.id}/diagnostic`;
   try {
     const preparing = app.inject({ method: "POST", url });

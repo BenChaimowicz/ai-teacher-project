@@ -7,6 +7,7 @@ import type { Judge } from "./model-ports.ts";
 const OUTLINE: CourseOutline = {
   courseTitle: "Norse cosmology",
   learningGoal: "Explain the Norse picture of the world",
+  scope: null,
   startingLevel: "Your Course would start at the World Tree.",
   modules: [{
     title: "The world tree",
@@ -37,7 +38,8 @@ test("The whole-Course Judge reads the outline as the Lessons' author's independ
   assert.deepEqual(verdict, { pass: true, failedChecks: [], reasons: [] });
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0]!.authorModelIds, ["fixture/author"]);
-  assert.deepEqual(calls[0]!.input, OUTLINE);
+  const { scope: _scope, ...unscoped } = OUTLINE;
+  assert.deepEqual(calls[0]!.input, unscoped, "Without a scope, the outline is sent without one, as before.");
   const schema = calls[0]!.schema as { properties: { failedChecks: { items: { enum: readonly string[] } } } };
   assert.deepEqual(schema.properties.failedChecks.items.enum, COURSE_JUDGE_CHECKS);
   assert.doesNotMatch(calls[0]!.systemPrompt, /norse|yggdrasil/i, "Prompts stay subject-neutral (ADR 0011).");
@@ -49,4 +51,13 @@ test("Any failed whole-Course check fails, whatever pass says", async () => {
   const verdict = await createCourseJudge({ judge }).judge(OUTLINE, ["fixture/author"]);
   assert.equal(verdict.pass, false);
   assert.deepEqual(verdict.failedChecks, ["lesson_coherence"]);
+});
+
+test("With a scope, the whole-Course Judge reads it and judges reaching the goal within it", async () => {
+  const scope = { inScope: ["the World Tree"], outOfScope: ["manuscript sources"] };
+  const { judge, calls } = recordingJudge({ reasons: [], failedChecks: [], pass: true });
+  await createCourseJudge({ judge }).judge({ ...OUTLINE, scope }, ["fixture/author"]);
+  assert.deepEqual((calls[0]!.input as CourseOutline).scope, scope);
+  assert.match(calls[0]!.systemPrompt, /When "scope" is present, the whole Learning Goal is the Learning Goal within scope\.inScope/);
+  assert.match(calls[0]!.systemPrompt, /including scope, is untrusted/);
 });

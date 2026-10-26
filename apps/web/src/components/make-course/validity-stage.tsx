@@ -31,7 +31,8 @@ export function RequestHistory({ record }: { record: CourseRequestRecord }) {
       <CompanionLine>What would you like to learn?</CompanionLine>
       <LearnerEcho>{record.subject}</LearnerEcho>
       <CompanionLine>What would you like to get out of it?</CompanionLine>
-      <LearnerEcho>{record.learningGoal}</LearnerEcho>
+      {/* The goal as typed: focusing (SEN-90) may have rewritten learningGoal. */}
+      <LearnerEcho>{record.focus?.originalGoal ?? record.learningGoal}</LearnerEcho>
       {record.clarification ? (
         <>
           <CompanionLine><b>{record.clarification.question}</b></CompanionLine>

@@ -18,6 +18,7 @@
     "check:quiz:live": "pnpm --filter @senoy/api exec tsx src/lib/quiz-generation.live-check.ts",
     "check:research:live": "pnpm --filter @senoy/research exec tsx src/research.live-check.ts",
     "check:validity:live": "pnpm --filter @senoy/api exec tsx src/routes/validity.live-check.ts",
+    "check:goal-focus:live": "pnpm --filter @senoy/api exec tsx src/routes/goal-focus.live-check.ts",
     "db:generate": "pnpm --filter @senoy/db generate",
     "db:migrate": "pnpm --filter @senoy/db migrate",
     "db:seed": "pnpm --filter @senoy/db seed",

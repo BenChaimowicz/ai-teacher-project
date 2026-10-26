@@ -12,10 +12,10 @@ import { cheer } from "@/lib/cheer.ts";
 import type { CourseRequestRecord, DiagnosticView } from "@/lib/course-request-types.ts";
 
 /** Statuses this stage owns; later statuses show it as history. */
-export const LEVEL_STATUSES = new Set(["validity_passed", "assessment_preparing", "assessment_failed", "assessment_ready", "awaiting_gap_confirmation"]);
+export const LEVEL_STATUSES = new Set(["goal_focused", "assessment_preparing", "assessment_failed", "assessment_ready", "awaiting_gap_confirmation"]);
 
 /** Statuses before the check exists, so there is nothing to load. */
-const UNPREPARED = new Set(["validity_passed", "assessment_failed"]);
+const UNPREPARED = new Set(["goal_focused", "assessment_failed"]);
 
 /** How often a check being prepared is looked at again. */
 const POLL_MS = 3000;
@@ -55,7 +55,7 @@ function answerText(item: DiagnosticView["items"][number], answer: DiagnosticAns
 }
 
 /**
- * The Starting Level check (spec §4.3): it is prepared by itself after Validity passes, then asked one question at a
+ * The Starting Level check (spec §4.3): it is prepared by itself once the Learning Goal is settled, then asked one question at a
  * time with I don't know always offered, then where the Course would start, with Looks right or Too easy (or, near
  * the ceiling, a short Course or a new goal). After confirming, it stays above as history.
  */
@@ -114,7 +114,7 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
     }
   }
 
-  useAutoStep(record.status === "validity_passed" && !record.failureReason ? `diagnostic:${record.id}` : null, prepare);
+  useAutoStep(record.status === "goal_focused" && !record.failureReason ? `diagnostic:${record.id}` : null, prepare);
 
   /** Records one answer and moves on; after the last, sends them all. */
   async function answer(itemId: string, value: DiagnosticAnswer) {
@@ -181,7 +181,7 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
     />
   );
 
-  if (record.status === "validity_passed" || record.status === "assessment_preparing") {
+  if (record.status === "goal_focused" || record.status === "assessment_preparing") {
     const working = busy === "prepare" || record.status === "assessment_preparing";
     const failure = error ?? (!working ? record.failureReason : null);
     return (

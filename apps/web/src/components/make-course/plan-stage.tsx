@@ -214,6 +214,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
       <>
         {record.failureReason ? <CompanionLine mood="think"><span role="alert">{record.failureReason}</span></CompanionLine> : null}
         <CompanionLine>Here's a plan. Your call.</CompanionLine>
+        <ScopeNote record={record} />
         <PlanCard
           view={view}
           subject={record.subject}
@@ -390,5 +391,24 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
       />
       <ThreadEnd watch={record.status} />
     </>
+  );
+}
+
+/**
+ * One line under the plan's header saying the scope the Learner settled before the Starting Level check (SEN-90), so
+ * they can see the plan kept to it. Nothing for a precise goal.
+ */
+function ScopeNote({ record }: { record: CourseRequestRecord }) {
+  const focus = record.focus;
+  if (focus?.outcome === "broad_overview") return <CompanionLine continued><span className="mk-faint">A broad overview, as you asked.</span></CompanionLine>;
+  if (focus?.outcome !== "focused" || !focus.scope) return null;
+  const { inScope, outOfScope } = focus.scope;
+  return (
+    <CompanionLine continued>
+      <span className="mk-faint">
+        Focused on: {inScope.join(", ")}
+        {outOfScope.length ? <> · Leaving out: {outOfScope.join(", ")}</> : null}
+      </span>
+    </CompanionLine>
   );
 }

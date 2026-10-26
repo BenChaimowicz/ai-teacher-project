@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useCompanionLines } from "@/components/companion/companion-provider.tsx";
 import { FlowSteps, FlowTitle, MAKE_STEPS } from "@/components/make-course/flow.tsx";
+import { FOCUS_STATUSES, FocusHistory, FocusStage } from "@/components/make-course/focus-stage.tsx";
 import { LEVEL_STATUSES, LevelStage } from "@/components/make-course/level-stage.tsx";
 import { PLAN_STATUSES, PlanStage } from "@/components/make-course/plan-stage.tsx";
 import { errorText, onRequestChange } from "@/components/make-course/request-api.ts";
@@ -30,7 +31,7 @@ const LINES = {
  */
 function stepOf(status: string) {
   if (status === "draft") return 0;
-  if (VALIDITY_STATUSES.has(status)) return 1;
+  if (VALIDITY_STATUSES.has(status) || FOCUS_STATUSES.has(status)) return 1;
   if (LEVEL_STATUSES.has(status)) return 2;
   if (status === "starting_level_confirmed" || status.startsWith("blueprint_")) return 3;
   if (status === "published") return MAKE_STEPS.length;
@@ -90,7 +91,13 @@ export function CourseRequestPage() {
       <ChatThread key={record.id}>
         <RequestHistory record={record} />
         {VALIDITY_STATUSES.has(record.status) ? <ValidityStage record={record} /> : null}
-        {!VALIDITY_STATUSES.has(record.status) ? <LevelStage record={record} /> : null}
+        {FOCUS_STATUSES.has(record.status) ? <FocusStage record={record} /> : null}
+        {!VALIDITY_STATUSES.has(record.status) && !FOCUS_STATUSES.has(record.status) ? (
+          <>
+            <FocusHistory record={record} />
+            <LevelStage record={record} />
+          </>
+        ) : null}
         {PLAN_STATUSES.has(record.status) ? <PlanStage record={record} /> : null}
       </ChatThread>
     </div>

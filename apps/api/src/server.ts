@@ -9,9 +9,11 @@ import dbPlugin from "./plugins/db.ts";
 import spaPlugin from "./plugins/spa.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { courseRequestRoutes } from "./routes/course-requests.ts";
+import { goalFocusRoutes } from "./routes/goal-focus.ts";
 import { startingLevelRoutes } from "./routes/starting-level.ts";
 import { createFixtureDiagnosticBuilder } from "./lib/diagnostic-fixture.ts";
 import { createFixtureValidityGate } from "./lib/validity-fixture.ts";
+import { createFixtureGoalFocuser } from "./lib/goal-focus-fixture.ts";
 import { blueprintRoutes } from "./routes/blueprint.ts";
 import { libraryRoutes } from "./routes/library.ts";
 import { mediaRoutes } from "./routes/media.ts";
@@ -41,6 +43,7 @@ async function start() {
     // Browser tests run without provider calls; never set DIAGNOSTIC_FIXTURE in a deployed service.
     const fixtures = process.env.DIAGNOSTIC_FIXTURE === "1";
     await app.register(courseRequestRoutes, { validityGate: fixtures ? createFixtureValidityGate() : undefined });
+    await app.register(goalFocusRoutes, { goalFocuser: fixtures ? createFixtureGoalFocuser() : undefined });
     await app.register(startingLevelRoutes, {
       diagnosticBuilder: fixtures ? createFixtureDiagnosticBuilder() : undefined,
     });

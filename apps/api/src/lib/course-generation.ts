@@ -133,13 +133,17 @@ export function settledStatus(error: unknown): SettledStatus {
 }
 
 /**
- * The research topic for one slot: research is scoped per Lesson (spec §5.2).
+ * The research topic for one slot: research is scoped per Lesson (spec §5.2). With a Learner-confirmed scope (SEN-90),
+ * a short clause names its in- and out-of-scope facets so vendors search inside it; without one, the topic is unchanged.
  * @param subject - The Course Request subject
  * @param slot - The Blueprint slot
  * @param scope - The Learner-confirmed focus of the Learning Goal, or null (SEN-90)
  */
 export function lessonResearchTopic(subject: string, slot: BlueprintSlot, scope: GoalScope | null): string {
-  return `${slot.title} (${subject}). ${slot.lessonGoal} Covers: ${slot.objectives.join("; ")}.`;
+  const topic = `${slot.title} (${subject}). ${slot.lessonGoal} Covers: ${slot.objectives.join("; ")}.`;
+  const focus = scope?.inScope.length ? ` Focus: ${scope.inScope.join("; ")}.` : "";
+  const not = scope?.outOfScope.length ? ` Not: ${scope.outOfScope.join("; ")}.` : "";
+  return `${topic}${focus}${not}`;
 }
 
 /**

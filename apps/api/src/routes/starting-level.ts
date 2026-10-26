@@ -133,7 +133,7 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       if (!found) return reply;
       const lost = found.status === "assessment_preparing" && !preparing.has(found.id);
       const row = lost
-        ? await transition(found.id, request.currentLearner.id, "assessment_preparing", "validity_passed", PREPARE_INTERRUPTED_REASON) ?? found
+        ? await transition(found.id, request.currentLearner.id, "assessment_preparing", "goal_focused", PREPARE_INTERRUPTED_REASON) ?? found
         : found;
       const attempt = await latestAttempt(row.id);
       return { courseRequest: row, diagnostic: attempt && attempt.readyAt ? learnerView(attempt) : null };
@@ -146,9 +146,9 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
     try {
       const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
       if (!row) return reply;
-      // Assessment-failed offers only Retry diagnostic, which starts here too.
+      // The check starts once the Learning Goal is settled (SEN-90); Assessment-failed offers only Retry diagnostic, which starts here too.
       const from = row.status;
-      if (from !== "validity_passed" && from !== "assessment_failed") return reply.code(409).send({ error: "This Request is not ready for a Starting Level check." });
+      if (from !== "goal_focused" && from !== "assessment_failed") return reply.code(409).send({ error: "This Request is not ready for a Starting Level check." });
       if (!await transition(row.id, request.currentLearner.id, from, "assessment_preparing")) {
         return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
       }
@@ -292,6 +292,8 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       if (request.currentLearner.teachingProfileVersion !== TEACHING_PROFILE_VERSION || request.currentLearner.teachingProfileAnswers == null) {
         return reply.code(409).send({ error: "Save your Teaching Profile before creating a Course Request." });
       }
+      // The current (possibly focused) goal carries over as editable text; `focus` does not, so the draft goes through
+      // Validity and focusing again, where a precise goal passes straight through (SEN-90).
       const [draft] = await app.db.insert(courseRequests).values({
         learnerId: request.currentLearner.id, subject: row.subject, learningGoal: row.learningGoal, status: "draft", revisedFromId: row.id,
       }).returning(requestFields);

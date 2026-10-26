@@ -35,6 +35,9 @@ export function courseRequestStatusLabel(status: string): string {
     case "awaiting_validity": return "Awaiting validity review";
     case "awaiting_clarification": return "Awaiting your clarification";
     case "validity_passed": return "Validity review passed";
+    case "awaiting_focus_answers": return "A few questions about your goal";
+    case "awaiting_focus_confirmation": return "Confirm your course's focus";
+    case "goal_focused": return "Goal settled";
     case "rejected": return "Request rejected";
     case "assessment_preparing": return "Preparing your Starting Level check";
     case "assessment_ready": return "Starting Level check";

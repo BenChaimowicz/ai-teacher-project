@@ -40,6 +40,7 @@ export const ROLE_HELP: Record<UsageRole, string> = {
 /** What each step does. */
 export const KIND_HELP: Record<PipelineEventKind, string> = {
   validity: "Decides whether a course request is fine, needs clarifying, or must be rejected. Code: validity",
+  goal_focus: "Decides whether the learning goal is specific enough, asks the learner focusing questions if not, and proposes a focused goal. Code: goal_focus",
   diagnostic: "Writes the eight placement questions that find the learner's starting level. Code: diagnostic",
   fact_check: "Checks facts in the request or a draft. Code: fact_check",
   blueprint: "Designs the course plan: modules, lessons, goals, and quizzes. Code: blueprint",
@@ -55,6 +56,7 @@ export const KIND_HELP: Record<PipelineEventKind, string> = {
 export const PRODUCT_EVENT_HELP: Partial<Record<ProductEventKind, string>> = {
   course_request_created: "A learner asked for a new course (subject and goal).",
   course_request_clarified: "The learner answered a clarifying question about their request.",
+  course_request_focused: "The learner's goal was settled: precise as typed, focused and confirmed, or skipped for a broad overview.",
   diagnostic_submitted: "The learner answered the placement questions.",
   starting_level_confirmed: "The learner confirmed their starting level.",
   blueprint_approved: "The learner approved the course plan, so writing starts.",
