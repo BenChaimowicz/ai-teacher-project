@@ -10,6 +10,7 @@ import {
   type CourseBlueprint,
   type JudgeResult,
 } from "@senoy/db/blueprint";
+import type { GoalScope } from "@senoy/db/course-request";
 import { isEvidenced, type GapConfirmation, type StartingLevel } from "@senoy/db/starting-level";
 import type { ExplanationOrder, QuizCadence } from "@senoy/db/teaching-profile";
 import { SEQUENCE_REACHES_GOAL } from "./course-judge.ts";
@@ -28,6 +29,8 @@ const AUTHOR_REASONING_TOKENS = 2000;
 export type BlueprintInput = {
   subject: string;
   learningGoal: string;
+  /** The Learner-confirmed focus of the Learning Goal (SEN-90): slots and objectives stay inside it. Null when not focused. */
+  scope: GoalScope | null;
   startingLevel: StartingLevel;
   confirmation: GapConfirmation;
   /** Write-time Teaching Profile fields the Blueprint consumes. */

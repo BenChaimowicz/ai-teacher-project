@@ -26,6 +26,7 @@ const requestFields = {
   createdAt: courseRequests.createdAt,
   validity: courseRequests.validity,
   clarification: courseRequests.clarification,
+  focus: courseRequests.focus,
   revisedFromId: courseRequests.revisedFromId,
   failureReason: courseRequests.failureReason,
 };
@@ -157,7 +158,7 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
         draft = await withPipelineEvent("diagnostic", {
           label: "Item set", courseRequestId: row.id, learnerId: request.currentLearner.id,
         }, async (event) => {
-          const built = await builder.build({ subject: row.subject, learningGoal: row.learningGoal });
+          const built = await builder.build({ subject: row.subject, learningGoal: row.learningGoal, scope: row.focus?.scope ?? null });
           event.setDetail({
             items: built.items.length,
             rounds: built.reviews.reduce((most, review) => Math.max(most, review.round + 1), 0),

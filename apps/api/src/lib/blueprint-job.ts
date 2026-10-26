@@ -73,6 +73,7 @@ export function createBlueprintJob(builder: BlueprintBuilder = createBlueprintBu
           const checked = await builder.build({
             subject: request.subject,
             learningGoal: request.learningGoal,
+            scope: request.focus?.scope ?? null,
             startingLevel: attempt.startingLevel,
             confirmation: attempt.confirmation,
             profile: {

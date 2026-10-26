@@ -1,3 +1,4 @@
+import type { GoalScope } from "@senoy/db/course-request";
 import type {
   CapabilityPlan,
   DiagnosticItem,
@@ -81,10 +82,13 @@ export type GapStatementInput = {
   capabilities: ProbedCapability[];
 };
 
+/** What a diagnostic is written from. `scope` is the Learner-confirmed focus of the Learning Goal (SEN-90), or null. */
+export type DiagnosticInput = { subject: string; learningGoal: string; scope: GoalScope | null };
+
 /** Prepares Starting Level diagnostics and writes remaining-gap statements. */
 export interface DiagnosticBuilder {
   /** Writes and checks a set, then once more with the fallback Generator if it still fails its checks. */
-  build(input: { subject: string; learningGoal: string }): Promise<DiagnosticDraft>;
+  build(input: DiagnosticInput): Promise<DiagnosticDraft>;
   writeGapStatement(input: GapStatementInput): Promise<string>;
 }
 
@@ -367,7 +371,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
    * Writes one set with `generator`, then reviews and rewrites failing items for the bounded rounds.
    * @throws DiagnosticFailedError when items still fail after the last round
    */
-  async function buildWith(generator: Generator, judge: Judge, input: { subject: string; learningGoal: string }): Promise<DiagnosticDraft> {
+  async function buildWith(generator: Generator, judge: Judge, input: DiagnosticInput): Promise<DiagnosticDraft> {
     if (generator.modelId.trim() === judge.modelId.trim()) {
       throw new Error("[diagnostic: build] Judge must use a different model from the author");
     }
