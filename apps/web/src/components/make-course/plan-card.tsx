@@ -69,7 +69,7 @@ export function PlanCard({ view, subject, unticked = new Set(), onToggle, onSequ
                   {onToggle ? <span className={cn("mk-check", !off && "on")} aria-hidden="true" /> : null}
                   <span className="n">{String(number).padStart(2, "0")}</span>
                   <span className="lt">{slot.title}<small>{slot.lessonGoal}</small></span>
-                  <span className={cn("mk-tag", slot.method === "quiz" && "quiz")}>{METHOD_LABELS[slot.method] ?? slot.method}</span>
+                  <span className={cn("k-rib", slot.method === "quiz" && "done")}>{METHOD_LABELS[slot.method] ?? slot.method}</span>
                 </>
               );
               const style = { "--i": number } as CSSProperties;

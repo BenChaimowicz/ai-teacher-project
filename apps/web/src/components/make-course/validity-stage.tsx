@@ -5,7 +5,7 @@ import { ComposeFlow } from "@/components/make-course/compose-flow.tsx";
 import { ThreadEnd, WorkingLine, useAutoStep } from "@/components/make-course/flow.tsx";
 import { errorText, requestAction } from "@/components/make-course/request-api.ts";
 import { Button } from "@/components/ui/button.tsx";
-import { LearnerEcho, NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { LearnerEcho, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
 import type { CourseRequestRecord } from "@/lib/course-request-types.ts";
@@ -28,13 +28,13 @@ export function RequestHistory({ record }: { record: CourseRequestRecord }) {
           A new try at an earlier request. <Link className="mk-link" to={`/course-requests/${record.revisedFromId}`}>View original request</Link>
         </p>
       ) : null}
-      <NibblesLine>What would you like to learn?</NibblesLine>
+      <CompanionLine>What would you like to learn?</CompanionLine>
       <LearnerEcho>{record.subject}</LearnerEcho>
-      <NibblesLine>What would you like to get out of it?</NibblesLine>
+      <CompanionLine>What would you like to get out of it?</CompanionLine>
       <LearnerEcho>{record.learningGoal}</LearnerEcho>
       {record.clarification ? (
         <>
-          <NibblesLine><b>{record.clarification.question}</b></NibblesLine>
+          <CompanionLine><b>{record.clarification.question}</b></CompanionLine>
           <LearnerEcho>{record.clarification.answer}</LearnerEcho>
         </>
       ) : null}
@@ -99,7 +99,7 @@ export function ValidityStage({ record }: StageProps) {
       <>
         {error ? (
           <>
-            <NibblesLine mood="think"><span role="alert">{error}</span></NibblesLine>
+            <CompanionLine mood="think"><span role="alert">{error}</span></CompanionLine>
             <OptionTiles key={`${record.status}-t0`}
               label="Checking didn't finish"
               resetKey={attempt}
@@ -111,7 +111,7 @@ export function ValidityStage({ record }: StageProps) {
             />
           </>
         ) : (
-          <NibblesLine mood="think"><WorkingLine>Checking that's something I can teach…</WorkingLine></NibblesLine>
+          <CompanionLine mood="think"><WorkingLine>Checking that's something I can teach…</WorkingLine></CompanionLine>
         )}
         <ThreadEnd watch={`${error}|${busy}`} />
       </>
@@ -128,10 +128,10 @@ export function ValidityStage({ record }: StageProps) {
     ];
     return (
       <>
-        <NibblesLine typing key={`${record.id}-${record.clarification?.answer ?? ""}`}>
+        <CompanionLine typing key={`${record.id}-${record.clarification?.answer ?? ""}`}>
           {unresolved ? "That didn't quite settle it. Same question, one more time:" : "One quick question before I start."}
-        </NibblesLine>
-        <NibblesLine continued><b>{question}</b></NibblesLine>
+        </CompanionLine>
+        <CompanionLine continued><b>{question}</b></CompanionLine>
         {answers.length ? (
           <OptionTiles key={`${record.status}-t1-${record.clarification?.answer ?? ""}`}
             label={question}
@@ -151,8 +151,8 @@ export function ValidityStage({ record }: StageProps) {
           <LegacyAnswer busy={busy} onAnswer={(answer) => { setPicked(answer); void check(answer); }} />
         )}
         {picked && !error ? <LearnerEcho>{picked}</LearnerEcho> : null}
-        {busy ? <NibblesLine mood="think"><WorkingLine>Thanks. Checking again…</WorkingLine></NibblesLine> : null}
-        {error ? <NibblesLine mood="think"><span role="alert">{error}</span> <span className="mk-faint">Pick again to retry.</span></NibblesLine> : null}
+        {busy ? <CompanionLine mood="think"><WorkingLine>Thanks. Checking again…</WorkingLine></CompanionLine> : null}
+        {error ? <CompanionLine mood="think"><span role="alert">{error}</span> <span className="mk-faint">Pick again to retry.</span></CompanionLine> : null}
         <ThreadEnd watch={`${picked}|${busy}|${error}`} />
       </>
     );
@@ -161,8 +161,8 @@ export function ValidityStage({ record }: StageProps) {
   // Rejected: say why, offer the safer framing, and Revise request. The decision stays in history; no appeal (spec §3).
   return (
     <>
-      <NibblesLine mood="think">I can't make this one. <span className="mk-faint">{record.validity?.reason}</span></NibblesLine>
-      {record.validity?.safeReframe ? <NibblesLine continued>What I could do instead: {record.validity.safeReframe}</NibblesLine> : null}
+      <CompanionLine mood="think">I can't make this one. <span className="mk-faint">{record.validity?.reason}</span></CompanionLine>
+      {record.validity?.safeReframe ? <CompanionLine continued>What I could do instead: {record.validity.safeReframe}</CompanionLine> : null}
       <OptionTiles key={`${record.status}-t2`}
         label="What next?"
         resetKey={attempt}
@@ -184,7 +184,7 @@ export function ValidityStage({ record }: StageProps) {
           }
         }}
       />
-      {error ? <NibblesLine mood="think"><span role="alert">{error}</span></NibblesLine> : null}
+      {error ? <CompanionLine mood="think"><span role="alert">{error}</span></CompanionLine> : null}
       <ThreadEnd watch={error} />
     </>
   );

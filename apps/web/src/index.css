@@ -1,4 +1,9 @@
 @import "@fontsource-variable/manrope";
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/instrument-serif/400.css";
 @import "@fontsource-variable/literata";
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
@@ -12,54 +17,66 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens (SEN-86), lifted from docs/uis/redesign/kit.css.
- * Always dark. A palette is an accent pair (--a, --b) picked with data-theme on <html>;
- * every surface derives from the accent so the whole app tints with it.
+ * Design tokens: Papercraft (SEN-97), from docs/uis/redesign/10-papercraft-jongi.html.
+ * One palette, always dark: a desk at night, ink-navy paper sheets, apricot for what's
+ * selected or primary, cream for highlights, bookmark red for "needs you" and streaks,
+ * gold for wins. Depth comes from sheet shadows, not glow. Token names are kept from
+ * SEN-86 so existing styles follow; only the values changed.
  */
-:root,
-[data-theme="amethyst"] {
-  --a: #a78bfa; --b: #7dd3fc; --on-a: #140f26; --a-rgb: 167, 139, 250; --b-rgb: 125, 211, 252;
-  --nib-hi: #f5f3ff; --nib-lo: #c4b5fd; --nib-ear: #b4a3f7;
-}
-[data-theme="rose"] {
-  --a: #fb7185; --b: #f9a8d4; --on-a: #2a0a12; --a-rgb: 251, 113, 133; --b-rgb: 249, 168, 212;
-  --nib-hi: #fff1f2; --nib-lo: #fbb6c4; --nib-ear: #f49aae;
-}
-[data-theme="honey"] {
-  --a: #f5c451; --b: #c8935f; --on-a: #2a1d05; --a-rgb: 245, 196, 81; --b-rgb: 200, 147, 95;
-  --nib-hi: #fdf3dc; --nib-lo: #e3b373; --nib-ear: #c8935f;
-}
-[data-theme="matcha"] {
-  --a: #9ae6b4; --b: #fdba74; --on-a: #0b2414; --a-rgb: 154, 230, 180; --b-rgb: 253, 186, 116;
-  --nib-hi: #fff7ed; --nib-lo: #f6c99a; --nib-ear: #eab17a;
-}
-[data-theme="slate"] {
-  --a: #cbd5e1; --b: #60a5fa; --on-a: #0f172a; --a-rgb: 203, 213, 225; --b-rgb: 96, 165, 250;
-  --nib-hi: #f1f5f9; --nib-lo: #a8b4c4; --nib-ear: #94a3b8;
-}
-
 :root {
-  /* surfaces derive from the accent */
-  --bg: color-mix(in srgb, var(--a) 5%, #0b0b0f);
-  --bg-2: color-mix(in srgb, var(--a) 8%, #0d0d12);
-  --panel: color-mix(in srgb, var(--a) 9%, #121217);
-  --panel-2: color-mix(in srgb, var(--a) 15%, #16161c);
-  --line: rgba(var(--a-rgb), 0.13);
-  --line-2: rgba(var(--a-rgb), 0.22);
-  --a-soft: rgba(var(--a-rgb), 0.16);
+  /* paper stock */
+  --bg: #0b0e18;          /* desk */
+  --bg-2: #0e1222;        /* sidebar */
+  --panel: #141a2e;       /* ink-navy sheet */
+  --panel-2: #18203b;     /* raised sheet */
+  --plum: #2a1f3c;        /* secondary sheet */
+  --plum-2: #352748;
+
+  /* accents: --a apricot, --b cream */
+  --a: #d8955c; --a-rgb: 216, 149, 92; --on-a: #1a1208;
+  --b: #f0e0c2; --b-rgb: 240, 224, 194;
+  --ribbon: #c8473b;      /* bookmark: fills only */
+  --ribbon-text: #e0695c; /* bookmark red for text and icons (AA) */
+  --gold: #e7b250; --gold-rgb: 231, 178, 80; /* wins, and what is being made */
+  /* paper edges (SEN-97 phase 1): the under-sheet a pop-up tab folds onto, and a recessed well */
+  --a-deep: #9b5f31;      /* apricot under-sheet */
+  --b-deep: #d4bc95;      /* cream under-sheet, key tabs */
+  --well: #0f1324;        /* cut-out wells: icon slots, inputs, progress tracks */
+  /* SEN-97 phase 3B (additive): channels for soft tints, the paper stacked under a sheet, text on good/miss fills */
+  --ribbon-rgb: 200, 71, 59;
+  --stack-under: #10152a; /* the sheet showing under a stacked one */
+  --on-good: #10241a;
+  --on-miss: #2a1210;
+  --recess: inset 0 1px 2px rgba(0, 0, 0, 0.55);           /* a well cut into the sheet */
+  --edge: inset 1px 1px 0 rgba(255, 238, 212, 0.08);       /* a cut edge catching light */
+  --hairline: inset 0 0 0 1px rgba(255, 255, 255, 0.11);   /* a ghost outline */
+  --inset: var(--recess);                                  /* same well shadow; the make-a-Course screens use this name */
+
+  --line: rgba(255, 255, 255, 0.065);
+  --line-2: rgba(255, 255, 255, 0.11);
+  --a-soft: rgba(var(--a-rgb), 0.14);
   --a-line: rgba(var(--a-rgb), 0.45);
-  --b-soft: rgba(var(--b-rgb), 0.16);
-  --glow: 0 0 26px rgba(var(--a-rgb), 0.28);
+  --b-soft: rgba(var(--b-rgb), 0.1);
 
-  /* text: muted and faint both pass AA on --bg for their sizes */
-  --text: #ecebf2;
-  --read: #dddbe6;
-  --text-muted: #a9a7b8;
-  --faint: #908ea1;
-  --good: #86efac; --good-rgb: 134, 239, 172;
-  --miss: #fda4af; --miss-rgb: 253, 164, 175;
+  /* depth: a single sheet, and a sheet with paper stacked under it */
+  --sheet: inset 1px 1px 0 rgba(255, 238, 212, 0.07), 0 1px 0 rgba(0, 0, 0, 0.55), 0 14px 26px -12px rgba(0, 0, 0, 0.75);
+  --stack: inset 1px 1px 0 rgba(255, 238, 212, 0.07), 0 1px 0 rgba(0, 0, 0, 0.5), 5px 6px 0 -1px #10152a,
+    5px 6px 0 0 rgba(255, 255, 255, 0.035), 6px 16px 22px -10px rgba(0, 0, 0, 0.8);
+  /* Deprecated: paper doesn't glow. Nothing uses it; kept as a no-op so stray uses stay valid. */
+  --glow: 0 0 0 transparent;
 
-  --font-ui: "Manrope Variable", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  /* text: every tone passes AA on desk, paper and plum */
+  --text: #ebe6dc;
+  --read: #e2ddd2;
+  --text-muted: #a3a4b8;
+  --faint: #8a8ba0;
+  --good: #8fd1a4; --good-rgb: 143, 209, 164;
+  --miss: #ef8f86; --miss-rgb: 239, 143, 134;
+
+  /* type: no italics anywhere (see the base rule below) */
+  --font-ui: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-read: "Manrope Variable", "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-code: "JetBrains Mono", ui-monospace, monospace;
   --font-book: "Literata Variable", "Literata", Georgia, serif;
   --font-legible: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
@@ -120,8 +137,13 @@
   --color-read: var(--read);
   --color-good: var(--good);
   --color-miss: var(--miss);
+  --color-ribbon: var(--ribbon);
+  --color-gold: var(--gold);
+  --color-plum: var(--plum);
 
   --font-sans: var(--font-ui);
+  --font-display: var(--font-display);
+  --font-read: var(--font-read);
   --font-mono: var(--font-code);
   --font-serif: var(--font-book);
   --font-legible: var(--font-legible);
@@ -131,11 +153,20 @@
   --radius-lg: 0.875rem;
   --radius-xl: 1rem;
   --shadow-glow: var(--glow);
+  --shadow-sheet: var(--sheet);
+  --shadow-stack: var(--stack);
 }
 
 @layer base {
   * {
     border-color: var(--border);
+  }
+  /* No italics anywhere (SEN-97): emphasis uses weight or colour instead. */
+  *,
+  *::before,
+  *::after {
+    font-style: normal !important;
+    font-synthesis: none;
   }
 }
 
@@ -151,11 +182,7 @@ body {
   font-family: var(--font-ui);
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
-  background:
-    radial-gradient(900px 520px at 85% -10%, rgba(var(--a-rgb), 0.16), transparent 65%),
-    radial-gradient(700px 480px at 30% 115%, rgba(var(--b-rgb), 0.1), transparent 65%),
-    var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
 }
 
 :focus-visible {

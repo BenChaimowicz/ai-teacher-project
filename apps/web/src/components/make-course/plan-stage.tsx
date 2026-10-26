@@ -7,7 +7,7 @@ import { ThreadEnd, WorkingLine, useAutoStep } from "@/components/make-course/fl
 import { MakingCard } from "@/components/make-course/making-card.tsx";
 import { PlanCard, sequenceModeName } from "@/components/make-course/plan-card.tsx";
 import { announceRequest, errorText, requestAction } from "@/components/make-course/request-api.ts";
-import { LearnerEcho, NibblesLine, ThreadCard } from "@/components/ui/chat-thread.tsx";
+import { LearnerEcho, CompanionLine, ThreadCard } from "@/components/ui/chat-thread.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
 import { useToast } from "@/components/ui/toast.tsx";
@@ -141,7 +141,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
     return () => window.clearTimeout(timer);
   }, [isPublished, view, toast]);
 
-  const errorLine = error ? <NibblesLine mood="think"><span role="alert">{error}</span></NibblesLine> : null;
+  const errorLine = error ? <CompanionLine mood="think"><span role="alert">{error}</span></CompanionLine> : null;
   const homeTile: OptionTile = { id: "home", label: "Back to Home", description: "It's saved; come back anytime", icon: <Home />, tone: "quiet" };
 
   // ---------- designing the plan ----------
@@ -151,7 +151,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
       <>
         {failure ? (
           <>
-            <NibblesLine mood="think"><span role="alert">{failure}</span></NibblesLine>
+            <CompanionLine mood="think"><span role="alert">{failure}</span></CompanionLine>
             <OptionTiles key={`${record.status}-t0`}
               label="The plan didn't finish"
               resetKey={attempt}
@@ -160,7 +160,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
             />
           </>
         ) : (
-          <NibblesLine mood="think"><WorkingLine>Putting a plan together…</WorkingLine></NibblesLine>
+          <CompanionLine mood="think"><WorkingLine>Putting a plan together…</WorkingLine></CompanionLine>
         )}
         <ThreadEnd watch={`${failure}|${busy}`} />
       </>
@@ -172,25 +172,25 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
       <>
         {view ? (
           <>
-            <NibblesLine mood="think"><WorkingLine>Redoing the plan without those lessons… This takes a minute or two.</WorkingLine></NibblesLine>
+            <CompanionLine mood="think"><WorkingLine>Redoing the plan without those lessons… This takes a minute or two.</WorkingLine></CompanionLine>
             <PlanCard view={view} subject={record.subject} className="mk-dim" />
           </>
         ) : (
-          <NibblesLine mood="think">
+          <CompanionLine mood="think">
             <WorkingLine>Putting a plan together. This takes a minute or two; you can leave and come back.</WorkingLine>
-          </NibblesLine>
+          </CompanionLine>
         )}
-        {loadError ? <NibblesLine continued><span className="mk-faint">{loadError} Still trying…</span></NibblesLine> : null}
+        {loadError ? <CompanionLine continued><span className="mk-faint">{loadError} Still trying…</span></CompanionLine> : null}
         <ThreadEnd watch={`${record.status}|${Boolean(view)}`} />
       </>
     );
   }
 
   if (!view) {
-    if (!loadError) return <NibblesLine typing>…</NibblesLine>;
+    if (!loadError) return <CompanionLine typing>…</CompanionLine>;
     return (
       <>
-        <NibblesLine mood="think"><span role="alert">{loadError}</span></NibblesLine>
+        <CompanionLine mood="think"><span role="alert">{loadError}</span></CompanionLine>
         <OptionTiles key={`${record.status}-t1`} label="Couldn't load" options={[{ id: "retry", label: "Try again", icon: <RefreshCw />, tone: "primary" }, homeTile]}
           onPick={(option) => (option.id === "retry" ? setLoadKey((n) => n + 1) : navigate("/"))} />
       </>
@@ -212,8 +212,8 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
       ];
     return (
       <>
-        {record.failureReason ? <NibblesLine mood="think"><span role="alert">{record.failureReason}</span></NibblesLine> : null}
-        <NibblesLine>Here's a plan. Your call.</NibblesLine>
+        {record.failureReason ? <CompanionLine mood="think"><span role="alert">{record.failureReason}</span></CompanionLine> : null}
+        <CompanionLine>Here's a plan. Your call.</CompanionLine>
         <PlanCard
           view={view}
           subject={record.subject}
@@ -230,7 +230,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
         {askWhy ? (
           <>
             <LearnerEcho>Redo the plan without these</LearnerEcho>
-            <NibblesLine typing delayMs={360}>Sure. Why skip them? <span className="mk-faint">Optional, but it helps me redo it.</span></NibblesLine>
+            <CompanionLine typing delayMs={360}>Sure. Why skip them? <span className="mk-faint">Optional, but it helps me redo it.</span></CompanionLine>
             <OptionTiles key={`${record.status}-t2`}
               label="Why skip them?"
               resetKey={attempt}
@@ -272,7 +272,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
   const total = generation?.totalLessons ?? view.blueprint.modules.reduce((sum, module) => sum + module.slots.length, 0);
   const history = (
     <>
-      <NibblesLine>Here's the plan: <b>{view.blueprint.courseTitle}</b>. <span className="mk-faint">{total} lessons · {sequenceModeName(view.sequenceMode).toLowerCase()}</span></NibblesLine>
+      <CompanionLine>Here's the plan: <b>{view.blueprint.courseTitle}</b>. <span className="mk-faint">{total} lessons · {sequenceModeName(view.sequenceMode).toLowerCase()}</span></CompanionLine>
       <LearnerEcho>Make my course</LearnerEcho>
     </>
   );
@@ -281,7 +281,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
     return (
       <>
         {history}
-        <NibblesLine mood="think">On it. You can leave; I'll keep going.</NibblesLine>
+        <CompanionLine mood="think">On it. You can leave; I'll keep going.</CompanionLine>
         <MakingCard view={view} generation={generation} status={record.status} />
         <OptionTiles key={`${record.status}-t4`}
           label="While it's being made"
@@ -310,10 +310,10 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
     return (
       <>
         {history}
-        <NibblesLine>
+        <CompanionLine>
           Stopped. {kept ? `The ${kept} of ${generation?.totalLessons ?? total} lessons already written are kept, and Resume picks up from the next one.` : "Resume starts again from the first lesson."}
           {" "}<span className="mk-faint">It won't restart by itself.</span>
-        </NibblesLine>
+        </CompanionLine>
         <MakingCard view={view} generation={generation} status={record.status} />
         <OptionTiles key={`${record.status}-t5`}
           label="Stopped"
@@ -338,7 +338,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
     return (
       <>
         {history}
-        <NibblesLine mood="think"><span role="alert">{record.failureReason ?? "I couldn't finish making this course."}</span></NibblesLine>
+        <CompanionLine mood="think"><span role="alert">{record.failureReason ?? "I couldn't finish making this course."}</span></CompanionLine>
         <MakingCard view={view} generation={generation} status={record.status} failureReason={record.failureReason} />
         <OptionTiles key={`${record.status}-t6`}
           label="Couldn't finish"
@@ -368,7 +368,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
   return (
     <>
       {history}
-      <NibblesLine mood="cheer">Your course is ready.</NibblesLine>
+      <CompanionLine mood="cheer">Your course is ready.</CompanionLine>
       <div ref={readyCard}>
         <ThreadCard>
           <div className="mk-ready">

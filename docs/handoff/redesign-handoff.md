@@ -2,6 +2,12 @@
 
 Written 2026-10-25, at the end of a long session, so a new session (on another computer) can pick up exactly where this one stopped. Read this first, then `docs/uis/redesign/README.md` and `docs/uis/redesign/09-implementation-notes.md`.
 
+## 0. Update, 2026-10-26
+
+- SEN-86, SEN-87 and SEN-88 are merged into the SEN-52 branch (PRs #27, #28, #29). PR #26 is waiting for Ben's review before it goes to `main`.
+- **The companion is now Jongi** (SEN-96 tracks the rename in code).
+- **The look is changing to Papercraft:** `docs/uis/redesign/10-papercraft-jongi.html`, to be fine-tuned in SEN-97. Also: no italics anywhere. The flow and behaviour decisions below still hold; where they describe Nibbles' look, the logo, palettes or fonts, Papercraft replaces them once SEN-97 is applied.
+
 ## 1. Where things stand
 
 | Ticket | Branch | PR | State |

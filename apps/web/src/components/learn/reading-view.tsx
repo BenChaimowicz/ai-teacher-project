@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
 import { useShell } from "@/components/shell/app-shell.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChatThread, NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { ChatThread, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
 import { useToast } from "@/components/ui/toast.tsx";
 import { isLightSurface, readingStyle } from "@/components/learn/reading-settings.ts";
@@ -337,10 +337,10 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
     <div className="l-nib">
       <ChatThread label="End of lesson">
         {completed ? (
-          <NibblesLine key="done">You've read this one.{finish ? " Ready when you are." : ""}</NibblesLine>
+          <CompanionLine key="done">You've read this one.{finish ? " Ready when you are." : ""}</CompanionLine>
         ) : (
           <>
-            <NibblesLine key="ask">That's the lesson. Did it make sense?</NibblesLine>
+            <CompanionLine key="ask">That's the lesson. Did it make sense?</CompanionLine>
             <OptionTiles options={END_OPTIONS} onPick={onEnd} label="End of lesson" resetKey={endKey} />
           </>
         )}

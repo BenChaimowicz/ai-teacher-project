@@ -2,6 +2,8 @@
 
 SEN-52 · 2026-10-25. These were settled while reviewing the mocks in this folder. Implementation agents should follow them. The mocks are the visual reference.
 
+- **Look: Papercraft, companion Jongi (decided 2026-10-26, SEN-97).** The visual direction is `10-papercraft-jongi.html`, fine-tuned in SEN-97. It's in the code (see `11-papercraft-implementation-plan.md`): one paper palette (the 5 palettes and the picker are gone), Space Grotesk for the UI, Instrument Serif for headings, Manrope still the lesson default, and the companion **Jongi** (`components/companion/jongi.tsx`). Older bullets below about Nibbles, the 5 palettes or glow are superseded.
+- **No italics** anywhere in the product.
 - **No language question.** "How you like to learn" asks 7 questions. Lessons are English only for now, and the course-making LLM prompts must say so explicitly: write lessons, quizzes and feedback in English.
 - **No seeds, XP or levels for now.** Rewards are non-numeric: a small confetti burst with a "✓ …" chip, a streak, today's minutes against a daily goal, ticked sections, and count-ups on real stats. The sidebar ring shows today's goal.
 - **The companion is called Nibbles.** It's a hamster. Its voice is low-key, kind and brief, never childish. The name may change later, so keep it in one constant.

@@ -1,12 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { COMPANION_NAME } from "@/lib/brand-marks.ts";
 import { prefersReducedMotion } from "@/lib/cheer.ts";
-import { Nibbles, type NibblesMood } from "@/components/ui/nibbles.tsx";
+import { Jongi, type JongiMood } from "@/components/companion/jongi.tsx";
 import { cn } from "@/lib/utils";
 
 /**
  * Chat-like column: the companion's lines, the Learner's echoed picks, and cards.
- * History scrolls up; put the current step's OptionTiles right after the latest NibblesLine.
+ * History scrolls up; put the current step's OptionTiles right after the latest CompanionLine.
  */
 export function ChatThread({ children, className, label = `Conversation with ${COMPANION_NAME}` }: { children: ReactNode; className?: string; label?: string }) {
   return (
@@ -16,14 +16,14 @@ export function ChatThread({ children, className, label = `Conversation with ${C
   );
 }
 
-type NibblesLineProps = {
+type CompanionLineProps = {
   children: ReactNode;
   /** Show typing dots first, for `delayMs`. Use for new lines, not for history on reload. */
   typing?: boolean;
   delayMs?: number;
   /** A follow-up line from the same speaker: no avatar, no top gap. */
   continued?: boolean;
-  mood?: NibblesMood;
+  mood?: JongiMood;
   /** Called once the text is visible (e.g. to show the options after it). */
   onShown?: () => void;
 };
@@ -31,7 +31,7 @@ type NibblesLineProps = {
 /**
  * One line from the companion. Low-key and brief: one or two sentences.
  */
-export function NibblesLine({ children, typing = false, delayMs = 520, continued = false, mood = "idle", onShown }: NibblesLineProps) {
+export function CompanionLine({ children, typing = false, delayMs = 520, continued = false, mood = "idle", onShown }: CompanionLineProps) {
   const [shown, setShown] = useState(!typing);
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export function NibblesLine({ children, typing = false, delayMs = 520, continued
   return (
     <div className={cn("k-trow", !continued && "grouped-start")}>
       <span className={cn("av", continued && "empty")} aria-hidden="true">
-        {continued ? null : <Nibbles size={32} mood={mood} />}
+        {continued ? null : <Jongi size={32} mood={mood} tile="round" />}
       </span>
       <div className="k-msg">
         <span className="sr-only">{COMPANION_NAME}: </span>

@@ -1,7 +1,7 @@
 import { BookOpen, Layers, MessageCircle, Wrench } from "lucide-react";
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { Button } from "@/components/ui/button.tsx";
-import { LearnerEcho, NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { LearnerEcho, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
@@ -136,15 +136,15 @@ export function ComposeFlow({ initialSubject, presetTopic, onCompose, onTopic }:
 
   return (
     <>
-      <NibblesLine>{initialSubject ? "Sure. What would you like to learn this time?" : "Hi. What would you like to learn?"}</NibblesLine>
+      <CompanionLine>{initialSubject ? "Sure. What would you like to learn this time?" : "Hi. What would you like to learn?"}</CompanionLine>
       {subject === null ? (
         <TopicField initial={initialSubject} onSubmit={pickTopic} />
       ) : (
         <>
           <div className="mk-topic-echo"><LearnerEcho>{subject}</LearnerEcho></div>
-          <NibblesLine typing key={subject} onShown={() => setGoalShown(true)}>
+          <CompanionLine typing key={subject} onShown={() => setGoalShown(true)}>
             Good choice. What would you like to get out of it?
-          </NibblesLine>
+          </CompanionLine>
           {goalShown ? (
             <>
               <OptionTiles
@@ -163,8 +163,8 @@ export function ComposeFlow({ initialSubject, presetTopic, onCompose, onTopic }:
             </>
           ) : null}
           {goal && !error ? <LearnerEcho>{goal.label}</LearnerEcho> : null}
-          {saving ? <NibblesLine mood="think"><WorkingLine>Saving it…</WorkingLine></NibblesLine> : null}
-          {error ? <NibblesLine mood="think"><span role="alert">{error}</span> <span className="mk-faint">Pick again to retry.</span></NibblesLine> : null}
+          {saving ? <CompanionLine mood="think"><WorkingLine>Saving it…</WorkingLine></CompanionLine> : null}
+          {error ? <CompanionLine mood="think"><span role="alert">{error}</span> <span className="mk-faint">Pick again to retry.</span></CompanionLine> : null}
         </>
       )}
       <ThreadEnd watch={`${subject}|${goalShown}|${goal?.id}|${saving}|${error}`} />

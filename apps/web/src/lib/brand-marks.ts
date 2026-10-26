@@ -1,92 +1,32 @@
 /*
- * SVG markup for the Knibbler mark, the capped Nibbles used by the loader, and the course icons.
- * Ported from docs/uis/redesign/kit.js. Strings (not JSX) because the favicon needs the same
- * markup as a data URI. Colours are CSS var() strings inline, or hex for the favicon.
+ * SVG markup for the Knibbler mark, the old capped companion still used by the loader, and the course icons.
+ * The mark is ported from docs/uis/redesign/10-papercraft-jongi.html (`logo()`). Strings (not JSX) because
+ * the favicon (public/jongi-logo.svg) is the same markup.
  */
 
-/** The companion's name lives here only. It may change. */
-export const COMPANION_NAME = "Nibbles";
+/** The companion's name lives here only. */
+export const COMPANION_NAME = "Jongi";
 
 /** Product name (silent k). */
 export const PRODUCT_NAME = "Knibbler";
 
-type MarkColours = { a: string; b: string };
-type NibblesColours = MarkColours & { hi: string; lo: string; ear: string };
-
-const MARK_VARS: MarkColours = { a: "var(--a)", b: "var(--b)" };
-const NIBBLES_VARS: NibblesColours = { ...MARK_VARS, hi: "var(--nib-hi)", lo: "var(--nib-lo)", ear: "var(--nib-ear)" };
-
 /**
- * The mark: Nibbles' silhouette (head, ears, cheeks) in a graduation cap. No face, so it stays crisp at 16px.
- * @param colours - Accent pair as var() strings or hex
- * @param uid - Unique id prefix for gradients and the mask
+ * The mark: Jongi's folded paper head (ears, face, cream muzzle, nose) in a tilted scholar cap with a
+ * gold tassel. Flat facets, no filters, so it stays crisp at 16px. Fixed paper colours (one palette).
+ * @param options.tile - Sit on the rounded ink-navy tile (use at 32px and up, and for the favicon)
  */
-export function logoMarkup(colours: MarkColours = MARK_VARS, uid = "lg") {
-  const board = "M50 7 L95 21.5 L50 36 L5 21.5Z";
-  const band = "M29 25 L71 25 L71 39.5 Q50 33.5 29 39.5Z";
-  const cord = "M94 22.5 V40";
-  const tassel = "M89.8 38.5 h8.4 l1.6 11 h-11.6z";
-  const head =
-    "M50 33 C64 33 75 40 79 50 C89 55 94 67 89 79 C84 91 69 97 50 97 C31 97 16 91 11 79 C6 67 11 55 21 50 C25 40 36 33 50 33Z";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
-  <defs>
-    <linearGradient id="${uid}h" gradientUnits="userSpaceOnUse" x1="18" y1="30" x2="80" y2="98"><stop offset="0" style="stop-color:${colours.a}"/><stop offset="1" style="stop-color:${colours.b}"/></linearGradient>
-    <linearGradient id="${uid}c" gradientUnits="userSpaceOnUse" x1="5" y1="8" x2="95" y2="54"><stop offset="0" style="stop-color:${colours.a}"/><stop offset="1" style="stop-color:${colours.b}"/></linearGradient>
-    <mask id="${uid}m" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
-      <rect width="100" height="100" fill="#fff"/>
-      <g style="fill:#000;stroke:#000" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
-        <path d="${board}"/><path d="${band}"/><path d="${tassel}"/><path d="${cord}" fill="none"/>
-      </g>
-    </mask>
-  </defs>
-  <g mask="url(#${uid}m)" style="fill:url(#${uid}h)">
-    <circle cx="22" cy="41" r="11"/><circle cx="78" cy="41" r="11"/>
-    <path d="${head}"/>
-  </g>
-  <g>
-    <path d="${band}" style="fill:url(#${uid}c)"/>
-    <path d="${band}" style="fill:#000" opacity=".28"/>
-    <path d="${board}" style="fill:url(#${uid}c)"/>
-    <g class="tassel">
-      <path d="${cord}" style="stroke:${colours.b};fill:none" stroke-width="3.6" stroke-linecap="round"/>
-      <path d="${tassel}" style="fill:${colours.b}"/>
-    </g>
-  </g>
-</svg>`;
-}
-
-/**
- * Nibbles with the full face in a graduation cap, for the loader (the companion working, not the mark).
- * @param uid - Unique id prefix for gradients
- */
-export function cappedNibblesMarkup(uid = "cn", colours: NibblesColours = NIBBLES_VARS) {
-  const p = colours;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 12 100 100" aria-hidden="true">
-  <defs>
-    <radialGradient id="${uid}f" cx="45%" cy="40%" r="72%"><stop offset="0" style="stop-color:${p.hi}"/><stop offset="1" style="stop-color:${p.lo}"/></radialGradient>
-    <linearGradient id="${uid}c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:${p.a}"/><stop offset="1" style="stop-color:${p.b}"/></linearGradient>
-  </defs>
-  <g>
-    <circle cx="29" cy="52" r="11" style="fill:${p.ear}"/><circle cx="29" cy="53" r="6" style="fill:#f9a8d4" opacity=".55"/>
-    <circle cx="91" cy="52" r="11" style="fill:${p.ear}"/><circle cx="91" cy="53" r="6" style="fill:#f9a8d4" opacity=".55"/>
-    <ellipse cx="60" cy="79" rx="42" ry="33" style="fill:url(#${uid}f)"/>
-    <ellipse cx="34" cy="89" rx="14" ry="11.5" style="fill:${p.hi}" opacity=".9"/><ellipse cx="86" cy="89" rx="14" ry="11.5" style="fill:${p.hi}" opacity=".9"/>
-    <ellipse cx="33" cy="89" rx="6.5" ry="3.4" style="fill:#f9a8d4" opacity=".5"/><ellipse cx="87" cy="89" rx="6.5" ry="3.4" style="fill:#f9a8d4" opacity=".5"/>
-    <ellipse cx="45" cy="76" rx="7.2" ry="8" style="fill:#1a1433"/><ellipse cx="75" cy="76" rx="7.2" ry="8" style="fill:#1a1433"/>
-    <circle cx="47.3" cy="73.3" r="2.6" style="fill:#fff"/><circle cx="77.3" cy="73.3" r="2.6" style="fill:#fff"/>
-    <path d="M57 84 h6 l-3 3z" style="fill:#e8799f"/>
-    <path d="M55.2 88 q2.4 2.8 4.8 0 q2.4 2.8 4.8 0" style="stroke:#3b2a3b;fill:none" stroke-width="1.8" stroke-linecap="round"/>
-    <path d="M37 45.5 q23 -9 46 0 v8.5 q-23 -7.5 -46 0z" style="fill:#1d1930"/>
-    <path d="M37 54 q23 -7.5 46 0" style="stroke:${p.a};fill:none" stroke-width="1.6" opacity=".55"/>
-    <path d="M60 20 L106 34.5 L60 49 L14 34.5Z" style="fill:url(#${uid}c)"/>
-    <path d="M60 20 L106 34.5 L60 49 L14 34.5Z" style="fill:none;stroke:#ffffff" stroke-width="1.2" stroke-linejoin="round" opacity=".35"/>
-    <g class="tassel">
-      <path d="M60 34.5 Q80 36.5 97 38.5 V57" style="stroke:#1d1930;fill:none" stroke-width="2.4" stroke-linecap="round"/>
-      <path d="M93.6 56 h6.8 l1.4 10 h-9.6z" style="fill:#1d1930"/>
-    </g>
-    <circle cx="60" cy="34.5" r="3.2" style="fill:#1d1930"/>
-  </g>
-</svg>`;
+export function logoMarkup({ tile = false }: { tile?: boolean } = {}) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true">${tile ? '<rect width="32" height="32" rx="7" fill="#141a2e"/>' : ""}
+<polygon points="3.5,14 5.2,3.2 10.5,10.8" fill="#e8b07a"/><polygon points="5.2,3.2 13.5,8.6 10.5,10.8" fill="#c27f48"/>
+<polygon points="28.5,14 26.8,3.2 21.5,10.8" fill="#b06f3c"/><polygon points="26.8,3.2 18.5,8.6 21.5,10.8" fill="#d08b55"/>
+<polygon points="16,6.5 24.6,8.9 28.6,16.6 25.6,25 16,28.8 6.4,25 3.4,16.6 7.4,8.9" fill="#d8955c"/>
+<polygon points="16,6.5 24.6,8.9 28.6,16.6 25.6,25 16,28.8" fill="#c4824c"/>
+<polygon points="16,18 22.8,21 21,26 16,28.8 11,26 9.2,21" fill="#f0e0c2"/><polygon points="16,18 22.8,21 21,26 16,28.8" fill="#d9c39d"/>
+<circle cx="11.4" cy="15.4" r="1.75" fill="#141726"/><circle cx="20.6" cy="15.4" r="1.75" fill="#141726"/>
+<polygon points="14.8,19.6 17.2,19.6 16,21.1" fill="#c25f72"/>
+<g transform="rotate(6 16 7)"><polygon points="8.5,6.6 16.4,3 24,5.8 16,9.6" fill="#2f3964"/><polygon points="16.4,3 24,5.8 16,9.6" fill="#222949"/>
+<polyline points="8.5,6.6 16.4,3 24,5.8" fill="none" stroke="#6372b3" stroke-width=".7" stroke-linejoin="round"/>
+<path d="M16.2,6.3 L23.6,6 L23.6,10.4" fill="none" stroke="#e7b250" stroke-width="1" stroke-linecap="round"/></g></svg>`;
 }
 
 /**

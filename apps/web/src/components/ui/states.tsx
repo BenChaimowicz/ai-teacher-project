@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Nibbles } from "@/components/ui/nibbles.tsx";
+import { Jongi } from "@/components/companion/jongi.tsx";
 import { cn } from "@/lib/utils";
 
 type StateProps = {
@@ -11,12 +11,12 @@ type StateProps = {
 };
 
 /**
- * Nothing here yet. Nibbles says it kindly, with one clear next step.
+ * Nothing here yet. The companion says it kindly, with one clear next step.
  */
 export function EmptyState({ title, children, actions, className }: StateProps) {
   return (
     <div className={cn("k-state", className)}>
-      <Nibbles size={64} className="art" track />
+      <Jongi size={64} className="art" track tile />
       <h3>{title}</h3>
       {children ? <p>{children}</p> : null}
       {actions ? <div className="mt-2 flex flex-wrap justify-center gap-2">{actions}</div> : null}
@@ -30,7 +30,7 @@ export function EmptyState({ title, children, actions, className }: StateProps) 
 export function ErrorState({ title = "That didn't load", children, actions, className }: Partial<StateProps>) {
   return (
     <div className={cn("k-state error", className)} role="alert">
-      <Nibbles size={56} mood="think" className="art" />
+      <Jongi size={64} mood="think" className="art" tile />
       <h3>{title}</h3>
       {children ? <p>{children}</p> : null}
       {actions ? <div className="mt-2 flex flex-wrap justify-center gap-2">{actions}</div> : null}

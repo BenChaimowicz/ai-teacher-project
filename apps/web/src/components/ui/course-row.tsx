@@ -12,7 +12,7 @@ const STATUS_WORDS: Record<CourseListItem["status"], string> = {
 };
 
 /**
- * One line per course in the sidebar: icon (status dot on its corner), title, tiny progress, short tag.
+ * One line per course in the sidebar: icon (status dot on its corner), title, tiny progress, a small status ribbon.
  */
 export function CourseRow({ course, active = false }: { course: CourseListItem; active?: boolean }) {
   const progress = course.progress && course.progress.total > 0 ? course.progress.completed / course.progress.total : null;
@@ -30,7 +30,7 @@ export function CourseRow({ course, active = false }: { course: CourseListItem; 
           <i style={{ width: `${Math.round(progress * 100)}%` }} />
         </span>
       ) : null}
-      <span className={cn("st", course.status)}>{course.badge}</span>
+      <span className={cn("k-rib st", course.status)}>{course.badge}</span>
       <span className="sr-only">, {STATUS_WORDS[course.status]}</span>
     </>
   );

@@ -2,6 +2,8 @@
 
 SEN-52 · 2026-10-25. This is the direction chosen in SEN-52 and the reference for SEN-86 (design system and app shell), SEN-87 (make-a-Course screens), SEN-88 (learning screens) and SEN-56 (conversational Teaching Profile). The mocks are standalone HTML, so open them from disk. They share `kit.css` and `kit.js`.
 
+> **Direction update, 2026-10-26 (SEN-97).** Yarden and Ben chose the **Papercraft** look ([`10-papercraft-jongi.html`](10-papercraft-jongi.html)) and renamed the companion **Jongi**. It's the base for the product and will be fine-tuned in SEN-97. Where this README or the older mocks disagree with it on looks (palette, type, the companion's design, logo), the Papercraft mock wins. The flow and behaviour decisions in [`09-implementation-notes.md`](09-implementation-notes.md) still hold.
+
 ## The direction in one paragraph
 
 Knibbler feels like a calm, dark, slightly techy study app with a cute companion, **Nibbles** the hamster. Every flow is chat-*like* without being a chat. Nibbles says one short line, and the Learner taps an option tile directly under it. The only free text is naming what to learn. A compact sidebar is present everywhere and never scrolls. Reading is long-form and comfortable, with reading modes the Learner can change. Progress feels rewarding through streaks, ticks, confetti and count-ups, without points.
@@ -19,6 +21,9 @@ Knibbler feels like a calm, dark, slightly techy study app with a cute companion
 | [`06-how-you-learn.html`](06-how-you-learn.html) | "How you like to learn" as a short conversation (SEN-56), first time and returning. |
 | [`07-brand.html`](07-brand.html), [`nibbles-logo.svg`](nibbles-logo.svg) | Logo (Nibbles' silhouette in a cap), favicon, loader, course icons. |
 | [`08-course-icons.md`](08-course-icons.md) | How each Course gets a fitting icon. |
+| [`10-papercraft-jongi.html`](10-papercraft-jongi.html) | **The chosen look (SEN-97).** Papercraft: a dark pop-up-book feel, with Jongi as a cut-paper hamster. Shows the companion, Home, New course, Reading, Quiz, Course complete and the design system. No italics. |
+| [`11-papercraft-implementation-plan.md`](11-papercraft-implementation-plan.md) | How the app moves to Papercraft: decisions, token mapping and phases. |
+| [`10b-papercraft-simplified.html`](10b-papercraft-simplified.html) | A simplified take on Papercraft, kept as a reference for how far to simplify while fine-tuning. Not the chosen look. |
 | [`09-implementation-notes.md`](09-implementation-notes.md) | **Decisions list for implementers. Read this first.** |
 | [`kit.css`](kit.css), [`kit.js`](kit.js) | Shared tokens and components of the mocks. These are the source for SEN-86's tokens. |
 | `02-new-course.html`, `03-study.html` | First iterations, kept for comparison. Superseded by the `b` versions. |

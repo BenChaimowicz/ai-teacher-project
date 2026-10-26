@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { Button } from "@/components/ui/button.tsx";
-import { NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { Dialog } from "@/components/ui/dialog.tsx";
-import { Nibbles } from "@/components/ui/nibbles.tsx";
+import { Jongi } from "@/components/companion/jongi.tsx";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
 import { useStudyChrome } from "@/components/learn/study-chrome.tsx";
 import {
@@ -33,7 +33,8 @@ const GLYPH: Record<ReadingModeKey, string> = {
   skim: `<rect class="ln" x="4" y="4" width="32" height="2" rx="1"/><rect class="ln mk" x="3" y="8.5" width="26" height="4" rx="1"/><rect class="ln" x="4" y="9.5" width="24" height="2" rx="1"/><rect class="ln" x="4" y="16" width="30" height="2" rx="1"/><rect class="ln mk" x="3" y="20.5" width="20" height="4" rx="1"/><rect class="ln" x="4" y="21.5" width="18" height="2" rx="1"/>`,
 };
 
-const SURFACE_CHIP: Record<ReadingSurface, string> = { dark: "#14131b", dim: "#24232b", sepia: "#f2e8d2", paper: "#f8f7f3" };
+/* Dark is the ink paper; Dim a softer ink; Sepia and Paper match the light pages in learn.css. */
+const SURFACE_CHIP: Record<ReadingSurface, string> = { dark: "var(--panel)", dim: "#30364d", sepia: "#f2e8d2", paper: "#f8f7f3" };
 
 type SegOption<T> = { value: T; label: string; style?: CSSProperties; chip?: string; note?: string };
 
@@ -190,7 +191,7 @@ export function ReadingPanel() {
                 setPicking(true);
               }}
             >
-              <Nibbles size={32} />
+              <Jongi size={32} tile="round" />
               <span>
                 <b>Help me pick</b>
                 <small>3 quick rounds · about 30s</small>
@@ -289,9 +290,9 @@ function FontPicker({ open, onClose }: { open: boolean; onClose: () => void }) {
         </div>
         {done && winner ? (
           <>
-            <NibblesLine key="done">
+            <CompanionLine key="done">
               {FONT_LABEL[winner.font]} suits you{winner.spaced ? ", with a little extra space" : ""}. Applied.
-            </NibblesLine>
+            </CompanionLine>
             <div className="l-pk-result">
               <span ref={result} className="big-aa" style={{ fontFamily: FONT_STACK[winner.font] }} aria-hidden="true">
                 Aa
@@ -308,7 +309,7 @@ function FontPicker({ open, onClose }: { open: boolean; onClose: () => void }) {
           </>
         ) : (
           <>
-            <NibblesLine key={`round-${round}`}>{current.line}</NibblesLine>
+            <CompanionLine key={`round-${round}`}>{current.line}</CompanionLine>
             <div role="group" aria-label={current.line} className="k-tiles l-sample-tiles" key={`tiles-${round}`}>
               {[current.a, current.b].map((sample, index) => (
                 <button

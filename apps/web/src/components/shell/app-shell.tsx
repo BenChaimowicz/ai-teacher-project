@@ -4,7 +4,6 @@ import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { CompanionCard } from "@/components/companion/companion-card.tsx";
 import { CourseRequestControl } from "@/components/course-request-control.tsx";
-import { PalettePicker } from "@/components/shell/palette-picker.tsx";
 import { SidebarCourses } from "@/components/shell/sidebar-courses.tsx";
 import { BrandLink } from "@/components/ui/logo.tsx";
 import { cn } from "@/lib/utils";
@@ -163,7 +162,6 @@ export function AppShell({ variant }: { variant: ShellVariant }) {
                 <SlidersHorizontal aria-hidden="true" />
                 How you like to learn
               </NavLink>
-              <PalettePicker />
             </div>
           </div>
         </aside>

@@ -1,12 +1,11 @@
 import { BookOpen, Compass, Footprints, Rocket, Shuffle } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
 import { LearnShowcase } from "@/components/learn/learn-showcase.tsx";
 import { ShellTitle } from "@/components/shell/app-shell.tsx";
-import { PalettePicker } from "@/components/shell/palette-picker.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card } from "@/components/ui/card.tsx";
-import { ChatThread, LearnerEcho, NibblesLine, ThreadCard } from "@/components/ui/chat-thread.tsx";
+import { ChatThread, LearnerEcho, CompanionLine, ThreadCard } from "@/components/ui/chat-thread.tsx";
 import { CourseCard } from "@/components/ui/course-card.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { CourseRow } from "@/components/ui/course-row.tsx";
@@ -14,7 +13,7 @@ import { ConfirmDialog, Dialog } from "@/components/ui/dialog.tsx";
 import { Input, Textarea } from "@/components/ui/input.tsx";
 import { Loader } from "@/components/ui/loader.tsx";
 import { Logo } from "@/components/ui/logo.tsx";
-import { Nibbles } from "@/components/ui/nibbles.tsx";
+import { Jongi, type JongiHandle, type JongiMood } from "@/components/companion/jongi.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
 import { ProgressBar, ProgressRing, SegmentedProgress } from "@/components/ui/progress.tsx";
 import { EmptyState, ErrorState } from "@/components/ui/states.tsx";
@@ -22,7 +21,6 @@ import { useToast } from "@/components/ui/toast.tsx";
 import { COURSE_ICON_PATHS, type CourseIconName } from "@/lib/brand-marks.ts";
 import { cheer, confettiAt } from "@/lib/cheer.ts";
 import type { CourseListItem } from "@/lib/course-list.ts";
-import { PALETTES, usePalette } from "@/lib/theme.ts";
 
 /* Sample courses, one per status, for the row and card sections. */
 const SAMPLE_COURSES: CourseListItem[] = [
@@ -82,12 +80,66 @@ function Cell({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+const JONGI_MOODS: { mood: JongiMood; label: string; note: string }[] = [
+  { mood: "idle", label: "Idle", note: "Breathes, blinks, ear-flicks." },
+  { mood: "think", label: "Thinking", note: "Paw to chin. Eyes up." },
+  { mood: "cheer", label: "Win", note: "A one-shot hop, then idle." },
+  { mood: "rest", label: "Resting", note: "Cap slips. Back soon." },
+];
+
+/** Jongi in every mood and framing, with a button that replays the Win. */
+function JongiSection() {
+  const wins = useRef<(JongiHandle | null)[]>([]);
+  return (
+    <Section title="jongi" note="The companion. Scene tiles at 168, the sidebar card's tile at 56, chat avatars at 32 and 24. Pointer look-at on the first row.">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {JONGI_MOODS.map((m, index) => (
+          <div key={m.mood} className="flex flex-col items-center gap-2 rounded-xl bg-[var(--panel)] p-3" data-jongi-tile={m.mood}>
+            <Jongi
+              ref={(handle) => {
+                wins.current[index] = handle;
+              }}
+              size={168}
+              framing="scene"
+              mood={m.mood}
+              track
+              label={`${m.label} Jongi`}
+            />
+            <span className="text-sm font-semibold">{m.label}</span>
+            <span className="text-xs text-muted-foreground">{m.note}</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 flex flex-wrap items-end gap-8">
+        {JONGI_MOODS.map((m) => (
+          <Cell key={m.mood} label={`56 tile · ${m.mood}`}>
+            <Jongi size={56} mood={m.mood} tile track />
+          </Cell>
+        ))}
+        <Cell label="32 round">
+          <Jongi size={32} tile="round" />
+        </Cell>
+        <Cell label="24 round">
+          <Jongi size={24} tile="round" />
+        </Cell>
+        <Cell label="140 full · cheer">
+          <Jongi size={140} framing="full" mood="cheer" />
+        </Cell>
+        <Cell label="Win">
+          <Button variant="secondary" size="sm" onClick={() => wins.current.forEach((handle) => handle?.win())}>
+            Replay the win
+          </Button>
+        </Cell>
+      </div>
+    </Section>
+  );
+}
+
 /**
- * Component reference (SEN-86): every kit component in its states, plus the palette.
+ * Component reference (SEN-86): every kit component in its states.
  * Reachable at /dev/components; not linked from the app.
  */
 export function ComponentsPage() {
-  const [palette, setPalette] = usePalette();
   const toast = useToast();
   const companion = useCompanion();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -106,37 +158,19 @@ export function ComponentsPage() {
         Every kit component in its states. Contract: <code className="k-mono">src/components/README.md</code>.
       </p>
 
-      <Section title="palette" note="Always dark. A palette only changes the accent pair, the favicon follows it.">
-        <div className="flex flex-wrap items-center gap-3">
-          {PALETTES.map((row) => (
-            <Button key={row.key} variant={row.key === palette ? "primary" : "secondary"} size="sm" onClick={() => setPalette(row.key)}>
-              {row.key}
-            </Button>
-          ))}
-          <span className="k-mono text-xs text-[var(--faint)]">sidebar picker →</span>
-          <PalettePicker />
-        </div>
-      </Section>
-
-      <Section title="brand" note="Logo is the silhouette in a cap; the full face is for the companion and the loader.">
+      <Section title="brand" note="The mark is Jongi's folded head in a cap, at 64 / 32 / 16. The favicon is the 64 on its tile.">
         <div className="flex flex-wrap items-end gap-8">
-          <Cell label="Logo 20">
-            <Logo size={20} />
+          <Cell label="Logo 16">
+            <Logo size={16} />
           </Cell>
           <Cell label="Logo 28">
             <Logo />
           </Cell>
-          <Cell label="Logo 56">
-            <Logo size={56} />
+          <Cell label="Logo 32 · tile">
+            <Logo size={32} tile />
           </Cell>
-          <Cell label="Nibbles idle · track">
-            <Nibbles size={64} track />
-          </Cell>
-          <Cell label="think">
-            <Nibbles size={64} mood="think" />
-          </Cell>
-          <Cell label="cheer">
-            <Nibbles size={64} mood="cheer" />
+          <Cell label="Logo 64 · tile">
+            <Logo size={64} tile />
           </Cell>
           <Cell label="Loader 20 (inline)">
             <Loader size={20} />
@@ -154,7 +188,7 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="button">
+      <Section title="button" note="Pop-up tabs on a darker under-sheet; pressed, they fold down 2px.">
         <div className="flex flex-wrap items-end gap-3">
           <Button>Primary</Button>
           <Button variant="secondary">Secondary</Button>
@@ -211,7 +245,7 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="card">
+      <Section title="card" note="Paper sheets: default casts a sheet shadow, flat is an outline for nesting, interactive lifts onto a stack.">
         <div className="grid gap-4 sm:grid-cols-3">
           <Card className="p-5">accent (default)</Card>
           <Card tone="flat" className="p-5">
@@ -223,12 +257,14 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="chat thread" note="NibblesLine, LearnerEcho, ThreadCard. Options sit right under the latest line.">
+      <JongiSection />
+
+      <Section title="chat thread" note="CompanionLine, LearnerEcho, ThreadCard. Options sit right under the latest line.">
         <ChatThread>
-          <NibblesLine>What would you like to learn?</NibblesLine>
+          <CompanionLine>What would you like to learn?</CompanionLine>
           <LearnerEcho>Norse mythology</LearnerEcho>
-          <NibblesLine mood="think">Nice. A few quick picks and I'll plan it.</NibblesLine>
-          <NibblesLine continued>How do you want to move through it?</NibblesLine>
+          <CompanionLine mood="think">Nice. A few quick picks and I'll plan it.</CompanionLine>
+          <CompanionLine continued>How do you want to move through it?</CompanionLine>
           <OptionTiles
             label="How do you want to move through it?"
             options={PACE_OPTIONS}
@@ -241,9 +277,9 @@ export function ComponentsPage() {
           </ThreadCard>
           <LearnerEcho verdict="good">Thor</LearnerEcho>
           <LearnerEcho verdict="miss">Loki</LearnerEcho>
-          <NibblesLine key={typingKey} typing delayMs={1200}>
+          <CompanionLine key={typingKey} typing delayMs={1200}>
             This line typed first.
-          </NibblesLine>
+          </CompanionLine>
         </ChatThread>
         <div className="mt-3 flex gap-2">
           <Button
@@ -262,7 +298,7 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="option tiles" note="Keys 1–9 pick from the newest unlocked group. Quiz mode: good glows and bursts, miss shakes and reveals.">
+      <Section title="option tiles" note="Resting sheets, stacked while they need you, lifted with an apricot rim when picked. Keys 1–9 pick from the newest unlocked group. Quiz: good bursts paper, miss shakes and reveals.">
         <div className="space-y-6">
           <Cell label="quiz (judge + correctId) · cols 2 · flush">
             <OptionTiles
@@ -289,7 +325,7 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="progress">
+      <Section title="progress" note="Ribbon bar with a notched end, paper pips, and a ring cut into paper segments.">
         <div className="grid gap-6 sm:grid-cols-2">
           <Cell label="segments: done, now, writing, miss, todo">
             <SegmentedProgress segments={["done", "done", "now", "writing", "miss", "todo"]} label="sample segments" className="w-64" />
@@ -306,6 +342,9 @@ export function ComponentsPage() {
                 16m
               </ProgressRing>
             </Cell>
+            <Cell label="ring 0.6 · 44">
+              <ProgressRing value={0.6} size={44} label="60%" />
+            </Cell>
             <Cell label="ring no label">
               <ProgressRing value={1} size={40} label="done">
                 {null}
@@ -315,7 +354,18 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="course row" note="Sidebar line: icon with status dot, title, tiny progress, short tag.">
+      <Section title="ribbons" note="Every status is a notched bookmark ribbon (.k-rib). Red is only for needs you and the streak.">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="k-rib learning">Learning</span>
+          <span className="k-rib making">Being made</span>
+          <span className="k-rib needs">Needs you</span>
+          <span className="k-rib done">✓ Done</span>
+          <span className="k-rib stopped">Stopped</span>
+          <span className="k-rib solid">6-day streak</span>
+        </div>
+      </Section>
+
+      <Section title="course row" note="Sidebar line: icon with status dot, title, tiny progress, a small status ribbon.">
         <div className="k-clist max-w-xs">
           {SAMPLE_COURSES.map((course, index) => (
             <CourseRow key={course.key} course={course} active={index === 0} />
@@ -335,14 +385,10 @@ export function ComponentsPage() {
 
       <Section title="states">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Card tone="flat">
-            <EmptyState title="Nothing here yet" actions={<Button>New course</Button>}>
-              Tell me something you're curious about.
-            </EmptyState>
-          </Card>
-          <Card tone="flat">
-            <ErrorState actions={<Button variant="secondary">Try again</Button>}>Your courses are safe. Try again in a moment.</ErrorState>
-          </Card>
+          <EmptyState title="Nothing here yet" actions={<Button>New course</Button>}>
+            Tell me something you're curious about.
+          </EmptyState>
+          <ErrorState actions={<Button variant="secondary">Try again</Button>}>Your courses are safe. Try again in a moment.</ErrorState>
         </div>
       </Section>
 

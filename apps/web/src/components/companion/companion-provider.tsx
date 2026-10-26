@@ -1,14 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import type { NibblesMood } from "@/components/ui/nibbles.tsx";
+import type { JongiMood } from "@/components/companion/jongi.tsx";
 import { addStudyMinutes, readActivity, type ActivitySummary } from "@/lib/study-activity.ts";
 
 /** Low-key lines for when a screen sets none. Kind, brief, never childish. */
 export const DEFAULT_COMPANION_LINES = [
   "I'm here if you need me.",
+  "Saved your place. No rush.",
   "Small steps add up.",
   "A short break helps things stick.",
-  "Curious about something? We can make a course of it.",
+  "Curious about something? Tell me a topic. I'll handle the rest.",
   "No rush. Go at your pace.",
 ];
 
@@ -17,13 +18,13 @@ type CompanionState = {
   line: string;
   /** Changes on every new line, so the bubble can replay its typing dots. */
   lineId: number;
-  mood: NibblesMood;
+  mood: JongiMood;
   activity: ActivitySummary;
   /** Say something now. A "cheer" mood falls back to idle after a moment. */
-  say: (text: string, mood?: NibblesMood) => void;
+  say: (text: string, mood?: JongiMood) => void;
   /** Next line from the current context (the card calls this on click). */
   next: () => void;
-  setMood: (mood: NibblesMood) => void;
+  setMood: (mood: JongiMood) => void;
   /** Replace the context lines (null restores the defaults). Says the first one. */
   setLines: (lines: string[] | null) => void;
 };
@@ -39,19 +40,19 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [lines, setLinesState] = useState<string[]>(DEFAULT_COMPANION_LINES);
   const [line, setLine] = useState(DEFAULT_COMPANION_LINES[0]!);
   const [lineId, setLineId] = useState(0);
-  const [mood, setMoodState] = useState<NibblesMood>("idle");
+  const [mood, setMoodState] = useState<JongiMood>("idle");
   const [activity, setActivity] = useState<ActivitySummary>(() => readActivity());
   const index = useRef(0);
   const moodTimer = useRef<number | undefined>(undefined);
 
-  const setMood = useCallback((next: NibblesMood) => {
+  const setMood = useCallback((next: JongiMood) => {
     setMoodState(next);
     window.clearTimeout(moodTimer.current);
     if (next === "cheer") moodTimer.current = window.setTimeout(() => setMoodState("idle"), 2200);
   }, []);
 
   const say = useCallback(
-    (text: string, nextMood?: NibblesMood) => {
+    (text: string, nextMood?: JongiMood) => {
       setLine(text);
       setLineId((id) => id + 1);
       if (nextMood) setMood(nextMood);

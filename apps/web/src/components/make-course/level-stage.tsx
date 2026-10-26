@@ -5,7 +5,7 @@ import type { DiagnosticAnswer } from "@senoy/db/starting-level";
 import { ThreadEnd, WorkingLine, useAutoStep } from "@/components/make-course/flow.tsx";
 import { announceRequest, errorText, requestAction } from "@/components/make-course/request-api.ts";
 import { Button } from "@/components/ui/button.tsx";
-import { LearnerEcho, NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { LearnerEcho, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
 import { requestJson } from "@/lib/api.ts";
 import { cheer } from "@/lib/cheer.ts";
@@ -162,13 +162,13 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
 
   const intro = (
     <>
-      <NibblesLine mood={live ? "think" : "idle"}>A few quick questions so I don't start too easy.</NibblesLine>
-      <NibblesLine continued>
+      <CompanionLine mood={live ? "think" : "idle"}>A few quick questions so I don't start too easy.</CompanionLine>
+      <CompanionLine continued>
         <span className="mk-faint">It's not a quiz or a grade, just a quick look at where to start. If you're not reasonably sure, “I don't know” is the right answer.</span>
-      </NibblesLine>
+      </CompanionLine>
     </>
   );
-  const errorLine = error ? <NibblesLine mood="think"><span role="alert">{error}</span></NibblesLine> : null;
+  const errorLine = error ? <CompanionLine mood="think"><span role="alert">{error}</span></CompanionLine> : null;
   const retryTiles = (label: string, onRetry: () => void | Promise<void>, retryLabel = "Try again") => (
     <OptionTiles key={`${record.status}-t0`}
       label={label}
@@ -187,10 +187,10 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
     return (
       <>
         {intro}
-        {working ? <NibblesLine mood="think"><WorkingLine>Writing your questions… This can take a minute or two.</WorkingLine></NibblesLine> : null}
+        {working ? <CompanionLine mood="think"><WorkingLine>Writing your questions… This can take a minute or two.</WorkingLine></CompanionLine> : null}
         {!working && failure ? (
           <>
-            <NibblesLine mood="think"><span role="alert">{failure}</span></NibblesLine>
+            <CompanionLine mood="think"><span role="alert">{failure}</span></CompanionLine>
             {retryTiles("Preparing didn't finish", prepare)}
           </>
         ) : null}
@@ -203,9 +203,9 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
     return (
       <>
         {intro}
-        <NibblesLine mood="think"><span role="alert">{error ?? record.failureReason ?? "I couldn't write questions for this goal that passed my checks."}</span></NibblesLine>
+        <CompanionLine mood="think"><span role="alert">{error ?? record.failureReason ?? "I couldn't write questions for this goal that passed my checks."}</span></CompanionLine>
         {busy === "prepare"
-          ? <NibblesLine mood="think"><WorkingLine>Writing a fresh set… This can take a minute or two.</WorkingLine></NibblesLine>
+          ? <CompanionLine mood="think"><WorkingLine>Writing a fresh set… This can take a minute or two.</WorkingLine></CompanionLine>
           : retryTiles("The questions didn't pass", prepare, "Retry diagnostic")}
         <ThreadEnd watch={`${busy}|${error}`} />
       </>
@@ -216,12 +216,12 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
     return (
       <>
         {live ? intro : null}
-        <NibblesLine mood="think"><span role="alert">{loadError}</span></NibblesLine>
+        <CompanionLine mood="think"><span role="alert">{loadError}</span></CompanionLine>
         {retryTiles("Couldn't load", () => setLoadKey((n) => n + 1))}
       </>
     );
   }
-  if (!diagnostic) return live ? <>{intro}<NibblesLine typing>…</NibblesLine></> : null;
+  if (!diagnostic) return live ? <>{intro}<CompanionLine typing>…</CompanionLine></> : null;
 
   const total = diagnostic.items.length;
   if (record.status === "assessment_ready") {
@@ -242,15 +242,15 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
         {sending ? (
           <>
             <QuestionHistory n={index + 1} total={total} stem={item.stem} answer={answerText(item, progress.answers[item.id])} />
-            {busy === "submit" ? <NibblesLine mood="think"><WorkingLine>Thanks. Working out where to start…</WorkingLine></NibblesLine> : null}
+            {busy === "submit" ? <CompanionLine mood="think"><WorkingLine>Thanks. Working out where to start…</WorkingLine></CompanionLine> : null}
             {errorLine}
             {error ? retryTiles("Sending didn't finish", () => submit(progress.answers)) : null}
           </>
         ) : (
           <>
-            <NibblesLine typing delayMs={380} key={item.id}>
+            <CompanionLine typing delayMs={380} key={`ask-${item.id}`}>
               <span className="mk-qhead"><span className="mk-qnum">{index + 1} of {total}</span><b>{item.stem}</b></span>
-            </NibblesLine>
+            </CompanionLine>
             <OptionTiles
               key={item.id}
               label={`Question ${index + 1} of ${total}`}
@@ -279,10 +279,10 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
   const ceiling = result.extremity === "ceiling";
   const gapLine = (
     <>
-      <NibblesLine>Thanks. {result.remainingGapStatement}</NibblesLine>
-      <NibblesLine continued>
+      <CompanionLine>Thanks. {result.remainingGapStatement}</CompanionLine>
+      <CompanionLine continued>
         <span className="mk-faint">This is a small sample, not a certificate. {result.coverageNote} Quizzes later in the course don't change where it starts.</span>
-      </NibblesLine>
+      </CompanionLine>
     </>
   );
 
@@ -312,8 +312,8 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
         <QuestionHistory key={item.id} n={itemIndex + 1} total={total} stem={item.stem} answer="" compact />
       ))}
       {gapLine}
-      {ceiling ? <NibblesLine continued>You answered nearly everything. I can still make a short course toward your goal, or you can set a harder one.</NibblesLine> : null}
-      {busy === "widen" ? <NibblesLine mood="think"><WorkingLine>Covering a bit more…</WorkingLine></NibblesLine> : (
+      {ceiling ? <CompanionLine continued>You answered nearly everything. I can still make a short course toward your goal, or you can set a harder one.</CompanionLine> : null}
+      {busy === "widen" ? <CompanionLine mood="think"><WorkingLine>Covering a bit more…</WorkingLine></CompanionLine> : (
         <OptionTiles key={`${record.status}-t1`}
           label="Where your course starts"
           resetKey={`${result.remainingGapStatement}-${attempt}`}
@@ -339,9 +339,9 @@ function QuestionHistory({ n, total, stem, answer, compact = false }: { n: numbe
   if (compact) return n === total ? <LearnerEcho><span className="mk-faint"><MessageCircle className="mr-1 inline size-3.5" aria-hidden="true" />{total} questions answered</span></LearnerEcho> : null;
   return (
     <>
-      <NibblesLine continued={n > 1}>
+      <CompanionLine continued={n > 1}>
         <span className="mk-qhead"><span className="mk-qnum">{n} of {total}</span><span className="mk-faint">{stem}</span></span>
-      </NibblesLine>
+      </CompanionLine>
       <LearnerEcho>{answer}</LearnerEcho>
     </>
   );

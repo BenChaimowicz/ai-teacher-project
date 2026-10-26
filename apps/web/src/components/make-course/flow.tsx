@@ -1,4 +1,3 @@
-import { Check } from "lucide-react";
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { Loader } from "@/components/ui/loader.tsx";
 import { prefersReducedMotion } from "@/lib/cheer.ts";
@@ -9,7 +8,7 @@ import "./make-course.css";
 export const MAKE_STEPS = ["Topic", "Goal", "Level", "Plan", "Making"] as const;
 
 /**
- * Step pills for the top bar (put it in `ShellActions`). Steps before `current` are ticked; `current` past the end
+ * Steps for the top bar, a small diamond each (put it in `ShellActions`). Steps before `current` are ticked; `current` past the end
  * ticks them all.
  * @param current - Index of the step in progress
  */
@@ -20,7 +19,7 @@ export function FlowSteps({ current, steps = MAKE_STEPS }: { current: number; st
         <Fragment key={name}>
           {index > 0 ? <li className="sep" aria-hidden="true" /> : null}
           <li className={cn(index < current && "done", index === current && "now")} aria-current={index === current ? "step" : undefined}>
-            {index < current ? <Check aria-hidden="true" /> : null}
+            <i className="dia" aria-hidden="true" />
             {name}
             {index < current ? <span className="sr-only"> (done)</span> : null}
           </li>
@@ -28,6 +27,13 @@ export function FlowSteps({ current, steps = MAKE_STEPS }: { current: number; st
       ))}
     </ol>
   );
+}
+
+/**
+ * A make-a-Course screen's title for the top bar (`ShellTitle`), in the display serif as the mock heads its screens.
+ */
+export function FlowTitle({ children }: { children: ReactNode }) {
+  return <span className="mk-title">{children}</span>;
 }
 
 /**
