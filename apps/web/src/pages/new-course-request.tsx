@@ -8,7 +8,7 @@ import { requestAction } from "@/components/make-course/request-api.ts";
 import { ShellActions, ShellTitle } from "@/components/shell/app-shell.tsx";
 import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChatThread, NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { ChatThread, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { PageLoader } from "@/components/ui/loader.tsx";
 import { OptionTiles } from "@/components/ui/option-tiles.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
@@ -41,7 +41,7 @@ export function NewCourseRequestPage() {
     return (
       <div className="mk-page">
         <ChatThread>
-          <NibblesLine>First, a few quick choices about how I teach you. It takes about a minute, and then we can make your course.</NibblesLine>
+          <CompanionLine>First, a few quick choices about how I teach you. It takes about a minute, and then we can make your course.</CompanionLine>
           <OptionTiles
             label="Before your first course"
             options={[

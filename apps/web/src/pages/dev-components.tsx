@@ -1,11 +1,11 @@
 import { BookOpen, Compass, Footprints, Rocket, Shuffle } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
 import { LearnShowcase } from "@/components/learn/learn-showcase.tsx";
 import { ShellTitle } from "@/components/shell/app-shell.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card } from "@/components/ui/card.tsx";
-import { ChatThread, LearnerEcho, NibblesLine, ThreadCard } from "@/components/ui/chat-thread.tsx";
+import { ChatThread, LearnerEcho, CompanionLine, ThreadCard } from "@/components/ui/chat-thread.tsx";
 import { CourseCard } from "@/components/ui/course-card.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { CourseRow } from "@/components/ui/course-row.tsx";
@@ -13,7 +13,7 @@ import { ConfirmDialog, Dialog } from "@/components/ui/dialog.tsx";
 import { Input, Textarea } from "@/components/ui/input.tsx";
 import { Loader } from "@/components/ui/loader.tsx";
 import { Logo } from "@/components/ui/logo.tsx";
-import { Nibbles } from "@/components/ui/nibbles.tsx";
+import { Jongi, type JongiHandle, type JongiMood } from "@/components/companion/jongi.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
 import { ProgressBar, ProgressRing, SegmentedProgress } from "@/components/ui/progress.tsx";
 import { EmptyState, ErrorState } from "@/components/ui/states.tsx";
@@ -80,6 +80,61 @@ function Cell({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+const JONGI_MOODS: { mood: JongiMood; label: string; note: string }[] = [
+  { mood: "idle", label: "Idle", note: "Breathes, blinks, ear-flicks." },
+  { mood: "think", label: "Thinking", note: "Paw to chin. Eyes up." },
+  { mood: "cheer", label: "Win", note: "A one-shot hop, then idle." },
+  { mood: "rest", label: "Resting", note: "Cap slips. Back soon." },
+];
+
+/** Jongi in every mood and framing, with a button that replays the Win. */
+function JongiSection() {
+  const wins = useRef<(JongiHandle | null)[]>([]);
+  return (
+    <Section title="jongi" note="The companion. Scene tiles at 168, the sidebar card's tile at 56, chat avatars at 32 and 24. Pointer look-at on the first row.">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {JONGI_MOODS.map((m, index) => (
+          <div key={m.mood} className="flex flex-col items-center gap-2 rounded-xl bg-[var(--panel)] p-3" data-jongi-tile={m.mood}>
+            <Jongi
+              ref={(handle) => {
+                wins.current[index] = handle;
+              }}
+              size={168}
+              framing="scene"
+              mood={m.mood}
+              track
+              label={`${m.label} Jongi`}
+            />
+            <span className="text-sm font-semibold">{m.label}</span>
+            <span className="text-xs text-muted-foreground">{m.note}</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 flex flex-wrap items-end gap-8">
+        {JONGI_MOODS.map((m) => (
+          <Cell key={m.mood} label={`56 tile · ${m.mood}`}>
+            <Jongi size={56} mood={m.mood} tile track />
+          </Cell>
+        ))}
+        <Cell label="32 round">
+          <Jongi size={32} tile="round" />
+        </Cell>
+        <Cell label="24 round">
+          <Jongi size={24} tile="round" />
+        </Cell>
+        <Cell label="140 full · cheer">
+          <Jongi size={140} framing="full" mood="cheer" />
+        </Cell>
+        <Cell label="Win">
+          <Button variant="secondary" size="sm" onClick={() => wins.current.forEach((handle) => handle?.win())}>
+            Replay the win
+          </Button>
+        </Cell>
+      </div>
+    </Section>
+  );
+}
+
 /**
  * Component reference (SEN-86): every kit component in its states.
  * Reachable at /dev/components; not linked from the app.
@@ -103,25 +158,19 @@ export function ComponentsPage() {
         Every kit component in its states. Contract: <code className="k-mono">src/components/README.md</code>.
       </p>
 
-      <Section title="brand" note="Logo is the silhouette in a cap; the full face is for the companion and the loader.">
+      <Section title="brand" note="The mark is Jongi's folded head in a cap, at 64 / 32 / 16. The favicon is the 64 on its tile.">
         <div className="flex flex-wrap items-end gap-8">
-          <Cell label="Logo 20">
-            <Logo size={20} />
+          <Cell label="Logo 16">
+            <Logo size={16} />
           </Cell>
           <Cell label="Logo 28">
             <Logo />
           </Cell>
-          <Cell label="Logo 56">
-            <Logo size={56} />
+          <Cell label="Logo 32 · tile">
+            <Logo size={32} tile />
           </Cell>
-          <Cell label="Nibbles idle · track">
-            <Nibbles size={64} track />
-          </Cell>
-          <Cell label="think">
-            <Nibbles size={64} mood="think" />
-          </Cell>
-          <Cell label="cheer">
-            <Nibbles size={64} mood="cheer" />
+          <Cell label="Logo 64 · tile">
+            <Logo size={64} tile />
           </Cell>
           <Cell label="Loader 20 (inline)">
             <Loader size={20} />
@@ -208,12 +257,14 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="chat thread" note="NibblesLine, LearnerEcho, ThreadCard. Options sit right under the latest line.">
+      <JongiSection />
+
+      <Section title="chat thread" note="CompanionLine, LearnerEcho, ThreadCard. Options sit right under the latest line.">
         <ChatThread>
-          <NibblesLine>What would you like to learn?</NibblesLine>
+          <CompanionLine>What would you like to learn?</CompanionLine>
           <LearnerEcho>Norse mythology</LearnerEcho>
-          <NibblesLine mood="think">Nice. A few quick picks and I'll plan it.</NibblesLine>
-          <NibblesLine continued>How do you want to move through it?</NibblesLine>
+          <CompanionLine mood="think">Nice. A few quick picks and I'll plan it.</CompanionLine>
+          <CompanionLine continued>How do you want to move through it?</CompanionLine>
           <OptionTiles
             label="How do you want to move through it?"
             options={PACE_OPTIONS}
@@ -226,9 +277,9 @@ export function ComponentsPage() {
           </ThreadCard>
           <LearnerEcho verdict="good">Thor</LearnerEcho>
           <LearnerEcho verdict="miss">Loki</LearnerEcho>
-          <NibblesLine key={typingKey} typing delayMs={1200}>
+          <CompanionLine key={typingKey} typing delayMs={1200}>
             This line typed first.
-          </NibblesLine>
+          </CompanionLine>
         </ChatThread>
         <div className="mt-3 flex gap-2">
           <Button

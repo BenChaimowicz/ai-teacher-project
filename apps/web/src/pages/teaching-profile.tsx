@@ -18,9 +18,9 @@ import { ProfileSettingsCard, ProfileSummaryPanel } from "@/components/make-cour
 import { ShellActions } from "@/components/shell/app-shell.tsx";
 import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChatThread, LearnerEcho, NibblesLine, ThreadCard } from "@/components/ui/chat-thread.tsx";
+import { ChatThread, LearnerEcho, CompanionLine, ThreadCard } from "@/components/ui/chat-thread.tsx";
 import { ConfirmDialog } from "@/components/ui/dialog.tsx";
-import { Nibbles } from "@/components/ui/nibbles.tsx";
+import { Jongi } from "@/components/companion/jongi.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
 import { PageLoader } from "@/components/ui/loader.tsx";
@@ -42,7 +42,7 @@ const INTRO_GUARANTEE = "No right answers. You can skip any question and change 
 const APPLY_NOTE = "Pacing and quiz answers change right away, everywhere. The rest applies to courses you start next; courses you already have aren't rewritten.";
 
 /** One past line in the thread. */
-type Entry = { key: string; who: "nibbles" | "me"; text: ReactNode; continued?: boolean };
+type Entry = { key: string; who: "companion" | "me"; text: ReactNode; continued?: boolean };
 
 /** Where the conversation is. */
 type Step =
@@ -142,7 +142,7 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
     const nextDraft = { ...draft, [question.field]: answer };
     setDraft(nextDraft);
     setFresh(question.field);
-    push({ who: "nibbles", text: <b>{question.ask}</b> }, { who: "me", text: echoText(question, answer) });
+    push({ who: "companion", text: <b>{question.ask}</b> }, { who: "me", text: echoText(question, answer) });
     const next = index + 1;
     if (next < PROFILE_QUESTIONS.length) {
       if (next === 3) say("Halfway there.");
@@ -159,7 +159,7 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
     const nextDraft = { ...draft, [field]: answer };
     setDraft(nextDraft);
     setFresh(field);
-    push({ who: "nibbles", text: <>Sure. <b>{question.ask}</b></> }, { who: "me", text: echoText(question, answer) });
+    push({ who: "companion", text: <>Sure. <b>{question.ask}</b></> }, { who: "me", text: echoText(question, answer) });
     await commit(nextDraft, "save", { kind: "updated" });
   }
 
@@ -184,7 +184,7 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
     setDraft({});
     setEntries([]);
     setFresh(null);
-    push({ who: "nibbles", text: "Sure. From the top, same seven questions. Your current settings stay until the last one." });
+    push({ who: "companion", text: "Sure. From the top, same seven questions. Your current settings stay until the last one." });
     setStep({ kind: "ask", index: 0 });
   }
 
@@ -241,8 +241,8 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
     <ChatThread>
       {mode === "first" ? (
         <>
-          <NibblesLine>Before your first lesson: a few quick choices about how I teach you.</NibblesLine>
-          <NibblesLine continued><span className="mk-faint">{INTRO_GUARANTEE}</span></NibblesLine>
+          <CompanionLine>Before your first lesson: a few quick choices about how I teach you.</CompanionLine>
+          <CompanionLine continued><span className="mk-faint">{INTRO_GUARANTEE}</span></CompanionLine>
           {step.kind === "intro" ? (
             <OptionTiles
               label="Set up how you like to learn"
@@ -264,7 +264,7 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
       ) : null}
       {entries.map((entry) => entry.who === "me"
         ? <LearnerEcho key={entry.key}>{entry.text}</LearnerEcho>
-        : <NibblesLine key={entry.key} continued={entry.continued}>{entry.text}</NibblesLine>)}
+        : <CompanionLine key={entry.key} continued={entry.continued}>{entry.text}</CompanionLine>)}
 
       {asking !== null ? (
         <ProfileAsk
@@ -282,10 +282,10 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
           onAnswer={(answer) => answerRedo(step.field, answer)}
         />
       ) : null}
-      {step.kind === "saving" ? <NibblesLine mood="think"><WorkingLine>Saving…</WorkingLine></NibblesLine> : null}
+      {step.kind === "saving" ? <CompanionLine mood="think"><WorkingLine>Saving…</WorkingLine></CompanionLine> : null}
       {step.kind === "save-failed" ? (
         <>
-          <NibblesLine mood="think"><span role="alert">I couldn't save that. Your answers are still here.</span></NibblesLine>
+          <CompanionLine mood="think"><span role="alert">I couldn't save that. Your answers are still here.</span></CompanionLine>
           <OptionTiles
             label="Couldn't save"
             resetKey={attempt}
@@ -300,9 +300,9 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
       ) : null}
       {step.kind === "done" ? (
         <>
-          <NibblesLine mood={step.celebrate ? "cheer" : "idle"}>
+          <CompanionLine mood={step.celebrate ? "cheer" : "idle"}>
             {step.celebrate ? "That's everything. I'll teach this way from your next lesson." : "Done. I'll use the defaults, and you can change them here anytime."}
-          </NibblesLine>
+          </CompanionLine>
           <div ref={summaryCard}>
             <ThreadCard title="In short" sub={step.celebrate ? "Tap any line on the right to change it." : undefined}>
               <p className="font-bold leading-relaxed">{oneLiner(draft) || "the usual"}</p>
@@ -313,7 +313,7 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
       ) : null}
       {step.kind === "updated" ? (
         <>
-          <NibblesLine>Updated. <span className="mk-faint">{APPLY_NOTE}</span></NibblesLine>
+          <CompanionLine>Updated. <span className="mk-faint">{APPLY_NOTE}</span></CompanionLine>
           <OptionTiles
             label="What next?"
             cols={3}
@@ -327,7 +327,7 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
       ) : null}
       {step.kind === "pick-change" ? (
         <>
-          <NibblesLine typing delayMs={300}>Which one?</NibblesLine>
+          <CompanionLine typing delayMs={300}>Which one?</CompanionLine>
           <OptionTiles label="Which one to change?" options={changeTiles} onPick={(option) => startRedo(option.value!)} />
         </>
       ) : null}
@@ -348,7 +348,7 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
     return (
       <div className="mk-ret">
         <div className="head">
-          <span className="av"><Nibbles size={46} /></span>
+          <span className="av"><Jongi size={46} tile="round" /></span>
           <div>
             <h1>How you like to learn</h1>
             <p>{oneLiner(draft) || "The usual settings."}</p>

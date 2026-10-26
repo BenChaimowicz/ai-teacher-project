@@ -1,7 +1,7 @@
 import { Clock, Flame } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
-import { Nibbles } from "@/components/ui/nibbles.tsx";
+import { Jongi, type JongiHandle } from "@/components/companion/jongi.tsx";
 import { COMPANION_NAME } from "@/lib/brand-marks.ts";
 import { prefersReducedMotion } from "@/lib/cheer.ts";
 import { cn } from "@/lib/utils";
@@ -10,14 +10,14 @@ const RING_R = 35;
 const RING_C = 2 * Math.PI * RING_R;
 
 /**
- * The sidebar companion: Nibbles inside today's-goal ring, streak and minutes, and a speech bubble.
- * Eyes follow the pointer; hover twitches an ear; click squishes and says another line.
+ * The sidebar companion: Jongi inside today's-goal ring, streak and minutes, and a speech bubble.
+ * Eyes follow the pointer; hover flicks an ear; click squashes and says another line.
+ * A "cheer" mood from the provider plays Jongi's Win once.
  */
 export function CompanionCard() {
   const { line, lineId, mood, activity, next } = useCompanion();
   const [typing, setTyping] = useState(false);
-  const [twitch, setTwitch] = useState(false);
-  const [squish, setSquish] = useState(0);
+  const jongi = useRef<JongiHandle>(null);
   const first = useRef(true);
 
   useEffect(() => {
@@ -30,12 +30,6 @@ export function CompanionCard() {
     const timer = window.setTimeout(() => setTyping(false), 420);
     return () => window.clearTimeout(timer);
   }, [lineId]);
-
-  useEffect(() => {
-    if (!twitch) return;
-    const timer = window.setTimeout(() => setTwitch(false), 750);
-    return () => window.clearTimeout(timer);
-  }, [twitch]);
 
   const goal = Math.min(1, activity.minutesToday / activity.goalMinutes);
 
@@ -50,9 +44,9 @@ export function CompanionCard() {
           className="av"
           aria-label={`${COMPANION_NAME}: say something else`}
           title={`Today: ${activity.minutesToday} of ${activity.goalMinutes} minutes`}
-          onMouseEnter={() => setTwitch(true)}
+          onMouseEnter={() => jongi.current?.flick()}
           onClick={() => {
-            setSquish((n) => n + 1);
+            jongi.current?.poke();
             next();
           }}
         >
@@ -74,13 +68,7 @@ export function CompanionCard() {
               strokeDashoffset={RING_C * (1 - goal)}
             />
           </svg>
-          <Nibbles
-            key={squish}
-            size={64}
-            mood={mood}
-            track
-            className={cn(twitch && "twitch", squish > 0 && "squish")}
-          />
+          <Jongi ref={jongi} size={56} mood={mood} track tile="round" />
         </button>
         <div className="id">
           <p className="nm">{COMPANION_NAME}</p>

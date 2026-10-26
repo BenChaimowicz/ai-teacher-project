@@ -7,10 +7,10 @@ import { useCompanion, useCompanionLines } from "@/components/companion/companio
 import { CountUp } from "@/components/learn/count-up.tsx";
 import { LinkTiles, type LinkTile } from "@/components/learn/link-tiles.tsx";
 import { ShellTitle } from "@/components/shell/app-shell.tsx";
-import { ChatThread, NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { ChatThread, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { PageLoader } from "@/components/ui/loader.tsx";
-import { Nibbles } from "@/components/ui/nibbles.tsx";
+import { Jongi } from "@/components/companion/jongi.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
 import { pickCourseIcon } from "@/lib/brand-marks.ts";
 import { cheer, confettiAt } from "@/lib/cheer.ts";
@@ -118,7 +118,7 @@ export function CourseCompletePage() {
       <ShellTitle>Course complete</ShellTitle>
       <div className="l-done-hero">
         <div className="big" ref={hero} aria-hidden="true">
-          <Nibbles size={140} mood="cheer" />
+          <Jongi size={140} mood="cheer" framing="full" />
           <span className="l-spark" style={{ top: -4, left: -12 }}>
             ✦
           </span>
@@ -184,12 +184,12 @@ export function CourseCompletePage() {
       </section>
 
       <ChatThread label="What's next">
-        <NibblesLine typing delayMs={900} mood="cheer">
+        <CompanionLine typing delayMs={900} mood="cheer">
           That's the whole course. Well done.
-        </NibblesLine>
-        <NibblesLine typing continued delayMs={1300} onShown={() => setNextShown(true)}>
+        </CompanionLine>
+        <CompanionLine typing continued delayMs={1300} onShown={() => setNextShown(true)}>
           Want to keep going?
-        </NibblesLine>
+        </CompanionLine>
       </ChatThread>
       {nextShown ? <LinkTiles tiles={next} label="Next steps" /> : null}
     </div>
