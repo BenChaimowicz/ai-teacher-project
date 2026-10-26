@@ -14,14 +14,21 @@ Defined in `src/index.css` (`:root`) and `src/styles/kit.css` (component classes
 
 | Token | Use |
 | --- | --- |
-| `--a`, `--b` (`--a-rgb`, `--b-rgb`) | Apricot (`--a`: selected, primary, focus) and cream (`--b`). |
-| `--on-a` | Text on a filled `--a` surface. |
-| `--bg`, `--bg-2`, `--panel`, `--panel-2` | Surfaces, tinted by the accent. |
-| `--line`, `--line-2`, `--a-soft`, `--a-line`, `--b-soft`, `--glow` | Borders, soft fills, subtle glow. |
-| `--text`, `--read`, `--text-muted`, `--faint` | Text: UI, lesson body, secondary, tertiary. Muted and faint pass AA on `--bg`. |
-| `--good`, `--miss` | Right / not quite. |
-| `--font-ui` (Manrope), `--font-code` (JetBrains Mono), `--font-book` (Literata), `--font-legible` (Atkinson Hyperlegible) | Lesson text defaults to `--font-ui`. |
+| `--bg`, `--bg-2` | Desk and sidebar. |
+| `--panel`, `--panel-2`, `--plum`, `--plum-2` | Paper sheets: ink navy, raised, and plum for secondary sheets (e.g. "How you like to learn"). |
+| `--well`, `--recess` (alias `--inset`) | Cut-out wells (icon slots, inputs, progress tracks) and the shadow inside them. |
+| `--sheet`, `--stack`, `--stack-under`, `--edge`, `--hairline` | Depth. `--sheet` for a single sheet, `--stack` for a sheet with paper under it ("needs you", open tile groups). No glow: `--glow` is a deprecated no-op. |
+| `--a`, `--a-deep` (`--a-rgb`), `--on-a` | Apricot: selected, primary, focus. `--a-deep` is the under-sheet of apricot buttons. Text on apricot uses `--on-a`. |
+| `--b`, `--b-deep` (`--b-rgb`) | Cream highlights and key tabs. |
+| `--ribbon` (`--ribbon-rgb`), `--ribbon-text` | Bookmark red, only for "needs you" and the streak. `--ribbon` for fills, `--ribbon-text` for text and icons (AA). |
+| `--gold` (`--gold-rgb`) | Wins and what is being made. |
+| `--line`, `--line-2`, `--a-soft`, `--a-line`, `--b-soft` | Hairlines and soft fills. |
+| `--text`, `--read`, `--text-muted`, `--faint` | Text: UI, lesson body, secondary, tertiary. All pass AA on desk, paper and plum. |
+| `--good`, `--miss` (`--on-good`, `--on-miss`) | Right / not quite, as rims rather than glows. |
+| `--font-ui` (Space Grotesk), `--font-display` (Instrument Serif, headings), `--font-read` (Manrope, lesson default), `--font-code` (JetBrains Mono), `--font-book` (Literata), `--font-legible` (Atkinson Hyperlegible) | No italics anywhere: a base rule sets `font-style: normal` and turns off synthesis. |
 | `--dur-fast`, `--dur`, `--dur-slow`, `--ease-pop` | Motion. Respect `prefersReducedMotion()`. |
+
+Status labels use the notched ribbon class `.k-rib` (tones: learning, making, needs, done, stopped, streak).
 
 The shadcn names (`bg-background`, `text-muted-foreground`, `border-border`, …) are mapped onto these, so Tailwind utilities follow the tokens too. Small shared classes: `.k-mono`, `.k-sec-h` (mono section heading with a rule; `.n` child for a count).
 
