@@ -2,6 +2,8 @@
 
 SEN-52 · 2026-10-25. These were settled while reviewing the mocks in this folder. Implementation agents should follow them. The mocks are the visual reference.
 
+- **Look: Papercraft, companion Jongi (decided 2026-10-26, SEN-97).** The visual direction is `10-papercraft-jongi.html`, to be fine-tuned in SEN-97. The companion is named **Jongi** (SEN-96). The rename and the Papercraft look are not in the code yet; the bullets below that mention Nibbles, the logo, palettes or fonts describe the current code until SEN-97 lands.
+- **No italics** anywhere in the product.
 - **No language question.** "How you like to learn" asks 7 questions. Lessons are English only for now, and the course-making LLM prompts must say so explicitly: write lessons, quizzes and feedback in English.
 - **No seeds, XP or levels for now.** Rewards are non-numeric: a small confetti burst with a "✓ …" chip, a streak, today's minutes against a daily goal, ticked sections, and count-ups on real stats. The sidebar ring shows today's goal.
 - **The companion is called Nibbles.** It's a hamster. Its voice is low-key, kind and brief, never childish. The name may change later, so keep it in one constant.
