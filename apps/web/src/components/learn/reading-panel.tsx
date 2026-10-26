@@ -33,7 +33,8 @@ const GLYPH: Record<ReadingModeKey, string> = {
   skim: `<rect class="ln" x="4" y="4" width="32" height="2" rx="1"/><rect class="ln mk" x="3" y="8.5" width="26" height="4" rx="1"/><rect class="ln" x="4" y="9.5" width="24" height="2" rx="1"/><rect class="ln" x="4" y="16" width="30" height="2" rx="1"/><rect class="ln mk" x="3" y="20.5" width="20" height="4" rx="1"/><rect class="ln" x="4" y="21.5" width="18" height="2" rx="1"/>`,
 };
 
-const SURFACE_CHIP: Record<ReadingSurface, string> = { dark: "#14131b", dim: "#24232b", sepia: "#f2e8d2", paper: "#f8f7f3" };
+/* Dark is the ink paper; Dim a softer ink; Sepia and Paper match the light pages in learn.css. */
+const SURFACE_CHIP: Record<ReadingSurface, string> = { dark: "var(--panel)", dim: "#30364d", sepia: "#f2e8d2", paper: "#f8f7f3" };
 
 type SegOption<T> = { value: T; label: string; style?: CSSProperties; chip?: string; note?: string };
 

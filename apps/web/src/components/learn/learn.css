@@ -450,6 +450,7 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
 .k-tile.reveal .l-key .n { color: var(--good); }
 /* Flags hang from the top edge of a marked answer. */
 .l-flag { position: absolute; top: -1px; right: 12px; }
+.l-qopts .k-tile:has(.l-flag) { padding-top: 26px; }
 .k-rib.l-flag.pick { color: var(--miss); background: rgba(var(--miss-rgb), 0.16); }
 .k-rib.l-flag.right { color: var(--on-good); background: var(--good); }
 .l-qres { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; font-size: 0.9rem; min-height: 0; }

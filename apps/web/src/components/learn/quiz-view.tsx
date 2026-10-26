@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import type { PublicQuizBody, PublicQuizItem, QuizScore } from "@senoy/db/quiz";
 import { Flame } from "lucide-react";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
+import { Jongi } from "@/components/companion/jongi.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { ChatThread, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { useToast } from "@/components/ui/toast.tsx";
@@ -54,7 +55,8 @@ type QuestionProps = {
 
 /**
  * One question card: the prompt, four answer tiles (radios), Check (per-item timing), the verdict, and
- * the right answer with why. A right answer glows green; a wrong one shakes and the right one lights up.
+ * the right answer with why. A right answer gets a soft green rim; a wrong one shakes, is struck through and
+ * flagged, and the right one is marked.
  */
 export function QuestionCard({ item, index, total, streak, results, chosen, locked, canCheck, result, revealed, busy, onAnswer, onCheck }: QuestionProps) {
   const card = useRef<HTMLFieldSetElement>(null);
@@ -85,7 +87,7 @@ export function QuestionCard({ item, index, total, streak, results, chosen, lock
             ))}
           </span>
           {streak >= 2 ? (
-            <span className="l-combo">
+            <span className="k-rib solid l-combo">
               <Flame />
               {streak} in a row
             </span>
@@ -107,16 +109,30 @@ export function QuestionCard({ item, index, total, streak, results, chosen, lock
               className={cn("k-tile", state, locked && !isChosen && !isKey && "dim")}
               style={{ "--i": optionIndex } as CSSProperties}
             >
-              <input
-                type="radio"
-                className="l-radio"
-                name={`quiz-${item.id}`}
-                checked={isChosen}
-                disabled={locked || busy}
-                onChange={() => onAnswer(option.id)}
-              />
+              <span className="l-key">
+                <input
+                  type="radio"
+                  className="l-radio"
+                  name={`quiz-${item.id}`}
+                  checked={isChosen}
+                  disabled={locked || busy}
+                  onChange={() => onAnswer(option.id)}
+                />
+                <span className="n" aria-hidden="true">
+                  {optionIndex + 1}
+                </span>
+              </span>
               <span className="tt">{option.text}</span>
-              {!locked ? <kbd aria-hidden="true">{optionIndex + 1}</kbd> : null}
+              {state === "miss" ? (
+                <span className="k-rib l-flag pick" aria-hidden="true">
+                  your pick
+                </span>
+              ) : null}
+              {state === "reveal" ? (
+                <span className="k-rib l-flag right" aria-hidden="true">
+                  right answer
+                </span>
+              ) : null}
             </label>
           );
         })}
@@ -132,12 +148,17 @@ export function QuestionCard({ item, index, total, streak, results, chosen, lock
       </div>
       {revealed && result !== undefined ? (
         <div className={cn("l-why", result && "right")}>
-          {result ? null : (
-            <p>
-              <b>Correct answer:</b> {item.options.find((option) => option.id === revealed.correctOptionId)?.text}
-            </p>
-          )}
-          <p>{revealed.explanation}</p>
+          <span className="av" aria-hidden="true">
+            <Jongi size={36} tile="round" mood={result ? "idle" : "think"} />
+          </span>
+          <div className="tx">
+            {result ? null : (
+              <p>
+                <b>Correct answer:</b> {item.options.find((option) => option.id === revealed.correctOptionId)?.text}
+              </p>
+            )}
+            <p>{revealed.explanation}</p>
+          </div>
         </div>
       ) : null}
     </fieldset>
