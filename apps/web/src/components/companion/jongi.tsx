@@ -82,6 +82,9 @@ const VIEWBOX: Record<JongiFraming, string> = {
   scene: "0 0 400 420",
 };
 
+/** In a round tile the bust zooms out a little, so the ears and cap stay inside the circle. */
+const ROUND_BUST_VIEWBOX = "86 44 228 228";
+
 /* ---------------------------------------------------------------------------------------------
  * Pointer look-at: one shared loop eases every tracked Jongi toward the pointer, and drifts
  * gently when the pointer has been still for a while (as in the mock's hero).
@@ -158,8 +161,6 @@ function place(t: Tracked) {
   const head = `translate(${(x * 8 * p).toFixed(2)} ${(y * 5 * p).toFixed(2)})`;
   t.heads.forEach((g) => g.setAttribute("transform", head));
   t.back?.setAttribute("transform", `translate(${(-x * 10 * p).toFixed(2)} ${(-y * 6 * p).toFixed(2)})`);
-  t.root.style.setProperty("--j-ry", `${(x * 10 * p).toFixed(2)}deg`);
-  t.root.style.setProperty("--j-rx", `${(-y * 7 * p).toFixed(2)}deg`);
 }
 
 /**
@@ -541,7 +542,12 @@ export function Jongi({
     const svg = svgRef.current;
     if (!svg) return;
     svg.querySelectorAll<SVGElement>(selector).forEach((el) => {
-      if (typeof el.animate === "function") running.current.push(el.animate(keys, options));
+      if (typeof el.animate !== "function") return;
+      const animation = el.animate(keys, options);
+      running.current.push(animation);
+      animation.onfinish = () => {
+        running.current = running.current.filter((a) => a !== animation);
+      };
     });
   }, []);
 
@@ -629,7 +635,10 @@ export function Jongi({
   useEffect(
     () => () => {
       timers.current.forEach((id) => window.clearTimeout(id));
+      timers.current = [];
       running.current.forEach((a) => a.cancel());
+      running.current = [];
+      busy.current = false;
     },
     [],
   );
@@ -647,7 +656,7 @@ export function Jongi({
       aria-label={label}
       aria-hidden={label ? undefined : true}
     >
-      <svg ref={svgRef} viewBox={VIEWBOX[framing]} aria-hidden="true" focusable="false">
+      <svg ref={svgRef} viewBox={framing === "bust" && tile === "round" ? ROUND_BUST_VIEWBOX : VIEWBOX[framing]} aria-hidden="true" focusable="false">
         <defs>
           {detail ? (
             <>

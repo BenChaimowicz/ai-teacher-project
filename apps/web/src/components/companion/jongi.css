@@ -6,7 +6,6 @@
 .jongi { position: relative; display: inline-block; flex: none; vertical-align: middle; line-height: 0; }
 .jongi svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .jongi.j-bust svg { overflow: hidden; }
-.jongi.j-tracking svg { transform: perspective(600px) rotateX(var(--j-rx, 0deg)) rotateY(var(--j-ry, 0deg)); }
 
 /* the mock's avatar tile: a small paper square, lit from the middle */
 .jongi.j-tile {
