@@ -33,7 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {items.map((item) => {
           const Icon = item.tone === "error" ? CircleAlert : item.tone === "celebrate" ? Sparkles : Check;
           return (
-            <div key={item.id} className={`k-toast${item.tone === "error" ? " error" : ""}${item.leaving ? " out" : ""}`}>
+            <div key={item.id} className={`k-toast${item.tone === "default" ? "" : ` ${item.tone}`}${item.leaving ? " out" : ""}`}>
               <span className="tic" aria-hidden="true">
                 <Icon />
               </span>
