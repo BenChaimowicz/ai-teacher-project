@@ -139,7 +139,7 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="button">
+      <Section title="button" note="Pop-up tabs on a darker under-sheet; pressed, they fold down 2px.">
         <div className="flex flex-wrap items-end gap-3">
           <Button>Primary</Button>
           <Button variant="secondary">Secondary</Button>
@@ -196,7 +196,7 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="card">
+      <Section title="card" note="Paper sheets: default casts a sheet shadow, flat is an outline for nesting, interactive lifts onto a stack.">
         <div className="grid gap-4 sm:grid-cols-3">
           <Card className="p-5">accent (default)</Card>
           <Card tone="flat" className="p-5">
@@ -247,7 +247,7 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="option tiles" note="Keys 1–9 pick from the newest unlocked group. Quiz mode: good glows and bursts, miss shakes and reveals.">
+      <Section title="option tiles" note="Resting sheets, stacked while they need you, lifted with an apricot rim when picked. Keys 1–9 pick from the newest unlocked group. Quiz: good bursts paper, miss shakes and reveals.">
         <div className="space-y-6">
           <Cell label="quiz (judge + correctId) · cols 2 · flush">
             <OptionTiles
@@ -274,7 +274,7 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="progress">
+      <Section title="progress" note="Ribbon bar with a notched end, paper pips, and a ring cut into paper segments.">
         <div className="grid gap-6 sm:grid-cols-2">
           <Cell label="segments: done, now, writing, miss, todo">
             <SegmentedProgress segments={["done", "done", "now", "writing", "miss", "todo"]} label="sample segments" className="w-64" />
@@ -291,6 +291,9 @@ export function ComponentsPage() {
                 16m
               </ProgressRing>
             </Cell>
+            <Cell label="ring 0.6 · 44">
+              <ProgressRing value={0.6} size={44} label="60%" />
+            </Cell>
             <Cell label="ring no label">
               <ProgressRing value={1} size={40} label="done">
                 {null}
@@ -300,7 +303,18 @@ export function ComponentsPage() {
         </div>
       </Section>
 
-      <Section title="course row" note="Sidebar line: icon with status dot, title, tiny progress, short tag.">
+      <Section title="ribbons" note="Every status is a notched bookmark ribbon (.k-rib). Red is only for needs you and the streak.">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="k-rib learning">Learning</span>
+          <span className="k-rib making">Being made</span>
+          <span className="k-rib needs">Needs you</span>
+          <span className="k-rib done">✓ Done</span>
+          <span className="k-rib stopped">Stopped</span>
+          <span className="k-rib solid">6-day streak</span>
+        </div>
+      </Section>
+
+      <Section title="course row" note="Sidebar line: icon with status dot, title, tiny progress, a small status ribbon.">
         <div className="k-clist max-w-xs">
           {SAMPLE_COURSES.map((course, index) => (
             <CourseRow key={course.key} course={course} active={index === 0} />
@@ -320,14 +334,10 @@ export function ComponentsPage() {
 
       <Section title="states">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Card tone="flat">
-            <EmptyState title="Nothing here yet" actions={<Button>New course</Button>}>
-              Tell me something you're curious about.
-            </EmptyState>
-          </Card>
-          <Card tone="flat">
-            <ErrorState actions={<Button variant="secondary">Try again</Button>}>Your courses are safe. Try again in a moment.</ErrorState>
-          </Card>
+          <EmptyState title="Nothing here yet" actions={<Button>New course</Button>}>
+            Tell me something you're curious about.
+          </EmptyState>
+          <ErrorState actions={<Button variant="secondary">Try again</Button>}>Your courses are safe. Try again in a moment.</ErrorState>
         </div>
       </Section>
 
