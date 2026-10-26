@@ -54,7 +54,7 @@ export const READING_MODES: ReadingMode[] = [
 
 export const FONT_LABEL: Record<ReadingFont, string> = { serif: "Serif", sans: "Sans", hyper: "Hyperlegible" };
 export const FONT_STACK: Record<ReadingFont, string> = {
-  sans: "var(--font-ui)",
+  sans: "var(--font-read)",
   serif: "var(--font-book)",
   hyper: "var(--font-legible)",
 };

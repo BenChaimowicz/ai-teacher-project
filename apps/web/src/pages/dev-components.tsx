@@ -3,7 +3,6 @@ import { useState, type ReactNode } from "react";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
 import { LearnShowcase } from "@/components/learn/learn-showcase.tsx";
 import { ShellTitle } from "@/components/shell/app-shell.tsx";
-import { PalettePicker } from "@/components/shell/palette-picker.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card } from "@/components/ui/card.tsx";
 import { ChatThread, LearnerEcho, NibblesLine, ThreadCard } from "@/components/ui/chat-thread.tsx";
@@ -22,7 +21,6 @@ import { useToast } from "@/components/ui/toast.tsx";
 import { COURSE_ICON_PATHS, type CourseIconName } from "@/lib/brand-marks.ts";
 import { cheer, confettiAt } from "@/lib/cheer.ts";
 import type { CourseListItem } from "@/lib/course-list.ts";
-import { PALETTES, usePalette } from "@/lib/theme.ts";
 
 /* Sample courses, one per status, for the row and card sections. */
 const SAMPLE_COURSES: CourseListItem[] = [
@@ -83,11 +81,10 @@ function Cell({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /**
- * Component reference (SEN-86): every kit component in its states, plus the palette.
+ * Component reference (SEN-86): every kit component in its states.
  * Reachable at /dev/components; not linked from the app.
  */
 export function ComponentsPage() {
-  const [palette, setPalette] = usePalette();
   const toast = useToast();
   const companion = useCompanion();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -105,18 +102,6 @@ export function ComponentsPage() {
       <p className="mt-2 mb-10 text-muted-foreground">
         Every kit component in its states. Contract: <code className="k-mono">src/components/README.md</code>.
       </p>
-
-      <Section title="palette" note="Always dark. A palette only changes the accent pair, the favicon follows it.">
-        <div className="flex flex-wrap items-center gap-3">
-          {PALETTES.map((row) => (
-            <Button key={row.key} variant={row.key === palette ? "primary" : "secondary"} size="sm" onClick={() => setPalette(row.key)}>
-              {row.key}
-            </Button>
-          ))}
-          <span className="k-mono text-xs text-[var(--faint)]">sidebar picker →</span>
-          <PalettePicker />
-        </div>
-      </Section>
 
       <Section title="brand" note="Logo is the silhouette in a cap; the full face is for the companion and the loader.">
         <div className="flex flex-wrap items-end gap-8">

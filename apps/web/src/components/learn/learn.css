@@ -135,7 +135,7 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
 
 /* ---------- reading page ---------- */
 .l-read {
-  --r-font: var(--font-ui); --r-size: 18px; --r-lh: 1.75; --r-ls: 0em; --r-ws: 0em; --r-measure: 66;
+  --r-font: var(--font-read); --r-size: 18px; --r-lh: 1.75; --r-ls: 0em; --r-ws: 0em; --r-measure: 66;
   max-width: calc(var(--r-measure) * 0.56 * var(--r-size) + 56px); margin: 0 auto; padding: 12px 28px 80px; color: var(--text); transition: background 0.3s;
 }
 .l-lhead h1 { font-weight: 800; font-size: 2.2rem; line-height: 1.2; margin-top: 8px; letter-spacing: -0.02em; }
