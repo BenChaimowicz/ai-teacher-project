@@ -18,7 +18,7 @@ type CourseCardProps = {
 };
 
 /**
- * A course on Home: icon cover, title, status tag, lesson segments, meta line.
+ * A course on Home, on a paper sheet: icon cover, title, status ribbon, lesson segments, meta line.
  */
 export function CourseCard({ course, sub, segments, metaLeft, metaRight, className }: CourseCardProps) {
   const segs: SegmentState[] | null =
@@ -36,7 +36,7 @@ export function CourseCard({ course, sub, segments, metaLeft, metaRight, classNa
           <p className="t">{course.title}</p>
           {sub ? <p className="sub">{sub}</p> : null}
         </div>
-        <span className={cn("badge", course.status)}>{course.badge}</span>
+        <span className={cn("k-rib badge", course.status)}>{course.badge}</span>
       </div>
       {segs ? (
         <SegmentedProgress

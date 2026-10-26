@@ -38,6 +38,10 @@
   --ribbon: #c8473b;      /* bookmark: fills only */
   --ribbon-text: #e0695c; /* bookmark red for text and icons (AA) */
   --gold: #e7b250;        /* wins only */
+  /* paper edges (SEN-97 phase 1): the under-sheet a pop-up tab folds onto, and a recessed well */
+  --a-deep: #9b5f31;      /* apricot under-sheet */
+  --b-deep: #d4bc95;      /* cream under-sheet, key tabs */
+  --well: #0f1324;        /* cut-out wells: icon slots, inputs, progress tracks */
 
   --line: rgba(255, 255, 255, 0.065);
   --line-2: rgba(255, 255, 255, 0.11);
