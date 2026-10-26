@@ -22,6 +22,7 @@ Knibbler feels like a calm, dark, slightly techy study app with a cute companion
 | [`07-brand.html`](07-brand.html), [`nibbles-logo.svg`](nibbles-logo.svg) | Logo (Nibbles' silhouette in a cap), favicon, loader, course icons. |
 | [`08-course-icons.md`](08-course-icons.md) | How each Course gets a fitting icon. |
 | [`10-papercraft-jongi.html`](10-papercraft-jongi.html) | **The chosen look (SEN-97).** Papercraft: a dark pop-up-book feel, with Jongi as a cut-paper hamster. Shows the companion, Home, New course, Reading, Quiz, Course complete and the design system. No italics. |
+| [`11-papercraft-implementation-plan.md`](11-papercraft-implementation-plan.md) | How the app moves to Papercraft: decisions, token mapping and phases. |
 | [`10b-papercraft-simplified.html`](10b-papercraft-simplified.html) | A simplified take on Papercraft, kept as a reference for how far to simplify while fine-tuning. Not the chosen look. |
 | [`09-implementation-notes.md`](09-implementation-notes.md) | **Decisions list for implementers. Read this first.** |
 | [`kit.css`](kit.css), [`kit.js`](kit.js) | Shared tokens and components of the mocks. These are the source for SEN-86's tokens. |
