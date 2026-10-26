@@ -277,29 +277,11 @@ a.k-ccard:hover { transform: translateY(-2px); box-shadow: var(--stack); }
 .k-ccard .k-segs { margin-top: 14px; }
 .k-ccard .m { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-family: var(--font-code); font-size: 0.66rem; color: var(--faint); }
 
-/* ---------- Nibbles avatar ---------- */
-.nib { display: inline-block; }
-.nib svg { width: 100%; height: 100%; overflow: visible; display: block; }
-.nib .hi { stop-color: var(--nib-hi); }
-.nib .lo { stop-color: var(--nib-lo); }
-.nib .ear { fill: var(--nib-ear); }
-.nib .cheek { fill: var(--nib-hi); }
-.nib .seed { fill: var(--b); }
-.nib .paw { fill: var(--nib-lo); }
-.nib .eyes { animation: k-blink 5s infinite; transform-origin: center; transform-box: fill-box; }
-.nib .ear-l, .nib .ear-r { transform-box: fill-box; transform-origin: 50% 90%; }
-.nib.mood-cheer .body-g { animation: k-hop 0.9s ease-in-out 2; transform-box: fill-box; }
-.nib.mood-think .body-g { animation: k-bob 1.4s ease-in-out infinite; transform-box: fill-box; }
-.nib.twitch .ear-r { animation: k-twitch-r 0.6s ease-in-out; }
-.nib.twitch .ear-l { animation: k-twitch-l 0.6s ease-in-out 0.12s; }
-.nib.squish .body-g { animation: k-squish 0.5s var(--ease-pop); transform-box: fill-box; transform-origin: 50% 100%; }
-
 /* ---------- companion card (markup is phase 2's; paper styling only) ---------- */
 .k-buddy { position: relative; border-radius: 12px; padding: 11px; overflow: hidden; flex: none; background: var(--panel); box-shadow: var(--sheet); }
 .k-buddy .top { display: flex; gap: 12px; align-items: center; }
 .k-buddy .av { position: relative; width: 60px; height: 60px; flex: none; border-radius: 50%; cursor: pointer; padding: 0; border: 0; background: none; -webkit-tap-highlight-color: transparent; }
 .k-buddy .av:focus-visible { outline: 2px solid var(--a); outline-offset: 4px; }
-.k-buddy .av .nib { position: relative; display: block; width: 100%; height: 100%; }
 .k-buddy .goal { position: absolute; inset: -3px; width: calc(100% + 6px); height: calc(100% + 6px); transform: rotate(-90deg); }
 .k-buddy .goal circle { fill: none; stroke-width: 3; }
 .k-buddy .goal .track { stroke: #080b16; }

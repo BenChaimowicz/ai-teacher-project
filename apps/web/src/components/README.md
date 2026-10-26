@@ -89,12 +89,12 @@ Lines are one or two short sentences: kind, low-key, never childish or chatty. U
 | --- | --- | --- |
 | `COMPANION_NAME`, `PRODUCT_NAME` | `brand-marks.ts` | `"Jongi"`, `"Knibbler"`. Always use the constants. |
 | `COURSE_ICON_PATHS`, `CourseIconName`, `pickCourseIcon(subject)` | `brand-marks.ts` | Names: `norse`, `knot`, `greek`, `music`, `yggdrasil`, `sourdough`, `investing`, `microscope`, `drum`, `generic`. `pickCourseIcon` is a keyword heuristic until the plan step stores an icon per Course. |
-| `logoMarkup({ tile? })` | `brand-marks.ts` | The mark's SVG string, behind `Logo` and `public/jongi-logo.svg`. `cappedNibblesMarkup` is deprecated (only the old loader uses it until phase 1 lands). |
+| `logoMarkup({ tile? })` | `brand-marks.ts` | The mark's SVG string, behind `Logo` and `public/jongi-logo.svg`. |
 | `cheer(el, text?)`, `confetti(x, y, opts?)`, `confettiAt(el, opts?)`, `prefersReducedMotion()` | `cheer.ts` | Rewards: a small burst plus a floating "✓ text" chip. Keep it to real moments (lesson read, right answer, course done). |
 | `CourseListItem`, `CourseListStatus`, `LibraryItem`, `toCourseListItem(item)`, `sidebarCourses(items)`, `notifyLibraryChanged()` | `course-list.ts` | Maps `/api/library` rows to plain words: `learning`, `making`, `needs`, `done`, `stopped`. Glossary statuses stay in code. The sidebar list reloads on navigation, on window focus, every 5 s while a course is being made or a Course Request is open, and when a screen calls `notifyLibraryChanged()` after an action that changes a status. |
 | `DAILY_GOAL_MINUTES`, `addStudyMinutes(n)`, `readActivity()`, `ActivitySummary` | `study-activity.ts` | Local streak and minutes for the companion card. |
 
-**Removed in SEN-97:** the 5 palettes and their API (`PALETTES`, `usePalette`, `applyPalette`, `initPalette`, `readPalette`, `PalettePicker`, the palette-following favicon), `Nibbles` (`nibbles.tsx`) and `NibblesLine`. The favicon is static.
+**Removed in SEN-97:** the 5 palettes and their API (`PALETTES`, `usePalette`, `applyPalette`, `initPalette`, `readPalette`, `PalettePicker`, the palette-following favicon), `Nibbles` (`nibbles.tsx`), `NibblesLine`, `cappedNibblesMarkup` and the `--nib-*` tokens. The favicon is static.
 
 ## Rules for screens
 

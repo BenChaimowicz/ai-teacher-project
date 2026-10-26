@@ -56,9 +56,6 @@
   /* Deprecated: paper doesn't glow. Kept as a no-op shadow until phase 1 removes its uses. */
   --glow: 0 0 0 transparent;
 
-  /* Nibbles' colours, in sand paper tones. Removed in phase 2 when Jongi replaces Nibbles. */
-  --nib-hi: #f0e0c2; --nib-lo: #c9a27a; --nib-ear: #b88d63;
-
   /* text: every tone passes AA on desk, paper and plum */
   --text: #ebe6dc;
   --read: #e2ddd2;

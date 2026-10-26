@@ -10,12 +10,6 @@ export const COMPANION_NAME = "Jongi";
 /** Product name (silent k). */
 export const PRODUCT_NAME = "Knibbler";
 
-type MarkColours = { a: string; b: string };
-type NibblesColours = MarkColours & { hi: string; lo: string; ear: string };
-
-const MARK_VARS: MarkColours = { a: "var(--a)", b: "var(--b)" };
-const NIBBLES_VARS: NibblesColours = { ...MARK_VARS, hi: "var(--nib-hi)", lo: "var(--nib-lo)", ear: "var(--nib-ear)" };
-
 /**
  * The mark: Jongi's folded paper head (ears, face, cream muzzle, nose) in a tilted scholar cap with a
  * gold tassel. Flat facets, no filters, so it stays crisp at 16px. Fixed paper colours (one palette).
@@ -33,42 +27,6 @@ export function logoMarkup({ tile = false }: { tile?: boolean } = {}) {
 <g transform="rotate(6 16 7)"><polygon points="8.5,6.6 16.4,3 24,5.8 16,9.6" fill="#2f3964"/><polygon points="16.4,3 24,5.8 16,9.6" fill="#222949"/>
 <polyline points="8.5,6.6 16.4,3 24,5.8" fill="none" stroke="#6372b3" stroke-width=".7" stroke-linejoin="round"/>
 <path d="M16.2,6.3 L23.6,6 L23.6,10.4" fill="none" stroke="#e7b250" stroke-width="1" stroke-linecap="round"/></g></svg>`;
-}
-
-/**
- * The old capped companion (pre-Jongi), for the loader.
- * @deprecated Phase 1 of SEN-97 replaces the loader with the page-flip loader; remove this (and the
- * `--nib-*` tokens in index.css) once nothing imports it.
- * @param uid - Unique id prefix for gradients
- */
-export function cappedNibblesMarkup(uid = "cn", colours: NibblesColours = NIBBLES_VARS) {
-  const p = colours;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 12 100 100" aria-hidden="true">
-  <defs>
-    <radialGradient id="${uid}f" cx="45%" cy="40%" r="72%"><stop offset="0" style="stop-color:${p.hi}"/><stop offset="1" style="stop-color:${p.lo}"/></radialGradient>
-    <linearGradient id="${uid}c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:${p.a}"/><stop offset="1" style="stop-color:${p.b}"/></linearGradient>
-  </defs>
-  <g>
-    <circle cx="29" cy="52" r="11" style="fill:${p.ear}"/><circle cx="29" cy="53" r="6" style="fill:#f9a8d4" opacity=".55"/>
-    <circle cx="91" cy="52" r="11" style="fill:${p.ear}"/><circle cx="91" cy="53" r="6" style="fill:#f9a8d4" opacity=".55"/>
-    <ellipse cx="60" cy="79" rx="42" ry="33" style="fill:url(#${uid}f)"/>
-    <ellipse cx="34" cy="89" rx="14" ry="11.5" style="fill:${p.hi}" opacity=".9"/><ellipse cx="86" cy="89" rx="14" ry="11.5" style="fill:${p.hi}" opacity=".9"/>
-    <ellipse cx="33" cy="89" rx="6.5" ry="3.4" style="fill:#f9a8d4" opacity=".5"/><ellipse cx="87" cy="89" rx="6.5" ry="3.4" style="fill:#f9a8d4" opacity=".5"/>
-    <ellipse cx="45" cy="76" rx="7.2" ry="8" style="fill:#1a1433"/><ellipse cx="75" cy="76" rx="7.2" ry="8" style="fill:#1a1433"/>
-    <circle cx="47.3" cy="73.3" r="2.6" style="fill:#fff"/><circle cx="77.3" cy="73.3" r="2.6" style="fill:#fff"/>
-    <path d="M57 84 h6 l-3 3z" style="fill:#e8799f"/>
-    <path d="M55.2 88 q2.4 2.8 4.8 0 q2.4 2.8 4.8 0" style="stroke:#3b2a3b;fill:none" stroke-width="1.8" stroke-linecap="round"/>
-    <path d="M37 45.5 q23 -9 46 0 v8.5 q-23 -7.5 -46 0z" style="fill:#1d1930"/>
-    <path d="M37 54 q23 -7.5 46 0" style="stroke:${p.a};fill:none" stroke-width="1.6" opacity=".55"/>
-    <path d="M60 20 L106 34.5 L60 49 L14 34.5Z" style="fill:url(#${uid}c)"/>
-    <path d="M60 20 L106 34.5 L60 49 L14 34.5Z" style="fill:none;stroke:#ffffff" stroke-width="1.2" stroke-linejoin="round" opacity=".35"/>
-    <g class="tassel">
-      <path d="M60 34.5 Q80 36.5 97 38.5 V57" style="stroke:#1d1930;fill:none" stroke-width="2.4" stroke-linecap="round"/>
-      <path d="M93.6 56 h6.8 l1.4 10 h-9.6z" style="fill:#1d1930"/>
-    </g>
-    <circle cx="60" cy="34.5" r="3.2" style="fill:#1d1930"/>
-  </g>
-</svg>`;
 }
 
 /**
