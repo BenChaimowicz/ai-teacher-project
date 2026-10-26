@@ -42,6 +42,15 @@
   --a-deep: #9b5f31;      /* apricot under-sheet */
   --b-deep: #d4bc95;      /* cream under-sheet, key tabs */
   --well: #0f1324;        /* cut-out wells: icon slots, inputs, progress tracks */
+  /* SEN-97 phase 3B (additive): channels for soft tints, the paper stacked under a sheet, text on good/miss fills */
+  --ribbon-rgb: 200, 71, 59;
+  --gold-rgb: 231, 178, 80;
+  --stack-under: #10152a; /* the sheet showing under a stacked one */
+  --on-good: #10241a;
+  --on-miss: #2a1210;
+  --recess: inset 0 1px 2px rgba(0, 0, 0, 0.55);           /* a well cut into the sheet */
+  --edge: inset 1px 1px 0 rgba(255, 238, 212, 0.08);       /* a cut edge catching light */
+  --hairline: inset 0 0 0 1px rgba(255, 255, 255, 0.11);   /* a ghost outline */
 
   --line: rgba(255, 255, 255, 0.065);
   --line-2: rgba(255, 255, 255, 0.11);
