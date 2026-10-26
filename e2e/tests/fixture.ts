@@ -65,6 +65,18 @@ export async function confirmedRequest(learningGoal = "Play Iris by the Goo Goo 
 }
 
 /**
+ * Adds Course Requests waiting on the Learner, without resetting, to fill the course list.
+ * @param count - How many to add
+ */
+export async function addWaitingRequests(count: number) {
+  await db.insert(courseRequests).values(
+    Array.from({ length: count }, (_, index) => ({
+      learnerId: SEEDED_LEARNER_ID, subject: `Subject ${index + 1}`, learningGoal: `Goal ${index + 1}`, status: "starting_level_confirmed" as const,
+    })),
+  );
+}
+
+/**
  * The fieldset of the n-th Quiz item (0-based).
  * @param page - Playwright page
  * @param index - Item index

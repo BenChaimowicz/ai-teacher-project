@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amethyst">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Knibbler · brand (mock)</title>
+<link rel="icon" type="image/svg+xml" href="nibbles-logo.svg" />
+<link rel="stylesheet" href="kit.css" />
+<style>
+  body { overflow-y: auto; height: auto; min-height: 100%; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 32px 120px; }
+  .kick { font-family: var(--mono); font-size: 0.72rem; color: rgba(var(--a-rgb), 0.85); margin-bottom: 12px; display: flex; gap: 8px; align-items: center; }
+  .kick::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
+  section { margin-top: 48px; }
+  .panel { border-radius: 18px; border: 1px solid rgba(var(--a-rgb), 0.24); background: linear-gradient(160deg, rgba(var(--a-rgb), 0.10), rgba(var(--b-rgb), 0.04)), var(--panel); padding: 24px; }
+  .note { color: var(--muted); font-size: 0.88rem; margin-top: 10px; line-height: 1.55; }
+  .note code { font-family: var(--mono); font-size: 0.8rem; color: var(--a); }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: 300px 1fr; gap: 40px; align-items: center; }
+  .hero-logo { position: relative; width: 260px; height: 260px; display: grid; place-items: center; }
+  .hero-logo::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(var(--a-rgb), 0.35), transparent 66%); }
+  .hero-logo .logo { position: relative; }
+  .hero h1 { font-size: 3.4rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .hero h1 span { background: linear-gradient(90deg, var(--a), var(--b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { color: var(--muted); margin-top: 14px; max-width: 520px; line-height: 1.6; }
+  .lockups { display: flex; gap: 28px; align-items: center; margin-top: 26px; }
+  .lockup { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.4rem; letter-spacing: -0.01em; }
+  .lockup.sm { font-size: 1.05rem; gap: 8px; }
+
+  /* sizes + favicon */
+  .row { display: flex; gap: 22px; align-items: flex-end; flex-wrap: wrap; }
+  .size { display: flex; flex-direction: column; align-items: center; gap: 8px; font-family: var(--mono); font-size: 0.68rem; color: var(--faint); }
+  .size img { image-rendering: auto; display: block; }
+  .chip-bg { padding: 10px; border-radius: 10px; background: #202124; border: 1px solid #34353a; display: grid; place-items: center; }
+
+  /* tab bar mock */
+  .browser { border-radius: 14px; overflow: hidden; border: 1px solid #34353a; background: #35363a; box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.8); }
+  .tabs { display: flex; align-items: flex-end; gap: 2px; padding: 8px 10px 0; background: #202124; }
+  .tab { display: flex; align-items: center; gap: 8px; width: 240px; padding: 8px 12px; border-radius: 10px 10px 0 0; color: #bdc1c6; font-family: system-ui, sans-serif; font-size: 12px; }
+  .tab.on { background: #35363a; color: #e8eaed; }
+  .tab img { width: 16px; height: 16px; flex: none; }
+  .tab .x { margin-left: auto; opacity: 0.6; }
+  .tab .gfav { width: 16px; height: 16px; border-radius: 50%; background: #5f6368; flex: none; }
+  .urlbar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: #35363a; }
+  .urlbar .url { flex: 1; padding: 6px 14px; border-radius: 99px; background: #202124; color: #bdc1c6; font-family: system-ui, sans-serif; font-size: 13px; }
+  .page-peek { height: 120px; background: var(--bg); display: flex; align-items: center; gap: 12px; padding: 0 24px; border-top: 1px solid #202124; }
+
+  /* palettes */
+  .pals { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .pal { border-radius: 16px; padding: 18px 12px 14px; text-align: center; border: 1px solid rgba(var(--a-rgb), 0.3);
+    background: radial-gradient(circle at 50% 35%, rgba(var(--a-rgb), 0.28), transparent 62%), color-mix(in srgb, var(--a) 7%, #0d0d12); }
+  .pal .logo { margin: 0 auto; }
+  .pal b { display: block; margin-top: 10px; font-family: var(--mono); font-size: 0.72rem; color: var(--a); }
+  .pal span { font-size: 0.72rem; color: var(--faint); }
+
+  /* loader */
+  .loaders { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; }
+  .inline-demo { display: flex; flex-direction: column; gap: 16px; }
+  .fake-btn { display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, var(--a), color-mix(in srgb, var(--a) 65%, var(--b))); color: var(--on-a); align-self: flex-start; }
+  .line-demo { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.92rem; }
+  .ccard-demo { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(var(--a-rgb), 0.08); border: 1px solid var(--line); max-width: 320px; font-weight: 600; font-size: 0.88rem; }
+  .ccard-demo .st { margin-left: auto; font-family: var(--mono); font-size: 0.66rem; color: var(--b); }
+  .page-load { display: grid; place-items: center; min-height: 280px; border-radius: 16px; background: radial-gradient(circle at 50% 45%, rgba(var(--a-rgb), 0.14), transparent 60%), var(--bg); border: 1px solid var(--line); }
+
+  /* course icons */
+  .icons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .ic-card { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 16px; background: rgba(var(--a-rgb), 0.05); border: 1px solid var(--line); }
+  .cic { display: grid; place-items: center; flex: none; border-radius: 12px; color: var(--on-a); background: linear-gradient(135deg, var(--a), var(--b)); box-shadow: 0 6px 18px -8px rgba(var(--a-rgb), 0.7); }
+  .cic.s20 { width: 40px; height: 40px; } .cic.s20 svg { width: 20px; height: 20px; }
+  .cic.s40 { width: 68px; height: 68px; border-radius: 18px; } .cic.s40 svg { width: 40px; height: 40px; stroke-width: 1.6; }
+  .ic-card b { display: block; font-size: 0.9rem; }
+  .ic-card span { font-family: var(--mono); font-size: 0.66rem; color: var(--faint); }
+  .ghost-ic { color: var(--a); background: rgba(var(--a-rgb), 0.14); box-shadow: none; border: 1px solid rgba(var(--a-rgb), 0.3); }
+
+  /* companion demo */
+  .duo { display: grid; grid-template-columns: 308px 1fr; gap: 28px; align-items: start; }
+  .side-sample { border-radius: 18px; padding: 14px; background: var(--bg-2); border: 1px solid var(--line); }
+  .duo ul { list-style: none; display: grid; gap: 10px; }
+  .duo li { display: flex; gap: 10px; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+  .duo li b { color: var(--text); }
+  .duo li::before { content: "✦"; color: var(--b); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-logo" id="hero-logo"></div>
+    <div>
+      <div class="kick">brand · mock</div>
+      <h1>Meet <span>Nibbles</span></h1>
+      <p>The Knibbler mark is Nibbles' silhouette in a graduation cap: the head shape, ears and round cheeks, with the cap cut out of it by a thin gap. No face, so it stays crisp down to a 16px tab icon. The full face belongs to the companion in the app (and to the loader). The mark and wordmark take the current accent pair.</p>
+      <div class="lockups">
+        <span class="lockup" id="lock-lg"></span>
+        <span class="lockup sm" id="lock-sm"></span>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <div class="kick">favicon · browser tab</div>
+    <div class="panel">
+      <div class="row">
+        <div class="size"><span class="chip-bg"><img id="fav16" width="16" height="16" alt="" /></span>16 · live</div>
+        <div class="size"><span class="chip-bg"><img id="fav32" width="32" height="32" alt="" /></span>32 · live</div>
+        <div class="size"><span class="chip-bg"><img id="fav64" width="64" height="64" alt="" /></span>64 · live</div>
+        <div class="size"><span class="chip-bg"><img src="nibbles-logo.svg" width="32" height="32" alt="" /></span>32 · nibbles-logo.svg</div>
+      </div>
+      <p class="note">The tab icon is rebuilt from the current palette on every theme change (<code>setFavicon()</code>). <code>nibbles-logo.svg</code> is the static fallback in fixed amethyst colours.</p>
+      <div class="browser" style="margin-top:18px">
+        <div class="tabs">
+          <div class="tab on"><img id="tab-fav" alt="" />Norse Mythology · Knibbler<span class="x">✕</span></div>
+          <div class="tab"><img id="tab-fav2" alt="" />Home · Knibbler<span class="x">✕</span></div>
+          <div class="tab"><span class="gfav"></span>Inbox<span class="x">✕</span></div>
+        </div>
+        <div class="urlbar"><span class="url">knibbler.app/study/norse-mythology/lessons/3</span></div>
+        <div class="page-peek"><span class="brand" id="peek-brand"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kick">in every palette</div>
+    <div class="pals" id="pals"></div>
+  </section>
+
+  <section>
+    <div class="kick">loader</div>
+    <div class="loaders">
+      <div class="panel inline-demo">
+        <span class="fake-btn" id="btn-load"></span>
+        <span class="line-demo" id="line-load"></span>
+        <span class="ccard-demo" id="card-load"></span>
+        <p class="note">Inline (24px): Nibbles bobs and the tassel swings. Use it in buttons, rows and short waits.<br><code>loaderHTML({ size: 24 })</code></p>
+      </div>
+      <div class="page-load" id="page-load"></div>
+    </div>
+    <p class="note">Page (96px): a hop with a squash on landing, a shadow, and three dots that get "nibbled" one by one. Use it for waits over about a second, like opening a lesson. Generating a course keeps its own progress card, since that wait is minutes long and needs real progress. <code>loaderHTML({ size: 96, label })</code></p>
+  </section>
+
+  <section>
+    <div class="kick">course icons · 20px and 40px</div>
+    <div class="icons" id="icons"></div>
+    <p class="note">Hand-drawn for the mock in the same stroke style as the UI icons. The plan for the real app (an icon picked per course from a licensed library) is in <code>08-course-icons.md</code>.</p>
+  </section>
+
+  <section>
+    <div class="kick">sidebar companion</div>
+    <div class="duo">
+      <div class="side-sample" id="buddy-slot"></div>
+      <ul>
+        <li><span><b>A real speech bubble.</b> Filled, borderless, with a tail up to Nibbles, so it can't be mistaken for a text field.</span></li>
+        <li><span><b>Eyes follow the pointer</b>, eased and clamped. When the mouse is still, Nibbles glances around now and then.</span></li>
+        <li><span><b>Hover</b> twitches an ear. <b>Click</b> gives a small squish and the next line from the page's context list (<code>nibblesLines([...])</code>).</span></li>
+        <li><span><b>The ring is today's goal</b> (18 of 20 min). No points or currency: just the streak and today's minutes.</span></li>
+        <li><span>All motion turns off with the system's reduced-motion setting.</span></li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<div class="mock"><p>mock</p><div class="sw" id="sw"></div></div>
+
+<script src="kit.js"></script>
+<script>
+document.getElementById("hero-logo").innerHTML = logoSVG({ size: 200 });
+document.getElementById("lock-lg").innerHTML = logoSVG({ size: 44 }) + `<span class="wordmark" style="font-size:1.6rem">knibbler</span>`;
+document.getElementById("lock-sm").innerHTML = logoSVG({ size: 24 }) + `<span class="wordmark">knibbler</span>`;
+document.getElementById("peek-brand").innerHTML = logoSVG({ size: 28 }) + `<span class="wordmark">knibbler</span>`;
+
+document.getElementById("pals").innerHTML = THEMES.map(([k, label]) =>
+  `<div class="pal" data-theme="${k}">${logoSVG({ size: 88 })}<b>${k}</b><span>${label}</span></div>`).join("");
+
+document.getElementById("btn-load").innerHTML = loaderHTML({ size: 24 }) + "Saving…";
+document.getElementById("line-load").innerHTML = loaderHTML({ size: 24 }) + "Checking your answers";
+document.getElementById("card-load").innerHTML = loaderHTML({ size: 22 }) + "Greek Gods and Heroes<span class='st'>writing</span>";
+document.getElementById("page-load").innerHTML = loaderHTML({ size: 96, label: "Getting your lesson ready…" });
+
+const ICON_NAMES = { norse: "Norse mythology", knot: "The square knot", greek: "Greek gods", music: "Reading sheet music", yggdrasil: "Yggdrasil", sourdough: "How sourdough works", investing: "Basics of investing", generic: "Fallback" };
+document.getElementById("icons").innerHTML = Object.entries(ICON_NAMES).map(([k, n]) =>
+  `<div class="ic-card"><span class="cic s40">${courseIcon(k)}</span><span class="cic s20">${courseIcon(k)}</span><span class="cic s20 ghost-ic">${courseIcon(k)}</span><div><b>${n}</b><span>${k}</span></div></div>`).join("");
+
+document.getElementById("buddy-slot").innerHTML = buddyHTML();
+renderBuddy();
+nibblesLines(["Hi. I'm Nibbles.", "Click me again if you like.", "I'll keep track of where you are.", "Small steps add up.", "No rush. Go at your pace."]);
+baoSay("Hi. I'm Nibbles.");
+
+function refreshFavs() {
+  const uri = logoDataURI();
+  ["fav16", "fav32", "fav64", "tab-fav", "tab-fav2"].forEach((id) => (document.getElementById(id).src = uri));
+}
+const origSetTheme = setTheme;
+setTheme = (k) => { origSetTheme(k); refreshFavs(); };
+initThemes(document.getElementById("sw"));
+</script>
+</body>
+</html>

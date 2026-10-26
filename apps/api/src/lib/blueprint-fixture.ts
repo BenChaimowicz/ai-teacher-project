@@ -4,12 +4,16 @@ import type { BlueprintBuilder } from "./blueprint.ts";
 /**
  * Deterministic builder for browser tests (`DIAGNOSTIC_FIXTURE=1`): no provider calls.
  * Two Readings on the two most basic capabilities not evidenced, then a Quiz that assesses both, as the default Quiz
- * cadence places them.
+ * cadence places them. A revision from Learner review skips the capabilities of the Lessons the Learner marked.
  */
 export function createFixtureBlueprintBuilder(): BlueprintBuilder {
   return {
-    async build({ startingLevel }) {
-      const gap = [...startingLevel.probedCapabilities].sort((a, b) => a.span - b.span).filter((capability) => !isEvidenced(capability));
+    async build({ startingLevel, revision }) {
+      const marked = revision
+        ? revision.previousBlueprint.modules.flatMap((module) => module.slots).filter((slot) => revision.feedback.irrelevantSlotIds.includes(slot.id))
+        : [];
+      const gap = [...startingLevel.probedCapabilities].sort((a, b) => a.span - b.span)
+        .filter((capability) => !isEvidenced(capability) && !marked.some((slot) => slot.title === `Reading: ${capability.statement}`));
       const [first, second] = [gap[0]?.statement ?? "the last steps", gap[1]?.statement ?? "the final step"];
       return {
         blueprint: {

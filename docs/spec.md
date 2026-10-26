@@ -25,7 +25,7 @@ Terms are defined in `CONTEXT.md`. This spec uses them; it does not redefine the
 - Calibrated IRT, CAT, or knowledge-space placement for open-ended Learning Goals.
 - Self-report-only mastery as Starting Level.
 - Human review of Lesson bodies. The Learner reviews Blueprint titles and Lesson goals only.
-- A persistent app sidebar while studying; a chat Course Guide; Learner-facing Lesson reuse or lineage UI.
+- A free-text chat with the companion (after the subject, every Learner turn is a tap-to-choose option); Learner-facing Lesson reuse or lineage UI.
 - Publishing a partial Course; a policy-override or appeal path on the Validity gate.
 - Vendor built-in web search on Generator or Judge calls.
 
@@ -85,17 +85,21 @@ Provenance: [Users & data](https://linear.app/senoy/issue/SEN-8/users-and-data),
 
 ## 3. Screens and Learner navigation
 
-Four screens. Dark workspace as the default. Throwaway IA probe: `prototype/ui-scope/` (variant B). Not the product.
+Four screens. Always dark, with five switchable accent palettes. The visual and interaction reference is the SEN-52 redesign in [`docs/uis/redesign/`](uis/redesign/README.md); its decisions list is [`09-implementation-notes.md`](uis/redesign/09-implementation-notes.md). Glossary words stay in code and docs; Learner-facing copy uses plain words ("New course", "Your plan", "How you like to learn", "a few quick questions").
 
-**Product name.** **Knibbler** (silent **k** — spelled *Knibbler*, pronounced like "Nibbler"). Sidebar lockup, browser tab title, greeting, empty states. Companion avatars are unnamed characters from the avatar collection; they are not sub-branded under Knibbler. Professor Pim is visual direction only, not the name.
+**Product name.** **Knibbler** (silent **k** — spelled *Knibbler*, pronounced like "Nibbler"). Sidebar lockup, browser tab title, greeting, empty states. The logo is the companion's silhouette in a graduation cap; the favicon follows the current palette.
+
+**Companion.** **Nibbles**, a hamster, voices the Course Guide and the scripted turns of every screen (the name lives in one constant; it may change). Low-key, kind, brief; never childish. It presents policy and system state; it cannot override policy or invent decisions. The flow is chat-*like*: Nibbles' line, then tap-to-choose options directly under it. The only free text is where the Learner names what to learn (Compose and Revise request). There is no open chat.
+
+**Sidebar.** Present on every screen, collapsible, and never scrolls: a compact companion card (streak, today's minutes against a daily goal), New course, one line per Course (4–5 at most, then "see all on Home"), and "How you like to learn" pinned at the bottom. In Study it shows the Course outline instead of the Course list. Rewards are non-numeric (no points, XP, or levels).
 
 ### Home
 
-Published Courses and unpublished Course Requests (including rejected) in one library. Workspace sidebar: Home, Teaching Profile, New Course Request, and Open items. Opening a published Course leaves Home for Study. Opening an unpublished Request opens that Request at its current status.
+Published Courses and unpublished Course Requests (including rejected) in one library, grouped: continue (the Course in progress, first), learning, being made, needs you (failed or waiting on the Learner), finished. Older failed or cancelled attempts collapse behind a "clear them" row. Each Course shows a per-Course icon picked at Blueprint time ([`08-course-icons.md`](uis/redesign/08-course-icons.md)). Opening a published Course leaves Home for Study. Opening an unpublished Request opens that Request at its current status. First run greets the Learner and asks what they want to learn.
 
 ### Teaching Profile
 
-Its own sidebar screen. Required before the first Course Request can start: first visit lands here; New Course Request waits until the Profile is saved. Reassess only when the Learner opens this screen and asks to. The eight questions in §4 are the locked questionnaire.
+Shown as "How you like to learn": a short guided conversation with tap-to-choose answers (SEN-56), one question at a time, with a live summary the Learner can edit per answer. Required before the first Course Request can start: first visit lands here; New Course Request waits until the Profile is saved. Reassess only when the Learner opens this screen and asks to. Seven of the eight questions in §4 are asked; Q1 is not shown while English is the only language.
 
 This overrides the first-run *order* in Assessment design (Profile after a passed Request). Orthogonality to Starting Level is unchanged.
 
@@ -117,14 +121,15 @@ One screen for every unpublished status. The body follows status; these are not 
 | Waiting | Blueprint prep or Course generation: stage, current Lesson title, N of M, generating vs repairing. No draft body, Sources, or token stream. **Cancel** keeps checkpoints and does not auto-resume. **Resume** continues. |
 | Terminal fail | Plain-language reason, **Retry** or **Revise request**. |
 
-The **Course Guide** is ordinary page copy on this screen (headings, explanations, questions). Not a chat, not a character, not a side rail. It presents policy; it cannot override it.
+The **Course Guide** is the companion's lines in a chat-like thread on this screen: history scrolls up, the current step and its options sit right under the latest line. Server steps the Learner does not need to trigger (Validity check, Blueprint prep) start automatically after the Learner answers. Clarification answers are offered as options; **Revise request** reopens the topic field. It presents policy; it cannot override it. (Changed by SEN-52: previously "ordinary page copy, not a chat, not a character, not a side rail".)
 
 ### Study
 
-Only a published Course. Land on the current Lesson (no Course overview first). Workspace sidebar hidden. Study bar: back to Workspace, **Lessons** toggle (Module/Lesson list off until shown), title and Progress, one-way free jump. Reading and Quiz share this chrome; the plugin supplies the body.
+Only a published Course. Land on the current Lesson (no Course overview first). The sidebar shows the Course outline (Lessons with state, Progress, the current Lesson's sections) and is collapsible. A header is always present, in every reading mode: sidebar toggle, back to Home, Lesson title, reading progress, and the **Aa** reading panel. Reading and Quiz share this chrome; the plugin supplies the body.
 
-- **Reading:** reading sections, Demonstrative media, **Mark complete**. Opening or partial reading does not complete. With `sectionAdvance = manual`, pause after each section until Continue; with `continuous`, scroll. Never auto-advance to the next Lesson.
-- **Quiz:** draft until Submit; every item must have an answer; untimed; open-book (completed Lessons stay revisitable). After Submit: right/wrong; while best score is under 100%, the Learner may open the correct answers; retake in place. Peeking does not block retakes. With `feedbackTiming = per_item`, each item has **Check**, which locks that answer and shows right/wrong; Submit waits until every item is checked. An attempt keeps the timing it started with. The draft is saved on the server; grading is server-side and the answer key reaches the browser only through **Show answer**.
+- **Reading modes** ([`05-reading-modes.md`](uis/redesign/05-reading-modes.md)): Comfort (default, Manrope), Focus, Spaced, Book, Skim, all shipped, plus font, size, width, line and letter spacing, and page colour: Dark (default), Dim, Sepia, Paper. Sepia and Paper are light reading surfaces inside the always-dark app. Show-time only; stored per Learner.
+- **Reading:** reading sections, Demonstrative media, then the companion's end-of-Lesson prompt (**I've read it**, the completion action). Opening or partial reading does not complete. With `sectionAdvance = manual`, pause after each section until Continue; with `continuous`, scroll. Never auto-advance to the next Lesson.
+- **Quiz:** shown one item at a time in the chat-like format; draft until Submit; every item must have an answer; untimed; open-book (completed Lessons stay revisitable). With `feedbackTiming = per_item`, each item has **Check**, which locks that answer and shows right/wrong together with the correct answer and its explanation (a wrong pick shakes and the right one lights up; there is no separate Show answer step); Submit waits until every item is checked. With `end_of_quiz`, right/wrong, the correct answers and explanations all arrive with Submit. Retake in place; seeing answers does not block retakes. An attempt keeps the timing it started with. The draft is saved on the server; grading is server-side, and an item's answer key reaches the browser only in the response that gives that item feedback (its Check, or Submit), never before the Learner has answered it. (Changed by SEN-88: previously the Learner opened answers with **Show answer**, only while the best score was under 100%.)
 
 Progress is completed Lessons / total Lessons. Opening does not complete. Progress never drops.
 
@@ -138,7 +143,7 @@ Sequence mode is Course-level. Default: linear unlock; completed Lessons revisit
 
 A reading Lesson completes when the Learner reaches the end and marks it complete. A Quiz completes when best score is at least 70%.
 
-Provenance: [UI scope (screens)](https://linear.app/senoy/issue/SEN-10/ui-scope-screens), [Level-to-course mapping](https://linear.app/senoy/issue/SEN-12/level-to-course-mapping), [Quiz mechanics](https://linear.app/senoy/issue/SEN-13/quiz-mechanics), [Plugin contract](https://linear.app/senoy/issue/SEN-14/plugin-contract), [Runtime generation](https://linear.app/senoy/issue/SEN-15/runtime-generation), [Decide product name](https://linear.app/senoy/issue/SEN-51/decide-product-name).
+Provenance: [Redesign: inspiration and direction](https://linear.app/senoy/issue/SEN-52/redesign-inspiration-and-direction), [UI scope (screens)](https://linear.app/senoy/issue/SEN-10/ui-scope-screens), [Level-to-course mapping](https://linear.app/senoy/issue/SEN-12/level-to-course-mapping), [Quiz mechanics](https://linear.app/senoy/issue/SEN-13/quiz-mechanics), [Plugin contract](https://linear.app/senoy/issue/SEN-14/plugin-contract), [Runtime generation](https://linear.app/senoy/issue/SEN-15/runtime-generation), [Decide product name](https://linear.app/senoy/issue/SEN-51/decide-product-name).
 
 ---
 
@@ -148,15 +153,15 @@ Provenance: [UI scope (screens)](https://linear.app/senoy/issue/SEN-10/ui-scope-
 
 A direct, editable questionnaire — not VARK, not learning-style labels, not a composite score. Store declared functional needs separately from changeable feature preferences. Every preference supports “No preference” and skip. Resolve each field independently. Version the questionnaire (`teachingProfileVersion = 1`).
 
-Intro copy:
+Intro copy (the guarantee said once, positively; SEN-52):
 
-> These choices set up how your Lessons are presented. They are not a test of intelligence, ability, or disability. You can skip any question and change these choices later.
+> No right answers. You can skip any question and change any of this later.
 
 Do not claim the questionnaire diagnoses ability or disability, predicts the best method, or that matching a “learning style” improves learning. Do not collect diagnoses, medical history, IQ, demographics, personality, or named assistive technologies. Prefer-not-to-answer must not penalize access or Progress. Provide **Reset to defaults** (delete saved answers). Profile fields are not used for advertising, eligibility, grading, or sharing with other Learners.
 
 Each plugin consumes only the semantic fields it declared. Future plugins add or consume fields without assigning a Learner type.
 
-**Q1 — Instructional language (single select).** This prototype supports English only.
+**Q1 — Instructional language (single select).** This prototype supports English only. **Not shown while English is the only language (SEN-52):** the setup asks Q2–Q8, `instructionLanguage` resolves to `en` from the default, and Generator prompts state that Lessons, Quizzes, and feedback are written in English. The options below apply when a second language ships.
 
 1. **English** — persist `instructionLanguage = en`.
 2. **I need a language that is not listed** — disclaimer that Lessons are English only at this moment, then continue with `instructionLanguage = en`. “Not listed” is not a persistable language code. No machine-translation path. Do not save an unsupported language and fail later at generation.

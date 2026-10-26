@@ -1,24 +1,111 @@
+@import "@fontsource-variable/manrope";
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/instrument-serif/400.css";
+@import "@fontsource-variable/literata";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/700.css";
+@import "@fontsource/atkinson-hyperlegible/400.css";
+@import "@fontsource/atkinson-hyperlegible/700.css";
 @import "tailwindcss";
+@import "./styles/kit.css" layer(components);
+@import "./styles/shell.css" layer(components);
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Design tokens: Papercraft (SEN-97), from docs/uis/redesign/10-papercraft-jongi.html.
+ * One palette, always dark: a desk at night, ink-navy paper sheets, apricot for what's
+ * selected or primary, cream for highlights, bookmark red for "needs you" and streaks,
+ * gold for wins. Depth comes from sheet shadows, not glow. Token names are kept from
+ * SEN-86 so existing styles follow; only the values changed.
+ */
 :root {
-  --background: oklch(0.145 0.015 250);
-  --foreground: oklch(0.96 0.01 250);
-  --card: oklch(0.18 0.015 250);
-  --card-foreground: oklch(0.96 0.01 250);
-  --primary: oklch(0.8 0.04 230);
-  --primary-foreground: oklch(0.18 0.02 250);
-  --secondary: oklch(0.24 0.015 250);
-  --secondary-foreground: oklch(0.96 0.01 250);
-  --muted: oklch(0.24 0.015 250);
-  --muted-foreground: oklch(0.72 0.02 250);
-  --accent: oklch(0.28 0.02 250);
-  --accent-foreground: oklch(0.96 0.01 250);
-  --border: oklch(0.3 0.015 250);
-  --input: oklch(0.3 0.015 250);
-  --ring: oklch(0.72 0.04 230);
-  --radius: 0.625rem;
+  /* paper stock */
+  --bg: #0b0e18;          /* desk */
+  --bg-2: #0e1222;        /* sidebar */
+  --panel: #141a2e;       /* ink-navy sheet */
+  --panel-2: #18203b;     /* raised sheet */
+  --plum: #2a1f3c;        /* secondary sheet */
+  --plum-2: #352748;
+
+  /* accents: --a apricot, --b cream */
+  --a: #d8955c; --a-rgb: 216, 149, 92; --on-a: #1a1208;
+  --b: #f0e0c2; --b-rgb: 240, 224, 194;
+  --ribbon: #c8473b;      /* bookmark: fills only */
+  --ribbon-text: #e0695c; /* bookmark red for text and icons (AA) */
+  --gold: #e7b250; --gold-rgb: 231, 178, 80; /* wins, and what is being made */
+  /* paper edges (SEN-97 phase 1): the under-sheet a pop-up tab folds onto, and a recessed well */
+  --a-deep: #9b5f31;      /* apricot under-sheet */
+  --b-deep: #d4bc95;      /* cream under-sheet, key tabs */
+  --well: #0f1324;        /* cut-out wells: icon slots, inputs, progress tracks */
+  /* SEN-97 phase 3B (additive): channels for soft tints, the paper stacked under a sheet, text on good/miss fills */
+  --ribbon-rgb: 200, 71, 59;
+  --stack-under: #10152a; /* the sheet showing under a stacked one */
+  --on-good: #10241a;
+  --on-miss: #2a1210;
+  --recess: inset 0 1px 2px rgba(0, 0, 0, 0.55);           /* a well cut into the sheet */
+  --edge: inset 1px 1px 0 rgba(255, 238, 212, 0.08);       /* a cut edge catching light */
+  --hairline: inset 0 0 0 1px rgba(255, 255, 255, 0.11);   /* a ghost outline */
+  --inset: var(--recess);                                  /* same well shadow; the make-a-Course screens use this name */
+
+  --line: rgba(255, 255, 255, 0.065);
+  --line-2: rgba(255, 255, 255, 0.11);
+  --a-soft: rgba(var(--a-rgb), 0.14);
+  --a-line: rgba(var(--a-rgb), 0.45);
+  --b-soft: rgba(var(--b-rgb), 0.1);
+
+  /* depth: a single sheet, and a sheet with paper stacked under it */
+  --sheet: inset 1px 1px 0 rgba(255, 238, 212, 0.07), 0 1px 0 rgba(0, 0, 0, 0.55), 0 14px 26px -12px rgba(0, 0, 0, 0.75);
+  --stack: inset 1px 1px 0 rgba(255, 238, 212, 0.07), 0 1px 0 rgba(0, 0, 0, 0.5), 5px 6px 0 -1px #10152a,
+    5px 6px 0 0 rgba(255, 255, 255, 0.035), 6px 16px 22px -10px rgba(0, 0, 0, 0.8);
+  /* Deprecated: paper doesn't glow. Nothing uses it; kept as a no-op so stray uses stay valid. */
+  --glow: 0 0 0 transparent;
+
+  /* text: every tone passes AA on desk, paper and plum */
+  --text: #ebe6dc;
+  --read: #e2ddd2;
+  --text-muted: #a3a4b8;
+  --faint: #8a8ba0;
+  --good: #8fd1a4; --good-rgb: 143, 209, 164;
+  --miss: #ef8f86; --miss-rgb: 239, 143, 134;
+
+  /* type: no italics anywhere (see the base rule below) */
+  --font-ui: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-read: "Manrope Variable", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-code: "JetBrains Mono", ui-monospace, monospace;
+  --font-book: "Literata Variable", "Literata", Georgia, serif;
+  --font-legible: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+
+  /* motion */
+  --dur-fast: 150ms;
+  --dur: 250ms;
+  --dur-slow: 450ms;
+  --ease-pop: cubic-bezier(0.3, 1.4, 0.5, 1);
+
+  --sidebar-w: 308px;
+
+  /* shadcn names, mapped onto the tokens so older screens follow the palette */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--panel);
+  --card-foreground: var(--text);
+  --primary: var(--a);
+  --primary-foreground: var(--on-a);
+  --secondary: var(--panel-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--panel-2);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--panel-2);
+  --accent-foreground: var(--text);
+  --border: var(--line-2);
+  --input: var(--line-2);
+  --ring: var(--a);
+  --radius: 0.75rem;
 }
 
 @theme inline {
@@ -37,11 +124,50 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-md: calc(var(--radius) - 2px);
+
+  --color-a: var(--a);
+  --color-b: var(--b);
+  --color-on-a: var(--on-a);
+  --color-bg-2: var(--bg-2);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-faint: var(--faint);
+  --color-read: var(--read);
+  --color-good: var(--good);
+  --color-miss: var(--miss);
+  --color-ribbon: var(--ribbon);
+  --color-gold: var(--gold);
+  --color-plum: var(--plum);
+
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-display);
+  --font-read: var(--font-read);
+  --font-mono: var(--font-code);
+  --font-serif: var(--font-book);
+  --font-legible: var(--font-legible);
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
+  --shadow-glow: var(--glow);
+  --shadow-sheet: var(--sheet);
+  --shadow-stack: var(--stack);
 }
 
-* {
-  border-color: var(--border);
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  /* No italics anywhere (SEN-97): emphasis uses weight or colour instead. */
+  *,
+  *::before,
+  *::after {
+    font-style: normal !important;
+    font-synthesis: none;
+  }
 }
 
 html,
@@ -51,8 +177,25 @@ body,
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
   margin: 0;
-  font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  background: var(--bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--a);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

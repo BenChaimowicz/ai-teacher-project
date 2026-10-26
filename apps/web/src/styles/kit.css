@@ -1,0 +1,402 @@
+/*
+ * Component styles for the kit: Papercraft (SEN-97), from docs/uis/redesign/10-papercraft-jongi.html.
+ * Every surface is a cut sheet of paper on a dark desk. Depth comes from one shadow language:
+ * `--sheet` for a single sheet, `--stack` for a sheet with paper under it (it needs you), and a
+ * lift plus an apricot rim for what's selected. No glow, no glassy gradients.
+ * Plain classes because several pieces (SVG moods, eye tracking, stagger) are easier in CSS.
+ * React components in src/components/ui own the markup; screens should use the components.
+ */
+
+/* ---------- small shared bits ---------- */
+.k-mono { font-family: var(--font-code); }
+.k-wordmark { font-family: var(--font-display); font-weight: 400; font-size: 1.45rem; line-height: 1; letter-spacing: 0.01em; color: var(--text); }
+.k-sec-h {
+  display: flex; align-items: center; gap: 8px; padding: 0 4px 6px;
+  font-family: var(--font-code); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
+}
+.k-sec-h::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.k-sec-h .n { order: 2; color: var(--faint); letter-spacing: 0.06em; }
+
+/* ---------- ribbons (status) ----------
+   A notched bookmark ribbon. Tones: learning (apricot), making (gold), needs (bookmark red),
+   done (cream), stopped (neutral). Solid red is for the streak. */
+.k-rib {
+  display: inline-flex; align-items: center; gap: 6px; height: 19px; padding: 0 12px 0 8px; flex: none; white-space: nowrap;
+  font-family: var(--font-code); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; line-height: 1;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 50%, 100% 100%, 0 100%); border-radius: 2px 0 0 2px;
+  color: #e8b07a; background: rgba(var(--a-rgb), 0.16);
+}
+.k-rib.making { color: var(--gold); background: rgba(231, 178, 80, 0.15); }
+.k-rib.needs { color: var(--ribbon-text); background: rgba(200, 71, 59, 0.2); }
+.k-rib.done { color: var(--b-deep); background: rgba(var(--b-rgb), 0.1); }
+.k-rib.stopped { color: var(--faint); background: rgba(255, 255, 255, 0.05); }
+.k-rib.solid { color: #fff2e8; background: var(--ribbon); }
+
+/* ---------- buttons ----------
+   Pop-up tabs on a darker under-sheet. Pressed, they fold down 2px onto it. */
+.k-btn {
+  --under: #0a0d1a;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
+  border-radius: 10px; font-family: var(--font-ui); font-weight: 600; font-size: 0.9rem; padding: 10px 16px; line-height: 1.2;
+  transition: transform 0.12s, box-shadow 0.12s, background var(--dur-fast), color var(--dur-fast);
+  cursor: pointer; border: 0; text-decoration: none; color: var(--text);
+}
+.k-btn svg { width: 16px; height: 16px; flex: none; }
+.k-btn:disabled, .k-btn[aria-disabled="true"] { cursor: default; }
+.k-btn.sm { padding: 6px 12px; font-size: 0.82rem; border-radius: 9px; }
+.k-btn.lg { padding: 13px 22px; font-size: 1rem; border-radius: 12px; }
+.k-btn.icon { padding: 0; width: 36px; height: 36px; border-radius: 10px; }
+
+/* --hl: the cut edge catching light. --under: the darker sheet the tab sits on. */
+.k-btn.primary, .k-btn.secondary, .k-btn.danger {
+  --hl: rgba(255, 238, 212, 0.08);
+  box-shadow: inset 1px 1px 0 var(--hl), 0 3px 0 var(--under), 0 10px 18px -8px rgba(0, 0, 0, 0.7);
+}
+.k-btn.primary:active:not(:disabled), .k-btn.secondary:active:not(:disabled), .k-btn.danger:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: inset 1px 1px 0 var(--hl), 0 1px 0 var(--under), 0 4px 8px -4px rgba(0, 0, 0, 0.7);
+}
+.k-btn.primary {
+  --under: var(--a-deep); --hl: rgba(255, 240, 215, 0.45);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--a) 88%, #f5c08a), var(--a)); color: var(--on-a);
+}
+.k-btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, #e8ad75, color-mix(in srgb, var(--a) 92%, #fff)); }
+.k-btn.primary:disabled { background: var(--panel-2); color: var(--faint); box-shadow: inset 0 0 0 1px var(--line); }
+.k-btn.secondary { background: var(--panel-2); }
+.k-btn.secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--panel-2) 86%, #fff); }
+.k-btn.danger { --under: #6e221b; background: var(--ribbon); color: #fff4ec; }
+.k-btn.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--ribbon) 90%, #fff); }
+.k-btn.ghost { color: var(--text); background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.11); }
+.k-btn.ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.035); box-shadow: inset 0 0 0 1px var(--a-line); }
+.k-btn.quiet { color: var(--text-muted); background: transparent; }
+.k-btn.quiet:hover:not(:disabled) { color: var(--text); background: rgba(255, 255, 255, 0.04); }
+.k-btn.link { padding: 0; color: var(--a); font-weight: 600; background: none; }
+.k-btn.link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.k-btn:disabled:not(.primary) { opacity: 0.5; box-shadow: none; }
+.k-kbd { font-family: var(--font-code); font-size: 0.64rem; font-weight: 500; padding: 2px 6px; border-radius: 4px; background: rgba(0, 0, 0, 0.18); color: inherit; opacity: 0.75; }
+
+/* ---------- input ----------
+   A slot cut into the sheet: recessed, with an apricot rim when focused. */
+.k-field {
+  display: flex; gap: 8px; align-items: center; padding: 6px 6px 6px 14px;
+  background: var(--well); border: 1px solid var(--line-2); border-radius: 12px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+  transition: border-color var(--dur), box-shadow var(--dur);
+}
+.k-field:focus-within { border-color: var(--a-line); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--a-line); }
+.k-field input, .k-field textarea { flex: 1; min-width: 0; outline: none; padding: 8px 0; background: none; border: 0; color: inherit; font: inherit; }
+.k-field input::placeholder, .k-field textarea::placeholder { color: var(--faint); }
+.k-field[data-invalid="true"] { border-color: var(--miss); }
+.k-field:has(:disabled) { opacity: 0.55; cursor: not-allowed; border-style: dashed; }
+.k-field :disabled { cursor: not-allowed; }
+
+/* ---------- card ---------- */
+.k-card { border-radius: 14px; padding: 18px; background: var(--panel); box-shadow: var(--sheet); }
+.k-card.flat { box-shadow: inset 0 0 0 1px var(--line); }
+.k-card.interactive { transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.3), box-shadow 0.18s; }
+.k-card.interactive:hover { transform: translateY(-2px); box-shadow: var(--stack); }
+
+/* ---------- chat thread ----------
+   The companion speaks on small paper notes; the Learner's echo is a cream line with an apricot rim. */
+.k-thread { display: flex; flex-direction: column; gap: 6px; }
+.k-trow { display: flex; gap: 10px; align-items: flex-start; animation: k-in 0.3s ease-out both; }
+.k-trow.grouped-start { margin-top: 16px; }
+.k-trow:first-child { margin-top: 0; }
+.k-trow .av {
+  width: 36px; height: 36px; flex: none; border-radius: 26%; padding: 2px; overflow: hidden;
+  background: radial-gradient(circle at 50% 62%, #262e52, #141a30); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 4px 8px -4px rgba(0, 0, 0, 0.6);
+}
+.k-trow .av.empty { visibility: hidden; }
+.k-msg { line-height: 1.55; max-width: 600px; font-size: 1rem; min-width: 0; }
+.k-trow:not(.me) .k-msg {
+  width: fit-content; max-width: min(560px, 100%); padding: 9px 14px; border-radius: 3px 12px 12px 12px;
+  background: var(--panel-2); box-shadow: var(--sheet);
+}
+.k-msg .faint { color: var(--text-muted); }
+.k-trow.me { justify-content: flex-end; }
+.k-trow.me .k-msg {
+  padding: 8px 14px; border-radius: 12px 3px 12px 12px; font-size: 0.95rem; color: var(--b);
+  background: transparent; box-shadow: inset 0 0 0 1px rgba(var(--a-rgb), 0.38);
+}
+.k-trow.me.good .k-msg { box-shadow: inset 0 0 0 1px rgba(var(--good-rgb), 0.5); }
+.k-trow.me.miss .k-msg { box-shadow: inset 0 0 0 1px rgba(var(--miss-rgb), 0.5); }
+.k-trow.me .mark { font-weight: 700; margin-left: 8px; }
+.k-trow.me.good .mark { color: var(--good); }
+.k-trow.me.miss .mark { color: var(--miss); }
+.k-typing { display: inline-flex; gap: 4px; padding: 6px 0; }
+.k-typing i { width: 5px; height: 5px; background: var(--a); transform: rotate(45deg); opacity: 0.3; animation: k-dot 1.2s ease-in-out infinite; }
+.k-typing i:nth-child(2) { animation-delay: 0.15s; }
+.k-typing i:nth-child(3) { animation-delay: 0.3s; }
+.k-tcard { margin: 8px 0 4px 46px; padding: 18px; border-radius: 14px; animation: k-in 0.3s ease-out both; background: var(--panel); box-shadow: var(--sheet); }
+.k-tcard.flush { margin-left: 0; }
+.k-tcard h4 { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; line-height: 1.1; color: var(--text); }
+.k-tcard .sub { color: var(--text-muted); font-size: 0.86rem; margin-top: 4px; }
+.k-tcard .sub + * { margin-top: 14px; }
+
+/* ---------- option tiles ----------
+   Resting: a sheet. Needs you (an open group): stacked. Selected: lifted with an apricot rim.
+   The entrance keeps fill `backwards` so hover and selected transforms work once it ends. */
+.k-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 10px 0 8px 46px; transition: opacity 0.3s, max-height 0.35s, margin 0.35s; max-height: 1200px; }
+.k-tiles.flush { margin-left: 0; }
+.k-tiles.one { grid-template-columns: 1fr; }
+.k-tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 640px) {
+  .k-tiles, .k-tiles.three { grid-template-columns: 1fr; margin-left: 0; }
+  .k-tcard { margin-left: 0; }
+}
+.k-tile {
+  position: relative; display: flex; gap: 12px; align-items: center; text-align: left; padding: 14px 40px 14px 14px; border-radius: 12px; min-height: 64px;
+  background: var(--panel); border: 1px solid transparent; box-shadow: var(--sheet); color: var(--text); cursor: pointer; font: inherit;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.3), box-shadow 0.18s, opacity 0.25s, background 0.2s;
+  animation: k-pop 0.38s var(--ease-pop) backwards; animation-delay: calc(var(--i, 0) * 55ms);
+}
+.k-tiles:not(.locked) .k-tile:not(:disabled):not(.quiet) { box-shadow: var(--stack); }
+/* Extends the hit area below a lifted tile, so a pointer resting on its bottom edge can't flicker hover on and off.
+   z-index -1 keeps it under the tile's content (e.g. a quiz radio), which must stay clickable. */
+.k-tile::before { content: ""; position: absolute; inset: 0 0 -4px 0; z-index: -1; }
+.k-tile:hover { transform: translateY(-3px); }
+.k-tile:active { transform: translateY(-1px); }
+.k-tile:disabled { cursor: not-allowed; opacity: 0.45; background: transparent; border-style: dashed; border-color: var(--line-2); box-shadow: none; transform: none; }
+.k-tile:disabled .ti { filter: grayscale(1); }
+.k-tile .ti {
+  width: 40px; height: 40px; border-radius: 10px; flex: none; display: grid; place-items: center; color: var(--a);
+  background: var(--well); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.k-tile .ti svg { width: 19px; height: 19px; }
+.k-tile .tt { display: block; font-weight: 600; font-size: 0.95rem; line-height: 1.35; }
+.k-tile .td { display: block; color: var(--text-muted); font-size: 0.8rem; font-weight: 400; margin-top: 2px; line-height: 1.4; }
+/* The number key hangs from the top edge like a small bookmark tab. */
+.k-tile kbd {
+  position: absolute; top: -1px; right: 12px; font-family: var(--font-code); font-size: 0.66rem; font-weight: 500; line-height: 1;
+  color: var(--on-a); background: var(--b-deep); padding: 5px 7px 8px; border-radius: 0 0 4px 4px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%);
+}
+.k-tile.primary { background: linear-gradient(180deg, color-mix(in srgb, var(--a) 88%, #f5c08a), var(--a)); color: var(--on-a); }
+.k-tiles:not(.locked) .k-tile.primary { box-shadow: inset 1px 1px 0 rgba(255, 240, 215, 0.45), 0 3px 0 var(--a-deep), 0 12px 20px -10px rgba(0, 0, 0, 0.75); }
+.k-tile.primary .ti { background: rgba(0, 0, 0, 0.14); color: var(--on-a); box-shadow: none; }
+.k-tile.primary .td { color: color-mix(in srgb, var(--on-a) 78%, transparent); }
+.k-tile.primary kbd { background: var(--b); }
+.k-tile.quiet { background: transparent; border-style: dashed; border-color: var(--line-2); box-shadow: none; color: var(--text-muted); }
+.k-tile.quiet .ti { color: var(--text-muted); background: transparent; box-shadow: none; }
+.k-tile.quiet kbd { background: var(--panel-2); color: var(--text-muted); }
+.k-tile.picked {
+  transform: translateY(-3px); background: linear-gradient(180deg, #1d2440, #171d36);
+  box-shadow: inset 0 0 0 1px rgba(var(--a-rgb), 0.6), inset 1px 1px 0 rgba(255, 238, 212, 0.1), 5px 6px 0 -1px #10152a, 6px 18px 26px -10px rgba(0, 0, 0, 0.85);
+}
+.k-tile.picked kbd { background: var(--a); }
+.k-tile.primary.picked { background: linear-gradient(180deg, color-mix(in srgb, var(--a) 88%, #f5c08a), var(--a)); box-shadow: inset 0 0 0 1px rgba(255, 240, 215, 0.5), 5px 6px 0 -1px #10152a, 6px 18px 26px -10px rgba(0, 0, 0, 0.85); }
+.k-tile.good {
+  transform: translateY(-3px); background: linear-gradient(180deg, color-mix(in srgb, var(--panel-2) 86%, var(--good)), var(--panel-2)) !important;
+  box-shadow: inset 0 0 0 1.5px rgba(var(--good-rgb), 0.85), inset 1px 1px 0 rgba(255, 238, 212, 0.1), 5px 6px 0 -1px #10152a, 6px 18px 26px -10px rgba(0, 0, 0, 0.85) !important;
+}
+.k-tile.good .ti { color: #10241a; background: var(--good); box-shadow: none; }
+.k-tile.good kbd { background: var(--good); }
+.k-tile.miss {
+  background: linear-gradient(180deg, #24192a, #1f1626) !important; animation: k-shake 0.4s;
+  box-shadow: inset 0 0 0 1.5px rgba(var(--miss-rgb), 0.75), 0 1px 0 rgba(0, 0, 0, 0.5), 0 14px 22px -12px rgba(0, 0, 0, 0.8) !important;
+}
+.k-tile.miss .tt { text-decoration: line-through; text-decoration-color: rgba(var(--miss-rgb), 0.7); text-decoration-thickness: 1.5px; }
+.k-tile.miss .ti { color: #2a1210; background: var(--miss); box-shadow: none; }
+.k-tile.miss kbd { background: var(--miss); }
+.k-tile.reveal { box-shadow: inset 0 0 0 1.5px rgba(var(--good-rgb), 0.6), var(--sheet); border-style: solid; border-color: transparent; }
+.k-tiles.locked .k-tile { pointer-events: none; }
+.k-tiles.locked .k-tile:not(.picked):not(.good):not(.miss):not(.reveal) { opacity: 0.4; box-shadow: none; }
+.k-tiles.gone { opacity: 0; max-height: 0; margin-top: 0; margin-bottom: 0; overflow: hidden; }
+
+/* ---------- progress ----------
+   Bar: a ribbon in a cut track, notched at its end. Segments: paper pips. Ring: cut into paper segments. */
+.k-segs { display: flex; gap: 4px; }
+.k-segs i { flex: 1; height: 6px; border-radius: 2px; background: #1c2138; box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6); }
+.k-segs i.done { background: var(--a); box-shadow: inset 0 1px 0 rgba(255, 240, 215, 0.3); }
+.k-segs i.now { background: var(--b); box-shadow: none; }
+.k-segs i.writing { background: linear-gradient(90deg, rgba(231, 178, 80, 0.2), rgba(231, 178, 80, 0.75), rgba(231, 178, 80, 0.2)); background-size: 200% 100%; animation: k-shimmer 1.4s linear infinite; box-shadow: none; }
+.k-segs i.miss { background: var(--miss); box-shadow: none; }
+.k-bar { position: relative; height: 8px; border-radius: 3px; background: #080b16; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.04); }
+.k-bar > i {
+  display: block; height: 100%; border-radius: 3px 0 0 3px; transition: width 0.6s;
+  background: linear-gradient(180deg, #eab27b, color-mix(in srgb, var(--a) 90%, #000));
+  clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 50%, 100% 100%, 0 100%);
+}
+.k-ring { display: inline-grid; place-items: center; position: relative; }
+.k-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.k-ring circle { fill: none; }
+.k-ring .track { stroke: #1c2138; }
+.k-ring .val { stroke: var(--a); transition: stroke-dashoffset 0.8s ease; }
+.k-ring .label { position: relative; font-family: var(--font-ui); font-weight: 600; font-size: 0.8rem; }
+
+/* ---------- course rows (sidebar) and cards ---------- */
+.k-clist { display: flex; flex-direction: column; gap: 2px; }
+.k-crow {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 7px; border-radius: 9px; color: #cfcade; text-decoration: none;
+  transition: background 0.15s, box-shadow 0.15s, color 0.15s;
+}
+.k-crow:hover { background: rgba(255, 255, 255, 0.03); color: var(--text); }
+.k-crow.active { background: var(--panel); box-shadow: var(--sheet); color: var(--text); }
+.k-crow .t { flex: 1; min-width: 0; font-weight: 500; font-size: 0.84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.k-crow .k-rib { height: 17px; padding: 0 10px 0 6px; font-size: 0.56rem; }
+.k-cdot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--a); }
+.k-cdot.making { background: var(--gold); animation: k-pulse 1.4s infinite; }
+.k-cdot.needs { background: var(--ribbon); box-shadow: 0 0 0 3px rgba(200, 71, 59, 0.22); }
+.k-cdot.done { background: var(--b-deep); }
+.k-cdot.stopped { background: var(--faint); }
+.k-cico {
+  position: relative; width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: 6px; color: var(--a);
+  background: var(--panel-2); box-shadow: inset 1px 1px 0 rgba(255, 238, 212, 0.07), 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+.k-cico svg { width: 15px; height: 15px; }
+.k-cico.making { color: var(--gold); }
+.k-cico.needs { color: var(--ribbon-text); }
+.k-cico.done { color: var(--b-deep); }
+.k-cico.stopped { color: var(--faint); background: var(--well); }
+.k-cico .k-cdot { position: absolute; right: -3px; bottom: -3px; border: 2px solid var(--bg-2); box-sizing: content-box; }
+.k-crow.active .k-cico .k-cdot { border-color: var(--panel); }
+.k-cbar { width: 34px; height: 4px; border-radius: 2px; background: #080b16; box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.7); overflow: hidden; flex: none; }
+.k-cbar i { display: block; height: 100%; background: var(--a); transition: width 0.6s; }
+.k-cbar.writing { background: linear-gradient(90deg, rgba(231, 178, 80, 0.15), rgba(231, 178, 80, 0.65), rgba(231, 178, 80, 0.15)); background-size: 200% 100%; animation: k-shimmer 1.4s linear infinite; }
+.k-see-all { font-family: var(--font-code); font-size: 0.66rem; color: var(--a); padding: 4px 7px; text-align: left; text-decoration: none; }
+.k-see-all:hover { text-decoration: underline; }
+
+.k-ccard {
+  display: block; padding: 14px 15px 15px; border-radius: 12px; text-decoration: none; color: var(--text); background: var(--panel); box-shadow: var(--sheet);
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.3), box-shadow 0.18s;
+}
+a.k-ccard:hover { transform: translateY(-2px); box-shadow: var(--stack); }
+.k-ccard .h { display: flex; gap: 12px; align-items: center; }
+.k-ccard .cov {
+  width: 40px; height: 40px; border-radius: 10px; flex: none; display: grid; place-items: center; color: var(--a);
+  background: var(--panel-2); box-shadow: inset 1px 1px 0 rgba(255, 238, 212, 0.08), 0 2px 5px rgba(0, 0, 0, 0.55);
+}
+.k-ccard .cov svg { width: 20px; height: 20px; }
+.k-ccard .cov.making { color: var(--gold); }
+.k-ccard .cov.needs { color: var(--ribbon-text); }
+.k-ccard .cov.done { color: var(--b-deep); }
+.k-ccard .cov.stopped { color: var(--faint); background: var(--well); }
+.k-ccard .t { font-weight: 600; font-size: 0.98rem; line-height: 1.3; }
+.k-ccard .sub { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; line-height: 1.35; }
+.k-ccard .k-rib { margin-left: auto; align-self: flex-start; }
+.k-ccard .k-segs { margin-top: 14px; }
+.k-ccard .m { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-family: var(--font-code); font-size: 0.66rem; color: var(--faint); }
+
+/* ---------- companion card (markup is phase 2's; paper styling only) ---------- */
+.k-buddy { position: relative; border-radius: 12px; padding: 11px; overflow: hidden; flex: none; background: var(--panel); box-shadow: var(--sheet); }
+.k-buddy .top { display: flex; gap: 12px; align-items: center; }
+.k-buddy .av { position: relative; width: 60px; height: 60px; flex: none; border-radius: 50%; cursor: pointer; padding: 0; border: 0; background: none; -webkit-tap-highlight-color: transparent; }
+.k-buddy .av:focus-visible { outline: 2px solid var(--a); outline-offset: 4px; }
+.k-buddy .goal { position: absolute; inset: -3px; width: calc(100% + 6px); height: calc(100% + 6px); transform: rotate(-90deg); }
+.k-buddy .goal circle { fill: none; stroke-width: 3; }
+.k-buddy .goal .track { stroke: #080b16; }
+.k-buddy .goal .val { stroke: var(--a); transition: stroke-dashoffset 0.8s ease; }
+.k-buddy .id { flex: 1; min-width: 0; }
+.k-buddy .id .nm { font-family: var(--font-display); font-weight: 400; font-size: 1.35rem; line-height: 1.1; }
+.k-buddy .brow { display: flex; gap: 8px; margin-top: 6px; font-size: 0.84rem; }
+.k-buddy .brow > span { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 8px; background: #10152a; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5); }
+.k-buddy .brow b { font-weight: 600; }
+.k-buddy .brow svg { width: 13px; height: 13px; color: var(--a); }
+.k-buddy .brow > span:first-child svg { color: var(--ribbon-text); }
+.k-buddy .brow small { font-size: 0.68rem; color: var(--text-muted); margin-left: -2px; }
+.k-buddy .say-wrap { min-height: calc(2 * 1.4em + 14px + 10px); padding-top: 10px; font-size: 0.82rem; }
+.k-buddy .say {
+  position: relative; width: fit-content; max-width: 100%; min-width: 64px; padding: 7px 10px; border-radius: 3px 10px 10px 10px; line-height: 1.4;
+  background: #1d2440; color: #e9e2d4; box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.6);
+}
+.k-buddy .say .text { position: relative; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; animation: k-say-pop 0.38s var(--ease-pop); }
+.k-buddy .say .dots { position: relative; display: inline-flex; gap: 4px; height: 1.4em; align-items: center; }
+.k-buddy .say .dots i { width: 4px; height: 4px; background: var(--b); transform: rotate(45deg); opacity: 0.8; animation: k-dot 0.9s infinite; }
+.k-buddy .say .dots i:nth-child(2) { animation-delay: 0.15s; }
+.k-buddy .say .dots i:nth-child(3) { animation-delay: 0.3s; }
+.k-buddy .spk { position: absolute; color: var(--gold); opacity: 0; pointer-events: none; font-size: 0.8rem; }
+.k-buddy.cheer .spk { animation: k-spark 1.2s ease-out 2; }
+
+/* ---------- logo ---------- */
+.k-logo { display: inline-block; width: var(--s, 28px); height: var(--s, 28px); flex: none; }
+.k-logo svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.k-logo .tassel { transform-box: view-box; transform-origin: 94px 22.5px; }
+.k-brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+.k-brand:hover .k-logo .tassel { animation: k-tassel 1s ease-in-out 2; }
+
+/* ---------- loader ----------
+   A small book whose page keeps turning, read by the companion's head over the top. */
+.k-loader { display: inline-flex; flex-direction: column; align-items: center; gap: calc(var(--s) * 0.12); vertical-align: middle; }
+.k-loader .art { display: block; line-height: 0; }
+.k-loader svg { display: block; width: var(--s); height: var(--s); overflow: visible; }
+.k-loader svg * { transform-box: view-box; }
+.k-loader .lp { transform-origin: 32px 0; animation: k-ld-flip 1.6s cubic-bezier(0.5, 0, 0.3, 1) infinite; }
+.k-loader .lp2 { animation-delay: 0.12s; }
+.k-loader .le { animation: k-ld-read 1.6s ease-in-out infinite; }
+.k-loader .lh { transform-origin: 32px 44px; animation: k-ld-bob 1.6s ease-in-out infinite; }
+.k-loader .label { font-size: 0.86rem; color: var(--text-muted); }
+.k-loader.sm { flex-direction: row; gap: 0; }
+
+/* ---------- toasts, confetti, cheer chip ---------- */
+.k-confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 70; }
+.k-toasts { position: fixed; top: 70px; right: 22px; z-index: 80; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; pointer-events: none; }
+.k-toast {
+  pointer-events: auto; display: flex; gap: 12px; align-items: center; padding: 10px 16px 10px 10px; border-radius: 12px; min-width: 240px; max-width: 360px;
+  background: var(--panel-2); box-shadow: var(--stack); animation: k-toast-in 0.45s var(--ease-pop);
+}
+.k-toast.out { animation: k-toast-out 0.3s ease-in forwards; }
+.k-toast.error { box-shadow: inset 0 0 0 1px rgba(var(--miss-rgb), 0.45), var(--stack); }
+.k-toast .tic { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: var(--a); color: var(--on-a); flex: none; box-shadow: inset 1px 1px 0 rgba(255, 240, 215, 0.4), 0 2px 0 var(--a-deep); }
+.k-toast.celebrate .tic { background: var(--gold); box-shadow: inset 1px 1px 0 rgba(255, 240, 215, 0.4), 0 2px 0 #a87b2a; }
+.k-toast.error .tic { background: var(--miss); color: #2a1210; box-shadow: 0 2px 0 #8f3b33; }
+.k-toast .tic svg { width: 18px; height: 18px; }
+.k-toast b { display: block; font-size: 0.9rem; font-weight: 600; }
+.k-toast span { display: block; font-size: 0.78rem; color: var(--text-muted); margin-top: 1px; }
+/* The cheer chip: a little cream ribbon that floats up. */
+.k-chip-float {
+  position: fixed; z-index: 60; pointer-events: none; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  font-family: var(--font-code); font-weight: 500; font-size: 0.72rem; letter-spacing: 0.04em; color: var(--on-a);
+  background: var(--b); padding: 5px 14px 5px 9px; border-radius: 3px 0 0 3px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 50%, 100% 100%, 0 100%);
+  filter: drop-shadow(1px 3px 2px rgba(0, 0, 0, 0.55));
+}
+.k-chip-float svg { width: 13px; height: 13px; color: var(--a-deep); }
+
+/* ---------- dialog ---------- */
+.k-dialog-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(4, 5, 11, 0.66); animation: k-fade 0.2s ease-out; border: 0; }
+.k-dialog {
+  position: fixed; z-index: 91; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
+  border-radius: 14px; padding: 22px; background: var(--panel); box-shadow: var(--stack), 0 30px 60px -24px rgba(0, 0, 0, 0.9); animation: k-dialog-in 0.3s var(--ease-pop);
+}
+.k-dialog h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.75rem; line-height: 1.1; }
+.k-dialog .body { margin-top: 10px; color: var(--text-muted); line-height: 1.6; font-size: 0.92rem; }
+.k-dialog .actions { margin-top: 22px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- empty and error states ---------- */
+.k-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 32px 20px; border-radius: 14px; background: var(--panel); box-shadow: var(--sheet); }
+.k-state.error { background: linear-gradient(180deg, #24192a, #1f1626); box-shadow: inset 0 0 0 1px rgba(var(--miss-rgb), 0.35), var(--sheet); }
+.k-state h3 { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; line-height: 1.1; }
+.k-state p { color: var(--text-muted); max-width: 420px; line-height: 1.55; font-size: 0.92rem; }
+.k-state .art { width: 64px; height: 64px; }
+
+/* ---------- keyframes ---------- */
+@keyframes k-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes k-pop { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes k-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes k-dialog-in { from { opacity: 0; transform: translate(-50%, -46%) scale(0.97); } to { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes k-dot { 0%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+@keyframes k-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+@keyframes k-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+@keyframes k-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes k-hop { 0%, 100% { transform: translateY(0); } 40%, 60% { transform: translateY(-7px); } }
+@keyframes k-shimmer { from { background-position: 200% 0; } to { background-position: 0 0; } }
+@keyframes k-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+@keyframes k-spark { 0% { opacity: 0; transform: scale(0.4); } 30% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: translateY(-10px) scale(0.6); } }
+@keyframes k-toast-in { from { opacity: 0; transform: translateY(-10px) scale(0.95); } to { opacity: 1; transform: none; } }
+@keyframes k-toast-out { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes k-twitch-r { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(14deg); } 60% { transform: rotate(-6deg); } }
+@keyframes k-twitch-l { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-12deg); } 60% { transform: rotate(5deg); } }
+@keyframes k-squish { 0% { transform: scale(1, 1); } 30% { transform: scale(1.1, 0.86); } 60% { transform: scale(0.95, 1.06); } 100% { transform: scale(1, 1); } }
+@keyframes k-say-pop { from { opacity: 0; transform: translateY(3px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes k-tassel { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(9deg); } }
+/* Loader page turn: the page folds over the spine, darker on its back side. */
+@keyframes k-ld-flip {
+  0%, 12% { transform: scaleX(1) skewY(0deg); fill: #e2d3b2; }
+  49.9% { fill: #e2d3b2; }
+  50% { transform: scaleX(0) skewY(-12deg); }
+  50.1% { fill: #a99878; }
+  88%, 100% { transform: scaleX(-1) skewY(0deg); fill: #d4c3a0; }
+}
+@keyframes k-ld-read { 0%, 12% { transform: translateX(1.4px); } 50% { transform: translateX(0); } 82%, 90% { transform: translateX(-1.4px); } 100% { transform: translateX(1.4px); } }
+@keyframes k-ld-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(0.8px); } }
+

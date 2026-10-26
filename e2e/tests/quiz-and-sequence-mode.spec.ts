@@ -26,11 +26,12 @@ async function retake(page: Page) {
  * @param page - Playwright page
  */
 async function openLessons(page: Page) {
-  await page.getByRole("button", { name: "Lessons" }).click();
+  // The Course outline sits in the sidebar, open by default on desktop.
+  await expect(page.getByRole("button", { name: "Hide lessons" })).toBeVisible();
   return page.getByRole("navigation", { name: "Lessons" });
 }
 
-test("Per-item feedback: Check, Show answer, and a failing Submit keeps the next Lesson locked", async ({ page }) => {
+test("Per-item feedback: Check reveals the right answer, and a failing Submit keeps the next Lesson locked", async ({ page }) => {
   await resetFixture();
   await page.goto(lessonUrl(SEEDED_QUIZ_LESSON_ID));
 
@@ -41,9 +42,15 @@ test("Per-item feedback: Check, Show answer, and a failing Submit keeps the next
   await expect(first.getByText("✗ Not quite")).toBeVisible();
   await expect(first.getByRole("radio").first()).toBeDisabled();
 
-  await first.getByRole("button", { name: "Show answer" }).click();
+  // A wrong answer reveals the right one with its Check; there is no Show answer step.
   const item = SEEDED_QUIZ_BODY.items[0]!;
   await expect(first.getByText(item.explanations.standard)).toBeVisible();
+  const right = item.options.find((option) => option.id === item.correctOptionId)!;
+  await expect(first.getByText(`Correct answer: ${right.text}`)).toBeVisible();
+  await expect(first.getByRole("button", { name: "Show answer" })).toHaveCount(0);
+  // The next question's answer is not in the page before it is answered.
+  const nextItem = SEEDED_QUIZ_BODY.items[1]!;
+  await expect(page.getByText(nextItem.explanations.standard)).toHaveCount(0);
 
   await expect(page.getByRole("button", { name: "Submit" })).toBeDisabled();
   for (let index = 1; index < SEEDED_QUIZ_BODY.items.length; index += 1) {
@@ -136,7 +143,7 @@ test("Free jump: disclaimer, later Lessons open before a pass, no way back to li
   const lessons = await openLessons(page);
   await lessons.getByRole("link", { name: FOLLOW_UP_TITLE }).click();
   await expect(page).toHaveURL(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
-  await page.getByRole("button", { name: "Mark complete" }).click();
+  await page.getByRole("button", { name: "I've read it" }).click();
   await expect(page.getByText("The square knot · 1 / 3")).toBeVisible();
 
   await page.getByRole("button", { name: "Course menu" }).click();

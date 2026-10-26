@@ -117,6 +117,10 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
         request.log.error(`[course-requests.ts: courseRequestRoutes] Validity provider failed || requestId=${row.id} || ${message}`);
         return reply.code(502).send({ error: "Validity review could not finish. Your Request is unchanged; try again." });
       }
+      // An unresolved answer is asked the same question again; keep offering its answers if the gate offered none.
+      if (validity.outcome === "clarify" && !validity.answerOptions?.length && row.validity?.answerOptions?.length) {
+        validity = { ...validity, answerOptions: row.validity.answerOptions };
+      }
       const status = validity.outcome === "pass" ? "validity_passed" : validity.outcome === "reject" ? "rejected" : "awaiting_clarification";
       const [updated] = await app.db.update(courseRequests).set({ validity, clarification, status }).where(and(
         eq(courseRequests.id, row.id), eq(courseRequests.learnerId, request.currentLearner.id),
@@ -141,7 +145,10 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
     try {
       const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
       if (!row) return reply;
-      if (row.status !== "rejected") return reply.code(409).send({ error: "Only a rejected Request can be revised here." });
+      // Revise request follows a rejection, or a Course that could not be generated (spec §5.1); the original stays as it is.
+      if (row.status !== "rejected" && row.status !== "generation_failed") {
+        return reply.code(409).send({ error: "Only a rejected or failed Request can be revised here." });
+      }
       if (request.currentLearner.teachingProfileVersion !== TEACHING_PROFILE_VERSION || request.currentLearner.teachingProfileAnswers == null) {
         return reply.code(409).send({ error: "Save your Teaching Profile before creating a Course Request." });
       }
@@ -151,7 +158,7 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
       }).returning(requestFields);
       if (!draft) throw new Error("Revised Request was not saved.");
       void recordProductEvent("course_request_created", {
-        learnerId: request.currentLearner.id, courseRequestId: draft.id, detail: { revisedFromId: row.id, from: "rejected" },
+        learnerId: request.currentLearner.id, courseRequestId: draft.id, detail: { revisedFromId: row.id, from: row.status },
       });
       return reply.code(201).send({ courseRequest: draft });
     } catch (error) {

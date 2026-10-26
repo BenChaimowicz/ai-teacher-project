@@ -4,17 +4,20 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button.tsx";
 import { ConfirmDialog } from "@/components/confirm-dialog.tsx";
 import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
-import { COURSE_REQUEST_BLOCKED } from "@/lib/teaching-profile-copy.ts";
 import { cn } from "@/lib/utils";
+
+/** Why New course waits, in plain words (spec §3: the Profile comes first). */
+const PROFILE_FIRST = "Before your first course: a few quick choices about how I teach you. It takes about a minute, and Home stays open meanwhile.";
 
 /**
  * New Course Request control that blocks until the Teaching Profile is saved.
+ * `sidebar` is the shell's primary "New course" button.
  */
 export function CourseRequestControl({
   variant,
   children,
 }: {
-  variant: "nav" | "button";
+  variant: "nav" | "button" | "sidebar";
   children: ReactNode;
 }) {
   const { loading, present } = useTeachingProfile();
@@ -24,9 +27,9 @@ export function CourseRequestControl({
   const dialog = (
     <ConfirmDialog
       open={open}
-      title="Teaching Profile comes first"
-      body={COURSE_REQUEST_BLOCKED}
-      confirmLabel="Go to Teaching Profile"
+      title="First, how you like to learn"
+      body={PROFILE_FIRST}
+      confirmLabel="Set it up"
       cancelLabel="Not now"
       onConfirm={() => {
         setOpen(false);
@@ -35,6 +38,24 @@ export function CourseRequestControl({
       onCancel={() => setOpen(false)}
     />
   );
+
+  if (variant === "sidebar") {
+    if (present) {
+      return (
+        <Link to="/new-course-request" className="k-new">
+          {children}
+        </Link>
+      );
+    }
+    return (
+      <>
+        <button type="button" className="k-new" disabled={loading} onClick={() => setOpen(true)}>
+          {children}
+        </button>
+        {dialog}
+      </>
+    );
+  }
 
   if (variant === "nav") {
     if (present) {

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="amethyst">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Knibbler · study (mock)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&display=swap" rel="stylesheet" />
+<style>
+  /* ---------- palettes (same as 02-new-course) ---------- */
+  :root, [data-theme="amethyst"] { --a: #a78bfa; --b: #7dd3fc; --on-a: #140f26; --a-rgb: 167, 139, 250; --b-rgb: 125, 211, 252; --bao-hi: #f5f3ff; --bao-lo: #c4b5fd; --bao-ear: #b4a3f7; }
+  [data-theme="rose"]   { --a: #fb7185; --b: #f9a8d4; --on-a: #2a0a12; --a-rgb: 251, 113, 133; --b-rgb: 249, 168, 212; --bao-hi: #fff1f2; --bao-lo: #fbb6c4; --bao-ear: #f49aae; }
+  [data-theme="honey"]  { --a: #f5c451; --b: #c8935f; --on-a: #2a1d05; --a-rgb: 245, 196, 81;  --b-rgb: 200, 147, 95;  --bao-hi: #fdf3dc; --bao-lo: #e3b373; --bao-ear: #c8935f; }
+  [data-theme="matcha"] { --a: #9ae6b4; --b: #fdba74; --on-a: #0b2414; --a-rgb: 154, 230, 180; --b-rgb: 253, 186, 116; --bao-hi: #fff7ed; --bao-lo: #f6c99a; --bao-ear: #eab17a; }
+  [data-theme="slate"]  { --a: #cbd5e1; --b: #60a5fa; --on-a: #0f172a; --a-rgb: 203, 213, 225; --b-rgb: 96, 165, 250;  --bao-hi: #f1f5f9; --bao-lo: #a8b4c4; --bao-ear: #94a3b8; }
+
+  html[data-theme] {
+    --bg: color-mix(in srgb, var(--a) 5%, #0b0b0f);
+    --bg-2: color-mix(in srgb, var(--a) 8%, #0d0d12);
+    --panel: color-mix(in srgb, var(--a) 9%, #121217);
+    --panel-2: color-mix(in srgb, var(--a) 15%, #16161c);
+    --line: rgba(var(--a-rgb), 0.13); --line-2: rgba(var(--a-rgb), 0.22);
+    --a-soft: rgba(var(--a-rgb), 0.16); --a-line: rgba(var(--a-rgb), 0.45); --b-soft: rgba(var(--b-rgb), 0.16);
+    --glow: 0 0 26px rgba(var(--a-rgb), 0.28);
+    --text: #ecebf2; --read: #dddbe6; --muted: #a3a1b3; --faint: #6c6a7c;
+    --good: #86efac; --good-rgb: 134, 239, 172; --miss: #fda4af; --miss-rgb: 253, 164, 175;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    color: var(--text); font-family: "Manrope", ui-sans-serif, system-ui, sans-serif; font-size: 15px; -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(900px 520px at 85% -10%, rgba(var(--a-rgb), 0.14), transparent 65%),
+      radial-gradient(700px 480px at 30% 115%, rgba(var(--b-rgb), 0.09), transparent 65%),
+      var(--bg);
+  }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+
+  .app { display: grid; grid-template-columns: 290px 1fr; height: 100vh; transition: grid-template-columns 0.25s; }
+  .app.rail-closed { grid-template-columns: 0 1fr; }
+
+  /* ---------- course rail ---------- */
+  .rail {
+    background: linear-gradient(180deg, rgba(var(--a-rgb), 0.10), transparent 45%), var(--bg-2);
+    border-right: 1px solid var(--line); overflow: hidden auto; display: flex; flex-direction: column;
+  }
+  .rail-in { padding: 18px 14px; display: flex; flex-direction: column; gap: 18px; min-width: 290px; flex: 1; }
+  .back { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.86rem; font-weight: 600; padding: 4px 6px; }
+  .back:hover { color: var(--text); }
+  .course-head { padding: 0 6px; }
+  .course-head h1 { font-size: 1.05rem; font-weight: 800; line-height: 1.35; }
+  .prog { margin-top: 10px; display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--muted); }
+  .prog .bar { flex: 1; height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .prog .bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--a), var(--b)); box-shadow: 0 0 12px rgba(var(--b-rgb), 0.4); transition: width 0.6s; }
+
+  .outline { list-style: none; display: grid; gap: 2px; }
+  .outline li button { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 8px; border-radius: 10px; font-size: 0.88rem; }
+  .outline li button:hover { background: var(--panel); }
+  .outline .ic { width: 20px; height: 20px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 0.65rem; border: 1.5px solid var(--line-2); color: var(--faint); }
+  .outline .lt { flex: 1; min-width: 0; }
+  .outline .lt small { display: block; color: var(--faint); font-size: 0.74rem; margin-top: 1px; }
+  .outline li.done .ic { background: var(--a-soft); border-color: var(--a-line); color: var(--a); }
+  .outline li.done .lt { color: var(--muted); }
+  .outline li.now button { background: rgba(var(--a-rgb), 0.16); box-shadow: inset 3px 0 0 var(--a); }
+  .outline li.now .ic { border-color: var(--a); box-shadow: var(--glow); }
+  .outline li.now .ic::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--a); }
+  .outline li.locked .lt { color: var(--faint); }
+  .outline li.added { animation: added 1.6s ease-out; }
+  .outline li.added button { box-shadow: inset 0 0 0 1px rgba(var(--b-rgb), 0.45); }
+  .new-badge { font-size: 0.66rem; font-weight: 800; color: var(--b); background: var(--b-soft); padding: 2px 7px; border-radius: 99px; }
+
+  .controls { margin-top: auto; background: var(--panel); border: 1px dashed var(--line-2); border-radius: 12px; padding: 12px; }
+  .controls p { font-size: 0.7rem; font-weight: 700; color: var(--faint); margin-bottom: 8px; }
+  .sw { display: flex; gap: 6px; }
+  .sw button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; padding: 3px; }
+  .sw button[aria-pressed="true"] { border-color: var(--text); }
+  .sw span { display: block; width: 100%; height: 100%; border-radius: 50%; }
+  .views { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .views button { font-size: 0.78rem; font-weight: 700; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line-2); color: var(--muted); }
+  .views button.on { background: var(--a-soft); color: var(--a); border-color: var(--a-line); }
+
+  /* ---------- main ---------- */
+  .main { display: flex; flex-direction: column; height: 100vh; min-width: 0; }
+  .top { position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 24px; }
+  .top::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, rgba(var(--a-rgb), 0.5), rgba(var(--b-rgb), 0.35) 60%, transparent); }
+  .icon-btn { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: var(--muted); border: 1px solid var(--line); }
+  .icon-btn:hover { color: var(--text); background: var(--panel); }
+  .crumb { font-size: 0.86rem; color: var(--muted); }
+  .crumb b { color: var(--text); font-weight: 700; }
+  .read-prog { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: linear-gradient(90deg, var(--a), var(--b)); box-shadow: 0 0 10px rgba(var(--b-rgb), 0.6); z-index: 1; }
+  .top .spacer { flex: 1; }
+  .pill { font-size: 0.78rem; font-weight: 700; padding: 5px 11px; border-radius: 99px; background: var(--a-soft); color: var(--a); }
+
+  .scroll { flex: 1; overflow-y: auto; scroll-behavior: smooth; }
+  .page { max-width: 700px; margin: 0 auto; padding: 48px 28px 80px; }
+
+  /* reading */
+  .kicker { font-size: 0.8rem; font-weight: 700; color: var(--a); }
+  .page h2.title { font-family: "Literata", Georgia, serif; font-weight: 600; font-size: 2.2rem; line-height: 1.2; margin-top: 8px; letter-spacing: -0.01em; }
+  .learn { margin-top: 14px; color: var(--muted); font-size: 0.95rem; }
+  .learn b { color: var(--text); font-weight: 600; }
+  .meta-row { display: flex; gap: 14px; margin-top: 14px; font-size: 0.8rem; color: var(--faint); }
+  .prose { font-family: "Literata", Georgia, serif; font-size: 1.12rem; line-height: 1.8; color: var(--read); margin-top: 36px; }
+  .prose h3 { font-family: "Manrope", sans-serif; font-size: 1.15rem; font-weight: 800; color: var(--text); margin: 40px 0 10px; }
+  .prose p + p { margin-top: 18px; }
+  .prose sup a { font-family: "Manrope", sans-serif; font-size: 0.7rem; color: var(--a); text-decoration: none; padding: 0 2px; }
+  .prose em { color: var(--text); }
+  .figure {
+    margin: 28px 0; border-radius: 14px; border: 1px solid var(--line); overflow: hidden;
+    background: linear-gradient(180deg, rgba(var(--a-rgb), 0.08), rgba(var(--b-rgb), 0.04)), var(--panel);
+    font-family: "Manrope", sans-serif;
+  }
+  .timeline { display: grid; grid-template-columns: repeat(4, 1fr); padding: 22px 18px 18px; gap: 6px; position: relative; }
+  .timeline::before { content: ""; position: absolute; left: 30px; right: 30px; top: 31px; height: 2px; background: linear-gradient(90deg, var(--a), var(--b)); opacity: 0.6; }
+  .tl { text-align: center; position: relative; }
+  .tl i { display: block; width: 14px; height: 14px; border-radius: 50%; margin: 0 auto; background: var(--bg); border: 2px solid var(--a); }
+  .tl.hl i { background: var(--a); box-shadow: var(--glow); }
+  .tl b { display: block; margin-top: 10px; font-size: 0.86rem; }
+  .tl span { display: block; color: var(--muted); font-size: 0.76rem; margin-top: 3px; line-height: 1.4; }
+  .figure figcaption { padding: 10px 18px; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--faint); }
+
+  .note {
+    display: flex; gap: 12px; align-items: flex-start; margin: 26px 0; padding: 14px 16px; border-radius: 14px;
+    background: rgba(var(--a-rgb), 0.07); border: 1px solid rgba(var(--a-rgb), 0.2);
+    font-family: "Manrope", sans-serif; font-size: 0.92rem; line-height: 1.55; color: var(--text);
+  }
+  .note .av { width: 30px; height: 30px; flex: none; }
+  .note b { color: var(--a); }
+
+  .sources { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 0.84rem; color: var(--muted); }
+  .sources h4 { font-size: 0.78rem; color: var(--faint); font-weight: 700; margin-bottom: 8px; }
+  .sources li { list-style: none; margin-top: 6px; }
+  .sources li b { color: var(--a); margin-right: 6px; }
+
+  /* Bao rows (shared with 02) */
+  .bao-area { margin-top: 44px; display: flex; flex-direction: column; gap: 8px; }
+  .row { display: flex; gap: 12px; align-items: flex-start; animation: in 0.3s ease-out both; }
+  .row.gap { margin-top: 14px; }
+  .row .av { width: 34px; height: 34px; flex: none; border-radius: 50%; background: rgba(var(--a-rgb), 0.14); box-shadow: 0 0 0 1px rgba(var(--a-rgb), 0.3), 0 0 16px rgba(var(--a-rgb), 0.2); padding: 2px; }
+  .row .av.empty { visibility: hidden; }
+  .msg { line-height: 1.6; padding: 6px 0; max-width: 580px; }
+  .msg .faint { color: var(--muted); }
+  .row.me { justify-content: flex-end; }
+  .row.me .msg { background: linear-gradient(135deg, rgba(var(--a-rgb), 0.28), rgba(var(--b-rgb), 0.16)); border: 1px solid rgba(var(--a-rgb), 0.4); padding: 8px 14px; border-radius: 14px 14px 4px 14px; }
+  .row.me.good .msg { background: rgba(var(--good-rgb), 0.12); border-color: rgba(var(--good-rgb), 0.4); }
+  .row.me.miss .msg { background: rgba(var(--miss-rgb), 0.1); border-color: rgba(var(--miss-rgb), 0.38); }
+  .mark { font-weight: 800; margin-left: 8px; }
+  .good .mark { color: var(--good); } .miss .mark { color: var(--miss); }
+  .typing { display: inline-flex; gap: 4px; padding: 12px 0; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--a); opacity: 0.35; animation: dot 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: 0.15s; } .typing i:nth-child(3) { animation-delay: 0.3s; }
+
+  .opts { display: grid; gap: 8px; margin: 6px 0 0 46px; }
+  .opt { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 14px; border-radius: 12px; background: rgba(var(--a-rgb), 0.07); border: 1px solid rgba(var(--a-rgb), 0.2); transition: background 0.15s, box-shadow 0.15s; }
+  .opt:hover { background: rgba(var(--a-rgb), 0.16); box-shadow: var(--glow); }
+  .opt kbd { font: inherit; font-size: 0.75rem; font-weight: 700; width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(var(--a-rgb), 0.35); color: var(--a); display: grid; place-items: center; flex: none; }
+  .opt.unsure { color: var(--muted); }
+  .opts.inline { display: flex; flex-wrap: wrap; }
+  .btn { padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 0.92rem; }
+  .btn.primary { background: var(--a); color: var(--on-a); }
+  .btn.primary:hover { filter: brightness(1.08); box-shadow: var(--glow); }
+  .btn.ghost { border: 1px solid rgba(var(--a-rgb), 0.3); }
+  .btn.ghost:hover { background: var(--panel); }
+
+  .qcount { display: flex; gap: 6px; margin: 8px 0 0 46px; }
+  .qcount i { width: 26px; height: 5px; border-radius: 99px; background: var(--line-2); }
+  .qcount i.on { background: var(--a); box-shadow: 0 0 8px rgba(var(--a-rgb), 0.5); }
+  .qcount i.good { background: var(--good); } .qcount i.miss { background: var(--miss); }
+
+  .card { margin: 8px 0 4px 46px; padding: 18px; border-radius: 14px; background: linear-gradient(180deg, rgba(var(--a-rgb), 0.09), rgba(var(--b-rgb), 0.04)), var(--panel); border: 1px solid rgba(var(--a-rgb), 0.24); animation: in 0.3s ease-out both; }
+  .score { display: flex; align-items: baseline; gap: 10px; }
+  .score b { font-size: 2rem; font-weight: 800; color: var(--a); }
+  .score span { color: var(--muted); }
+  .path-change { display: flex; gap: 10px; align-items: center; margin-top: 14px; padding: 12px; border-radius: 10px; background: var(--b-soft); border: 1px solid rgba(var(--b-rgb), 0.35); font-size: 0.9rem; }
+  .path-change .plus { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--b); color: var(--bg); font-weight: 800; flex: none; }
+
+  /* complete */
+  .done-hero { text-align: center; padding-top: 24px; }
+  .done-hero .big { width: 132px; height: 132px; margin: 0 auto; position: relative; }
+  .done-hero .big::before { content: ""; position: absolute; inset: -18px; border-radius: 50%; background: radial-gradient(circle, rgba(var(--a-rgb), 0.35), transparent 65%); animation: pulse 2.8s ease-in-out infinite; }
+  .done-hero .big .bao { position: relative; width: 100%; height: 100%; display: block; }
+  .spark { position: absolute; color: var(--b); animation: pulse 1.6s ease-in-out infinite; font-size: 0.9rem; }
+  .done-hero h2 { font-family: "Literata", serif; font-weight: 600; font-size: 2.1rem; margin-top: 18px; }
+  .done-hero p { color: var(--muted); margin-top: 8px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 28px; }
+  .stat { padding: 16px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); text-align: center; }
+  .stat b { display: block; font-size: 1.5rem; font-weight: 800; background: linear-gradient(90deg, var(--a), var(--b)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stat span { color: var(--muted); font-size: 0.82rem; }
+  .covered { margin-top: 28px; }
+  .covered h4 { font-size: 0.8rem; color: var(--faint); font-weight: 700; margin-bottom: 10px; }
+  .covered li { list-style: none; display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+  .covered li i { color: var(--a); font-style: normal; font-weight: 800; }
+  .covered li span { margin-left: auto; color: var(--faint); font-size: 0.8rem; }
+
+  /* Bao */
+  .bao svg { width: 100%; height: 100%; overflow: visible; display: block; }
+  .bao .hi { stop-color: var(--bao-hi); } .bao .lo { stop-color: var(--bao-lo); }
+  .bao .ear { fill: var(--bao-ear); } .bao .cheek { fill: var(--bao-hi); } .bao .seed { fill: var(--b); } .bao .paw { fill: var(--bao-lo); }
+  .bao .eyes { animation: blink 5s infinite; transform-origin: center; transform-box: fill-box; }
+  .cheer .body-g { animation: hop 1.2s ease-in-out infinite; transform-box: fill-box; }
+
+  @keyframes in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+  @keyframes dot { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+  @keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+  @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+  @keyframes hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-7px); } 60% { transform: translateY(-7px); } }
+  @keyframes added { 0% { background: rgba(var(--b-rgb), 0.3); } 100% { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="rail">
+    <div class="rail-in">
+      <button class="back" type="button" onclick="alert('Mock: back to Home')">← Home</button>
+      <div class="course-head">
+        <h1>Norse Mythology: Gods, Worlds and Sources</h1>
+        <div class="prog"><div class="bar"><i id="prog-bar"></i></div><span id="prog-text"></span></div>
+      </div>
+      <ul class="outline" id="outline"></ul>
+
+      <div class="controls">
+        <p>MOCK · ACCENT COLOURS</p>
+        <div class="sw" id="sw"></div>
+        <p style="margin:12px 0 0">MOCK · SCREEN</p>
+        <div class="views" id="views">
+          <button type="button" data-v="reading">Reading</button>
+          <button type="button" data-v="quiz">Quiz</button>
+          <button type="button" data-v="complete">Course complete</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <button class="icon-btn" type="button" id="toggle" title="Show or hide lessons" aria-label="Show or hide lessons">☰</button>
+      <div class="crumb" id="crumb"></div>
+      <div class="spacer"></div>
+      <span class="pill" id="pill"></span>
+      <div class="read-prog" id="read-prog"></div>
+    </div>
+    <div class="scroll" id="scroll"><div class="page" id="page"></div></div>
+  </main>
+</div>
+
+<script>
+/* ---------- Bao ---------- */
+let baoId = 0;
+function baoSVG() {
+  const id = "bao" + baoId++;
+  return `<svg viewBox="0 0 120 120" aria-hidden="true">
+    <defs><radialGradient id="${id}" cx="45%" cy="35%" r="70%"><stop offset="0" class="hi"/><stop offset="1" class="lo"/></radialGradient></defs>
+    <g class="body-g">
+      <circle cx="30" cy="40" r="11" class="ear"/><circle cx="30" cy="41" r="6" fill="#f9a8d4" opacity=".55"/>
+      <circle cx="90" cy="40" r="11" class="ear"/><circle cx="90" cy="41" r="6" fill="#f9a8d4" opacity=".55"/>
+      <ellipse cx="60" cy="72" rx="42" ry="37" fill="url(#${id})"/>
+      <ellipse cx="34" cy="82" rx="15" ry="13" class="cheek" opacity=".9"/><ellipse cx="86" cy="82" rx="15" ry="13" class="cheek" opacity=".9"/>
+      <g class="eyes">
+        <ellipse cx="45" cy="67" rx="7.5" ry="8.4" fill="#1a1433"/><ellipse cx="75" cy="67" rx="7.5" ry="8.4" fill="#1a1433"/>
+        <circle cx="47.4" cy="64.2" r="2.7" fill="#fff"/><circle cx="77.4" cy="64.2" r="2.7" fill="#fff"/>
+        <circle cx="42.4" cy="69.2" r="1.2" fill="#fff"/><circle cx="72.4" cy="69.2" r="1.2" fill="#fff"/>
+      </g>
+      <ellipse cx="33" cy="82" rx="6.5" ry="3.6" fill="#f9a8d4" opacity=".45"/><ellipse cx="87" cy="82" rx="6.5" ry="3.6" fill="#f9a8d4" opacity=".45"/>
+      <path d="M57 76 h6 l-3 3z" fill="#e8799f"/>
+      <path d="M55 80 q2.5 3 5 0 q2.5 3 5 0" stroke="#3b2a3b" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <ellipse cx="60" cy="97" rx="5" ry="7.5" class="seed"/>
+      <circle cx="53" cy="98" r="4.5" class="paw"/><circle cx="67" cy="98" r="4.5" class="paw"/>
+    </g>
+  </svg>`;
+}
+
+/* ---------- themes ---------- */
+const THEMES = [["amethyst", "#a78bfa", "#7dd3fc"], ["rose", "#fb7185", "#f9a8d4"], ["honey", "#f5c451", "#c8935f"], ["matcha", "#9ae6b4", "#fdba74"], ["slate", "#cbd5e1", "#60a5fa"]];
+const sw = document.getElementById("sw");
+function setTheme(k) {
+  document.documentElement.dataset.theme = k;
+  localStorage.setItem("knibbler-theme", k);
+  sw.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === k)));
+}
+THEMES.forEach(([k, a, b]) => {
+  const el = document.createElement("button");
+  el.type = "button"; el.dataset.k = k;
+  el.innerHTML = `<span style="background:linear-gradient(135deg, ${a} 50%, ${b} 50%)"></span>`;
+  el.onclick = () => setTheme(k);
+  sw.appendChild(el);
+});
+setTheme(localStorage.getItem("knibbler-theme") || "amethyst");
+
+/* ---------- course state ---------- */
+let LESSONS;
+function resetLessons() {
+  LESSONS = [
+    { t: "Gods, giants and the nine worlds", k: "Read", s: "done" },
+    { t: "Quick check", k: "Quiz", s: "done", note: "5/5" },
+    { t: "Where the myths come from", k: "Read", s: "now" },
+    { t: "Quick check", k: "Quiz", s: "locked" },
+    { t: "Loki and the death of Baldr", k: "Read", s: "locked" },
+    { t: "Ragnarök", k: "Read", s: "locked" },
+  ];
+}
+resetLessons();
+
+function renderOutline() {
+  const done = LESSONS.filter((l) => l.s === "done").length;
+  document.getElementById("prog-bar").style.width = (done / LESSONS.length) * 100 + "%";
+  document.getElementById("prog-text").textContent = `${done} of ${LESSONS.length}`;
+  document.getElementById("outline").innerHTML = LESSONS.map((l, i) => `
+    <li class="${l.s} ${l.added ? "added" : ""}"><button type="button">
+      <span class="ic">${l.s === "done" ? "✓" : l.s === "locked" ? "🔒︎" : ""}</span>
+      <span class="lt">${l.t}<small>${l.k === "Quiz" ? "Quiz" : "Reading"}${l.note ? " · " + l.note : ""}</small></span>
+      ${l.added ? `<span class="new-badge">NEW</span>` : ""}
+    </button></li>`).join("");
+}
+
+function setTop(crumb, pill) {
+  document.getElementById("crumb").innerHTML = crumb;
+  document.getElementById("pill").textContent = pill;
+}
+
+/* ---------- helpers ---------- */
+const page = document.getElementById("page");
+const scroll = document.getElementById("scroll");
+let token = 0, lastWasBao = false, autoScroll = true;
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const down = () => autoScroll && requestAnimationFrame(() => (scroll.scrollTop = scroll.scrollHeight));
+
+function area() { return page.querySelector(".bao-area"); }
+async function bao(html, pause = 500) {
+  const my = token;
+  const row = document.createElement("div");
+  row.className = "row" + (lastWasBao ? "" : " gap");
+  row.innerHTML = `<div class="av bao ${lastWasBao ? "empty" : ""}">${lastWasBao ? "" : baoSVG()}</div><div class="msg"><span class="typing"><i></i><i></i><i></i></span></div>`;
+  area().appendChild(row); down(); lastWasBao = true;
+  await wait(pause);
+  if (my !== token) return false;
+  row.querySelector(".msg").innerHTML = html; down();
+  return true;
+}
+function me(html, cls = "") {
+  const row = document.createElement("div");
+  row.className = `row me gap ${cls}`;
+  row.innerHTML = `<div class="msg">${html}</div>`;
+  area().appendChild(row); down(); lastWasBao = false;
+}
+function block(html) {
+  const el = document.createElement("div");
+  el.innerHTML = html;
+  const node = el.firstElementChild;
+  area().appendChild(node); down(); lastWasBao = false;
+  return node;
+}
+function choose(list, onPick, inline = false) {
+  const box = block(`<div class="opts ${inline ? "inline" : ""}">${list.map((o, i) =>
+    o.btn ? `<button type="button" class="btn ${o.btn}" data-i="${i}">${o.label}</button>`
+          : `<button type="button" class="opt ${o.unsure ? "unsure" : ""}" data-i="${i}"><kbd>${i + 1}</kbd>${o.label}</button>`).join("")}</div>`);
+  box.querySelectorAll("button").forEach((b) => (b.onclick = () => { box.remove(); onPick(list[+b.dataset.i]); }));
+}
+document.addEventListener("keydown", (e) => {
+  const n = Number(e.key);
+  if (n >= 1 && n <= 9) page.querySelectorAll(".bao-area .opts:last-child .opt")[n - 1]?.click();
+});
+
+/* ---------- views ---------- */
+const views = document.getElementById("views");
+function show(v) {
+  token++; lastWasBao = false; autoScroll = v !== "complete";
+  views.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+  document.getElementById("read-prog").style.width = "0";
+  scroll.scrollTop = 0;
+  ({ reading, quiz, complete })[v]();
+}
+views.querySelectorAll("button").forEach((b) => (b.onclick = () => show(b.dataset.v)));
+document.getElementById("toggle").onclick = () => document.getElementById("app").classList.toggle("rail-closed");
+
+/* ---------- reading ---------- */
+function reading() {
+  resetLessons(); renderOutline();
+  setTop(`Lesson 3 · <b>Where the myths come from</b>`, "8 min read");
+  page.innerHTML = `
+    <p class="kicker">Lesson 3 · Reading</p>
+    <h2 class="title">Where the myths come from</h2>
+    <p class="learn"><b>You'll learn:</b> what the Eddas and sagas are, who wrote them down, and why that matters when you read them.</p>
+    <div class="meta-row"><span>8 min</span><span>·</span><span>3 sources</span></div>
+
+    <div class="prose">
+      <p>Almost everything we know about the Norse gods comes from a handful of books written in Iceland in the 1200s. Not from the Vikings themselves, who left few written stories, but from their descendants, writing two centuries after Iceland had become Christian.<sup><a href="#">1</a></sup></p>
+
+      <h3>The Poetic Edda</h3>
+      <p>The <em>Poetic Edda</em> is a collection of anonymous poems about gods and heroes. Most of them survive in a single manuscript, the <em>Codex Regius</em>, made around 1270.<sup><a href="#">2</a></sup> The poems are older than the book, but nobody knows exactly how much older.</p>
+
+      <div class="note"><span class="av bao">${baoSVG()}</span><span><b>Worth knowing:</b> "Edda" may come from an Old Norse word for "great-grandmother", which suits a book of very old stories. Nobody is sure, though.</span></div>
+
+      <h3>The Prose Edda</h3>
+      <p>Around 1220, the Icelandic poet and politician Snorri Sturluson wrote the <em>Prose Edda</em>, a handbook for young poets. To explain the old poetic images, he retold the myths in plain prose, and in doing so he gave us the most complete version of Norse mythology we have.<sup><a href="#">3</a></sup></p>
+    </div>
+
+    <figure class="figure">
+      <div class="timeline">
+        <div class="tl"><i></i><b>~800–1050</b><span>Viking Age. Stories passed on by word of mouth</span></div>
+        <div class="tl"><i></i><b>~1000</b><span>Iceland adopts Christianity</span></div>
+        <div class="tl hl"><i></i><b>~1220</b><span>Snorri writes the Prose Edda</span></div>
+        <div class="tl hl"><i></i><b>~1270</b><span>Codex Regius is copied</span></div>
+      </div>
+      <figcaption>Two centuries sit between the last pagan Vikings and the books we read today.</figcaption>
+    </figure>
+
+    <div class="prose">
+      <h3>Why this matters</h3>
+      <p>The people who wrote these myths down were Christians, looking back at a religion their ancestors had left behind. Some details may be shaped by that distance, and Snorri sometimes explains the gods as famous ancient kings. Reading the myths well means keeping one eye on the story and one on who is telling it.</p>
+    </div>
+
+    <div class="sources">
+      <h4>SOURCES</h4>
+      <ul>
+        <li><b>1</b>Christianization of Iceland, Wikipedia</li>
+        <li><b>2</b>Codex Regius, Wikipedia</li>
+        <li><b>3</b>Prose Edda, Wikipedia</li>
+      </ul>
+    </div>
+
+    <div class="bao-area"></div>`;
+
+  const io = new IntersectionObserver(async ([e]) => {
+    if (!e.isIntersecting) return;
+    io.disconnect();
+    if (!(await bao("That's the lesson. Ready for a quick check on it?"))) return;
+    choose([{ label: "I've read it, start the quiz", btn: "primary" }, { label: "Not yet, stay here", btn: "ghost" }], (o) => {
+      if (o.btn === "primary") {
+        LESSONS[2].s = "done"; LESSONS[3].s = "now"; renderOutline();
+        show("quiz");
+      } else { me("Not yet, stay here"); bao("No rush. I'll be here at the bottom when you're ready."); }
+    }, true);
+  });
+  io.observe(page.querySelector(".bao-area"));
+  scroll.onscroll = () => {
+    const p = scroll.scrollTop / (scroll.scrollHeight - scroll.clientHeight || 1);
+    document.getElementById("read-prog").style.width = Math.min(100, p * 100) + "%";
+  };
+}
+
+/* ---------- quiz ---------- */
+const QUIZ = [
+  { q: "Who wrote the Prose Edda?", a: ["Snorri Sturluson", "Odin", "An unknown Viking poet"], ok: 0, why: "Snorri Sturluson, around 1220, as a handbook for poets." },
+  { q: "When were most of the myths written down?", a: ["In the 1200s, after Iceland became Christian", "During the Viking raids of the 800s", "By Roman historians"], ok: 0, why: "In the 1200s, about two centuries after Iceland became Christian." },
+  { q: "What is the Poetic Edda?", a: ["A single history by one author", "A collection of anonymous poems", "A book of laws"], ok: 1, why: "A collection of anonymous poems, mostly preserved in the Codex Regius." },
+  { q: "Why read these sources with some care?", a: ["They were forged in the 1800s", "They were written by Christians, long after the Viking Age", "They survive only in Latin"], ok: 1, why: "They were written by Christians looking back two centuries, which may colour the details." },
+  { q: "What is the Codex Regius?", a: ["A runestone in Sweden", "A manuscript holding most of the Poetic Edda", "A Viking king's law code"], ok: 1, why: "The manuscript, from around 1270, that holds most Poetic Edda poems." },
+];
+
+async function quiz() {
+  if (LESSONS[3].s !== "now") { resetLessons(); LESSONS[2].s = "done"; LESSONS[3].s = "now"; }
+  renderOutline();
+  setTop(`Lesson 4 · <b>Quick check</b>`, "5 questions");
+  page.innerHTML = `
+    <p class="kicker">Lesson 4 · Quiz</p>
+    <h2 class="title">Quick check</h2>
+    <p class="learn">Five questions on where the myths come from. Untimed, and you can look back at lesson 3 anytime.</p>
+    <div class="bao-area"></div>`;
+  const results = [];
+  if (!(await bao("Let's see what stuck. Pick the best answer; \"Not sure\" is fine."))) return;
+  const counter = block(`<div class="qcount">${QUIZ.map(() => "<i></i>").join("")}</div>`);
+  const ticks = () => counter.querySelectorAll("i").forEach((el, i) => (el.className = results[i] === true ? "good" : results[i] === false ? "miss" : i === results.length ? "on" : ""));
+
+  for (let i = 0; i < QUIZ.length; i++) {
+    const Q = QUIZ[i];
+    ticks();
+    if (!(await bao(`<b>${i + 1}.</b> ${Q.q}`, 350))) return;
+    const pick = await new Promise((res) => choose([...Q.a.map((label, j) => ({ label, j })), { label: "Not sure", j: -1, unsure: true }], res));
+    const right = pick.j === Q.ok;
+    results.push(right);
+    me(`${pick.label}<span class="mark">${right ? "✓" : pick.j === -1 ? "" : "✕"}</span>`, right ? "good" : "miss");
+    if (!(await bao(right ? "Right." : `Not quite. ${Q.why}`, 400))) return;
+  }
+  ticks();
+  const score = results.filter(Boolean).length;
+  const passed = score / QUIZ.length >= 0.7;
+  const weak = !results[1] || !results[3];
+  LESSONS[3].note = `${score}/5`;
+  const el = block(`<div class="card">
+    <div class="score"><b>${score}/5</b><span>${passed ? "Passed" : "Not passed yet · you need 4 of 5"}</span></div>
+    ${weak ? `<div class="path-change"><span class="plus">+</span><span>I added a short lesson, <b>Who wrote it down, and why it matters</b>, before Loki. It covers the part that tripped you up.</span></div>` : ""}
+  </div>`);
+  if (passed) { LESSONS[3].s = "done"; }
+  if (weak) {
+    LESSONS.splice(4, 0, { t: "Who wrote it down, and why it matters", k: "Read", s: passed ? "now" : "locked", added: true });
+  } else if (passed) { LESSONS[4].s = "now"; }
+  renderOutline();
+  await bao(passed
+    ? (weak ? "Nicely done. One small detour, then on to Loki." : "All clear. On to Loki.")
+    : "Close. Have another look at the answers, then try again whenever you like.");
+  choose(passed
+    ? [{ label: weak ? "Start the short lesson" : "Next: Loki and the death of Baldr", btn: "primary" }, { label: "Review my answers", btn: "ghost" }]
+    : [{ label: "Try again", btn: "primary" }, { label: "Show the right answers", btn: "ghost" }, { label: "Back to lesson 3", btn: "ghost" }],
+  (o) => o.label === "Try again" ? show("quiz") : alert("Mock: " + o.label), true);
+}
+
+/* ---------- complete ---------- */
+function complete() {
+  LESSONS = [
+    { t: "Gods, giants and the nine worlds", k: "Read", s: "done" },
+    { t: "Quick check", k: "Quiz", s: "done", note: "5/5" },
+    { t: "Where the myths come from", k: "Read", s: "done" },
+    { t: "Quick check", k: "Quiz", s: "done", note: "4/5" },
+    { t: "Who wrote it down, and why it matters", k: "Read", s: "done" },
+    { t: "Loki and the death of Baldr", k: "Read", s: "done" },
+    { t: "Ragnarök", k: "Read", s: "done" },
+  ];
+  renderOutline();
+  setTop(`<b>Course complete</b>`, "7 of 7");
+  page.innerHTML = `
+    <div class="done-hero">
+      <div class="big"><span class="bao cheer">${baoSVG()}</span>
+        <span class="spark" style="top:-4px;left:-10px">✦</span><span class="spark" style="top:20px;right:-18px;animation-delay:-.5s">✦</span><span class="spark" style="bottom:6px;left:-20px;animation-delay:-1s">✦</span>
+      </div>
+      <h2>You finished Norse Mythology</h2>
+      <p>Gods, worlds, the sources behind them, and how it all ends.</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>7</b><span>lessons</span></div>
+      <div class="stat"><b>9/10</b><span>on quizzes</span></div>
+      <div class="stat"><b>1h 40m</b><span>spent learning</span></div>
+    </div>
+    <div class="covered">
+      <h4>WHAT YOU CAN DO NOW</h4>
+      <ul>
+        <li><i>✓</i>Name the main gods and giants, and the nine worlds<span>Lesson 1</span></li>
+        <li><i>✓</i>Tell the Poetic Edda from the Prose Edda<span>Lesson 3</span></li>
+        <li><i>✓</i>Explain why the sources need careful reading<span>Lesson 5</span></li>
+        <li><i>✓</i>Retell the death of Baldr and Ragnarök<span>Lessons 6–7</span></li>
+      </ul>
+    </div>
+    <div class="bao-area"></div>`;
+  (async () => {
+    if (!(await bao("That's the whole course. Well done."))) return;
+    if (!(await bao("Want to keep going?", 400))) return;
+    choose([
+      { label: "Go deeper: the heroic sagas" },
+      { label: "Something related: Greek mythology" },
+      { label: "Review a lesson" },
+      { label: "Back to Home" },
+    ], (o) => { me(o.label); bao("Mock: this would start a new course chat, already knowing what you've learned."); });
+  })();
+}
+
+show("reading");
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 import { QUIZ_METHOD_ID, READING_METHOD_ID } from "@senoy/db/reading-lesson";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { StudyLesson, StudyPayload } from "@/lib/study-types.ts";
 import { QuizLessonPlay } from "@/teaching-methods/quiz-lesson-play.tsx";
 import { ReadingLessonPlay } from "@/teaching-methods/reading-lesson-play.tsx";
@@ -10,6 +10,10 @@ export type LessonPlayProps = {
   lesson: StudyLesson;
   sectionAdvance: "manual" | "continuous";
   onPayload: (payload: StudyPayload) => void;
+  /** 1-based place of the Lesson in the Course, for the kicker ("lesson 03 · reading"). */
+  lessonNumber?: number;
+  /** Study's finish line (Next Lesson / Finish Course). The plugin shows it once the Lesson is complete. */
+  finish?: ReactNode;
 };
 
 const renders: Record<string, ComponentType<LessonPlayProps>> = {

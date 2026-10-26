@@ -1,0 +1,526 @@
+/*
+ * Learning screens (SEN-88), on Papercraft paper (SEN-97 phase 3B): Home, the Course outline, Reading,
+ * Quiz, Course complete. Visual reference: docs/uis/redesign/10-papercraft-jongi.html.
+ * Colours come from index.css tokens; sheets, ribbons, tiles and progress come from styles/kit.css.
+ * Depth is the kit's one shadow language (--sheet, --stack, recessed --well); no glow, no gradients.
+ * Classes here are prefixed `l-`.
+ */
+
+/* ---------- shared ---------- */
+/* The mock's eyebrow: small mono capitals. */
+.l-kicker, .l-eyebrow { font-family: var(--font-code); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--a); }
+.l-eyebrow { color: var(--faint); }
+.l-mono { font-family: var(--font-code); }
+.l-sec { margin-top: 28px; }
+.l-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.l-stack { display: grid; gap: 12px; }
+@media (max-width: 720px) { .l-grid2 { grid-template-columns: 1fr; } }
+a.k-tile { text-decoration: none; }
+/* A course cover: a small paper tile with the course icon. */
+.l-cover {
+  width: 44px; height: 44px; border-radius: 10px; flex: none; display: grid; place-items: center; color: var(--a);
+  background: var(--panel-2); box-shadow: var(--edge), 0 2px 5px rgba(0, 0, 0, 0.55);
+}
+.l-cover svg { width: 22px; height: 22px; }
+.l-cover.done { color: var(--b-deep); }
+/* A ribbon for wins (gold thread is kept for wins). */
+.k-rib.l-rib-win { color: var(--on-a); background: var(--gold); }
+
+/* ---------- Home ---------- */
+.l-home { max-width: 880px; margin: 0 auto; }
+.l-home .k-tiles { margin-left: 0; }
+.l-home .k-tcard { margin-left: 0; }
+.l-home > .k-sec-h { margin-top: 22px; }
+.l-home .l-hero + .k-tiles { margin-top: 18px; }
+
+/* Continue: the focal sheet, stacked, with a bookmark ribbon hanging from its top edge. */
+.l-hero {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 200px; margin-top: 4px; border-radius: 14px; overflow: hidden;
+  background: color-mix(in srgb, var(--panel) 55%, var(--panel-2)); box-shadow: var(--stack); animation: k-in 0.35s ease-out both;
+}
+.l-bm {
+  position: absolute; top: -2px; left: 14px; z-index: 2; width: 14px; height: 44px; background: var(--ribbon);
+  box-shadow: inset 4px 0 0 rgba(0, 0, 0, 0.12); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 76%, 0 100%);
+  filter: drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.5));
+}
+.l-hero .tx { display: flex; flex-direction: column; min-width: 0; padding: 20px 24px 20px 40px; }
+.l-hero .k-rib { align-self: flex-start; }
+.l-hero h2 { font-family: var(--font-display); font-weight: 400; font-size: 2rem; line-height: 1.05; margin-top: 10px; overflow-wrap: anywhere; }
+.l-hero .nx { margin-top: 6px; color: var(--text-muted); font-size: 0.88rem; line-height: 1.45; }
+.l-hero .nx b { color: var(--text); font-weight: 600; }
+.l-hero .k-bar { margin-top: 18px; }
+.l-hero .m { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-family: var(--font-code); font-size: 0.66rem; color: var(--faint); }
+.l-hero .cta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+/* The cover side: the course icon on cut paper discs. */
+.l-hero .art { position: relative; display: grid; place-items: center; overflow: hidden; color: var(--b); background: var(--plum); }
+.l-hero .art::before, .l-hero .art::after { content: ""; position: absolute; border-radius: 50%; }
+.l-hero .art::before { width: 230px; height: 230px; left: 18px; top: 40px; background: var(--plum-2); box-shadow: var(--sheet); }
+.l-hero .art::after { width: 120px; height: 120px; left: 40px; top: 46px; background: var(--panel-2); box-shadow: var(--sheet); }
+.l-hero .art svg { position: relative; z-index: 1; width: 52px; height: 52px; margin: 0 22px 0 0; filter: drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.45)); }
+@media (max-width: 640px) {
+  .l-hero { grid-template-columns: 1fr; }
+  .l-hero .art { display: none; }
+}
+
+/* Today: minutes, streak, lessons done. Small sheets; numbers in the display serif. */
+.l-today { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+@media (max-width: 720px) { .l-today { grid-template-columns: 1fr; } }
+.l-tbox {
+  display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--panel); box-shadow: var(--sheet);
+  animation: k-pop 0.4s backwards; animation-delay: calc(var(--i, 0) * 70ms);
+}
+.l-tbox .lbl { font-family: var(--font-code); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.l-tbox .val { font-family: var(--font-display); font-weight: 400; font-size: 1.9rem; line-height: 1; margin-top: 4px; }
+.l-tbox .val small { font-family: var(--font-ui); font-size: 0.74rem; color: var(--faint); }
+.l-tbox .note { font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; }
+.l-tbox .ic { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; flex: none; color: var(--b); background: var(--well); box-shadow: var(--recess); }
+.l-tbox .ic.streak { color: var(--ribbon-text); }
+.l-tbox .ic svg { width: 18px; height: 18px; }
+
+/* Learning, being made and needs you sit side by side as columns; finished runs underneath. */
+.l-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; margin-top: 28px; align-items: start; }
+.l-groups > .l-sec { margin-top: 0; min-width: 0; }
+.l-making .sub { display: flex; align-items: center; gap: 8px; }
+/* Needs you: a stacked sheet (paper under it), the companion's honest line, one thing to do. */
+.k-ccard.l-needs { box-shadow: var(--stack); }
+.l-needs .say { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; font-size: 0.86rem; line-height: 1.5; color: var(--text); }
+.l-needs .say .av { width: 28px; height: 28px; flex: none; }
+.l-needs .k-tiles { margin: 12px 0 0; }
+.l-needs .k-tile { min-height: 54px; padding-top: 10px; padding-bottom: 10px; }
+.l-older {
+  display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 8px 12px; border-radius: 10px;
+  background: var(--well); box-shadow: var(--recess); font-family: var(--font-code); font-size: 0.68rem; color: var(--faint);
+}
+.l-older .grow { flex: 1; }
+.l-older button { font-family: var(--font-code); font-size: 0.66rem; color: var(--a); padding: 3px 9px; border-radius: 7px; border: 0; box-shadow: inset 0 0 0 1px var(--a-line); background: none; cursor: pointer; }
+.l-older button:hover { background: var(--a-soft); }
+/* Finished: recessed rows, like a shelf of closed books. */
+.l-rows { display: grid; gap: 8px; }
+.l-done-row {
+  display: flex; align-items: center; gap: 14px; padding: 10px 12px; border-radius: 12px; color: var(--text); text-decoration: none;
+  background: var(--well); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 8px 18px -12px rgba(0, 0, 0, 0.8); transition: background var(--dur-fast);
+}
+.l-done-row:hover { background: var(--panel); }
+.l-done-row .l-cover { width: 40px; height: 36px; border-radius: 8px; }
+.l-done-row .l-cover svg { width: 18px; height: 18px; }
+.l-done-row .tx { flex: 1; min-width: 0; }
+.l-done-row b { display: block; font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.l-done-row small { display: block; color: var(--text-muted); font-size: 0.76rem; margin-top: 1px; }
+.l-done-row .rv { flex: none; padding: 6px 12px; border-radius: 9px; font-size: 0.8rem; font-weight: 600; color: var(--text); box-shadow: var(--hairline); }
+.l-done-row:hover .rv { box-shadow: inset 0 0 0 1px var(--a-line); }
+@media (max-width: 560px) { .l-done-row .rv { display: none; } }
+
+/* first run */
+.l-topic {
+  display: flex; gap: 8px; align-items: center; padding: 6px 6px 6px 16px; border-radius: 12px; background: var(--well); border: 1px solid var(--line-2);
+  box-shadow: var(--recess); transition: border-color var(--dur), box-shadow var(--dur);
+}
+.l-topic:focus-within { border-color: var(--a-line); box-shadow: var(--recess), 0 0 0 1px var(--a-line); }
+.l-topic input { flex: 1; min-width: 0; outline: none; padding: 10px 0; font-size: 1rem; background: none; border: 0; color: inherit; font: inherit; }
+.l-topic input::placeholder { color: var(--faint); }
+.l-sugg-h { margin-top: 16px; font-family: var(--font-code); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.l-sugg { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.l-chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 9px; border: 0; font-size: 0.85rem; color: var(--text); cursor: pointer;
+  background: var(--panel-2); box-shadow: var(--sheet); animation: k-pop 0.35s backwards; animation-delay: calc(var(--i, 0) * 50ms);
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.3), box-shadow 0.18s;
+}
+.l-chip:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px var(--a-line), var(--sheet); }
+.l-chip svg { width: 14px; height: 14px; color: var(--a); }
+.l-how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
+@media (max-width: 720px) { .l-how { grid-template-columns: 1fr; } }
+.l-how div { padding: 14px; border-radius: 12px; background: var(--panel); box-shadow: var(--sheet); animation: k-pop 0.4s backwards; animation-delay: calc(300ms + var(--i, 0) * 80ms); }
+.l-how .n { font-family: var(--font-code); font-size: 0.66rem; letter-spacing: 0.1em; color: var(--a); }
+.l-how b { display: block; margin-top: 6px; font-family: var(--font-display); font-weight: 400; font-size: 1.35rem; line-height: 1.1; }
+.l-how span { display: block; color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; line-height: 1.45; }
+
+/* ---------- Course outline (Study sidebar) ---------- */
+.l-course { display: flex; flex-direction: column; min-height: 0; }
+.l-course h2 { display: flex; align-items: center; gap: 10px; padding: 0 4px; min-width: 0; font-family: var(--font-display); font-weight: 400; font-size: 1.3rem; line-height: 1.15; }
+.l-course h2 .c-t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.l-course .c-ic {
+  width: 28px; height: 28px; border-radius: 7px; flex: none; display: grid; place-items: center; color: var(--a);
+  background: var(--panel-2); box-shadow: var(--edge), 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+.l-course .c-ic svg { width: 16px; height: 16px; }
+.l-cstats { display: flex; gap: 10px; flex-wrap: wrap; padding: 6px 4px 0; font-family: var(--font-code); font-size: 0.64rem; color: var(--faint); }
+.l-cstats b { color: var(--text); font-weight: 500; }
+.l-course .k-segs { padding: 0 4px; margin-top: 10px; }
+.l-mod { margin-top: 12px; padding: 0 8px; font-family: var(--font-code); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.l-ol { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; margin-top: 8px; padding: 0; }
+.l-ol .row { width: 100%; display: flex; align-items: center; gap: 9px; text-align: left; padding: 6px 8px; border-radius: 9px; color: color-mix(in srgb, var(--text) 82%, var(--text-muted)); text-decoration: none; transition: background 0.15s; }
+.l-ol a.row:hover { background: rgba(255, 255, 255, 0.03); color: var(--text); }
+.l-ol .idx { width: 18px; font-family: var(--font-code); font-size: 0.64rem; color: var(--faint); flex: none; }
+.l-ol .ic { width: 20px; height: 20px; border-radius: 6px; flex: none; display: grid; place-items: center; color: var(--faint); background: var(--well); box-shadow: var(--recess); }
+.l-ol .ic svg { width: 11px; height: 11px; }
+.l-ol .t { flex: 1; min-width: 0; font-size: 0.84rem; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Small notched ribbons for the lesson type. */
+.l-ol .tag {
+  flex: none; height: 16px; display: inline-flex; align-items: center; padding: 0 9px 0 5px; border-radius: 2px 0 0 2px;
+  font-family: var(--font-code); font-size: 0.54rem; letter-spacing: 0.07em; text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 50%, 100% 100%, 0 100%); color: var(--faint); background: rgba(255, 255, 255, 0.05);
+}
+.l-ol .tag.quiz { color: var(--b-deep); background: var(--b-soft); }
+.l-ol .tag.new { color: var(--on-a); background: var(--b); font-weight: 600; }
+.l-ol li.done .ic { color: var(--a); }
+.l-ol li.done .t { color: var(--text-muted); }
+/* The lesson you're on: lifted onto its own sheet, with an apricot diamond. */
+.l-ol li.now > .row { background: var(--panel); box-shadow: var(--sheet); color: var(--text); }
+.l-ol li.now .idx { color: var(--a); }
+.l-ol li.now .ic::after { content: ""; width: 7px; height: 7px; background: var(--a); transform: rotate(45deg); }
+.l-ol li.now.done .ic::after { display: none; }
+.l-ol li.locked .row { color: var(--faint); }
+.l-ol li.added > .row { box-shadow: inset 0 0 0 1px rgba(var(--b-rgb), 0.4); }
+.l-subs { list-style: none; margin: 4px 0 6px 46px; padding: 0; display: grid; gap: 2px; position: relative; }
+.l-subs::before { content: ""; position: absolute; left: -15px; top: 4px; bottom: 8px; width: 1px; background: var(--line-2); }
+.l-subs li { display: flex; align-items: center; gap: 9px; font-size: 0.74rem; color: var(--faint); padding: 1px 0; min-width: 0; }
+.l-subs li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Section ticks are small paper diamonds that fill apricot once read. */
+.l-subs li i { width: 7px; height: 7px; flex: none; margin: 0 2px; transform: rotate(45deg); background: var(--line-2); transition: background 0.3s; }
+.l-subs li i svg { display: none; }
+.l-subs li.read { color: var(--text-muted); }
+.l-subs li.read i { background: var(--a); }
+
+/* ---------- Study header bits ---------- */
+.l-crumb { font-weight: 500; color: var(--text-muted); }
+.l-crumb b { color: var(--text); font-weight: 600; }
+.l-crumb .sep { color: var(--faint); margin: 0 6px; }
+.l-menu { position: relative; }
+.l-menu [role="menu"] { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; width: 264px; padding: 4px; border-radius: 12px; background: var(--panel); box-shadow: var(--stack); animation: k-pop 0.2s var(--ease-pop); }
+.l-menu [role="menuitem"] { display: block; width: 100%; padding: 8px 12px; border-radius: 8px; text-align: left; font-size: 0.86rem; color: var(--text); background: none; border: 0; cursor: pointer; }
+.l-menu [role="menuitem"]:hover { background: var(--panel-2); }
+.l-menu .note { padding: 8px 12px; font-size: 0.84rem; color: var(--text-muted); }
+.l-focus-exit { display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 9px; border: 0; box-shadow: var(--hairline); font-family: var(--font-code); font-size: 0.68rem; color: var(--text-muted); background: none; cursor: pointer; }
+.l-focus-exit:hover { color: var(--text); box-shadow: inset 0 0 0 1px var(--a-line); }
+
+/* Focus mode: the header stays (menu, Home, Aa, exit) but fades while you read. */
+html[data-read-focus] .k-top { opacity: 0.4; transition: opacity 0.35s; }
+html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, html[data-read-focus][data-read-awake] .k-top { opacity: 1; }
+
+/* ---------- reading page ---------- */
+.l-read {
+  --r-font: var(--font-read); --r-size: 18px; --r-lh: 1.75; --r-ls: 0em; --r-ws: 0em; --r-measure: 66;
+  max-width: calc(var(--r-measure) * 0.56 * var(--r-size) + 56px); margin: 0 auto; padding: 14px 28px 80px; color: var(--text); transition: background 0.3s;
+}
+.l-lhead h1 { font-family: var(--font-display); font-weight: 400; font-size: 2.9rem; line-height: 1.04; margin-top: 10px; letter-spacing: -0.005em; }
+.l-lhead .learn { margin-top: 12px; font-family: var(--font-read); color: var(--text-muted); font-size: 1rem; line-height: 1.55; }
+.l-lhead .learn b { color: var(--text); font-weight: 600; }
+.l-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 14px; font-family: var(--font-code); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.l-read.f-hyper .l-lhead h1, .l-read.f-hyper .l-lhead .learn { font-family: var(--font-legible); }
+.l-read.f-hyper .l-lhead h1 { font-weight: 700; font-size: 2.3rem; letter-spacing: -0.01em; }
+.l-read.f-serif .l-lhead .learn { font-family: var(--font-book); }
+
+.l-prose { font-family: var(--r-font); font-size: var(--r-size); line-height: var(--r-lh); letter-spacing: var(--r-ls); word-spacing: var(--r-ws); color: var(--read); margin-top: 30px; }
+.l-prose h2 { font-family: var(--font-ui); font-size: 1.08rem; font-weight: 600; color: var(--text); margin: 38px 0 10px; display: flex; align-items: baseline; gap: 10px; letter-spacing: 0.01em; word-spacing: 0; line-height: 1.35; scroll-margin-top: 24px; }
+.l-prose section:first-child h2 { margin-top: 0; }
+.l-prose h2 .sec-n { font-family: var(--font-code); font-size: 0.68rem; font-weight: 500; color: var(--a); flex: none; }
+.l-prose p + p { margin-top: calc(var(--r-lh) * 0.55em); }
+/* Citations: a small cream key tab that never breaks the line; the source shows on hover or focus. */
+.l-cite {
+  position: relative; display: inline-block; vertical-align: 0.5em; line-height: 1; margin-left: 3px; padding: 2px 5px 3px; border-radius: 3px;
+  font-family: var(--font-code); font-size: 0.56em; font-weight: 500; letter-spacing: 0; white-space: nowrap; text-decoration: none;
+  color: var(--on-a); background: var(--b-deep); box-shadow: 0 2px 0 color-mix(in srgb, var(--b-deep) 62%, #000);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.l-cite + .l-cite, .l-cite-sep + .l-cite { margin-left: 2px; }
+.l-cite-sep { display: none; }
+.l-cite:hover, .l-cite:focus-visible { transform: translateY(-1px); box-shadow: 0 3px 0 color-mix(in srgb, var(--b-deep) 62%, #000); }
+.l-cite::after {
+  content: attr(data-title); position: absolute; left: 50%; bottom: calc(100% + 9px); width: max-content; max-width: 260px; z-index: 5; pointer-events: none;
+  padding: 7px 10px; border-radius: 3px 10px 10px 10px; font-family: var(--font-ui); font-size: 0.8rem; font-weight: 500; line-height: 1.4; color: var(--text); white-space: normal; text-align: left;
+  background: var(--panel-2); box-shadow: var(--sheet);
+  opacity: 0; transform: translate(-50%, 4px); transition: opacity 0.15s, transform 0.15s;
+}
+.l-cite:hover::after, .l-cite:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+.l-sources { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 0.84rem; color: var(--text-muted); }
+.l-sources h2 { font-family: var(--font-code); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); font-weight: 500; margin-bottom: 8px; }
+.l-sources ol { list-style: none; padding: 0; margin: 0; }
+.l-sources li { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; padding: 2px 4px; scroll-margin-top: 80px; border-radius: 6px; }
+.l-sources li.hl { background: var(--a-soft); transition: background 1.2s; }
+.l-sources li:focus { outline: none; }
+.l-sources li b { flex: none; font-family: var(--font-code); font-size: 0.68rem; font-weight: 500; color: var(--on-a); background: var(--b-deep); padding: 2px 5px; border-radius: 3px; }
+.l-sources a { color: var(--text); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+.l-sources a:hover { text-decoration-color: var(--a); }
+.l-nib { margin-top: 40px; }
+.l-nib .k-tiles { margin-bottom: 0; }
+.l-continue { margin-top: 26px; display: flex; gap: 12px; align-items: center; font-family: var(--font-code); font-size: 0.68rem; color: var(--faint); }
+.l-error { margin-top: 14px; color: var(--miss); font-size: 0.9rem; }
+
+/* Page colour. Dark is the desk the app sits on; Dim softens the ink; Sepia and Paper are light
+   sheets laid on the desk. Light pages re-point the tokens, so kit pieces inside follow. */
+.l-read.surf-dim { --read: #bdb6aa; --text: #d6d0c4; --text-muted: #9a9bae; }
+.l-read.light {
+  --ink: #6b5a44;
+  --a: color-mix(in srgb, rgb(var(--a-rgb)) 42%, #1b130b); --on-a: #ffffff; --a-deep: color-mix(in srgb, rgb(var(--a-rgb)) 30%, #1b130b);
+  --text: #23201c; --read: #2d2925; --text-muted: #625a52; --faint: #756c62;
+  --line: rgba(60, 40, 20, 0.12); --line-2: rgba(60, 40, 20, 0.2);
+  --bg: var(--page); --panel: color-mix(in srgb, var(--page) 93%, var(--ink)); --panel-2: color-mix(in srgb, var(--page) 86%, var(--ink));
+  --well: color-mix(in srgb, var(--page) 88%, var(--ink)); --stack-under: color-mix(in srgb, var(--page) 80%, var(--ink));
+  --a-soft: rgba(var(--a-rgb), 0.2); --a-line: rgba(60, 40, 20, 0.3); --b-deep: color-mix(in srgb, var(--page) 70%, var(--ink));
+  --sheet: inset 1px 1px 0 rgba(255, 255, 255, 0.5), 0 1px 0 rgba(60, 40, 20, 0.16), 0 10px 18px -12px rgba(60, 40, 20, 0.45);
+  --stack: inset 1px 1px 0 rgba(255, 255, 255, 0.5), 0 1px 0 rgba(60, 40, 20, 0.16), 5px 6px 0 -1px var(--stack-under), 6px 14px 20px -12px rgba(60, 40, 20, 0.45);
+  --recess: inset 0 1px 2px rgba(60, 40, 20, 0.2); --edge: inset 1px 1px 0 rgba(255, 255, 255, 0.5); --hairline: inset 0 0 0 1px var(--line-2);
+  --good: #15803d; --good-rgb: 21, 128, 61; --miss: #be123c; --miss-rgb: 190, 18, 60;
+  /* the page itself drops onto the desk, so its own shadow is the desk's, not the re-pointed --sheet */
+  background: var(--page); border-radius: 14px; margin-top: 4px; margin-bottom: 40px; padding-top: 36px;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.6), 0 1px 0 rgba(0, 0, 0, 0.55), 0 30px 50px -26px rgba(0, 0, 0, 0.9);
+}
+.l-read.surf-sepia { --page: #f2e8d2; }
+.l-read.surf-paper { --page: #f8f7f3; }
+.l-read.light .l-cite, .l-read.light .l-sources li b { color: var(--text); }
+.l-read.light .k-tile kbd { color: var(--text); }
+.l-read.light .k-tile.primary kbd { background: var(--page); }
+.l-read.light .k-tile.picked:not(.primary) { background: var(--panel-2); }
+.l-read.light .k-msg { color: var(--text); }
+
+/* Focus */
+.l-read.lay-focus { padding-top: 16vh; padding-bottom: 40vh; }
+.l-read.lay-focus .fb { opacity: 0.22; transition: opacity 0.35s; }
+.l-read.lay-focus .fb.lit { opacity: 1; }
+.l-read.lay-focus .l-prose h2 { opacity: 0.5; }
+
+/* Skim: the key sentence is marked like a highlighter stroke. */
+.l-read.lay-skim .l-prose h2 { margin-top: 26px; }
+.l-read.lay-skim .key { color: var(--text); box-shadow: inset 0 -0.42em 0 rgba(var(--a-rgb), 0.3); border-radius: 2px; }
+.l-read.light.lay-skim .key { box-shadow: inset 0 -0.42em 0 rgba(var(--a-rgb), 0.42); }
+.l-sec-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; font-family: var(--font-code); font-size: 0.66rem; color: var(--a); padding: 3px 9px; border-radius: 7px; border: 0; box-shadow: inset 0 0 0 1px var(--line-2); background: none; cursor: pointer; }
+.l-sec-more:hover { box-shadow: inset 0 0 0 1px var(--a-line); }
+
+/* Book: two columns, one spread at a time */
+.l-read.lay-book { max-width: 1140px; padding: 10px 44px 30px; }
+.l-book-view { overflow: hidden; }
+.l-read.lay-book .l-flow { position: relative; column-count: 2; column-gap: 64px; column-fill: auto; transition: transform 0.45s cubic-bezier(0.3, 0.8, 0.3, 1); }
+@media (max-width: 899px) { .l-read.lay-book .l-flow { position: relative; column-count: 1; } .l-read.lay-book { padding: 10px 20px 30px; } }
+.l-read.lay-book .l-lhead, .l-read.lay-book .l-sources li { break-inside: avoid; }
+.l-read.lay-book .l-prose h2 { break-after: avoid; margin-top: 26px; }
+.l-read.lay-book .l-prose { margin-top: 22px; }
+.l-read.lay-book .l-lhead h1 { font-size: 2.3rem; }
+.l-read.lay-book .l-sources { margin-top: 26px; }
+.l-book-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.l-book-nav button {
+  width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; border: 0; color: var(--text); cursor: pointer;
+  background: var(--panel-2); box-shadow: var(--edge), 0 3px 0 var(--well), 0 10px 18px -8px rgba(0, 0, 0, 0.7); transition: transform 0.12s, box-shadow 0.12s;
+}
+.l-book-nav button:active:not(:disabled) { transform: translateY(2px); box-shadow: var(--edge), 0 1px 0 var(--well); }
+.l-book-nav button:disabled { opacity: 0.3; cursor: default; box-shadow: none; }
+.l-book-nav button svg { width: 17px; height: 17px; }
+.l-book-nav .pg { font-family: var(--font-code); font-size: 0.72rem; color: var(--text-muted); min-width: 110px; text-align: center; }
+.l-book-nav .pg b { color: var(--a); font-weight: 500; }
+
+/* ---------- Aa button and panel ---------- */
+.l-aa { position: relative; }
+.l-aa-btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 9px; border: 0; cursor: pointer;
+  color: var(--text); font-family: var(--font-display); font-weight: 400; font-size: 1.15rem; background: none; box-shadow: var(--hairline);
+}
+.l-aa-btn small { font-family: var(--font-code); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--a); }
+.l-aa-btn:hover, .l-aa-btn[aria-expanded="true"] { background: rgba(255, 255, 255, 0.035); box-shadow: inset 0 0 0 1px var(--a-line); }
+.l-rpanel {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 55; width: min(392px, calc(100vw - 24px)); max-height: calc(100vh - 84px); overflow-y: auto;
+  padding: 16px; border-radius: 14px; text-align: left; font-weight: 500; background: var(--panel); box-shadow: var(--stack), 0 30px 60px -24px rgba(0, 0, 0, 0.9);
+  animation: k-toast-in 0.3s var(--ease-pop);
+}
+.l-rp-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.l-rp-h b { font-family: var(--font-display); font-size: 1.35rem; font-weight: 400; line-height: 1; }
+.l-rp-cur {
+  height: 19px; display: inline-flex; align-items: center; padding: 0 12px 0 8px; border-radius: 2px 0 0 2px; clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 50%, 100% 100%, 0 100%);
+  font-family: var(--font-code); font-size: 0.6rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--on-a); background: var(--a);
+}
+.l-rp-cur.custom { color: var(--a); background: var(--a-soft); }
+.l-presets { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.l-preset {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 9px 4px 8px; border-radius: 10px; border: 0; cursor: pointer;
+  color: var(--text-muted); font-size: 0.74rem; font-weight: 600; background: var(--well); box-shadow: var(--recess);
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.3), box-shadow 0.18s, background 0.18s, color 0.18s;
+}
+.l-preset:hover { color: var(--text); }
+.l-preset[aria-pressed="true"] { transform: translateY(-2px); color: var(--text); background: var(--panel-2); box-shadow: inset 0 0 0 1px rgba(var(--a-rgb), 0.6), var(--sheet); }
+.l-preset svg { width: 40px; height: 30px; display: block; }
+.l-preset svg .ln { fill: currentColor; opacity: 0.55; }
+.l-preset svg .ln.hi { opacity: 1; fill: var(--a); }
+.l-preset svg .ln.mk { fill: var(--a); opacity: 0.6; }
+.l-preset-desc { margin-top: 10px; font-size: 0.78rem; color: var(--text-muted); min-height: 2.6em; line-height: 1.45; }
+.l-rp-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+.l-ctl { display: grid; grid-template-columns: 82px 1fr; align-items: center; gap: 10px; }
+.l-ctl > span { font-family: var(--font-code); font-size: 0.62rem; letter-spacing: 0.06em; color: var(--faint); }
+.l-segc { display: flex; padding: 3px; border-radius: 10px; gap: 2px; background: var(--well); box-shadow: var(--recess); }
+.l-segc button { flex: 1; padding: 6px 4px; border-radius: 7px; font-size: 0.76rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; background: none; border: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.l-segc button:hover { color: var(--text); }
+.l-segc button[aria-pressed="true"] { color: var(--text); background: var(--panel-2); box-shadow: inset 0 0 0 1px rgba(var(--a-rgb), 0.55), var(--edge); }
+.l-segc .chipc { width: 22px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18); }
+.l-segc .opt-l { display: block; font-family: var(--font-code); font-size: 0.54rem; font-weight: 500; color: var(--faint); }
+.l-sizer { display: flex; align-items: center; gap: 8px; }
+.l-sizer button { width: 34px; height: 30px; border-radius: 8px; border: 0; font-weight: 700; color: var(--text); cursor: pointer; background: var(--panel-2); box-shadow: var(--edge), 0 2px 0 var(--well); }
+.l-sizer button:hover:not(:disabled) { color: var(--a); }
+.l-sizer button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+.l-sizer button:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+.l-sizer button:first-child { font-size: 0.72rem; }
+.l-sizer button:last-child { font-size: 1rem; }
+.l-sizer .px { flex: 1; text-align: center; font-family: var(--font-code); font-size: 0.74rem; color: var(--a); }
+.l-sizer .px i { display: block; height: 4px; margin-top: 5px; border-radius: 2px; overflow: hidden; background: var(--well); box-shadow: var(--recess); }
+.l-sizer .px i b { display: block; height: 100%; background: var(--a); }
+.l-switch { justify-self: start; width: 42px; height: 24px; border-radius: 99px; border: 0; position: relative; cursor: pointer; padding: 0; background: var(--well); box-shadow: var(--recess); transition: background 0.2s; }
+.l-switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--text-muted); transition: transform 0.2s, background 0.2s; }
+.l-switch[aria-checked="true"] { background: var(--a-soft); }
+.l-switch[aria-checked="true"]::after { transform: translateX(18px); background: var(--a); }
+.l-rp-note { margin-top: 10px; font-family: var(--font-code); font-size: 0.6rem; color: var(--faint); line-height: 1.5; }
+.l-rp-foot { display: flex; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.l-pick-btn {
+  flex: 1; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; border-radius: 12px; border: 0; text-align: left; color: var(--text); cursor: pointer;
+  background: var(--plum); box-shadow: var(--sheet); transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.3), box-shadow 0.18s;
+}
+.l-pick-btn:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px var(--a-line), var(--stack); }
+.l-pick-btn b { display: block; font-size: 0.84rem; font-weight: 600; }
+.l-pick-btn small { display: block; font-family: var(--font-code); font-size: 0.6rem; color: var(--text-muted); }
+.l-reset-btn { font-family: var(--font-code); font-size: 0.66rem; color: var(--text-muted); padding: 0 12px; border-radius: 10px; border: 0; box-shadow: inset 0 0 0 1px var(--line-2); background: none; cursor: pointer; }
+.l-reset-btn:hover { color: var(--text); box-shadow: inset 0 0 0 1px var(--a-line); }
+
+/* Help me pick */
+.k-dialog:has(.l-pk-body) { width: min(720px, calc(100vw - 32px)); }
+.l-pk-head { display: flex; align-items: center; gap: 10px; font-family: var(--font-code); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+/* Paper pips: done, the one you're on (cream), right, not quite. */
+.l-dots { display: flex; gap: 6px; }
+.l-dots i { width: 22px; height: 6px; border-radius: 2px; background: var(--well); box-shadow: var(--recess); }
+.l-dots i.on { background: var(--b); box-shadow: none; }
+.l-dots i.good { background: var(--good); box-shadow: none; }
+.l-dots i.miss { background: var(--miss); box-shadow: none; }
+.l-sample-tiles { margin-left: 46px; }
+.l-sample-tiles .k-tile { align-items: flex-start; padding: 16px 40px 16px 16px; }
+.l-sample { display: block; font-size: 1.05rem; line-height: 1.7; color: var(--read); font-weight: 400; }
+.l-sample-tag { display: block; font-family: var(--font-code); font-size: 0.62rem; color: var(--a); margin-bottom: 6px; }
+.l-pk-result {
+  margin: 12px 0 0 46px; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px;
+  background: var(--plum); box-shadow: inset 0 0 0 1px rgba(var(--a-rgb), 0.45), var(--sheet); animation: k-pop 0.4s var(--ease-pop) both;
+}
+.l-pk-result .big-aa {
+  width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; flex: none; font-size: 1.4rem; font-weight: 700;
+  color: var(--on-a); background: var(--a); box-shadow: inset 1px 1px 0 rgba(255, 240, 215, 0.45), 0 3px 0 var(--a-deep);
+}
+.l-pk-result b { display: block; }
+.l-pk-result span { font-family: var(--font-code); font-size: 0.66rem; color: var(--text-muted); }
+.l-pk-result .k-btn { margin-left: auto; }
+@media (max-width: 640px) { .l-sample-tiles, .l-pk-result { margin-left: 0; } }
+
+/* ---------- Quiz ---------- */
+.l-quiz { max-width: 760px; margin: 0 auto; padding: 14px 28px 40px; }
+.l-quiz .k-thread { margin-top: 28px; }
+.l-best { margin-top: 12px; font-size: 0.88rem; color: var(--text-muted); }
+.l-best b { color: var(--text); font-weight: 600; }
+/* One question: the prompt in the display serif, then the answers as paper tiles. */
+.l-qcard { margin: 18px 0 0 46px; padding: 0; border: 0; min-width: 0; animation: k-in 0.3s ease-out both; }
+@media (max-width: 640px) { .l-qcard { margin-left: 0; } }
+.l-qcard + .l-qcard { margin-top: 34px; padding-top: 26px; border-top: 1px solid var(--line); }
+.l-qcard legend { float: left; width: 100%; padding: 0; }
+.l-qcard legend + * { clear: both; }
+.l-qc-head { display: flex; align-items: center; gap: 12px; font-family: var(--font-code); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+.l-combo { margin-left: auto; }
+.l-combo svg { width: 11px; height: 11px; }
+.l-qc-q { display: block; margin-top: 10px; font-family: var(--font-display); font-weight: 400; font-size: 2rem; line-height: 1.12; color: var(--text); overflow-wrap: anywhere; }
+.l-qopts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding-top: 18px; }
+@media (max-width: 640px) { .l-qopts { grid-template-columns: 1fr; } }
+.l-qopts .k-tile { cursor: pointer; min-height: 64px; padding: 14px 16px 14px 14px; }
+.l-qopts .k-tile .tt { font-weight: 600; }
+.l-qopts .k-tile:has(input:disabled) { cursor: default; }
+.l-qopts .k-tile:has(input:disabled):hover { transform: none; }
+/* Picked, not checked yet: lifted with an apricot rim. */
+.l-qopts .k-tile:has(input:checked):not(.good):not(.miss) {
+  transform: translateY(-3px); background: var(--panel-2);
+  box-shadow: inset 0 0 0 1px rgba(var(--a-rgb), 0.6), inset 1px 1px 0 rgba(255, 238, 212, 0.1), 5px 6px 0 -1px var(--stack-under), 6px 18px 26px -10px rgba(0, 0, 0, 0.85);
+}
+.l-qopts .k-tile.dim { opacity: 0.45; box-shadow: var(--sheet); }
+.l-qopts .k-tile:has(input:focus-visible) { outline: 2px solid var(--a); outline-offset: 2px; }
+/* Right: a soft green rim, no glow. The kit's .good lifts it; here it stays still and calm. */
+.l-qopts .k-tile.good { background: var(--panel-2) !important; box-shadow: inset 0 0 0 1.5px rgba(var(--good-rgb), 0.7), var(--sheet) !important; }
+.l-qopts .k-tile.miss { background: var(--panel) !important; }
+.l-qopts .k-tile.reveal { opacity: 1; }
+/* The number key: a cut-out square holding the radio, like the mock's answer keys. */
+.l-key { position: relative; width: 30px; height: 30px; flex: none; display: grid; place-items: center; }
+.l-key .n { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-family: var(--font-code); font-size: 0.74rem; color: var(--text-muted); }
+.l-radio {
+  appearance: none; -webkit-appearance: none; margin: 0; width: 30px; height: 30px; border-radius: 8px; cursor: inherit;
+  background: var(--well); box-shadow: var(--recess); transition: background 0.15s;
+}
+.l-radio:focus-visible { outline: none; }
+.l-radio:checked { background: var(--a); box-shadow: inset 1px 1px 0 rgba(255, 240, 215, 0.4); }
+.l-radio:checked + .n { color: var(--on-a); }
+.k-tile.good .l-radio { background: var(--good); box-shadow: none; }
+.k-tile.good .l-radio + .n { color: var(--on-good); }
+.k-tile.miss .l-radio { background: var(--miss); box-shadow: none; }
+.k-tile.miss .l-radio + .n { color: var(--on-miss); }
+.k-tile.reveal .l-key .n { color: var(--good); }
+/* Flags hang from the top edge of a marked answer. */
+.l-flag { position: absolute; top: -1px; right: 12px; }
+.l-qopts .k-tile:has(.l-flag) { padding-top: 26px; }
+.k-rib.l-flag.pick { color: var(--miss); background: rgba(var(--miss-rgb), 0.16); }
+.k-rib.l-flag.right { color: var(--on-good); background: var(--good); }
+.l-qres { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; font-size: 0.9rem; min-height: 0; }
+.l-qres:empty { display: none; }
+.l-verdict { font-weight: 600; }
+.l-verdict.good { color: var(--good); }
+.l-verdict.miss { color: var(--miss); }
+/* What it means: a recessed note with Jongi, like the mock's feedback strip. */
+.l-why {
+  display: flex; gap: 12px; align-items: flex-start; margin-top: 12px; padding: 12px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.55;
+  background: var(--well); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 12px 22px -14px rgba(0, 0, 0, 0.9);
+}
+.l-why .av { flex: none; width: 36px; height: 36px; }
+.l-why .tx { min-width: 0; }
+.l-why b { color: var(--good); font-weight: 600; }
+.l-why p { color: var(--text); }
+.l-why p + p { margin-top: 4px; color: var(--text-muted); }
+.l-submit-bar {
+  position: sticky; bottom: 0; z-index: 5; margin: 26px 0 0 46px; padding: 12px 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--panel); box-shadow: var(--sheet), 0 -12px 24px -12px var(--bg);
+}
+.l-submit-bar .info { flex: 1; min-width: 0; font-family: var(--font-code); font-size: 0.68rem; color: var(--text-muted); }
+@media (max-width: 640px) { .l-submit-bar { margin-left: 0; } }
+/* Score: a sheet with the number in the display serif. A pass catches a gold thread. */
+.l-score { margin: 18px 0 4px 46px; padding: 22px; border-radius: 14px; background: var(--panel); box-shadow: var(--sheet); animation: k-pop 0.45s var(--ease-pop) both; }
+.l-score.pass { background: color-mix(in srgb, var(--panel) 70%, var(--plum)); box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb), 0.4), var(--stack); }
+@media (max-width: 640px) { .l-score { margin-left: 0; } }
+.l-sc-top { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.l-sc-num { display: flex; align-items: baseline; font-family: var(--font-display); }
+.l-sc-num b { font-weight: 400; font-size: 4rem; line-height: 0.9; color: var(--text); }
+.l-score.pass .l-sc-num b { color: var(--gold); }
+.l-sc-num span { font-size: 1.6rem; color: var(--text-muted); margin-left: 2px; }
+.l-sc-label { font-family: var(--font-display); font-size: 1.7rem; font-weight: 400; line-height: 1.1; }
+.l-sc-sub { font-size: 0.86rem; color: var(--text-muted); margin-top: 4px; }
+.l-sc-res { display: flex; gap: 6px; margin-top: 18px; }
+.l-sc-res i { flex: 1; height: 28px; border-radius: 6px; display: grid; place-items: center; font-family: var(--font-code); font-size: 0.68rem; }
+.l-sc-res i.good { background: rgba(var(--good-rgb), 0.14); color: var(--good); }
+.l-sc-res i.miss { background: rgba(var(--miss-rgb), 0.12); color: var(--miss); }
+.l-sc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+
+/* finish line (Next Lesson / Finish Course) */
+.l-finish { margin-top: 26px; }
+.l-finish .k-tiles { margin-bottom: 0; }
+
+/* ---------- Course complete ---------- */
+.l-done { max-width: 880px; margin: 0 auto; padding-bottom: 40px; }
+.l-done-hero { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 18px; align-items: center; padding-top: 6px; }
+.l-done-hero .big { position: relative; display: grid; place-items: center; }
+.l-done-hero .k-rib { align-self: flex-start; }
+.l-done-hero h1 { font-family: var(--font-display); font-weight: 400; font-size: 3.1rem; line-height: 1.02; margin-top: 12px; letter-spacing: -0.005em; overflow-wrap: anywhere; }
+.l-done-hero h1 .t { color: var(--a); }
+.l-done-hero .sub { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-top: 10px; }
+@media (max-width: 760px) {
+  .l-done-hero { grid-template-columns: 1fr; text-align: center; }
+  .l-done-hero .big { max-width: 220px; margin: 0 auto; }
+  .l-done-hero .k-rib { align-self: center; }
+}
+.l-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 22px; }
+@media (max-width: 640px) { .l-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.l-stat { padding: 11px 12px; border-radius: 11px; background: var(--panel); box-shadow: var(--sheet); animation: k-pop 0.4s var(--ease-pop) backwards; animation-delay: calc(var(--i, 0) * 80ms + 100ms); }
+.l-stat b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 2.1rem; line-height: 1; }
+.l-stat > span { color: var(--text-muted); font-size: 0.74rem; }
+.l-stat.hl { background: color-mix(in srgb, var(--panel) 70%, var(--plum)); box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb), 0.35), var(--sheet); }
+.l-stat.hl b { color: var(--gold); }
+.l-covered { margin-top: 34px; }
+.l-covered ul { list-style: none; padding: 0; margin: 0; }
+.l-covered li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 4px; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+.l-covered li > i { width: 20px; height: 20px; margin-top: 1px; border-radius: 6px; display: grid; place-items: center; flex: none; color: var(--a); background: var(--well); box-shadow: var(--recess); }
+.l-covered li > i svg { width: 11px; height: 11px; }
+.l-covered li .g { display: block; color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+.l-covered li .r { margin-left: auto; font-family: var(--font-code); color: var(--faint); font-size: 0.66rem; white-space: nowrap; padding-left: 10px; }
+.l-covered li .r.pass { color: var(--good); }
+.l-done .k-thread { margin-top: 30px; }
