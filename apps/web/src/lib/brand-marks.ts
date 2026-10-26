@@ -1,10 +1,10 @@
 /*
- * SVG markup for the Knibbler mark, the capped Nibbles used by the loader, and the course icons.
- * Ported from docs/uis/redesign/kit.js. Strings (not JSX) because the favicon needs the same
- * markup as a data URI. Colours are CSS var() strings inline, or hex for the favicon.
+ * SVG markup for the Knibbler mark, the old capped companion still used by the loader, and the course icons.
+ * The mark is ported from docs/uis/redesign/10-papercraft-jongi.html (`logo()`). Strings (not JSX) because
+ * the favicon (public/jongi-logo.svg) is the same markup.
  */
 
-/** The companion's name lives here only. It may change. */
+/** The companion's name lives here only. */
 export const COMPANION_NAME = "Nibbles";
 
 /** Product name (silent k). */
@@ -17,46 +17,28 @@ const MARK_VARS: MarkColours = { a: "var(--a)", b: "var(--b)" };
 const NIBBLES_VARS: NibblesColours = { ...MARK_VARS, hi: "var(--nib-hi)", lo: "var(--nib-lo)", ear: "var(--nib-ear)" };
 
 /**
- * The mark: Nibbles' silhouette (head, ears, cheeks) in a graduation cap. No face, so it stays crisp at 16px.
- * @param colours - Accent pair as var() strings or hex
- * @param uid - Unique id prefix for gradients and the mask
+ * The mark: Jongi's folded paper head (ears, face, cream muzzle, nose) in a tilted scholar cap with a
+ * gold tassel. Flat facets, no filters, so it stays crisp at 16px. Fixed paper colours (one palette).
+ * @param options.tile - Sit on the rounded ink-navy tile (use at 32px and up, and for the favicon)
  */
-export function logoMarkup(colours: MarkColours = MARK_VARS, uid = "lg") {
-  const board = "M50 7 L95 21.5 L50 36 L5 21.5Z";
-  const band = "M29 25 L71 25 L71 39.5 Q50 33.5 29 39.5Z";
-  const cord = "M94 22.5 V40";
-  const tassel = "M89.8 38.5 h8.4 l1.6 11 h-11.6z";
-  const head =
-    "M50 33 C64 33 75 40 79 50 C89 55 94 67 89 79 C84 91 69 97 50 97 C31 97 16 91 11 79 C6 67 11 55 21 50 C25 40 36 33 50 33Z";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
-  <defs>
-    <linearGradient id="${uid}h" gradientUnits="userSpaceOnUse" x1="18" y1="30" x2="80" y2="98"><stop offset="0" style="stop-color:${colours.a}"/><stop offset="1" style="stop-color:${colours.b}"/></linearGradient>
-    <linearGradient id="${uid}c" gradientUnits="userSpaceOnUse" x1="5" y1="8" x2="95" y2="54"><stop offset="0" style="stop-color:${colours.a}"/><stop offset="1" style="stop-color:${colours.b}"/></linearGradient>
-    <mask id="${uid}m" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
-      <rect width="100" height="100" fill="#fff"/>
-      <g style="fill:#000;stroke:#000" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
-        <path d="${board}"/><path d="${band}"/><path d="${tassel}"/><path d="${cord}" fill="none"/>
-      </g>
-    </mask>
-  </defs>
-  <g mask="url(#${uid}m)" style="fill:url(#${uid}h)">
-    <circle cx="22" cy="41" r="11"/><circle cx="78" cy="41" r="11"/>
-    <path d="${head}"/>
-  </g>
-  <g>
-    <path d="${band}" style="fill:url(#${uid}c)"/>
-    <path d="${band}" style="fill:#000" opacity=".28"/>
-    <path d="${board}" style="fill:url(#${uid}c)"/>
-    <g class="tassel">
-      <path d="${cord}" style="stroke:${colours.b};fill:none" stroke-width="3.6" stroke-linecap="round"/>
-      <path d="${tassel}" style="fill:${colours.b}"/>
-    </g>
-  </g>
-</svg>`;
+export function logoMarkup({ tile = false }: { tile?: boolean } = {}) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true">${tile ? '<rect width="32" height="32" rx="7" fill="#141a2e"/>' : ""}
+<polygon points="3.5,14 5.2,3.2 10.5,10.8" fill="#e8b07a"/><polygon points="5.2,3.2 13.5,8.6 10.5,10.8" fill="#c27f48"/>
+<polygon points="28.5,14 26.8,3.2 21.5,10.8" fill="#b06f3c"/><polygon points="26.8,3.2 18.5,8.6 21.5,10.8" fill="#d08b55"/>
+<polygon points="16,6.5 24.6,8.9 28.6,16.6 25.6,25 16,28.8 6.4,25 3.4,16.6 7.4,8.9" fill="#d8955c"/>
+<polygon points="16,6.5 24.6,8.9 28.6,16.6 25.6,25 16,28.8" fill="#c4824c"/>
+<polygon points="16,18 22.8,21 21,26 16,28.8 11,26 9.2,21" fill="#f0e0c2"/><polygon points="16,18 22.8,21 21,26 16,28.8" fill="#d9c39d"/>
+<circle cx="11.4" cy="15.4" r="1.75" fill="#141726"/><circle cx="20.6" cy="15.4" r="1.75" fill="#141726"/>
+<polygon points="14.8,19.6 17.2,19.6 16,21.1" fill="#c25f72"/>
+<g transform="rotate(6 16 7)"><polygon points="8.5,6.6 16.4,3 24,5.8 16,9.6" fill="#2f3964"/><polygon points="16.4,3 24,5.8 16,9.6" fill="#222949"/>
+<polyline points="8.5,6.6 16.4,3 24,5.8" fill="none" stroke="#6372b3" stroke-width=".7" stroke-linejoin="round"/>
+<path d="M16.2,6.3 L23.6,6 L23.6,10.4" fill="none" stroke="#e7b250" stroke-width="1" stroke-linecap="round"/></g></svg>`;
 }
 
 /**
- * Nibbles with the full face in a graduation cap, for the loader (the companion working, not the mark).
+ * The old capped companion (pre-Jongi), for the loader.
+ * @deprecated Phase 1 of SEN-97 replaces the loader with the page-flip loader; remove this (and the
+ * `--nib-*` tokens in index.css) once nothing imports it.
  * @param uid - Unique id prefix for gradients
  */
 export function cappedNibblesMarkup(uid = "cn", colours: NibblesColours = NIBBLES_VARS) {
