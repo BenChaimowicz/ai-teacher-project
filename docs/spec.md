@@ -389,6 +389,8 @@ This prototype ships `reading` and `quiz`.
 
 **Shared Lesson envelope:** Course, Blueprint slot, teaching method, title, Lesson goal, objectives, Topic tags, Lesson lineage, Sources, Citations. Generate also receives the Course Learning Goal, prior-Lesson Course context, only the write-time Teaching Profile fields this method declared, retrieved Sources or a reuse candidate, and — for a Quiz — the instructional Lessons it assesses. It returns one finished Lesson (envelope + method body). The Learner cannot open it until the Course publishes atomically.
 
+The reading and Quiz authors write to one teaching style guide: a reason to care, examples, signposting, questions that check understanding, a recap, and one teaching voice. It adds structure and explanation, never facts (ADR 0019).
+
 **Reading body:** ordered reading sections, each with a heading and content blocks (prose and optional Demonstrative media). Numbered Citations live in the prose.
 
 **Quiz body:** 5–10 single-correct four-option items. Each item stores a `brief`, `standard`, and `detailed` explanation (Q8 is show-time). No reading sections. No Demonstrative media. Generator chooses `n` in 5–10. Equal weight per question. Pass is the raw ratio `correct / n ≥ 0.70`. Unlimited retakes, same question set, best score kept. Prototype does not generate new items per attempt.
@@ -492,7 +494,7 @@ A Blueprint fail is a Blueprint revision, then Learner review again.
 
 **Code:** envelope + reading plugin `validate`; every Citation URL is in this Lesson’s retrieval set; required Demonstrative media has a hostable Media descriptor; SVG has no script / `foreignObject`.
 
-**Judge:** every factual claim is supported by a retrieved excerpt from a cited Source; every slot objective is taught; sequential coherence with prior finalized Lessons; no generated substitute of a named work; media vision on attached stills/loops (required slots fail closed; optional decorative may skip).
+**Judge:** every factual claim is supported by a retrieved excerpt from a cited Source (a plainly marked analogy or invented example is not a claim, as long as it states no fact about the subject); every slot objective is taught; sequential coherence with prior finalized Lessons; no generated substitute of a named work; media vision on attached stills/loops (required slots fail closed; optional decorative may skip).
 
 ### 6.4 Quiz (before checkpoint)
 

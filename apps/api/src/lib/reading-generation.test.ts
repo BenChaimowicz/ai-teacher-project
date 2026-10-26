@@ -4,6 +4,7 @@ import type { BlueprintSlot } from "@senoy/db/blueprint";
 import type { PackSource, SourcePack } from "@senoy/research";
 import type { Generator, Judge, StructuredRequest, ModelReply } from "./model-ports.ts";
 import { applyRepairEdits, createReadingGenerator, LessonUnresearchableError, READING_JUDGE_CHECKS, ReadingFailedError, UNRELIABLE_SOURCE, type ReadingInput } from "./reading-generation.ts";
+import { ILLUSTRATION_RULE, READING_STYLE, TEACHING_VOICE } from "./teaching-style.ts";
 
 /** A Source with the given excerpts. */
 function source(sourceId: string, url: string, excerpts: string[]): PackSource {
@@ -58,11 +59,11 @@ const TOUCH = edits(["Roots again", "Roots again"]);
 /** Scripted Generator: one output per call, repeating the last; records what it was shown and asked for. */
 function scriptedGenerator(output: unknown, modelId = "fixture/author", ...later: unknown[]) {
   const outputs = [output, ...later];
-  const calls: { input: unknown; schemaName: string }[] = [];
+  const calls: { input: unknown; schemaName: string; systemPrompt: string }[] = [];
   const generator: Generator = {
     modelId,
     async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
-      calls.push({ input: request.input, schemaName: request.schemaName });
+      calls.push({ input: request.input, schemaName: request.schemaName, systemPrompt: request.systemPrompt });
       return { value: request.parse(outputs[Math.min(calls.length, outputs.length) - 1]), modelId: modelId };
     },
   };
@@ -77,7 +78,7 @@ const PASS = { pass: true, failedChecks: [], reasons: [] };
  */
 function scriptedJudge(verdict: unknown = PASS, modelId = "fixture/judge", ...later: unknown[]) {
   const verdicts = [verdict, ...later];
-  const calls: { input: unknown; authorModelIds: readonly string[]; schema: unknown }[] = [];
+  const calls: { input: unknown; authorModelIds: readonly string[]; schema: unknown; systemPrompt: string }[] = [];
   const vettings: { input: unknown; systemPrompt: string }[] = [];
   const rejected: string[] = [];
   const judge: Judge = {
@@ -87,7 +88,7 @@ function scriptedJudge(verdict: unknown = PASS, modelId = "fixture/judge", ...la
         vettings.push({ input: request.input, systemPrompt: request.systemPrompt });
         return { value: request.parse({ rejected: rejected.map((sourceId) => ({ sourceId, reason: "A shop's blog." })) }), modelId: modelId };
       }
-      calls.push({ input: request.input, authorModelIds: request.authorModelIds, schema: request.schema });
+      calls.push({ input: request.input, authorModelIds: request.authorModelIds, schema: request.schema, systemPrompt: request.systemPrompt });
       return { value: request.parse(verdicts[Math.min(calls.length, verdicts.length) - 1]), modelId: modelId };
     },
   };
@@ -155,6 +156,18 @@ test("A Judge failure is repaired by edits: the repair sees its draft, the numbe
   assert.deepEqual(revision.numberedSources, [{ n: 1, sourceId: WIKI.sourceId }, { n: 2, sourceId: BRIT.sourceId }]);
   assert.deepEqual(revision.problems, UNSUPPORTED.reasons);
   assert.equal(revision.sources.length, 2, "A repair is grounded in the same Sources.");
+});
+
+test("The author writes to the style guide, a repair keeps its voice, and the Judge accepts the illustrations it allows", async () => {
+  const { generator, calls } = scriptedGenerator(authored(), "fixture/author", TOUCH);
+  const { judge, calls: judgeCalls } = scriptedJudge(UNSUPPORTED, "fixture/judge", PASS);
+  await createReadingGenerator({ generator, judge }).generate(INPUT);
+
+  assert.ok(calls[0]!.systemPrompt.includes(READING_STYLE));
+  assert.ok(calls[1]!.systemPrompt.includes(TEACHING_VOICE), "A replacement sentence reads like the rest of the draft.");
+  // The author and the Judge get one wording of when an analogy is not a claim, so they decide it the same way.
+  for (const prompt of [calls[0]!.systemPrompt, calls[1]!.systemPrompt, judgeCalls[0]!.systemPrompt]) assert.ok(prompt.includes(ILLUSTRATION_RULE));
+  for (const prompt of [READING_STYLE, ILLUSTRATION_RULE]) assert.doesNotMatch(prompt, /norse|yggdrasil/i, "Prompts stay subject-neutral (ADR 0011).");
 });
 
 test("A repair whose edits all miss is not judged again; the next repair gets the same problems and is told why", async () => {
