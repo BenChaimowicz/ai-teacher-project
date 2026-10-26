@@ -1,7 +1,7 @@
 import { ArrowRight, Check, SkipForward, X } from "lucide-react";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { ReadingSupport } from "@senoy/db/teaching-profile";
-import { NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
 import {
   NO_PREFERENCE_ICON,
@@ -30,9 +30,9 @@ export function ProfileAsk({ question, lead, onAnswer, resetKey }: AskProps) {
   const [shown, setShown] = useState(false);
   return (
     <>
-      <NibblesLine typing delayMs={420} onShown={() => setShown(true)}>
+      <CompanionLine typing delayMs={420} onShown={() => setShown(true)}>
         <span className="mk-qhead">{lead}<b>{question.ask}</b></span>
-      </NibblesLine>
+      </CompanionLine>
       {shown ? (
         question.multi ? (
           <MultiTiles question={question} onAnswer={onAnswer} resetKey={resetKey} />

@@ -6,11 +6,11 @@ import { useCompanion, useCompanionLines } from "@/components/companion/companio
 import { CountUp } from "@/components/learn/count-up.tsx";
 import { LinkTiles, type LinkTile } from "@/components/learn/link-tiles.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChatThread, NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { ChatThread, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { CourseCard } from "@/components/ui/course-card.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { PageLoader, Loader } from "@/components/ui/loader.tsx";
-import { Nibbles } from "@/components/ui/nibbles.tsx";
+import { Jongi } from "@/components/companion/jongi.tsx";
 import { ProgressRing, SegmentedProgress, type SegmentState } from "@/components/ui/progress.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
 import { COMPANION_NAME, type CourseIconName } from "@/lib/brand-marks.ts";
@@ -232,7 +232,7 @@ function NeedsCard({ row }: { row: Row }) {
       <CourseCardBody course={row.course} sub={row.item.learningGoal} />
       <div className="say">
         <span className="av" aria-hidden="true">
-          <Nibbles size={24} />
+          <Jongi size={24} tile="round" />
         </span>
         <span>
           <span className="sr-only">{COMPANION_NAME}: </span>
@@ -291,9 +291,9 @@ function FirstRun() {
   return (
     <div className="l-home">
       <ChatThread>
-        <NibblesLine typing onShown={() => setShown(true)}>
+        <CompanionLine typing onShown={() => setShown(true)}>
           Hi, I'm {COMPANION_NAME}. What would you like to learn?
-        </NibblesLine>
+        </CompanionLine>
       </ChatThread>
       {shown ? (
         <div className="k-tcard">
@@ -435,9 +435,9 @@ export function HomePage() {
   return (
     <div className="l-home">
       <ChatThread>
-        <NibblesLine typing delayMs={420} onShown={() => setTilesShown(true)}>
+        <CompanionLine typing delayMs={420} onShown={() => setTilesShown(true)}>
           {line}
-        </NibblesLine>
+        </CompanionLine>
       </ChatThread>
       {resume ? <ContinueHero row={resume} study={study} /> : null}
       {tilesShown ? <LinkTiles tiles={tiles} label="What to do now" cols={3} /> : null}

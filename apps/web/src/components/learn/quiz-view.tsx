@@ -3,7 +3,7 @@ import type { PublicQuizBody, PublicQuizItem, QuizScore } from "@senoy/db/quiz";
 import { Flame } from "lucide-react";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChatThread, NibblesLine } from "@/components/ui/chat-thread.tsx";
+import { ChatThread, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { useToast } from "@/components/ui/toast.tsx";
 import { useCountUp } from "@/components/learn/count-up.tsx";
 import { requestJson } from "@/lib/api.ts";
@@ -417,12 +417,12 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
       ) : (
         <div ref={thread}>
           <ChatThread label="Quiz">
-            <NibblesLine>
+            <CompanionLine>
               {perItem
                 ? `${count[0]!.toUpperCase()}${count.slice(1)} questions, one at a time. Pick an answer, then Check it.`
                 : `${count[0]!.toUpperCase()}${count.slice(1)} questions, one at a time. You'll see how you did after you submit.`}{" "}
               <span className="faint">No timer.</span>
-            </NibblesLine>
+            </CompanionLine>
             {items.slice(0, shown).map((item, index) => {
               const chosen = answers[item.id];
               let streak = 0;
@@ -446,7 +446,7 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
                 />
               );
             })}
-            {canSubmit ? <NibblesLine key="all-done">That's all {count}. Submit when you're ready.</NibblesLine> : null}
+            {canSubmit ? <CompanionLine key="all-done">That's all {count}. Submit when you're ready.</CompanionLine> : null}
             {submitted && attempt?.score ? (
               <>
                 <ScoreCard
@@ -457,13 +457,13 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
                   onRetake={() => void retake()}
                   celebrate={justSubmitted}
                 />
-                <NibblesLine key="after">
+                <CompanionLine key="after">
                   {view.passed
                     ? attempt.score.correct / attempt.score.total >= 0.7
                       ? "All clear."
                       : "Your best score still counts, so this one stays passed."
                     : "Close. The right answers are marked above. Try again whenever you like."}
-                </NibblesLine>
+                </CompanionLine>
               </>
             ) : null}
           </ChatThread>
