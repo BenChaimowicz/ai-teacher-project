@@ -248,7 +248,7 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
           </>
         ) : (
           <>
-            <CompanionLine typing delayMs={380} key={item.id}>
+            <CompanionLine typing delayMs={380} key={`ask-${item.id}`}>
               <span className="mk-qhead"><span className="mk-qnum">{index + 1} of {total}</span><b>{item.stem}</b></span>
             </CompanionLine>
             <OptionTiles

@@ -2,7 +2,7 @@ import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useCompanionLines } from "@/components/companion/companion-provider.tsx";
-import { FlowSteps, MAKE_STEPS } from "@/components/make-course/flow.tsx";
+import { FlowSteps, FlowTitle, MAKE_STEPS } from "@/components/make-course/flow.tsx";
 import { LEVEL_STATUSES, LevelStage } from "@/components/make-course/level-stage.tsx";
 import { PLAN_STATUSES, PlanStage } from "@/components/make-course/plan-stage.tsx";
 import { errorText, onRequestChange } from "@/components/make-course/request-api.ts";
@@ -85,7 +85,7 @@ export function CourseRequestPage() {
 
   return (
     <div className="mk-page">
-      <ShellTitle>{record.status === "draft" ? "New course" : record.subject}</ShellTitle>
+      <ShellTitle><FlowTitle>{record.status === "draft" ? "New course" : record.subject}</FlowTitle></ShellTitle>
       <ShellActions><FlowSteps current={stepOf(record.status)} /></ShellActions>
       <ChatThread key={record.id}>
         <RequestHistory record={record} />

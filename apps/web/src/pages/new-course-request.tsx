@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCompanionLines } from "@/components/companion/companion-provider.tsx";
 import { ComposeFlow } from "@/components/make-course/compose-flow.tsx";
-import { FlowSteps } from "@/components/make-course/flow.tsx";
+import { FlowSteps, FlowTitle } from "@/components/make-course/flow.tsx";
 import { requestAction } from "@/components/make-course/request-api.ts";
 import { ShellActions, ShellTitle } from "@/components/shell/app-shell.tsx";
 import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
@@ -63,7 +63,7 @@ export function NewCourseRequestPage() {
 
   return (
     <div className="mk-page">
-      {topic ? <ShellTitle>{topic}</ShellTitle> : null}
+      <ShellTitle><FlowTitle>{topic ?? "New course"}</FlowTitle></ShellTitle>
       <ShellActions><FlowSteps current={topic ? 1 : 0} /></ShellActions>
       <ChatThread>
         <ComposeFlow initialSubject={params.get("subject") ?? undefined} presetTopic={params.get("topic") ?? undefined} onCompose={compose} onTopic={setTopic} />
