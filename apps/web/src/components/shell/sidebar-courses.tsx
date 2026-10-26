@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { CourseRow } from "@/components/ui/course-row.tsx";
-import { LIBRARY_CHANGED_EVENT, sidebarCourses, type CourseListItem, type LibraryItem } from "@/lib/course-list.ts";
+import { RemovableCourse } from "@/components/ui/remove-course.tsx";
+import { LIBRARY_CHANGED_EVENT, sidebarCourses, withoutHidden, type CourseListItem, type LibraryItem } from "@/lib/course-list.ts";
 
 const MAX_ROWS = 5;
 /** How often to re-check while a course is being made or a Course Request screen is open. */
@@ -33,7 +34,7 @@ export function SidebarCourses() {
           return response.json() as Promise<{ items: LibraryItem[] }>;
         })
         .then((body) => {
-          if (!cancelled) setItems(sidebarCourses(body.items));
+          if (!cancelled) setItems(sidebarCourses(withoutHidden(body.items)));
         })
         .catch(() => {
           if (!cancelled) setItems((current) => current ?? []);
@@ -68,7 +69,9 @@ export function SidebarCourses() {
       {items && items.length === 0 ? <p className="k-empty-line">Nothing yet. Start one and it shows up here.</p> : null}
       <div className="k-clist">
         {shown.map((course) => (
-          <CourseRow key={course.key} course={course} active={isActive(course, pathname)} />
+          <RemovableCourse key={course.key} course={course} className="row">
+            <CourseRow course={course} active={isActive(course, pathname)} />
+          </RemovableCourse>
         ))}
       </div>
       {more > 0 ? (

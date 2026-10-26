@@ -14,7 +14,8 @@ import { Jongi } from "@/components/companion/jongi.tsx";
 import { ProgressBar, ProgressRing } from "@/components/ui/progress.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
 import { COMPANION_NAME, type CourseIconName } from "@/lib/brand-marks.ts";
-import { toCourseListItem, type CourseListItem, type LibraryItem } from "@/lib/course-list.ts";
+import { LIBRARY_CHANGED_EVENT, toCourseListItem, withoutHidden, type CourseListItem, type LibraryItem } from "@/lib/course-list.ts";
+import { RemovableCourse } from "@/components/ui/remove-course.tsx";
 import type { StudyPayload } from "@/lib/study-types.ts";
 import "@/components/learn/learn.css";
 
@@ -401,7 +402,7 @@ export function HomePage() {
         return response.json() as Promise<{ items: LibraryItem[] }>;
       })
       .then((body) => {
-        if (!cancelled) setItems(body.items);
+        if (!cancelled) setItems(withoutHidden(body.items));
       })
       .catch((caught: unknown) => {
         if (!cancelled) setError(caught instanceof Error ? caught.message : "Your courses didn't load.");
@@ -410,6 +411,13 @@ export function HomePage() {
       cancelled = true;
     };
   }, [attempt]);
+
+  // A course removed from the UI (here or in the sidebar) drops out without a refetch.
+  useEffect(() => {
+    const drop = () => setItems((current) => (current ? withoutHidden(current) : current));
+    window.addEventListener(LIBRARY_CHANGED_EVENT, drop);
+    return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, drop);
+  }, []);
 
   const groups = useMemo(() => (items ? groupLibrary(items) : null), [items]);
   const resumeId = groups?.resume?.item.id ?? null;
@@ -471,7 +479,9 @@ export function HomePage() {
       {resume ? (
         <>
           <p className="k-sec-h">continue</p>
-          <ContinueHero row={resume} study={study} />
+          <RemovableCourse course={resume.course}>
+            <ContinueHero row={resume} study={study} />
+          </RemovableCourse>
         </>
       ) : null}
       {tilesShown ? <LinkTiles tiles={tiles} label="What to do now" cols={2} /> : null}
@@ -484,11 +494,12 @@ export function HomePage() {
             <Section id="home-learning" title="learning" count={groups.learning.length}>
               <div className="l-stack">
                 {groups.learning.map((row) => (
-                  <CourseCard
-                    key={row.course.key}
-                    course={row.course}
-                    metaLeft={`${row.item.progress?.completed ?? 0} of ${row.item.progress?.total ?? 0} lessons`}
-                  />
+                  <RemovableCourse key={row.course.key} course={row.course}>
+                    <CourseCard
+                      course={row.course}
+                      metaLeft={`${row.item.progress?.completed ?? 0} of ${row.item.progress?.total ?? 0} lessons`}
+                    />
+                  </RemovableCourse>
                 ))}
               </div>
             </Section>
@@ -498,8 +509,8 @@ export function HomePage() {
             <Section id="home-making" title="being made" count={groups.making.length}>
               <div className="l-stack">
                 {groups.making.map((row) => (
+                  <RemovableCourse key={row.course.key} course={row.course}>
                   <CourseCard
-                    key={row.course.key}
                     className="l-making"
                     course={row.course}
                     sub={
@@ -510,6 +521,7 @@ export function HomePage() {
                     }
                     metaLeft="you can leave; it keeps going"
                   />
+                  </RemovableCourse>
                 ))}
               </div>
             </Section>
@@ -519,7 +531,9 @@ export function HomePage() {
             <Section id="home-needs" title="needs you" count={groups.needs.length}>
               <div className="l-stack">
                 {groups.needs.map((row) => (
-                  <NeedsCard key={row.course.key} row={row} />
+                  <RemovableCourse key={row.course.key} course={row.course}>
+                    <NeedsCard row={row} />
+                  </RemovableCourse>
                 ))}
               </div>
               {groups.older.length ? (
@@ -535,7 +549,9 @@ export function HomePage() {
                   {showOlder ? (
                     <div id="home-older" className="l-stack mt-2">
                       {groups.older.map((row) => (
-                        <CourseCard key={row.course.key} course={row.course} sub={row.item.learningGoal} />
+                        <RemovableCourse key={row.course.key} course={row.course}>
+                          <CourseCard course={row.course} sub={row.item.learningGoal} />
+                        </RemovableCourse>
                       ))}
                     </div>
                   ) : null}
@@ -550,7 +566,9 @@ export function HomePage() {
         <Section id="home-done" title="finished" count={groups.done.length}>
           <div className="l-rows">
             {groups.done.map((row) => (
-              <DoneRow key={row.course.key} row={row} />
+              <RemovableCourse key={row.course.key} course={row.course} className="row">
+                <DoneRow row={row} />
+              </RemovableCourse>
             ))}
           </div>
         </Section>

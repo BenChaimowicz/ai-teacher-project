@@ -8,6 +8,41 @@ export function notifyLibraryChanged() {
   window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT));
 }
 
+const HIDDEN_KEY = "knibbler-hidden-courses";
+
+/** Course keys (`kind-id`) the Learner removed from the UI in this browser. */
+export function readHiddenCourses(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? "[]") as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Hides a course from Home and the sidebar (this browser only; nothing is deleted).
+ * @param key - `CourseListItem.key`
+ */
+export function hideCourse(key: string) {
+  const hidden = readHiddenCourses();
+  hidden.add(key);
+  try {
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hidden]));
+  } catch {
+    // Private mode can refuse storage; the course comes back on reload.
+  }
+  notifyLibraryChanged();
+}
+
+/**
+ * Drops the rows the Learner removed.
+ * @param items - Library rows
+ */
+export function withoutHidden(items: LibraryItem[]): LibraryItem[] {
+  const hidden = readHiddenCourses();
+  return items.filter((item) => !hidden.has(`${item.kind}-${item.id}`));
+}
+
 /** A row from `/api/library`: a published Course or an unpublished Course Request. */
 export type LibraryItem = {
   id: string;
