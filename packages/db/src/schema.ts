@@ -38,6 +38,8 @@ export const courseRequests = pgTable("course_requests", {
   revisedFromId: uuid("revised_from_id").references((): AnyPgColumn => courseRequests.id),
   /** Plain-language reason the last step failed, with its next step; cleared when the Learner tries again. */
   failureReason: text("failure_reason"),
+  /** Set when the Learner removed it from Home and the sidebar. Nothing else changes; it's just not listed. */
+  hiddenAt: timestamp("hidden_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -203,6 +205,8 @@ export const publishedCourses = pgTable("published_courses", {
   learningGoal: text("learning_goal").notNull(),
   sequenceMode: text("sequence_mode").notNull().default("linear"),
   publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Set when the Learner removed it from Home and the sidebar. Nothing else changes; it's just not listed. */
+  hiddenAt: timestamp("hidden_at", { withTimezone: true }),
 });
 
 /** Named grouping of Lessons inside a published Course. */

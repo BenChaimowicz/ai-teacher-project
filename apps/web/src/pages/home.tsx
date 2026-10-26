@@ -14,7 +14,7 @@ import { Jongi } from "@/components/companion/jongi.tsx";
 import { ProgressBar, ProgressRing } from "@/components/ui/progress.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
 import { COMPANION_NAME, type CourseIconName } from "@/lib/brand-marks.ts";
-import { LIBRARY_CHANGED_EVENT, toCourseListItem, withoutHidden, type CourseListItem, type LibraryItem } from "@/lib/course-list.ts";
+import { LIBRARY_CHANGED_EVENT, toCourseListItem, type CourseListItem, type LibraryItem } from "@/lib/course-list.ts";
 import { RemovableCourse } from "@/components/ui/remove-course.tsx";
 import type { StudyPayload } from "@/lib/study-types.ts";
 import "@/components/learn/learn.css";
@@ -402,7 +402,7 @@ export function HomePage() {
         return response.json() as Promise<{ items: LibraryItem[] }>;
       })
       .then((body) => {
-        if (!cancelled) setItems(withoutHidden(body.items));
+        if (!cancelled) setItems(body.items);
       })
       .catch((caught: unknown) => {
         if (!cancelled) setError(caught instanceof Error ? caught.message : "Your courses didn't load.");
@@ -412,11 +412,11 @@ export function HomePage() {
     };
   }, [attempt]);
 
-  // A course removed from the UI (here or in the sidebar) drops out without a refetch.
+  // A course removed (here or in the sidebar) drops out: reload the Library.
   useEffect(() => {
-    const drop = () => setItems((current) => (current ? withoutHidden(current) : current));
-    window.addEventListener(LIBRARY_CHANGED_EVENT, drop);
-    return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, drop);
+    const reload = () => setAttempt((n) => n + 1);
+    window.addEventListener(LIBRARY_CHANGED_EVENT, reload);
+    return () => window.removeEventListener(LIBRARY_CHANGED_EVENT, reload);
   }, []);
 
   const groups = useMemo(() => (items ? groupLibrary(items) : null), [items]);

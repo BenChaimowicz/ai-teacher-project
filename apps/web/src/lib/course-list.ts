@@ -8,39 +8,22 @@ export function notifyLibraryChanged() {
   window.dispatchEvent(new Event(LIBRARY_CHANGED_EVENT));
 }
 
-const HIDDEN_KEY = "knibbler-hidden-courses";
-
-/** Course keys (`kind-id`) the Learner removed from the UI in this browser. */
-export function readHiddenCourses(): Set<string> {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? "[]") as string[]);
-  } catch {
-    return new Set();
-  }
-}
-
 /**
- * Hides a course from Home and the sidebar (this browser only; nothing is deleted).
- * @param key - `CourseListItem.key`
+ * Removes a course from the Library (Home and the sidebar) for good. Nothing is deleted on the server;
+ * it's marked hidden. Throws with a plain message when the server refuses.
+ * @param course - The row's kind and id
  */
-export function hideCourse(key: string) {
-  const hidden = readHiddenCourses();
-  hidden.add(key);
-  try {
-    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hidden]));
-  } catch {
-    // Private mode can refuse storage; the course comes back on reload.
+export async function hideCourse(course: Pick<CourseListItem, "kind" | "id">) {
+  const response = await fetch("/api/library/hide", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind: course.kind, id: course.id }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? "Couldn't remove that course. Try again.");
   }
   notifyLibraryChanged();
-}
-
-/**
- * Drops the rows the Learner removed.
- * @param items - Library rows
- */
-export function withoutHidden(items: LibraryItem[]): LibraryItem[] {
-  const hidden = readHiddenCourses();
-  return items.filter((item) => !hidden.has(`${item.kind}-${item.id}`));
 }
 
 /** A row from `/api/library`: a published Course or an unpublished Course Request. */

@@ -148,6 +148,13 @@
       "when": 1792857500667,
       "tag": "0020_20261024155820_needs_new_blueprint",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793039510046,
+      "tag": "0021_20261026183150_hide_from_library",
+      "breakpoints": true
     }
   ]
 }
