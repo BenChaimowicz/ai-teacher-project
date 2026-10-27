@@ -302,7 +302,7 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
   if (!diagnostic) return live ? <>{intro}<CompanionLine typing>…</CompanionLine></> : null;
 
   // Brand new to this: the Learner's own word, so no questions and no "small sample" note (spec §4.3).
-  if (diagnostic.items.length === 0 && diagnostic.result) {
+  if (diagnostic.result?.selfReportedNew) {
     return (
       <>
         {knowAsk}

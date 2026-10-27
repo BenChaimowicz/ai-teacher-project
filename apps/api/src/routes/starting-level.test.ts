@@ -350,7 +350,7 @@ test("Brand new to this confirms a from-the-beginning Starting Level with no ite
       assert.deepEqual(body.diagnostic, {
         id: body.diagnostic.id,
         items: [],
-        result: { remainingGapStatement: NEW_TO_SUBJECT_GAP_STATEMENT, coverageNote: "", extremity: "floor", canExpandGap: false },
+        result: { remainingGapStatement: NEW_TO_SUBJECT_GAP_STATEMENT, coverageNote: "", extremity: "floor", canExpandGap: false, selfReportedNew: true },
         confirmation: "looks_right",
       });
       assert.equal(requestRow.status, "starting_level_confirmed");

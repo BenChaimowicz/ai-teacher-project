@@ -54,6 +54,8 @@ function learnerView(attempt: Attempt) {
       coverageNote: level.coverageNote,
       extremity: level.extremity,
       canExpandGap: canExpandGap(level.probedCapabilities),
+      /** The Learner said they are brand new: their own word, not a diagnostic result (ADR 0021). */
+      selfReportedNew: level.selfReportedNew === true,
     } : null,
     confirmation: attempt.confirmation,
   };

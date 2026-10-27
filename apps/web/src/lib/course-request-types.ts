@@ -14,6 +14,8 @@ export type DiagnosticView = {
     coverageNote: string;
     extremity: Extremity;
     canExpandGap: boolean;
+    /** The Learner said they are brand new, so nothing was asked (ADR 0021). */
+    selfReportedNew: boolean;
   } | null;
   confirmation: GapConfirmation | null;
 };
