@@ -13,6 +13,7 @@ const requestFields = {
   createdAt: courseRequests.createdAt,
   validity: courseRequests.validity,
   clarification: courseRequests.clarification,
+  focus: courseRequests.focus,
   revisedFromId: courseRequests.revisedFromId,
   failureReason: courseRequests.failureReason,
 };
@@ -152,6 +153,8 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
       if (request.currentLearner.teachingProfileVersion !== TEACHING_PROFILE_VERSION || request.currentLearner.teachingProfileAnswers == null) {
         return reply.code(409).send({ error: "Save your Teaching Profile before creating a Course Request." });
       }
+      // The current (possibly focused) goal carries over as editable text; `focus` does not, so the draft goes through
+      // Validity and focusing again, where a precise goal passes straight through (SEN-90).
       const [draft] = await app.db.insert(courseRequests).values({
         learnerId: request.currentLearner.id, subject: row.subject, learningGoal: row.learningGoal,
         status: "draft", revisedFromId: row.id,

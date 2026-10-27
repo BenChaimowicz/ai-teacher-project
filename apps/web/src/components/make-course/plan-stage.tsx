@@ -214,6 +214,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
       <>
         {record.failureReason ? <CompanionLine mood="think"><span role="alert">{record.failureReason}</span></CompanionLine> : null}
         <CompanionLine>Here's a plan. Your call.</CompanionLine>
+        <ScopeNote record={record} />
         <PlanCard
           view={view}
           subject={record.subject}
@@ -389,6 +390,31 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
         onPick={(option) => navigate(option.id === "start" && courseHref ? courseHref : "/")}
       />
       <ThreadEnd watch={record.status} />
+    </>
+  );
+}
+
+/**
+ * Under the plan's header: the Learning Goal it aims for, then the scope the Learner settled before the Starting Level
+ * check (SEN-90), so they can see the plan kept to it. No scope line for a precise goal.
+ */
+function ScopeNote({ record }: { record: CourseRequestRecord }) {
+  const focus = record.focus;
+  const goal = <CompanionLine continued><span className="mk-plan-goal">Aiming for: {record.learningGoal}</span></CompanionLine>;
+  if (focus?.outcome === "broad_overview") {
+    return <>{goal}<CompanionLine continued><span className="mk-faint">A broad overview, as you asked.</span></CompanionLine></>;
+  }
+  if (focus?.outcome !== "focused" || !focus.scope) return goal;
+  const { inScope, outOfScope } = focus.scope;
+  return (
+    <>
+      {goal}
+      <CompanionLine continued>
+        <span className="mk-faint">
+          Focused on: {inScope.join(", ")}
+          {outOfScope.length ? <> · Leaving out: {outOfScope.join(", ")}</> : null}
+        </span>
+      </CompanionLine>
     </>
   );
 }

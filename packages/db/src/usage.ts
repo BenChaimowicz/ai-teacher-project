@@ -56,6 +56,7 @@ export type CostBasis = (typeof COST_BASES)[number];
 /** The platform's own steps that group Usage Records and give them their purpose. */
 export const PIPELINE_EVENT_KINDS = [
   "validity",
+  "goal_focus",
   "diagnostic",
   "fact_check",
   "blueprint",
@@ -76,8 +77,10 @@ export type PipelineEventStatus = (typeof PIPELINE_EVENT_STATUSES)[number];
 export const PRODUCT_EVENT_KINDS = [
   "course_request_created",
   "course_request_clarified",
+  "course_request_focused",
   "diagnostic_submitted",
   "starting_level_confirmed",
+  "starting_level_self_reported_new",
   "blueprint_approved",
   "blueprint_rejected",
   "generation_cancelled",

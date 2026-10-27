@@ -30,6 +30,7 @@ const requestFields = {
   createdAt: courseRequests.createdAt,
   validity: courseRequests.validity,
   clarification: courseRequests.clarification,
+  focus: courseRequests.focus,
   revisedFromId: courseRequests.revisedFromId,
   failureReason: courseRequests.failureReason,
 };

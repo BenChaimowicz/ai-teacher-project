@@ -25,7 +25,7 @@ Terms are defined in `CONTEXT.md`. This spec uses them; it does not redefine the
 - Calibrated IRT, CAT, or knowledge-space placement for open-ended Learning Goals.
 - Self-report-only mastery as Starting Level.
 - Human review of Lesson bodies. The Learner reviews Blueprint titles and Lesson goals only.
-- A free-text chat with the companion (after the subject, every Learner turn is a tap-to-choose option); Learner-facing Lesson reuse or lineage UI.
+- A free-text chat with the companion (after the subject, every Learner turn is a tap-to-choose option, except **Something else** while focusing the Learning Goal); Learner-facing Lesson reuse or lineage UI.
 - Publishing a partial Course; a policy-override or appeal path on the Validity gate.
 - Vendor built-in web search on Generator or Judge calls.
 
@@ -67,7 +67,7 @@ Optional server-only model overrides: `GENERATOR_MODEL`, `GENERATOR_FALLBACK_MOD
 **Conceptual records (not SQL).**
 
 - **Learner** — seeded row; Teaching Profile lives here.
-- **Course Request** — subject, Learning Goal, status, plain-language reason when failed or rejected; Assessment outcome (Starting Level) on the Request.
+- **Course Request** — subject, Learning Goal, status, plain-language reason when failed or rejected; the Goal focus (the goal as typed, the focusing rounds and answers, how it ended, and the confirmed Goal scope); Assessment outcome (Starting Level) on the Request.
 - **Teaching Profile** — Learner-level questionnaire fields, version, assessed/updated timestamps.
 - **Course Blueprint** — current draft plus last approved snapshot.
 - **Generation job** — cursor, stage, remaining repair budget; one active job per Request.
@@ -89,7 +89,7 @@ Four screens. Always dark, with five switchable accent palettes. The visual and 
 
 **Product name.** **Knibbler** (silent **k** — spelled *Knibbler*, pronounced like "Nibbler"). Sidebar lockup, browser tab title, greeting, empty states. The logo is the companion's silhouette in a graduation cap; the favicon follows the current palette.
 
-**Companion.** **Nibbles**, a hamster, voices the Course Guide and the scripted turns of every screen (the name lives in one constant; it may change). Low-key, kind, brief; never childish. It presents policy and system state; it cannot override policy or invent decisions. The flow is chat-*like*: Nibbles' line, then tap-to-choose options directly under it. The only free text is where the Learner names what to learn (Compose and Revise request). There is no open chat.
+**Companion.** **Nibbles**, a hamster, voices the Course Guide and the scripted turns of every screen (the name lives in one constant; it may change). Low-key, kind, brief; never childish. It presents policy and system state; it cannot override policy or invent decisions. The flow is chat-*like*: Nibbles' line, then tap-to-choose options directly under it. The only free text is where the Learner names what to learn (Compose, Revise request, and **Something else** while focusing the goal). There is no open chat.
 
 **Sidebar.** Present on every screen, collapsible, and never scrolls: a compact companion card (streak, today's minutes against a daily goal), New course, one line per Course (4–5 at most, then "see all on Home"), and "How you like to learn" pinned at the bottom. In Study it shows the Course outline instead of the Course list. Rewards are non-numeric (no points, XP, or levels).
 
@@ -111,17 +111,18 @@ One screen for every unpublished status. The body follows status; these are not 
 
 | Status surface | What the Learner does |
 | --- | --- |
-| Compose | Subject + Learning Goal. |
+| Compose | One typed line: a topic ("Norse mythology") or what the Learner wants to be able to do. It is saved as the subject and as the Learning Goal as typed. There is no generic goal question; Goal focusing asks what part and how deep, with options built from the subject. A topic picked elsewhere (Home, Go deeper) is saved straight away. |
 | Validity | Pass, one clarification, or reject. Reject: plain-language reason, safe reframe, **Revise request** (editable new Request). Rejected stays in history. No appeal. |
-| Assessment | Honesty copy; eight three-option items plus **I don’t know**. |
-| Remaining-gap | **Looks right** or **too easy** (expand the gap). No “I’m more advanced.” |
+| Focus | Nothing, if the goal is already precise. Otherwise a few tap-to-choose questions per round (each with **Something else** and **A broad overview is fine**), then the proposed goal with what it covers and leaves out: **That's it**, **Not quite** (while rounds remain), or **A broad overview is fine**. |
+| Assessment | First, **How much do you know about this already?**: **Brand new to this** (no items; Starting Level is the Learner's own word, §4.3) or **I know some of it** (the check). Then honesty copy; eight three-option items plus **I don’t know**. |
+| Remaining-gap | **Looks right** or **too easy** (expand the gap; shown as **Start a bit earlier**, since it adds basics). No “I’m more advanced.” |
 | Ceiling | Thin Blueprint or revise the Learning Goal. Never auto-publish an empty Course. |
 | Assessment-failed | **Retry diagnostic** only. |
 | Blueprint review | Titles and Lesson goals; mark irrelevant (optional why); Sequence mode picker (linear default; free jump one-way). Approve. Closing the tab returns here. Not a job. |
 | Waiting | Blueprint prep or Course generation: stage, current Lesson title, N of M, generating vs repairing. No draft body, Sources, or token stream. **Cancel** keeps checkpoints and does not auto-resume. **Resume** continues. |
 | Terminal fail | Plain-language reason, **Retry** or **Revise request**. |
 
-The **Course Guide** is the companion's lines in a chat-like thread on this screen: history scrolls up, the current step and its options sit right under the latest line. Server steps the Learner does not need to trigger (Validity check, Blueprint prep) start automatically after the Learner answers. Clarification answers are offered as options; **Revise request** reopens the topic field. It presents policy; it cannot override it. (Changed by SEN-52: previously "ordinary page copy, not a chat, not a character, not a side rail".)
+The **Course Guide** is the companion's lines in a chat-like thread on this screen: history scrolls up, the current step and its options sit right under the latest line. Server steps the Learner does not need to trigger (Validity check, the first focusing turn, Blueprint prep) start automatically after the Learner answers. Clarification answers are offered as options; **Revise request** reopens the topic field. It presents policy; it cannot override it. (Changed by SEN-52: previously "ordinary page copy, not a chat, not a character, not a side rail".)
 
 ### Study
 
@@ -222,13 +223,29 @@ The Learner creates a Course Request by selecting a subject and stating a Learni
 
 **Named copyrighted works.** A Learning Goal that names a song, book, or film **passes**. Clarify or reject only when the requested outcome is the protected copy itself (generate the chart, paste the lyrics, embed the film). Naming the Course after the work is not a copyright issue. No request-time copyright speech. Operational illegal enablement is still rejected under the hard rules.
 
+#### Focusing the Learning Goal
+
+Validity decides whether a request is real and learnable; it does not decide which part of a subject the Learner means. **Goal focusing** runs after Validity **pass** and before the Starting Level diagnostic, on every Course Request. Validity's one clarification stays separate: it settles learnability, focusing settles scope (ADR 0020). Focusing reads the clarification and its answer as settled and never asks it again.
+
+**Detect.** A bare topic is never precise. The Generator rates the goal on three questions: does it name a facet of the subject, a depth or purpose (overview, be able to do or retell it, analyse it), and a finish line? The rating is structured output and code decides: only a goal that answers all three is **precise**, and a precise goal passes straight through with nothing asked. "Name the Æsir and Vanir and how they are related" is precise; "explain the main stories and figures in the Norse mythic corpus" is not.
+
+**Ask.** Up to three rounds of one to three questions each. Each question offers two to five answers built from the subject's real facets, plus **Something else** (a short typed answer) and **A broad overview is fine**. Each round narrows what earlier answers left open, and stops once facet, depth, and finish line are clear. After the last round the Course Guide must propose.
+
+**Result.** The Course Guide proposes a rewritten Learning Goal plus a **Goal scope**: in scope and out of scope, each a short list of facets. The Learner may tap any entry to move it between the two lists (in scope keeps at least one) before **That's it** confirms it; the rewritten goal becomes the Request's Learning Goal; the goal as typed stays recorded. **Not quite** asks another round while rounds remain. **A broad overview is fine**, at any point, records a deliberate broad overview with no scope. Its Learning Goal is a one-sentence broad-overview goal the Course Guide writes from what was typed when it first asks (a bare topic is not a goal sentence).
+
+**Statuses.** `validity_passed` (first turn runs automatically), `awaiting_focus_answers`, `awaiting_focus_confirmation`, then `goal_focused`, from which the diagnostic starts. Status is explicit, not derived from the stored focus.
+
+**Consumers.** The diagnostic probes capabilities inside the scope only. The Blueprint author and Judge treat out-of-scope facets as off-limits for slots and objectives (§6.2). Each Lesson's research topic carries the scope (§5.3). Both Judges' `sequence_reaches_goal` judge the focused goal within its scope (§6.2, §6.5). With no scope (precise, or a broad overview) every stage behaves as before.
+
+**Carry-over.** **Revise request** and **Change my goal** copy the current Learning Goal, focused or not, into the new draft as editable text. The draft runs Validity and focusing again; a focused goal is usually precise and passes straight through.
+
 Examples: “history of firearms” passes; “build an untraceable gun” fails. “Sexual health” passes; pornographic instruction fails. Studying criminal law passes; operational instruction for committing a serious offense fails.
 
 ### 4.3 Starting Level diagnostic
 
-After Validity, on **every** Course Request, a generated diagnostic — not a 0–100, not a Quiz, not Progress, not a certification of real-world performance. Teaching Profile is orthogonal: never infer Profile from the diagnostic or Starting Level from the Profile. Diagnostic items are never reused as Course Quizzes.
+After goal focusing, on **every** Course Request, a generated diagnostic — not a 0–100, not a Quiz, not Progress, not a certification of real-world performance. Teaching Profile is orthogonal: never infer Profile from the diagnostic or Starting Level from the Profile. Diagnostic items are never reused as Course Quizzes.
 
-**Procedure.** The Generator decomposes the Learning Goal into eight prerequisite capabilities (necessary or strongly supporting; answerable in English MCQ; span likely-novice through near-goal; at least two application-in-words items). One three-option single-correct MCQ per capability, plus a separate **I don’t know**. No true/false, multi-select, all/none of the above, or negative stems. For named-work goals, items target transferable skills, not reproduction of the protected copy.
+**Procedure.** The Generator decomposes the Learning Goal, within its Goal scope when there is one, into eight prerequisite capabilities (necessary or strongly supporting; answerable in English MCQ; span likely-novice through near-goal; at least two application-in-words items). One three-option single-correct MCQ per capability, plus a separate **I don’t know**. No true/false, multi-select, all/none of the above, or negative stems. For named-work goals, items target transferable skills, not reproduction of the protected copy.
 
 Assessment does not wait for Lesson Source retrieval. A **bounded fact-check** of keyed answers that are external factual claims is allowed; it is not Lesson Source retrieval (no Preference list, no Citations, no stored Lesson Sources). Skip retrieval for purely definitional keys.
 
@@ -275,11 +292,13 @@ Scaffolding *dosage* (worked-example amount, tighter sequencing) follows Startin
 
 **Construct limits for Test courses.** The diagnostic may ask written knowledge (reagent roles, 4/4 vs 6/8, attested corpus facts). It must not claim wet-lab competence, kit playing, or living religious competence. Coverage notes must say so.
 
-**Failure.** Retry once with the fallback Generator model. If the set still fails, the Course Request is **assessment-failed**; offer **Retry diagnostic** only. Do not invent Starting Level from self-report. Do not offer a “Start from fundamentals” shortcut that looks like a completed diagnostic. Mid-diagnostic abandon: persist partial responses; do not Blueprint until the set is complete or the Learner confirms floor-from-insufficient-evidence.
+**Brand new to this.** Before the items, the Course Guide asks how much the Learner knows already. **Brand new to this** skips the items: the Starting Level is a floor with no probed capabilities, marked as the Learner's own word (`selfReportedNew`), with the statement “You're new to this, so the course starts from the very beginning.” It is never shown or stored as a diagnostic result. The Blueprint starts from the fundamentals of the whole Learning Goal (within its Goal scope) and sizes the Course for a newcomer. **I know some of it** takes the diagnostic. Eight “I don't know” answers would tell the Blueprint the same thing while making a newcomer sit through them (ADR 0021).
+
+**Failure.** Retry once with the fallback Generator model. If the set still fails, the Course Request is **assessment-failed**; offer **Retry diagnostic** only. Do not invent Starting Level from self-report, with one exception below. Do not offer a “Start from fundamentals” shortcut that looks like a completed diagnostic. Mid-diagnostic abandon: persist partial responses; do not Blueprint until the set is complete or the Learner confirms floor-from-insufficient-evidence.
 
 ### 4.4 Course Blueprint
 
-The generator is told subject, Learning Goal, Starting Level, and the write-time Teaching Profile fields the Blueprint consumes (including `quizCadence`). It designs the Module and Lesson sequence for that remaining gap alone: what the whole Learning Goal needs that the Learner does not yet have. The diagnostic's probed capabilities sample the goal; they do not list it, so a Blueprint teaches the missed probes and whatever else the goal clearly needs, and skips only what the diagnostic evidenced. There is no canonical novice→goal outline and no unpublished prefix. Remaining-gap scope lives on the Blueprint; Lessons have no difficulty score.
+The generator is told subject, Learning Goal, Goal scope (when focused), Starting Level, and the write-time Teaching Profile fields the Blueprint consumes (including `quizCadence`). No slot, title, Lesson goal, or objective teaches an out-of-scope facet, and the sequence reaches the focused goal within its scope. It designs the Module and Lesson sequence for that remaining gap alone: what the whole Learning Goal needs that the Learner does not yet have. The diagnostic's probed capabilities sample the goal; they do not list it, so a Blueprint teaches the missed probes and whatever else the goal clearly needs, and skips only what the diagnostic evidenced. There is no canonical novice→goal outline and no unpublished prefix. Remaining-gap scope lives on the Blueprint; Lessons have no difficulty score.
 
 Each slot: title, Lesson goal, non-empty objectives, registered teaching method (`reading` or `quiz`), 2–5 Topic tags (lowercase slugs from the slot’s objectives; no closed taxonomy). A Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it) and lists 1–10 objectives. No two slots share a Lesson goal. At least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal.
 
@@ -291,7 +310,7 @@ For named-work goals, the Blueprint deconstructs the Learning Goal into generic 
 
 A material structural discovery during generation returns to Blueprint generation, system validation, and Learner review. The pipeline never silently diverges from the approved Blueprint. On structural return: discard **all** unpublished Lessons; keep the Course Request, the return reason, and the new Blueprint draft. After re-approval, generation starts from Lesson 1.
 
-Provenance: [Teaching Profile via questions](https://linear.app/senoy/issue/SEN-24/teaching-profile-via-questions) (`docs/research/teaching-profile-via-questions.md`), [Instructional language scope](https://linear.app/senoy/issue/SEN-27/instructional-language-scope), [Search synthesis failure modes](https://linear.app/senoy/issue/SEN-19/search-synthesis-failure-modes), [Validity gate policy](https://linear.app/senoy/issue/SEN-25/validity-gate-policy), [Copyrighted works as Learning Goals](https://linear.app/senoy/issue/SEN-26/copyrighted-works-as-learning-goals), [Assessment design: learning goal, starting level, and teaching fit](https://linear.app/senoy/issue/SEN-21/assessment-design-learning-goal-starting-level-and-teaching-fit) (`docs/research/assessment-design.md`), [Generation pipeline](https://linear.app/senoy/issue/SEN-11/generation-pipeline), [UI scope (screens)](https://linear.app/senoy/issue/SEN-10/ui-scope-screens).
+Provenance: [Teaching Profile via questions](https://linear.app/senoy/issue/SEN-24/teaching-profile-via-questions) (`docs/research/teaching-profile-via-questions.md`), [Instructional language scope](https://linear.app/senoy/issue/SEN-27/instructional-language-scope), [Search synthesis failure modes](https://linear.app/senoy/issue/SEN-19/search-synthesis-failure-modes), [Validity gate policy](https://linear.app/senoy/issue/SEN-25/validity-gate-policy), [Copyrighted works as Learning Goals](https://linear.app/senoy/issue/SEN-26/copyrighted-works-as-learning-goals), [Assessment design: learning goal, starting level, and teaching fit](https://linear.app/senoy/issue/SEN-21/assessment-design-learning-goal-starting-level-and-teaching-fit) (`docs/research/assessment-design.md`), [Generation pipeline](https://linear.app/senoy/issue/SEN-11/generation-pipeline), [UI scope (screens)](https://linear.app/senoy/issue/SEN-10/ui-scope-screens), [Focus the Learning Goal](https://linear.app/senoy/issue/SEN-90/focus-the-learning-goal-question-the-learner-when-a-goal-is-broad-or).
 
 ---
 
@@ -322,7 +341,7 @@ Approved full-Course generation is a durable Postgres-backed job. One active job
 
 ### 5.3 Two research calls
 
-Retrieval is two independent research calls on the same Lesson topic, not a single web-search API. The Generator synthesizes from both Source packs. Citations must point at Sources that appear in those packs; invented URLs are dropped. Vendor built-in web search is off.
+Retrieval is two independent research calls on the same Lesson topic, not a single web-search API. With a Goal scope, the topic names what the Course covers and leaves out. The Generator synthesizes from both Source packs. Citations must point at Sources that appear in those packs; invented URLs are dropped. Vendor built-in web search is off.
 
 | Slot | Implementations (config picks one) | Job |
 | --- | --- | --- |
@@ -486,7 +505,7 @@ If Test-course protocol finds missed factual errors, bump Judge SKU in config (`
 
 **Code:** every slot has title, Lesson goal, non-empty objectives, and a registered method (`reading` or `quiz`); a Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it); no two slots share a Lesson goal; at least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal; a Quiz slot lists 1–10 objectives.
 
-**Judge:** coverage (no remaining-gap capability is left untaught); the sequence reaches this Learning Goal from this Starting Level, which is the same check the whole-Course Judge makes (§6.5), so a sequence that cannot reach the goal fails here, before any Lesson is written; prerequisite order; no redundant slot; each Quiz’s assessed Lessons are the right chunk.
+**Judge:** coverage (no remaining-gap capability is left untaught); the sequence reaches this Learning Goal from this Starting Level, which is the same check the whole-Course Judge makes (§6.5), so a sequence that cannot reach the goal fails here, before any Lesson is written; prerequisite order; no redundant slot; each Quiz’s assessed Lessons are the right chunk; with a Goal scope, no slot or objective teaches an out-of-scope facet (`out_of_scope`), and reaching the goal is judged within the scope.
 
 A Blueprint fail is a Blueprint revision, then Learner review again.
 
@@ -510,7 +529,7 @@ Do not re-judge every Lesson from scratch.
 
 **Code:** every Blueprint slot has a checkpointed unpublished Lesson whose Code and Judge both passed; required media still attached; no extra Lessons off the approved Blueprint.
 
-**Judge:** one pass over titles, Lesson goals, objectives, and short per-Lesson commitments — Course coherence across Modules, and the assembled sequence reaches this Learning Goal from this Starting Level.
+**Judge:** one pass over titles, Lesson goals, objectives, and short per-Lesson commitments — Course coherence across Modules, and the assembled sequence reaches this Learning Goal from this Starting Level (within its Goal scope, when focused; out-of-scope facets are not required).
 
 If that Judge names a **Lesson**, targeted repair from that earliest Lesson and affected downstream, then this pass again. If it names the **sequence**, structural return to Blueprint review. Retrying cannot fix the sequence, so it is never offered for one. Until the structural return is built (SEN-85), the Request fails with a reason that says so and points to a new Course Request.
 

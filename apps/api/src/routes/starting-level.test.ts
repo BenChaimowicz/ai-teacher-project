@@ -13,8 +13,15 @@ import {
   type DiagnosticItem,
 } from "@senoy/db";
 import { DiagnosticFailedError, type DiagnosticBuilder, type DiagnosticDraft, type GapStatementInput } from "../lib/diagnostic.ts";
+import { installUsageTracking, type ProductEventRow, type UsageSink } from "../lib/usage-tracking.ts";
 import { fakeDb } from "./fake-db.ts";
-import { ASSESSMENT_FAILED_REASON, PREPARE_FAILED_REASON, PREPARE_INTERRUPTED_REASON, startingLevelRoutes } from "./starting-level.ts";
+import {
+  ASSESSMENT_FAILED_REASON,
+  NEW_TO_SUBJECT_GAP_STATEMENT,
+  PREPARE_FAILED_REASON,
+  PREPARE_INTERRUPTED_REASON,
+  startingLevelRoutes,
+} from "./starting-level.ts";
 
 /** A Learner with a saved Teaching Profile. */
 function savedLearner(): typeof learners.$inferSelect {
@@ -45,11 +52,13 @@ const draft: DiagnosticDraft = {
 /** How a fixture preparation fails: a provider error, or a set that failed its checks with both Generators. */
 type Failure = "provider" | "checks" | null;
 
-/** Builder fixture that records gap-statement inputs; `fail` makes preparation throw. */
+/** Builder fixture that records gap-statement inputs and counts builds; `fail` makes preparation throw. */
 function fixtureBuilder(fail: Failure = null) {
   const gapInputs: GapStatementInput[] = [];
+  const counts = { builds: 0 };
   const builder: DiagnosticBuilder = {
     async build() {
+      counts.builds += 1;
       if (fail === "provider") throw new Error("provider down");
       if (fail === "checks") throw new DiagnosticFailedError({ item3: ["The reviewer found more than one defensible answer."] });
       return structuredClone(draft);
@@ -59,14 +68,14 @@ function fixtureBuilder(fail: Failure = null) {
       return `Gap statement ${gapInputs.length} (${input.extremity})`;
     },
   };
-  return { builder, gapInputs };
+  return { builder, gapInputs, counts };
 }
 
 /** Runs the real routes on in-memory storage with one Course Request in `status`. */
-async function testApp(status: CourseRequestStatus = "validity_passed", fail: Failure = null) {
+async function testApp(status: CourseRequestStatus = "goal_focused", fail: Failure = null) {
   const learner = savedLearner();
   const { db, rows, inserts } = fakeDb([courseRequests, startingLevelDiagnostics, lessonCompletions]);
-  const { builder, gapInputs } = fixtureBuilder(fail);
+  const { builder, gapInputs, counts } = fixtureBuilder(fail);
   const app = Fastify();
   app.decorate("db", db);
   app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
@@ -75,7 +84,7 @@ async function testApp(status: CourseRequestStatus = "validity_passed", fail: Fa
     learnerId: learner.id, subject: "Drums", learningGoal: "Play Iris by the Goo Goo Dolls", status,
   }).returning();
   const url = `/api/course-requests/${request!.id}/diagnostic`;
-  return { app, rows, inserts, gapInputs, url, requestRow: rows.get(courseRequests)![0]! };
+  return { app, rows, inserts, gapInputs, counts, url, requestRow: rows.get(courseRequests)![0]! };
 }
 
 /** Answers keyed by item: the listed item numbers are correct, the rest are I don't know. */
@@ -107,8 +116,8 @@ test("Starting the diagnostic prepares eight items and never sends keys, warrant
   }
 });
 
-test("A diagnostic only starts after the Validity gate passes, once", async () => {
-  for (const status of ["awaiting_validity", "rejected", "assessment_ready"] as const) {
+test("A diagnostic only starts once the Learning Goal is settled, once", async () => {
+  for (const status of ["awaiting_validity", "rejected", "validity_passed", "awaiting_focus_answers", "awaiting_focus_confirmation", "assessment_ready"] as const) {
     const { app, url } = await testApp(status);
     try {
       assert.equal((await app.inject({ method: "POST", url })).statusCode, 409);
@@ -119,12 +128,12 @@ test("A diagnostic only starts after the Validity gate passes, once", async () =
 });
 
 test("A provider failure returns the Request to where it started, with a reason and Try again", async () => {
-  const { app, url, requestRow } = await testApp("validity_passed", "provider");
+  const { app, url, requestRow } = await testApp("goal_focused", "provider");
   try {
     const response = await app.inject({ method: "POST", url });
     assert.equal(response.statusCode, 200, "The failure is a saved state, not a lost request.");
-    assert.deepEqual([response.json().courseRequest.status, response.json().courseRequest.failureReason], ["validity_passed", PREPARE_FAILED_REASON]);
-    assert.equal(requestRow.status, "validity_passed");
+    assert.deepEqual([response.json().courseRequest.status, response.json().courseRequest.failureReason], ["goal_focused", PREPARE_FAILED_REASON]);
+    assert.equal(requestRow.status, "goal_focused");
     assert.equal(requestRow.failureReason, PREPARE_FAILED_REASON);
   } finally {
     await app.close();
@@ -132,7 +141,7 @@ test("A provider failure returns the Request to where it started, with a reason 
 });
 
 test("A set failing its checks with both Generators is assessment-failed; Retry diagnostic is the one way on", async () => {
-  const { app, url, requestRow } = await testApp("validity_passed", "checks");
+  const { app, url, requestRow } = await testApp("goal_focused", "checks");
   try {
     const failed = await app.inject({ method: "POST", url });
     assert.deepEqual([failed.json().courseRequest.status, failed.json().courseRequest.failureReason], ["assessment_failed", ASSESSMENT_FAILED_REASON]);
@@ -161,8 +170,8 @@ test("A check left preparing by an API restart can be started again", async () =
   const { app, url, requestRow } = await testApp("assessment_preparing");
   try {
     const reopened = await app.inject({ method: "GET", url });
-    assert.deepEqual([reopened.json().courseRequest.status, reopened.json().courseRequest.failureReason], ["validity_passed", PREPARE_INTERRUPTED_REASON]);
-    assert.equal(requestRow.status, "validity_passed");
+    assert.deepEqual([reopened.json().courseRequest.status, reopened.json().courseRequest.failureReason], ["goal_focused", PREPARE_INTERRUPTED_REASON]);
+    assert.equal(requestRow.status, "goal_focused");
     const started = await app.inject({ method: "POST", url });
     assert.deepEqual([started.json().courseRequest.status, started.json().courseRequest.failureReason], ["assessment_ready", null]);
   } finally {
@@ -181,7 +190,7 @@ test("A check still being prepared by this process is left alone", async () => {
   await app.register(startingLevelRoutes, {
     diagnosticBuilder: { async build() { await gate; return structuredClone(draft); }, async writeGapStatement() { return "Gap"; } },
   });
-  const [request] = await db.insert(courseRequests).values({ learnerId: learner.id, subject: "Drums", learningGoal: "Play", status: "validity_passed" }).returning();
+  const [request] = await db.insert(courseRequests).values({ learnerId: learner.id, subject: "Drums", learningGoal: "Play", status: "goal_focused" }).returning();
   const url = `/api/course-requests/${request!.id}/diagnostic`;
   try {
     const preparing = app.inject({ method: "POST", url });
@@ -306,6 +315,107 @@ test("Another Learner's Request is not found", async () => {
   try {
     app.addHook("onRequest", async (request) => { request.currentLearner = savedLearner(); });
     assert.equal((await app.inject({ method: "POST", url })).statusCode, 404);
+  } finally {
+    await app.close();
+  }
+});
+
+/** Records Product Events and counts Pipeline Events while installed. */
+function recordingSink() {
+  const events: ProductEventRow[] = [];
+  let pipelineEvents = 0;
+  const sink: UsageSink = {
+    async startPipelineEvent() { pipelineEvents += 1; return randomUUID(); },
+    async finishPipelineEvent() {},
+    async insertUsageRecord() {},
+    async setUsageMeasurement() {},
+    async insertProductEvent(row) { events.push(row); },
+    async insertApiRequest() {},
+  };
+  return { sink, events, pipelineEvents: () => pipelineEvents };
+}
+
+test("Brand new to this confirms a from-the-beginning Starting Level with no items and no model call", async () => {
+  for (const status of ["goal_focused", "assessment_failed"] as const) {
+    const { app, rows, url, counts, requestRow } = await testApp(status);
+    requestRow.failureReason = status === "assessment_failed" ? ASSESSMENT_FAILED_REASON : null;
+    const recording = recordingSink();
+    const uninstall = installUsageTracking({ sink: recording.sink, log: { error() {} } });
+    try {
+      const response = await app.inject({ method: "POST", url: `${url}/new-to-subject` });
+      assert.equal(response.statusCode, 200, response.body);
+      const body = response.json();
+      assert.equal(body.courseRequest.status, "starting_level_confirmed");
+      assert.equal(body.courseRequest.failureReason, null);
+      assert.deepEqual(body.diagnostic, {
+        id: body.diagnostic.id,
+        items: [],
+        result: { remainingGapStatement: NEW_TO_SUBJECT_GAP_STATEMENT, coverageNote: "", extremity: "floor", canExpandGap: false, selfReportedNew: true },
+        confirmation: "looks_right",
+      });
+      assert.equal(requestRow.status, "starting_level_confirmed");
+      assert.equal(requestRow.failureReason, null);
+      const [attempt] = rows.get(startingLevelDiagnostics)!;
+      assert.deepEqual(attempt!.startingLevel, {
+        learningGoal: "Play Iris by the Goo Goo Dolls", probedCapabilities: [], remainingGapStatement: NEW_TO_SUBJECT_GAP_STATEMENT,
+        coverageNote: "", extremity: "floor", selfReportedNew: true,
+      });
+      assert.deepEqual([attempt!.capabilities, attempt!.items, attempt!.reviews, attempt!.answers], [[], [], [], {}]);
+      assert.equal(attempt!.coverageNote, null);
+      assert.equal(attempt!.confirmation, "looks_right");
+      assert.ok(attempt!.readyAt && attempt!.submittedAt && attempt!.confirmedAt);
+      assert.equal(attempt!.authorModelId ?? null, null);
+      assert.equal(attempt!.judgeModelId ?? null, null);
+      assert.equal(attempt!.factCheckVendor ?? null, null);
+      assert.equal(counts.builds, 0);
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(recording.pipelineEvents(), 0, "No model call, so no Pipeline Event.");
+      assert.deepEqual(recording.events.map((event) => event.kind), ["starting_level_self_reported_new"]);
+      assert.deepEqual(recording.events[0]!.detail, { from: status });
+
+      const reopened = await app.inject({ method: "GET", url });
+      assert.equal(reopened.statusCode, 200);
+      assert.deepEqual(reopened.json(), body, "Reloading shows the same result.");
+      for (const action of ["/too-easy", "/confirm", "/change-goal", "/answers", "/new-to-subject", ""]) {
+        assert.equal((await app.inject({ method: "POST", url: `${url}${action}`, payload: { choice: "looks_right" } })).statusCode, 409, action);
+      }
+      assert.equal(rows.get(startingLevelDiagnostics)!.length, 1);
+    } finally {
+      uninstall();
+      await app.close();
+    }
+  }
+});
+
+test("Brand new to this is refused outside goal_focused and assessment_failed", async () => {
+  const refused: CourseRequestStatus[] = [
+    "awaiting_validity", "validity_passed", "awaiting_focus_answers", "awaiting_focus_confirmation",
+    "assessment_preparing", "assessment_ready", "awaiting_gap_confirmation", "starting_level_confirmed", "blueprint_preparing",
+  ];
+  for (const status of refused) {
+    const { app, rows, url, requestRow } = await testApp(status);
+    try {
+      assert.equal((await app.inject({ method: "POST", url: `${url}/new-to-subject` })).statusCode, 409, status);
+      assert.equal(requestRow.status, status);
+      assert.equal(rows.get(startingLevelDiagnostics)!.length, 0);
+    } finally {
+      await app.close();
+    }
+  }
+});
+
+test("Brand new to this that lost a race saves no attempt", async () => {
+  const { app, rows, url, requestRow } = await testApp();
+  try {
+    // Something else moves the Request between the read and the conditional write.
+    const original = app.db.transaction.bind(app.db);
+    (app.db as { transaction: unknown }).transaction = async (callback: (transaction: unknown) => Promise<unknown>) => {
+      requestRow.status = "assessment_preparing";
+      return original(callback as never);
+    };
+    assert.equal((await app.inject({ method: "POST", url: `${url}/new-to-subject` })).statusCode, 409);
+    assert.equal(requestRow.status, "assessment_preparing");
+    assert.equal(rows.get(startingLevelDiagnostics)!.length, 0);
   } finally {
     await app.close();
   }

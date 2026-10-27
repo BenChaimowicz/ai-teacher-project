@@ -73,6 +73,9 @@ export function toCourseListItem(item: LibraryItem): CourseListItem {
   if (MAKING.has(item.status)) return { ...base, status: "making", badge: item.status === "generating" ? "writing" : "preparing" };
   if (STOPPED.has(item.status)) return { ...base, status: "stopped", badge: item.status === "rejected" ? "declined" : "stopped" };
   if (FAILED.has(item.status)) return { ...base, status: "needs", badge: "couldn't finish" };
+  // Everything else waits on the Learner: a clarification, focusing questions or a proposed focus (SEN-90), the
+  // How much they know already (goal_focused), the Starting Level check, the plan. validity_passed lands here too, as
+  // the screen moves it on.
   return { ...base, status: "needs", badge: "your turn" };
 }
 

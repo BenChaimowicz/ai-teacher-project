@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { test } from "node:test";
 import {
   courseRequests,
@@ -18,7 +19,7 @@ import {
 import type { SourcePack } from "@senoy/research";
 import { fakeDb } from "../routes/fake-db.ts";
 import type { CourseJudge, CourseOutline } from "./course-judge.ts";
-import { createCourseGeneration, CourseFailedError } from "./course-generation.ts";
+import { createCourseGeneration, CourseFailedError, lessonResearchTopic } from "./course-generation.ts";
 import { LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
 import { QuizFailedError, type QuizGenerator, type QuizInput } from "./quiz-generation.ts";
 import { loadModelConfig } from "./model-config.ts";
@@ -318,6 +319,7 @@ test("The whole-Course Judge reads one outline of titles, goals, objectives, and
   assert.deepEqual(outlines[0], {
     courseTitle: "Norse cosmology",
     learningGoal: "Explain the Norse picture of the world",
+    scope: null,
     startingLevel: "Your Course would start at the World Tree.",
     modules: [{
       title: "The world tree",
@@ -564,4 +566,32 @@ test("A research call that fails keeps the research that finished; Resume resear
   assert.deepEqual(resumed.inputs.map((input) => input.slot.id), ["slot2", "slot4", "slot5"]);
   assert.deepEqual(resumed.inputs[0]!.packs, packsFor("stored for slot2"));
   assert.equal(resumed.stored().status, "published");
+});
+
+/** A Learner-confirmed focus of the Learning Goal (SEN-90). */
+const SCOPE = { inScope: ["the World Tree", "the Nine Worlds"], outOfScope: ["manuscript sources"] };
+
+test("Without a scope, a research topic is the slot's title, subject, goal, and objectives, exactly as before", () => {
+  const slot = APPROVED.blueprint.modules[0]!.slots[0]!;
+  assert.equal(lessonResearchTopic("Norse mythology", slot, null),
+    "The World Tree (Norse mythology). Describe how Yggdrasil connects the Nine Worlds. Covers: Describe Yggdrasil.");
+});
+
+test("With a scope, a research topic ends with its focus and exclusion phrases", () => {
+  const slot = APPROVED.blueprint.modules[0]!.slots[0]!;
+  assert.equal(lessonResearchTopic("Norse mythology", slot, SCOPE),
+    "The World Tree (Norse mythology). Describe how Yggdrasil connects the Nine Worlds. Covers: Describe Yggdrasil. Focus: the World Tree; the Nine Worlds. Not: manuscript sources.");
+  assert.equal(lessonResearchTopic("Norse mythology", slot, { inScope: ["the World Tree"], outOfScope: [] }),
+    "The World Tree (Norse mythology). Describe how Yggdrasil connects the Nine Worlds. Covers: Describe Yggdrasil. Focus: the World Tree.");
+});
+
+test("A focused Request's scope reaches each Reading's research topic and the whole-Course Judge's outline", async () => {
+  const { started, topics, outlines } = await run(null, undefined, async (db, requestId) => {
+    await db.update(courseRequests).set({
+      focus: { outcome: "focused", originalGoal: "Learn Norse myths", rounds: [], proposal: null, scope: SCOPE },
+    }).where(eq(courseRequests.id, requestId)).returning();
+  });
+  await started;
+  assert.match(topics[0]!, / Focus: the World Tree; the Nine Worlds\. Not: manuscript sources\.$/);
+  assert.deepEqual(outlines[0]!.scope, SCOPE);
 });

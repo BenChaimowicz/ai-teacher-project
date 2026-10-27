@@ -1,5 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { blueprintSlots, type ApprovedBlueprint, type BlueprintSlot, type JudgeResult } from "@senoy/db/blueprint";
+import type { GoalScope } from "@senoy/db/course-request";
 import {
   courseCodeFailures,
   courseRequests,
@@ -132,12 +133,17 @@ export function settledStatus(error: unknown): SettledStatus {
 }
 
 /**
- * The research topic for one slot: research is scoped per Lesson (spec §5.2).
+ * The research topic for one slot: research is scoped per Lesson (spec §5.2). With a Learner-confirmed scope (SEN-90),
+ * a short clause names its in- and out-of-scope facets so vendors search inside it; without one, the topic is unchanged.
  * @param subject - The Course Request subject
  * @param slot - The Blueprint slot
+ * @param scope - The Learner-confirmed focus of the Learning Goal, or null (SEN-90)
  */
-export function lessonResearchTopic(subject: string, slot: BlueprintSlot): string {
-  return `${slot.title} (${subject}). ${slot.lessonGoal} Covers: ${slot.objectives.join("; ")}.`;
+export function lessonResearchTopic(subject: string, slot: BlueprintSlot, scope: GoalScope | null): string {
+  const topic = `${slot.title} (${subject}). ${slot.lessonGoal} Covers: ${slot.objectives.join("; ")}.`;
+  const focus = scope?.inScope.length ? ` Focus: ${scope.inScope.join("; ")}.` : "";
+  const not = scope?.outOfScope.length ? ` Not: ${scope.outOfScope.join("; ")}.` : "";
+  return `${topic}${focus}${not}`;
 }
 
 /**
@@ -219,7 +225,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         // Every call runs to the end, even after one fails, so each finished slot is stored and Resume skips it.
         const outcomes = await Promise.allSettled(unresearched.map(async (slot) => {
           const packs = await withPipelineEvent("research", { label: slot.title, detail: { slotId: slot.id } }, async (step) => {
-            const found = await research(lessonResearchTopic(request.subject, slot));
+            const found = await research(lessonResearchTopic(request.subject, slot, request.focus?.scope ?? null));
             step.setDetail({ packs: found.map((pack) => ({ adapter: pack.adapter, status: pack.status, sources: pack.sources.length })) });
             return found;
           });
@@ -337,7 +343,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       // A checkpoint from before SEN-57 names no author; the primary Generator wrote it.
       const authors = new Set(checkpoints.flatMap((checkpoint) =>
         checkpoint.authorModelIds.length ? checkpoint.authorModelIds : [loadModelConfig().generatorModel]));
-      const outline = courseOutline(approved, checkpoints, request.learningGoal, diagnostic.startingLevel.remainingGapStatement);
+      const outline = courseOutline(approved, checkpoints, request.learningGoal, diagnostic.startingLevel.remainingGapStatement, request.focus?.scope ?? null);
       const verdict = await withPipelineEvent("course_judge", { detail: { authorModelIds: [...authors] } }, async (step) => {
         const judged = await courseJudge.judge(outline, [...authors]);
         step.setDetail({ pass: judged.pass, failedChecks: judged.failedChecks });

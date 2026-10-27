@@ -39,7 +39,7 @@ async function checkStartingLevel() {
         assert.ok(learner);
         const [request] = await transaction.insert(courseRequests).values({
           learnerId: learner.id, subject: "Microbiology lab fundamentals",
-          learningGoal: "Perform and interpret a Gram stain and explain why each reagent step matters.", status: "validity_passed",
+          learningGoal: "Perform and interpret a Gram stain and explain why each reagent step matters.", status: "goal_focused",
         }).returning();
         assert.ok(request);
         const app = Fastify({ logger: { level: "error" } });

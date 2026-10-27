@@ -26,6 +26,7 @@ const requestFields = {
   createdAt: courseRequests.createdAt,
   validity: courseRequests.validity,
   clarification: courseRequests.clarification,
+  focus: courseRequests.focus,
   revisedFromId: courseRequests.revisedFromId,
   failureReason: courseRequests.failureReason,
 };
@@ -53,6 +54,8 @@ function learnerView(attempt: Attempt) {
       coverageNote: level.coverageNote,
       extremity: level.extremity,
       canExpandGap: canExpandGap(level.probedCapabilities),
+      /** The Learner said they are brand new: their own word, not a diagnostic result (ADR 0021). */
+      selfReportedNew: level.selfReportedNew === true,
     } : null,
     confirmation: attempt.confirmation,
   };
@@ -67,6 +70,9 @@ export const PREPARE_FAILED_REASON = "We couldn't prepare your Starting Level ch
 
 /** Shown when the API restarted while a check was being prepared. */
 export const PREPARE_INTERRUPTED_REASON = "Preparing your Starting Level check was interrupted. Try again.";
+
+/** The remaining gap a Learner who said they are brand new reads; no capability was probed (spec §4.3). */
+export const NEW_TO_SUBJECT_GAP_STATEMENT = "You're new to this, so the course starts from the very beginning.";
 
 /** Accepts only an object body. */
 function bodyFields(body: unknown): Record<string, unknown> {
@@ -132,7 +138,7 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       if (!found) return reply;
       const lost = found.status === "assessment_preparing" && !preparing.has(found.id);
       const row = lost
-        ? await transition(found.id, request.currentLearner.id, "assessment_preparing", "validity_passed", PREPARE_INTERRUPTED_REASON) ?? found
+        ? await transition(found.id, request.currentLearner.id, "assessment_preparing", "goal_focused", PREPARE_INTERRUPTED_REASON) ?? found
         : found;
       const attempt = await latestAttempt(row.id);
       return { courseRequest: row, diagnostic: attempt && attempt.readyAt ? learnerView(attempt) : null };
@@ -145,9 +151,9 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
     try {
       const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
       if (!row) return reply;
-      // Assessment-failed offers only Retry diagnostic, which starts here too.
+      // The check starts once the Learning Goal is settled (SEN-90); Assessment-failed offers only Retry diagnostic, which starts here too.
       const from = row.status;
-      if (from !== "validity_passed" && from !== "assessment_failed") return reply.code(409).send({ error: "This Request is not ready for a Starting Level check." });
+      if (from !== "goal_focused" && from !== "assessment_failed") return reply.code(409).send({ error: "This Request is not ready for a Starting Level check." });
       if (!await transition(row.id, request.currentLearner.id, from, "assessment_preparing")) {
         return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
       }
@@ -157,7 +163,7 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
         draft = await withPipelineEvent("diagnostic", {
           label: "Item set", courseRequestId: row.id, learnerId: request.currentLearner.id,
         }, async (event) => {
-          const built = await builder.build({ subject: row.subject, learningGoal: row.learningGoal });
+          const built = await builder.build({ subject: row.subject, learningGoal: row.learningGoal, scope: row.focus?.scope ?? null });
           event.setDetail({
             items: built.items.length,
             rounds: built.reviews.reduce((most, review) => Math.max(most, review.round + 1), 0),
@@ -188,6 +194,46 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       return { courseRequest: ready, diagnostic: learnerView(attempt) };
     } catch (error) {
       return fail(reply, request.log, "prepare", request.params.requestId, error, "Failed to prepare the Starting Level check.");
+    }
+  });
+
+  app.post<RequestParams>("/api/course-requests/:requestId/diagnostic/new-to-subject", async (request, reply) => {
+    try {
+      const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
+      if (!row) return reply;
+      // Offered wherever the check could start instead (spec §4.3): the Learner's own word replaces it, with no model call.
+      const from = row.status;
+      if (from !== "goal_focused" && from !== "assessment_failed") return reply.code(409).send({ error: "This Request is not ready for a Starting Level check." });
+      const now = new Date();
+      const startingLevel: StartingLevel = {
+        learningGoal: row.learningGoal,
+        probedCapabilities: [],
+        remainingGapStatement: NEW_TO_SUBJECT_GAP_STATEMENT,
+        coverageNote: "",
+        extremity: "floor",
+        selfReportedNew: true,
+      };
+      // The attempt and the status move commit together, and only if nothing else moved the Request first.
+      const saved = await app.db.transaction(async (transaction) => {
+        const [moved] = await transaction.update(courseRequests).set({ status: "starting_level_confirmed", failureReason: null }).where(and(
+          eq(courseRequests.id, row.id), eq(courseRequests.learnerId, request.currentLearner.id), eq(courseRequests.status, from),
+        )).returning(requestFields);
+        if (!moved) return null;
+        const [attempt] = await transaction.insert(startingLevelDiagnostics).values({
+          courseRequestId: row.id, learnerId: request.currentLearner.id,
+          capabilities: [], items: [], reviews: [], coverageNote: null, answers: {},
+          startingLevel, confirmation: "looks_right", readyAt: now, submittedAt: now, confirmedAt: now,
+        }).returning();
+        if (!attempt) throw new Error("Diagnostic attempt was not saved.");
+        return { courseRequest: moved, attempt };
+      });
+      if (!saved) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+      void recordProductEvent("starting_level_self_reported_new", {
+        learnerId: request.currentLearner.id, courseRequestId: row.id, detail: { from },
+      });
+      return { courseRequest: saved.courseRequest, diagnostic: learnerView(saved.attempt) };
+    } catch (error) {
+      return fail(reply, request.log, "new-to-subject", request.params.requestId, error, "Could not start your Course from the beginning. Try again.");
     }
   });
 
@@ -291,6 +337,8 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       if (request.currentLearner.teachingProfileVersion !== TEACHING_PROFILE_VERSION || request.currentLearner.teachingProfileAnswers == null) {
         return reply.code(409).send({ error: "Save your Teaching Profile before creating a Course Request." });
       }
+      // The current (possibly focused) goal carries over as editable text; `focus` does not, so the draft goes through
+      // Validity and focusing again, where a precise goal passes straight through (SEN-90).
       const [draft] = await app.db.insert(courseRequests).values({
         learnerId: request.currentLearner.id, subject: row.subject, learningGoal: row.learningGoal, status: "draft", revisedFromId: row.id,
       }).returning(requestFields);

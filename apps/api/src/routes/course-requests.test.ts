@@ -38,7 +38,7 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
   const dialect = new PgDialect();
   const columnKeys = {
     id: "id", learner_id: "learnerId", subject: "subject", learning_goal: "learningGoal", status: "status",
-    created_at: "createdAt", validity: "validity", clarification: "clarification", revised_from_id: "revisedFromId",
+    created_at: "createdAt", validity: "validity", clarification: "clarification", focus: "focus", revised_from_id: "revisedFromId",
     failure_reason: "failureReason", hidden_at: "hiddenAt",
   } as const;
   /** Projects precisely the selected columns, as Postgres does. */
@@ -63,7 +63,7 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
       values: (values: typeof courseRequests.$inferInsert) => ({
         returning: async (fields?: Record<string, PgColumn>) => {
           if (failWrites) throw new Error("Database unavailable");
-          const row = { id: randomUUID(), createdAt: new Date(), validity: null, clarification: null, revisedFromId: null, failureReason: null, hiddenAt: null, ...values } as CourseRequest;
+          const row = { id: randomUUID(), createdAt: new Date(), validity: null, clarification: null, focus: null, revisedFromId: null, failureReason: null, hiddenAt: null, ...values } as CourseRequest;
           rows.push(row);
           return [project(row, fields)];
         },
@@ -345,6 +345,7 @@ test("Revise creates an editable new Request while rejected history and ownershi
     assert.equal(draft.status, "draft");
     assert.equal(draft.revisedFromId, row.id);
     assert.equal(draft.validity, null);
+    assert.equal(draft.focus, null);
     const draftUrl = `/api/course-requests/${draft.id}`;
     assert.equal((await app.inject({ method: "POST", url: `${draftUrl}/validity`, payload: {} })).statusCode, 409);
     const saved = await app.inject({ method: "PATCH", url: draftUrl, payload: { subject: "  Safety  ", learningGoal: "  Learn prevention.  ", status: "validity_passed", learnerId: randomUUID() } });
@@ -361,6 +362,24 @@ test("Revise creates an editable new Request while rejected history and ownershi
         assert.equal((await app.inject({ method, url: endpoint + suffix, payload })).statusCode, 404);
       }
     }
+  } finally { await app.close(); }
+});
+
+test("Revising a failed focused Request carries the focused goal as editable text but not its focus", async () => {
+  const { app, rows } = await testApp();
+  try {
+    const row = await createRequest(app);
+    const focus = {
+      outcome: "focused", originalGoal: "Explain the mythic corpus.", rounds: [],
+      proposal: { learningGoal: "Retell the main stories.", scope: { inScope: ["Main stories"], outOfScope: ["Later retellings"] } },
+      scope: { inScope: ["Main stories"], outOfScope: ["Later retellings"] },
+    } as const;
+    Object.assign(rows.find((stored) => stored.id === row.id)!, { status: "generation_failed", learningGoal: "Retell the main stories.", focus });
+    const revised = await app.inject({ method: "POST", url: `/api/course-requests/${row.id}/revise` });
+    assert.equal(revised.statusCode, 201, revised.body);
+    const draft = revised.json().courseRequest;
+    assert.equal(draft.learningGoal, "Retell the main stories.");
+    assert.equal(draft.focus, null, "The draft goes through Validity and focusing again.");
   } finally { await app.close(); }
 });
 

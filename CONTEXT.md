@@ -56,8 +56,16 @@ _Avoid_: Prompt, topic request
 The Course Request-time decision that combines deterministic policy rules with Generator judgment before the Starting Level diagnostic. It passes a valid request, asks the Course Guide to clarify ambiguous framing, or rejects a prohibited or unsupported factual premise.
 _Avoid_: Safety prompt, moderation prompt
 
+**Goal focusing**:
+The Course Request step after the Validity gate passes and before the Starting Level diagnostic that decides whether a Learning Goal is specific enough to design one Course for. A precise goal passes straight through; a broad or ambiguous one gets a few rounds of tap-to-choose questions, then a proposed rewritten Learning Goal with its Goal scope for the Learner to confirm. The Learner may skip it for a deliberate broad overview.
+_Avoid_: clarification (that is the Validity gate's learnability question), interview, refinement
+
+**Goal scope**:
+The Learner-confirmed in-scope and out-of-scope facets of a focused Learning Goal. The diagnostic, Blueprint, research topics, and both Judges stay inside it. Absent when the goal was already precise or the Learner chose a broad overview.
+_Avoid_: topic, Topic tag, objectives, coverage
+
 **Course Guide**:
-The Learner-facing copy on the Course Request screen that helps form the request, asks Diagnostic items, and explains validity decisions. It presents policy but does not own or override it.
+The Learner-facing copy on the Course Request screen that helps form the request, asks Goal focusing questions and Diagnostic items, and explains validity decisions. It presents policy but does not own or override it.
 _Avoid_: Character, chatbot, chat transcript, Generator (when meaning this voice)
 
 **Course Blueprint**:
@@ -85,7 +93,7 @@ A Publish gate decided by a model that did not author the artifact — claim sup
 _Avoid_: LLM-as-judge (when speaking in-domain), self-eval, Code check
 
 **Learning Goal**:
-The terminal capability a Learner wants the Course to produce for a subject. It defines what success means; it is not the Learner's current proficiency, a preference for more content, or a Lesson goal.
+The terminal capability a Learner wants the Course to produce for a subject. It defines what success means; it is not the Learner's current proficiency, a preference for more content, or a Lesson goal. After Goal focusing it is the confirmed rewrite; the goal as typed stays on the Course Request.
 _Avoid_: Desired depth, target score, difficulty, Lesson goal (when meaning the Course)
 
 **Lesson goal**:
@@ -97,11 +105,11 @@ The detailed checklist of capabilities a Lesson or Blueprint slot covers. Covera
 _Avoid_: Lesson goal (when meaning the checklist), Learning Goal, outcomes
 
 **Starting Level**:
-The remaining-gap input to Blueprint generation, produced by a Course Request diagnostic: evidenced versus not-evidenced prerequisite capabilities plus a short remaining-gap statement. It is not a 0–100, not a Quiz, not Progress, and not a certification of real-world performance.
+The remaining-gap input to Blueprint generation, produced by a Course Request diagnostic: evidenced versus not-evidenced prerequisite capabilities plus a short remaining-gap statement. A Learner who says they are brand new skips the diagnostic; their Starting Level is a floor with nothing probed, recorded as their own word. It is not a 0–100, not a Quiz, not Progress, and not a certification of real-world performance.
 _Avoid_: Skill level (when the relevant goal is unstated), entry point, Progress (when meaning assessed capability), placement score, proficiency
 
 **Starting Level diagnostic**:
-The eight-item check, run on every Course Request after the Validity gate passes, that produces Starting Level. Not a Quiz, not a grade, not Progress. "Assessment" survives only as the Course Request status label for this step.
+The eight-item check, run on every Course Request after Goal focusing, that produces Starting Level. Not a Quiz, not a grade, not Progress. "Assessment" survives only as the Course Request status label for this step.
 _Avoid_: Assessment (as the concept name), placement test, pre-test, Quiz
 
 **Diagnostic item**:

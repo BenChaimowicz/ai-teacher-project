@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, date, doublePrecision, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
-import { COURSE_REQUEST_STATUSES, type ValidityClarification, type ValidityResult } from "./course-request.ts";
+import { COURSE_REQUEST_STATUSES, type GoalFocus, type ValidityClarification, type ValidityResult } from "./course-request.ts";
 import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
 import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
@@ -35,6 +35,8 @@ export const courseRequests = pgTable("course_requests", {
   status: courseRequestStatus("status").notNull(),
   validity: jsonb("validity").$type<ValidityResult>(),
   clarification: jsonb("clarification").$type<ValidityClarification>(),
+  /** How the Learning Goal was focused after Validity passed (SEN-90); `learningGoal` holds the result. */
+  focus: jsonb("focus").$type<GoalFocus>(),
   revisedFromId: uuid("revised_from_id").references((): AnyPgColumn => courseRequests.id),
   /** Plain-language reason the last step failed, with its next step; cleared when the Learner tries again. */
   failureReason: text("failure_reason"),

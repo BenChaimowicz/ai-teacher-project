@@ -5,7 +5,10 @@ import { loadModelConfig } from "./model-config.ts";
 import { createDiagnosticBuilder, DiagnosticFailedError, type FactChecker } from "./diagnostic.ts";
 import { ModelError, type StructuredTransport } from "./openrouter.ts";
 
-const INPUT = { subject: "Microbiology", learningGoal: "Perform and interpret a Gram stain" };
+const INPUT = { subject: "Microbiology", learningGoal: "Perform and interpret a Gram stain", scope: null };
+
+/** A Learner-confirmed focus of the Learning Goal (SEN-90). */
+const SCOPE = { inScope: ["reading a stained slide", "why cells stain differently"], outOfScope: ["history of the stain"] };
 
 /** A clean authored probe; `n` is its span and keeps every stem distinct. */
 function probe(n: number, overrides: Record<string, unknown> = {}) {
@@ -34,11 +37,11 @@ function verdict(itemId: string, overrides: Record<string, unknown> = {}) {
 
 /** Scripted author: first call returns the set, later calls return queued rewrites. Records inputs. */
 function scriptedGenerator(set: unknown, rewrites: unknown[] = [], modelId = "fixture/author") {
-  const calls: { schemaName: string; input: unknown }[] = [];
+  const calls: { schemaName: string; systemPrompt: string; input: unknown }[] = [];
   const generator: Generator = {
     modelId,
     async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
-      calls.push({ schemaName: request.schemaName, input: request.input });
+      calls.push({ schemaName: request.schemaName, systemPrompt: request.systemPrompt, input: request.input });
       if (request.schemaName === "starting_level_diagnostic_items") return { value: request.parse(set), modelId: modelId };
       const next = rewrites.shift();
       if (!next) throw new Error("No scripted rewrite left");
@@ -50,11 +53,11 @@ function scriptedGenerator(set: unknown, rewrites: unknown[] = [], modelId = "fi
 
 /** Scripted Judge: answers each reviewed item via `decide`, defaulting to a clean verdict. */
 function scriptedJudge(decide: (itemId: string, stem: string) => Record<string, unknown> = () => ({}), modelId = "fixture/judge") {
-  const calls: { input: unknown; authorModelIds: readonly string[] }[] = [];
+  const calls: { systemPrompt: string; input: unknown; schema: unknown; authorModelIds: readonly string[] }[] = [];
   const judge: Judge = {
     modelId,
     async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
-      calls.push({ input: request.input, authorModelIds: request.authorModelIds });
+      calls.push({ systemPrompt: request.systemPrompt, input: request.input, schema: request.schema, authorModelIds: request.authorModelIds });
       const { items } = request.input as { items: { itemId: string; stem: string; options: string[] }[] };
       return { value: request.parse({ reviews: items.map((item) => verdict(item.itemId, decide(item.itemId, item.stem))) }), modelId: modelId };
     },
@@ -184,6 +187,42 @@ test("An item the Judge finds ambiguous, keyed wrong, or performance-based is re
   } as Record<string, Record<string, unknown>>)[itemId] ?? {});
   const draft = await createDiagnosticBuilder({ generator, judge, ...scriptedFactChecker() }).build(INPUT);
   assert.deepEqual(draft.items.filter((item) => item.stem.startsWith("Rewritten")).map((item) => item.id), ["item1", "item4", "item7"]);
+});
+
+test("Without a scope, no stage is shown or asked about one", async () => {
+  const { generator, calls: authorCalls } = scriptedGenerator(cleanSet, [{ items: [rewrite("cap1", 1)] }]);
+  const { judge, calls: judgeCalls } = scriptedJudge((itemId, stem) => itemId === "item1" && !stem.startsWith("Rewritten") ? { defensibleOptions: [] } : {});
+  await createDiagnosticBuilder({ generator, judge, ...scriptedFactChecker() }).build(INPUT);
+  for (const call of [...authorCalls, ...judgeCalls]) {
+    assert.ok(!("scope" in (call.input as object)), "Scope is left out of the input, not sent as null.");
+    assert.doesNotMatch(call.systemPrompt, /scope/i);
+  }
+  assert.doesNotMatch(JSON.stringify(judgeCalls[0]!.schema), /outsideScope/);
+});
+
+test("A confirmed scope reaches the author, the rewrite, and the Judge, and an item outside it is rewritten", async () => {
+  const { generator, calls: authorCalls } = scriptedGenerator(cleanSet, [{ items: [rewrite("cap3", 3)] }]);
+  const { judge, calls: judgeCalls } = scriptedJudge((itemId, stem) => ({ outsideScope: itemId === "item3" && !stem.startsWith("Rewritten") }));
+  const draft = await createDiagnosticBuilder({ generator, judge, ...scriptedFactChecker() }).build({ ...INPUT, scope: SCOPE });
+
+  const [author, rewriter] = authorCalls;
+  for (const call of [author!, rewriter!, ...judgeCalls]) assert.deepEqual((call.input as { scope: unknown }).scope, SCOPE);
+  for (const call of [author!, rewriter!]) assert.match(call.systemPrompt, /stays inside scope\.inScope; never probe a facet in scope\.outOfScope/);
+  assert.match(judgeCalls[0]!.systemPrompt, /- outsideScope: true if the item probes a facet in scope\.outOfScope/);
+  assert.match(JSON.stringify(judgeCalls[0]!.schema), /"outsideScope"/);
+  for (const call of [author!, rewriter!, ...judgeCalls]) assert.match(call.systemPrompt, /scope.*untrusted|untrusted.*scope/i);
+
+  const rewriteInput = rewriter!.input as { rewrite: { capabilityId: string; problems: string[] }[] };
+  assert.deepEqual(rewriteInput.rewrite.map((r) => r.capabilityId), ["cap3"]);
+  assert.ok(rewriteInput.rewrite[0]!.problems.some((problem) => problem.includes("outside the Learner's confirmed scope")));
+  assert.equal(draft.items[2]!.stem, "Rewritten: which reagent fixes step 3?");
+  assert.ok(draft.reviews.some((review) => review.itemId === "item3" && !review.passed));
+});
+
+test("With a scope, a Judge verdict that does not answer outsideScope is invalid output", async () => {
+  const { generator } = scriptedGenerator(cleanSet);
+  await assert.rejects(createDiagnosticBuilder({ generator, ...scriptedJudge(), ...scriptedFactChecker() }).build({ ...INPUT, scope: SCOPE }),
+    (error: unknown) => error instanceof ModelError && error.code === "invalid_output");
 });
 
 test("Only keys the Judge flags as external facts are fact-checked, and an unconfirmed key is rewritten", async () => {
