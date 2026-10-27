@@ -6,6 +6,7 @@ import {
   type FocusProposal,
   type FocusQuestion,
   type FocusRound,
+  type ValidityClarification,
 } from "@senoy/db/course-request";
 import { createModelPorts, type Generator } from "./model-ports.ts";
 import { ModelError, rejectedOutput } from "./openrouter.ts";
@@ -19,6 +20,8 @@ export type FocusTurnInput = {
   rounds: FocusRound[];
   /** Set when the Learner said this proposal was "not quite" right: ask what would fix it. */
   notQuite?: FocusProposal;
+  /** Validity's clarification and the Learner's answer, already settled: never ask it again. */
+  clarification: ValidityClarification | null;
 };
 
 /**

@@ -31,6 +31,12 @@ export type StartingLevel = {
   remainingGapStatement: string;
   coverageNote: string;
   extremity: Extremity;
+  /**
+   * True when the Learner said they are brand new to this instead of taking the diagnostic: no capability was probed,
+   * the Blueprint starts from the fundamentals of the whole Learning Goal, and the floor is recorded as their own word,
+   * never as a diagnostic result.
+   */
+  selfReportedNew?: true;
 };
 
 /** Evidenced capabilities may be treated as already in place; everything else is in the remaining gap. */
