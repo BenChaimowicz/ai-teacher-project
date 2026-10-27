@@ -56,10 +56,13 @@ export function NewCourseRequestPage() {
     );
   }
 
-  /** Saves the Request and opens it; its Validity check starts there. */
+  /**
+   * Saves the Request and opens it; its Validity check starts there. Replaces this page in history, so Back never lands
+   * on a `?topic=` preset that would save a second Request.
+   */
   async function compose(subject: string, learningGoal: string) {
     const { courseRequest } = await requestAction("", "POST", { subject, learningGoal }, "Could not save your course. Please try again.");
-    navigate(`/course-requests/${courseRequest.id}`);
+    navigate(`/course-requests/${courseRequest.id}`, { replace: true });
   }
 
   return (

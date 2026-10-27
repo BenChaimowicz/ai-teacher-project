@@ -72,7 +72,19 @@
 .mk-scope .out li { color: var(--text-muted); }
 .mk-scope .out li::before { background: var(--line-2); }
 .mk-topic > button { margin-top: 4px; }
+/* editable entries: small paper chips that move to the other list; the last one in Covers stays put */
+.mk-scope li.edit::before { display: none; }
+.mk-scope li.none { color: var(--faint); font-size: 0.8rem; }
+.mk-scope li.none::before { background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); }
+.mk-move { padding: 5px 10px; border-radius: 8px; font-size: 0.84rem; line-height: 1.35; text-align: left; overflow-wrap: anywhere; animation: none; }
+.mk-scope .out .mk-move { color: var(--text-muted); background: var(--panel-2); }
+.mk-move:disabled { cursor: default; opacity: 0.7; transform: none; box-shadow: var(--sheet); }
+.mk-move:focus-visible { outline: 2px solid var(--a); outline-offset: 2px; }
+.mk-scope-hint { margin-top: 12px; font-size: 0.78rem; color: var(--faint); }
 @media (max-width: 640px) { .mk-scope { grid-template-columns: 1fr; } }
+
+/* the plan's Learning Goal, under its header */
+.mk-plan-goal { color: var(--text-muted); font-size: 0.9rem; overflow-wrap: anywhere; }
 
 /* ---------- working line (server step in progress) ---------- */
 .mk-working { display: flex; align-items: center; gap: 12px; }

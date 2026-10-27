@@ -15,7 +15,7 @@ import {
   type GoalScope,
 } from "@senoy/db";
 import type { DiagnosticBuilder } from "../lib/diagnostic.ts";
-import type { GoalFocuser } from "../lib/goal-focus.ts";
+import type { FocusTurnInput, GoalFocuser } from "../lib/goal-focus.ts";
 import {
   createFixtureGoalFocuser,
   fixtureBroadGoal,
@@ -26,7 +26,7 @@ import {
   FIXTURE_FOCUS_PART_QUESTION,
 } from "../lib/goal-focus-fixture.ts";
 import { fakeDb } from "./fake-db.ts";
-import { FOCUS_FAILED_MESSAGE, goalFocusRoutes } from "./goal-focus.ts";
+import { FOCUS_FAILED_MESSAGE, goalFocusRoutes, SCOPE_EDIT_MISMATCH_MESSAGE } from "./goal-focus.ts";
 import { startingLevelRoutes } from "./starting-level.ts";
 
 /** A Learner with a saved Teaching Profile. */
@@ -62,8 +62,12 @@ const draft = {
  * @param options.subject - Its subject
  * @param options.focus - Its stored focus
  * @param options.focuser - The focuser; defaults to the deterministic fixture
+ * @param options.clarification - Validity's settled clarification, if any
  */
-async function testApp(options: { status?: CourseRequestStatus; subject?: string; focus?: GoalFocus | null; focuser?: GoalFocuser } = {}) {
+async function testApp(options: {
+  status?: CourseRequestStatus; subject?: string; focus?: GoalFocus | null; focuser?: GoalFocuser;
+  clarification?: { question: string; answer: string } | null;
+} = {}) {
   const learner = savedLearner();
   const { db, rows } = fakeDb([courseRequests, startingLevelDiagnostics]);
   const scopes: (GoalScope | null | undefined)[] = [];
@@ -75,8 +79,9 @@ async function testApp(options: { status?: CourseRequestStatus; subject?: string
     async writeGapStatement() { return "Gap"; },
   };
   let calls = 0;
+  const inputs: FocusTurnInput[] = [];
   const base = options.focuser ?? createFixtureGoalFocuser();
-  const counting: GoalFocuser = { next: (input) => { calls += 1; return base.next(input); } };
+  const counting: GoalFocuser = { next: (input) => { calls += 1; inputs.push(input); return base.next(input); } };
   const app = Fastify();
   app.decorate("db", db);
   app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
@@ -84,10 +89,10 @@ async function testApp(options: { status?: CourseRequestStatus; subject?: string
   await app.register(startingLevelRoutes, { diagnosticBuilder: builder });
   const [request] = await db.insert(courseRequests).values({
     learnerId: learner.id, subject: options.subject ?? BROAD_SUBJECT, learningGoal: ORIGINAL_GOAL,
-    status: options.status ?? "validity_passed", focus: options.focus ?? null,
+    status: options.status ?? "validity_passed", focus: options.focus ?? null, clarification: options.clarification ?? null,
   }).returning();
   const url = `/api/course-requests/${request!.id}`;
-  return { app, url, learner, scopes, calls: () => calls, row: rows.get(courseRequests)![0]! };
+  return { app, url, learner, scopes, inputs, calls: () => calls, row: rows.get(courseRequests)![0]! };
 }
 
 /** Taps the first option of every fixture question. */
@@ -192,6 +197,69 @@ test("A broad goal is questioned, answers are validated, and a confirmed proposa
     assert.equal(diagnostic.json().courseRequest.status, "assessment_ready");
     assert.deepEqual(scopes, [proposed.focus.proposal.scope], "The diagnostic is written within the confirmed scope.");
   } finally { await app.close(); }
+});
+
+test("Validity's settled clarification reaches every focusing turn", async () => {
+  const clarification = { question: "Do you mean the night sky or space travel?", answer: "The night sky" };
+  const { app, url, inputs } = await testApp({ clarification });
+  try {
+    await app.inject({ method: "POST", url: `${url}/focus`, payload: {} });
+    await app.inject({ method: "POST", url: `${url}/focus`, payload: { answers: tapped(1) } });
+    await app.inject({ method: "POST", url: `${url}/focus/not-quite` });
+    assert.equal(inputs.length, 3);
+    for (const input of inputs) assert.deepEqual(input.clarification, clarification);
+  } finally { await app.close(); }
+  const plain = await testApp();
+  try {
+    await plain.app.inject({ method: "POST", url: `${plain.url}/focus`, payload: {} });
+    assert.equal(plain.inputs[0]!.clarification, null);
+  } finally { await plain.app.close(); }
+});
+
+test("Confirm accepts the Learner's own re-partition of the proposal's entries and records it on the proposal", async () => {
+  const proposal = { learningGoal: "Explain the sky.", scope: { inScope: ["The sky", "Stars"], outOfScope: ["The ground"] } };
+  const focus: GoalFocus = { ...proposedFocus(1), proposal };
+  const edited = { inScope: ["The ground", "The sky"], outOfScope: ["Stars"] };
+  const { app, url, row, scopes } = await testApp({ status: "awaiting_focus_confirmation", focus });
+  try {
+    const confirmed = await app.inject({ method: "POST", url: `${url}/focus/confirm`, payload: { scope: edited } });
+    assert.equal(confirmed.statusCode, 200, confirmed.body);
+    const { courseRequest } = confirmed.json();
+    assert.equal(courseRequest.status, "goal_focused");
+    assert.equal(courseRequest.learningGoal, proposal.learningGoal);
+    assert.deepEqual(courseRequest.focus.scope, edited);
+    assert.deepEqual(courseRequest.focus.proposal, { learningGoal: proposal.learningGoal, scope: edited });
+    assert.deepEqual((row.focus as GoalFocus).scope, edited);
+    await app.inject({ method: "POST", url: `${url}/diagnostic` });
+    assert.deepEqual(scopes, [edited], "The diagnostic reads the edited scope.");
+  } finally { await app.close(); }
+});
+
+test("Confirm refuses an edited scope that is not a re-partition of the proposal, and changes nothing", async () => {
+  const proposal = { learningGoal: "Explain the sky.", scope: { inScope: ["The sky", "Stars"], outOfScope: ["The ground"] } };
+  const invalid: unknown[] = [
+    null,
+    "The sky",
+    { inScope: ["The sky", "Stars"] },
+    { inScope: [], outOfScope: ["The sky", "Stars", "The ground"] },
+    { inScope: ["The sky", "Stars"], outOfScope: [] },
+    { inScope: ["The sky", "Stars", "The ground", "Planets"], outOfScope: [] },
+    { inScope: ["The sky", "Stars", "Planets"], outOfScope: [] },
+    { inScope: ["The sky", "Stars"], outOfScope: ["The sky"] },
+    { inScope: ["The sky", "Stars", "Stars"], outOfScope: [] },
+    { inScope: ["the sky", "Stars"], outOfScope: ["The ground"] },
+    { inScope: ["The sky", "Stars"], outOfScope: [42] },
+  ];
+  for (const scope of invalid) {
+    const { app, url, row } = await testApp({ status: "awaiting_focus_confirmation", focus: { ...proposedFocus(1), proposal } });
+    try {
+      const before = structuredClone(row);
+      const response = await app.inject({ method: "POST", url: `${url}/focus/confirm`, payload: { scope } });
+      assert.equal(response.statusCode, 400, JSON.stringify(scope));
+      assert.equal(response.json().error, SCOPE_EDIT_MISMATCH_MESSAGE);
+      assert.deepEqual(row, before);
+    } finally { await app.close(); }
+  }
 });
 
 test("Not quite opens another round that records the proposal it answers, and is refused when no rounds are left", async () => {

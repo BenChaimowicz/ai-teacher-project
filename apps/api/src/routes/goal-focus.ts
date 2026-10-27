@@ -8,6 +8,8 @@ import {
   type FocusProposal,
   type FocusRound,
   type GoalFocus,
+  type GoalScope,
+  type ValidityClarification,
 } from "@senoy/db";
 import { createGoalFocuser, type FocusTurn, type GoalFocuser } from "../lib/goal-focus.ts";
 import { recordProductEvent, withPipelineEvent } from "../lib/usage-tracking.ts";
@@ -32,6 +34,7 @@ type RequestRow = {
   subject: string;
   learningGoal: string;
   status: CourseRequestStatus;
+  clarification: ValidityClarification | null;
   focus: GoalFocus | null;
 };
 
@@ -49,6 +52,9 @@ export const FOCUS_FAILED_MESSAGE = "Focusing your goal could not finish. Your R
 
 /** Shown when a conditional write lost a race. */
 const CHANGED_MESSAGE = "This Request changed while focusing your goal. Reload it before continuing.";
+
+/** Shown when an edited scope is not a re-partition of the proposal's own entries. */
+export const SCOPE_EDIT_MISMATCH_MESSAGE = "Your changes to the focus didn't match it. Reload and try again.";
 
 /** Accepts only an object body. */
 function bodyFields(body: unknown): Record<string, unknown> {
@@ -75,6 +81,24 @@ export function readFocusAnswers(value: unknown, round: FocusRound): FocusAnswer
     byId.set(question.id, { questionId: question.id, answer: trimmed, ownWords });
   }
   return round.questions.map((question) => byId.get(question.id)!);
+}
+
+/**
+ * Reads a Learner-edited scope: the proposal's own entries moved between Covers and Leaves out. Every entry of the
+ * proposal appears exactly once across the two lists (exact strings), nothing new is added, and Covers is not empty.
+ * @param value - Untrusted `scope` from the body
+ * @param proposed - The proposal's scope
+ * @returns The edited scope, or null when it is not a re-partition of the proposal
+ */
+export function readScopeEdit(value: unknown, proposed: GoalScope): GoalScope | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const { inScope, outOfScope } = value as Record<string, unknown>;
+  if (!Array.isArray(inScope) || !Array.isArray(outOfScope) || inScope.length === 0) return null;
+  if (![...inScope, ...outOfScope].every((entry): entry is string => typeof entry === "string")) return null;
+  const expected = [...proposed.inScope, ...proposed.outOfScope];
+  const given = [...inScope, ...outOfScope] as string[];
+  if (given.length !== expected.length || new Set(given).size !== given.length || !given.every((entry) => expected.includes(entry))) return null;
+  return { inScope: [...inScope] as string[], outOfScope: [...outOfScope] as string[] };
 }
 
 /**
@@ -143,7 +167,9 @@ export async function goalFocusRoutes(app: FastifyInstance, options: GoalFocusOp
         learnerId,
         detail: { rounds: focus.rounds.length, notQuite: Boolean(notQuite) },
       }, async (event) => {
-        const turn = await focuser.next({ subject: row.subject, learningGoal: focus.originalGoal, rounds: focus.rounds, notQuite });
+        const turn = await focuser.next({
+          subject: row.subject, learningGoal: focus.originalGoal, rounds: focus.rounds, notQuite, clarification: row.clarification,
+        });
         // Checked here so a misbehaving focuser leaves the Request unchanged rather than half-written.
         const applied = applyTurn(focus, turn, notQuite);
         event.setDetail({ move: turn.kind });
@@ -208,7 +234,12 @@ export async function goalFocusRoutes(app: FastifyInstance, options: GoalFocusOp
       if (row.status !== "awaiting_focus_confirmation" || !row.focus || !proposal) {
         return reply.code(409).send({ error: "There is no focused goal to confirm." });
       }
-      const focus: GoalFocus = { ...row.focus, outcome: "focused", scope: proposal.scope };
+      // No body confirms as proposed; a `scope` is the Learner's own re-partition of the proposal's entries.
+      const { scope: edit } = bodyFields(request.body);
+      const scope = edit === undefined ? proposal.scope : readScopeEdit(edit, proposal.scope);
+      if (!scope) return reply.code(400).send({ error: SCOPE_EDIT_MISMATCH_MESSAGE });
+      // The proposal records what was confirmed, so history shows the edited lists.
+      const focus: GoalFocus = { ...row.focus, outcome: "focused", proposal: { ...proposal, scope }, scope };
       const updated = await save(row, request.currentLearner.id, { status: "goal_focused", focus, learningGoal: proposal.learningGoal });
       if (!updated) return reply.code(409).send({ error: CHANGED_MESSAGE });
       recordFocused(request.currentLearner.id, row.id, focus);

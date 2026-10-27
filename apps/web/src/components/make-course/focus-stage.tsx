@@ -1,7 +1,7 @@
 import { Check, Home, MessageCircle, PenLine, RefreshCw, Telescope, Undo2 } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MAX_FOCUS_ROUNDS, type FocusAnswer, type FocusProposal, type FocusQuestion, type FocusRound } from "@senoy/db/course-request";
+import { MAX_FOCUS_ROUNDS, type FocusAnswer, type FocusProposal, type FocusQuestion, type FocusRound, type GoalScope } from "@senoy/db/course-request";
 import { ThreadEnd, WorkingLine, useAutoStep } from "@/components/make-course/flow.tsx";
 import { errorText, requestAction } from "@/components/make-course/request-api.ts";
 import { Button } from "@/components/ui/button.tsx";
@@ -24,6 +24,42 @@ const PROPOSAL_LINE = "Here's the course I'd make:";
 /** What is running right now. */
 type Busy = "start" | "answers" | "confirm" | "not-quite" | "skip" | null;
 
+/** Browser storage key for one round's answers in progress. */
+function roundKey(requestId: string, roundIndex: number) {
+  return `goal-focus:${requestId}:${roundIndex}`;
+}
+
+/**
+ * A round's answers so far, kept in this tab until the round is sent, so a reload resumes it. Anything that doesn't
+ * match the round's questions in order starts it over; a full set drops its last answer, so the round is sent by a tap.
+ */
+function readRoundAnswers(requestId: string, roundIndex: number, round: FocusRound | undefined): FocusAnswer[] {
+  if (!round || roundIndex < 0) return [];
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(roundKey(requestId, roundIndex)) ?? "null") as FocusAnswer[] | null;
+    if (!Array.isArray(saved)) return [];
+    const valid = saved.every((answer, index) => answer && answer.questionId === round.questions[index]?.id && typeof answer.answer === "string");
+    return valid ? saved.slice(0, round.questions.length - 1) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Keeps a round's answers so far; storage can be full or blocked, and the answers still go up at the end. */
+function writeRoundAnswers(requestId: string, roundIndex: number, answers: FocusAnswer[]) {
+  try {
+    if (answers.length) window.sessionStorage.setItem(roundKey(requestId, roundIndex), JSON.stringify(answers));
+    else window.sessionStorage.removeItem(roundKey(requestId, roundIndex));
+  } catch {
+    // Nothing to do; the round just won't resume after a reload.
+  }
+}
+
+/** Whether a scope differs from the proposal's own split. */
+function scopeMoved(proposal: GoalScope, scope: GoalScope) {
+  return scope.inScope.length !== proposal.inScope.length || scope.inScope.some((item) => !proposal.inScope.includes(item));
+}
+
 /**
  * Focusing the Learning Goal (SEN-90): after Validity passes, the Course Guide looks at the goal by itself. A precise
  * goal moves straight on; a broad one gets a round or two of tap-to-choose questions, one at a time, then a proposed
@@ -34,21 +70,25 @@ export function FocusStage({ record }: { record: CourseRequestRecord }) {
   const rounds = record.focus?.rounds ?? [];
   const openIndex = record.status === "awaiting_focus_answers" ? rounds.length - 1 : -1;
   const open = openIndex >= 0 ? rounds[openIndex] : undefined;
-  const [answers, setAnswers] = useState<FocusAnswer[]>([]);
+  const [answers, setAnswers] = useState<FocusAnswer[]>(() => readRoundAnswers(record.id, openIndex, open));
   const [ownWords, setOwnWords] = useState(false);
   const [echo, setEcho] = useState<string | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [backs, setBacks] = useState(0);
+  const proposalScope = record.focus?.proposal?.scope ?? null;
+  // The proposal's Covers / Leaves out as the Learner has rearranged them.
+  const [scope, setScope] = useState<GoalScope | null>(proposalScope);
 
   // A new round or a proposal replaces whatever was picked here; history shows it from the saved Request.
   useEffect(() => {
-    setAnswers([]);
+    setAnswers(readRoundAnswers(record.id, openIndex, open));
     setOwnWords(false);
     setEcho(null);
     setError(null);
-  }, [record.status, rounds.length]);
+    setScope(proposalScope);
+  }, [record.id, record.status, rounds.length]);
 
   /**
    * Sends one focus action. Failures (a model call that didn't finish, or a stale step) leave the Request unchanged.
@@ -70,12 +110,18 @@ export function FocusStage({ record }: { record: CourseRequestRecord }) {
   }
 
   const start = () => run("start", "/focus", {}, "I couldn't look at your goal just then. Nothing changed; try again.");
-  const sendAnswers = (all: FocusAnswer[]) => run("answers", "/focus", { answers: all }, "I couldn't take your answers just then. Nothing changed; try again.");
+  /** Sends the round; once it is in, this tab forgets its copy. */
+  async function sendAnswers(all: FocusAnswer[]) {
+    const ok = await run("answers", "/focus", { answers: all }, "I couldn't take your answers just then. Nothing changed; try again.");
+    if (ok) writeRoundAnswers(record.id, openIndex, []);
+  }
 
   /** Ends focusing with a broad overview; on failure the options come back. */
   async function skip() {
     setEcho(BROAD);
-    if (!(await run("skip", "/focus/skip", {}, "I couldn't save that. Nothing changed; pick again."))) setEcho(null);
+    if (await run("skip", "/focus/skip", {}, "I couldn't save that. Nothing changed; pick again.")) {
+      if (openIndex >= 0) writeRoundAnswers(record.id, openIndex, []);
+    } else setEcho(null);
   }
 
   // Looking at the goal is a server step the Learner does not trigger (spec §3).
@@ -120,7 +166,17 @@ export function FocusStage({ record }: { record: CourseRequestRecord }) {
       const next = [...answers, { questionId: q.id, answer: text, ownWords: own }];
       setAnswers(next);
       setOwnWords(false);
+      writeRoundAnswers(record.id, openIndex, next);
       if (next.length === open.questions.length) void sendAnswers(next);
+    };
+
+    /** Steps back one question within this round. */
+    const changeLast = () => {
+      const back = answers.slice(0, -1);
+      setAnswers(back);
+      setOwnWords(false);
+      setError(null);
+      writeRoundAnswers(record.id, openIndex, back);
     };
 
     return (
@@ -150,6 +206,9 @@ export function FocusStage({ record }: { record: CourseRequestRecord }) {
                 onAnswer={(text) => answer(question, text, true)}
               />
             ) : null}
+            {answers.length > 0 && !ownWords ? (
+              <div className="mk-back"><Button variant="link" size="sm" onClick={changeLast}>Change my last answer</Button></div>
+            ) : null}
             {errorLine("Pick again to retry.")}
           </>
         ) : null}
@@ -169,16 +228,27 @@ export function FocusStage({ record }: { record: CourseRequestRecord }) {
   const proposal = record.focus?.proposal;
   if (record.status === "awaiting_focus_confirmation" && proposal) {
     const roundsLeft = rounds.length < MAX_FOCUS_ROUNDS;
+    const broadGoal = record.focus?.broadGoal;
+    const edited = scope ?? proposal.scope;
+    const moved = scopeMoved(proposal.scope, edited);
     const tiles: OptionTile[] = [
       { id: "confirm", label: CONFIRM, description: "Make the course about this", icon: <Check />, tone: "primary" },
       ...(roundsLeft ? [{ id: "not-quite", label: NOT_QUITE, description: "Ask me a little more", icon: <Undo2 /> }] : []),
-      { id: "broad", label: BROAD, description: "Keep the goal as I wrote it", icon: <Telescope />, tone: "quiet" as const },
+      { id: "broad", label: BROAD, description: broadGoal ? `I'll aim for: ${broadGoal}` : "A general course on it", icon: <Telescope />, tone: "quiet" as const },
     ];
+    /** Moves one entry to the other list; Covers keeps at least one. */
+    const move = (item: string) => {
+      const inCovers = edited.inScope.includes(item);
+      if (inCovers && edited.inScope.length <= 1) return;
+      setScope(inCovers
+        ? { inScope: edited.inScope.filter((entry) => entry !== item), outOfScope: [...edited.outOfScope, item] }
+        : { inScope: [...edited.inScope, item], outOfScope: edited.outOfScope.filter((entry) => entry !== item) });
+    };
     return (
       <>
         <FocusRounds rounds={rounds} />
         <CompanionLine typing key={`proposal-${proposal.learningGoal}`}>{PROPOSAL_LINE}</CompanionLine>
-        <ProposalCard proposal={proposal} />
+        <ProposalCard proposal={{ ...proposal, scope: edited }} onMove={echo || busy ? undefined : move} />
         {echo ? <LearnerEcho>{echo}</LearnerEcho> : (
           <OptionTiles key={`proposal-${attempt}`}
             label="Your course's focus"
@@ -189,7 +259,7 @@ export function FocusStage({ record }: { record: CourseRequestRecord }) {
               const label = option.id === "confirm" ? CONFIRM : NOT_QUITE;
               setEcho(label);
               const ok = option.id === "confirm"
-                ? await run("confirm", "/focus/confirm", {}, "I couldn't save that. Nothing changed; pick again.")
+                ? await run("confirm", "/focus/confirm", moved ? { scope: edited } : {}, "I couldn't save that. Nothing changed; pick again.")
                 : await run("not-quite", "/focus/not-quite", {}, "I couldn't think of more questions just then. Nothing changed; pick again.");
               if (!ok) setEcho(null);
             }}
@@ -207,13 +277,16 @@ export function FocusStage({ record }: { record: CourseRequestRecord }) {
 
 /**
  * The focus exchange as history once the goal is settled: the questions and answers, then the confirmed focus or the
- * broad overview. Nothing for a precise goal or a Request from before focusing existed.
+ * broad overview. A precise goal gets one line saying so; a Request from before focusing existed gets nothing.
  */
 export function FocusHistory({ record }: { record: CourseRequestRecord }) {
   const focus = record.focus;
-  if (!focus || focus.outcome === null || focus.outcome === "precise") return null;
+  if (!focus || focus.outcome === null) return null;
+  if (focus.outcome === "precise") return <CompanionLine>That's clear. I'll aim for exactly that.</CompanionLine>;
   const allAnswered = focus.rounds.every((round) => round.answers !== null);
-  const proposal = focus.outcome === "focused" || allAnswered ? focus.proposal : null;
+  const shown = focus.outcome === "focused" || allAnswered ? focus.proposal : null;
+  // The card shows the lists as confirmed, after any entries the Learner moved.
+  const proposal = shown && focus.outcome === "focused" && focus.scope ? { ...shown, scope: focus.scope } : shown;
   return (
     <>
       <FocusRounds rounds={focus.rounds} />
@@ -226,7 +299,7 @@ export function FocusHistory({ record }: { record: CourseRequestRecord }) {
       {focus.outcome === "focused" ? <LearnerEcho>{CONFIRM}</LearnerEcho> : (
         <>
           <LearnerEcho>{BROAD}</LearnerEcho>
-          <CompanionLine>A broad overview it is.</CompanionLine>
+          <CompanionLine>A broad overview it is. I'll aim for: <b>{record.learningGoal}</b></CompanionLine>
         </>
       )}
     </>
@@ -291,27 +364,52 @@ function questionTiles(question: FocusQuestion): OptionTile<string>[] {
   ];
 }
 
-/** The proposed goal, with what the course covers and leaves out. */
-function ProposalCard({ proposal }: { proposal: FocusProposal }) {
+/**
+ * The proposed goal, with what the course covers and leaves out. With `onMove`, each entry is a chip that moves it to
+ * the other list (spec §4.2 Result); Covers keeps at least one.
+ */
+function ProposalCard({ proposal, onMove }: { proposal: FocusProposal; onMove?: (item: string) => void }) {
+  const lastCover = proposal.scope.inScope.length <= 1;
   return (
     <ThreadCard className="mk-focus">
       <p className="mk-focus-goal">{proposal.learningGoal}</p>
       <div className="mk-scope">
-        <ScopeList title="Covers" items={proposal.scope.inScope} />
-        <ScopeList title="Leaves out" items={proposal.scope.outOfScope} out />
+        <ScopeList title="Covers" to="Leaves out" items={proposal.scope.inScope} onMove={onMove} locked={lastCover} />
+        <ScopeList title="Leaves out" to="Covers" items={proposal.scope.outOfScope} onMove={onMove} out />
       </div>
+      {onMove ? <p className="mk-scope-hint">Tap an item to move it.</p> : null}
     </ThreadCard>
   );
 }
 
-/** One side of the scope. */
-function ScopeList({ title, items, out = false }: { title: string; items: string[]; out?: boolean }) {
-  if (!items.length) return null;
+type ScopeListProps = {
+  title: string;
+  /** The other list's title, for the move label. */
+  to: string;
+  items: string[];
+  onMove?: (item: string) => void;
+  /** Nothing here may move (the last entry in Covers). */
+  locked?: boolean;
+  out?: boolean;
+};
+
+/** One side of the scope; editable entries are chips. An empty side shows only while editing. */
+function ScopeList({ title, to, items, onMove, locked = false, out = false }: ScopeListProps) {
+  if (!items.length && !onMove) return null;
   return (
     <section className={out ? "out" : undefined} aria-label={title}>
       <h5>{title}</h5>
       <ul>
-        {items.map((item) => <li key={item}>{item}</li>)}
+        {items.map((item) => (
+          <li key={item} className={onMove ? "edit" : undefined}>
+            {onMove ? (
+              <button type="button" className="mk-chip mk-move" aria-label={`Move ${item} to ${to}`} disabled={locked} onClick={() => onMove(item)}>
+                {item}
+              </button>
+            ) : item}
+          </li>
+        ))}
+        {!items.length ? <li className="none">Nothing</li> : null}
       </ul>
     </section>
   );

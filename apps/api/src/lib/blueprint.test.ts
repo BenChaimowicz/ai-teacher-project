@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { blueprintCodeFailures } from "@senoy/db/blueprint";
 import type { StartingLevel } from "@senoy/db/starting-level";
+import { createFixtureBlueprintBuilder } from "./blueprint-fixture.ts";
 import { BlueprintFailedError, BLUEPRINT_JUDGE_CHECKS, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, parseAuthoredBlueprint, slugTag, type BlueprintInput } from "./blueprint.ts";
 import { COURSE_JUDGE_CHECKS, SEQUENCE_REACHES_GOAL } from "./course-judge.ts";
 import { loadModelConfig } from "./model-config.ts";
@@ -313,4 +315,55 @@ test("After Learner review, the redesign keeps the scope", async () => {
   });
   assert.match(calls[0]!.systemPrompt, /redesigning a Course Blueprint after the Learner reviewed it[\s\S]*Design for the scope/);
   assert.deepEqual(calls[0]!.input.scope, SCOPE);
+});
+
+/** A Learner who said they are brand new to this instead of taking the diagnostic (spec §4.3). */
+const NEW_TO_SUBJECT: StartingLevel = {
+  learningGoal: INPUT.learningGoal,
+  probedCapabilities: [],
+  remainingGapStatement: "You're new to this, so the course starts from the very beginning.",
+  coverageNote: "",
+  extremity: "floor",
+  selfReportedNew: true,
+};
+
+test("Without selfReportedNew, no input carries newToSubject and no prompt mentions it", async () => {
+  const { generator, calls } = queuedGenerator(authored(), authored());
+  const verdicts = queuedJudge(COVERAGE_FAIL, PASS);
+  await createBlueprintBuilder({ generator, judge: verdicts.judge }).build(INPUT);
+  for (const input of [...calls.map((call) => call.input), ...verdicts.inputs]) assert.ok(!("newToSubject" in input), "Left out, not sent as false.");
+  for (const prompt of [...calls.map((call) => call.systemPrompt), ...verdicts.prompts]) assert.doesNotMatch(prompt, /newToSubject|brand new/);
+});
+
+test("A brand-new Learner's Blueprint starts from the fundamentals: author, revision and Judge are told, and coverage is not failed for an empty gap", async () => {
+  const { generator, calls } = queuedGenerator(authored(), authored());
+  const verdicts = queuedJudge(SEQUENCE_FAIL, PASS);
+  const checked = await createBlueprintBuilder({ generator, judge: verdicts.judge }).build({ ...INPUT, startingLevel: NEW_TO_SUBJECT });
+  assert.equal(checked.judge.pass, true);
+  assert.equal(calls.length, 2);
+  for (const input of [...calls.map((call) => call.input), ...verdicts.inputs]) {
+    assert.equal(input.newToSubject, true);
+    assert.deepEqual([input.inPlace, input.remainingGap], [[], []]);
+  }
+  for (const call of calls) {
+    assert.match(call.systemPrompt, /the Learner says they are brand new to this, and no capability was probed/);
+    assert.match(call.systemPrompt, /start from the fundamentals of the whole Learning Goal \(within scope\.inScope when there is a scope\), and size the Course for a newcomer/);
+  }
+  assert.match(calls[1]!.systemPrompt, /revising a Course Blueprint that failed/);
+  for (const prompt of verdicts.prompts) assert.match(prompt, /Never fail coverage or remaining_gap_only because those lists are empty/);
+});
+
+test("A brand-new Learner with a confirmed scope gets both rules", async () => {
+  const { generator, calls } = queuedGenerator(authored());
+  const verdicts = queuedJudge(PASS);
+  await createBlueprintBuilder({ generator, judge: verdicts.judge }).build({ ...INPUT, scope: SCOPE, startingLevel: NEW_TO_SUBJECT });
+  assert.match(calls[0]!.systemPrompt, /Design for the scope[\s\S]*brand new to this/);
+  assert.deepEqual([calls[0]!.input.scope, calls[0]!.input.newToSubject], [SCOPE, true]);
+  assert.deepEqual([verdicts.inputs[0]!.scope, verdicts.inputs[0]!.newToSubject], [SCOPE, true]);
+});
+
+test("The fixture builder designs a Blueprint from an empty capability list", async () => {
+  const { blueprint } = await createFixtureBlueprintBuilder().build({ ...INPUT, startingLevel: NEW_TO_SUBJECT });
+  assert.deepEqual(blueprint.modules[0]!.slots.map((slot) => slot.method), ["reading", "reading", "quiz"]);
+  assert.deepEqual(blueprintCodeFailures(blueprint, "every_2_to_3_readings"), []);
 });

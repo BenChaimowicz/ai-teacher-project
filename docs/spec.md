@@ -114,8 +114,8 @@ One screen for every unpublished status. The body follows status; these are not 
 | Compose | One typed line: a topic ("Norse mythology") or what the Learner wants to be able to do. It is saved as the subject and as the Learning Goal as typed. There is no generic goal question; Goal focusing asks what part and how deep, with options built from the subject. A topic picked elsewhere (Home, Go deeper) is saved straight away. |
 | Validity | Pass, one clarification, or reject. Reject: plain-language reason, safe reframe, **Revise request** (editable new Request). Rejected stays in history. No appeal. |
 | Focus | Nothing, if the goal is already precise. Otherwise a few tap-to-choose questions per round (each with **Something else** and **A broad overview is fine**), then the proposed goal with what it covers and leaves out: **That's it**, **Not quite** (while rounds remain), or **A broad overview is fine**. |
-| Assessment | Honesty copy; eight three-option items plus **I don’t know**. |
-| Remaining-gap | **Looks right** or **too easy** (expand the gap). No “I’m more advanced.” |
+| Assessment | First, **How much do you know about this already?**: **Brand new to this** (no items; Starting Level is the Learner's own word, §4.3) or **I know some of it** (the check). Then honesty copy; eight three-option items plus **I don’t know**. |
+| Remaining-gap | **Looks right** or **too easy** (expand the gap; shown as **Start a bit earlier**, since it adds basics). No “I’m more advanced.” |
 | Ceiling | Thin Blueprint or revise the Learning Goal. Never auto-publish an empty Course. |
 | Assessment-failed | **Retry diagnostic** only. |
 | Blueprint review | Titles and Lesson goals; mark irrelevant (optional why); Sequence mode picker (linear default; free jump one-way). Approve. Closing the tab returns here. Not a job. |
@@ -225,13 +225,13 @@ The Learner creates a Course Request by selecting a subject and stating a Learni
 
 #### Focusing the Learning Goal
 
-Validity decides whether a request is real and learnable; it does not decide which part of a subject the Learner means. **Goal focusing** runs after Validity **pass** and before the Starting Level diagnostic, on every Course Request. Validity's one clarification stays separate: it settles learnability, focusing settles scope (ADR 0020).
+Validity decides whether a request is real and learnable; it does not decide which part of a subject the Learner means. **Goal focusing** runs after Validity **pass** and before the Starting Level diagnostic, on every Course Request. Validity's one clarification stays separate: it settles learnability, focusing settles scope (ADR 0020). Focusing reads the clarification and its answer as settled and never asks it again.
 
 **Detect.** A bare topic is never precise. The Generator rates the goal on three questions: does it name a facet of the subject, a depth or purpose (overview, be able to do or retell it, analyse it), and a finish line? The rating is structured output and code decides: only a goal that answers all three is **precise**, and a precise goal passes straight through with nothing asked. "Name the Æsir and Vanir and how they are related" is precise; "explain the main stories and figures in the Norse mythic corpus" is not.
 
 **Ask.** Up to three rounds of one to three questions each. Each question offers two to five answers built from the subject's real facets, plus **Something else** (a short typed answer) and **A broad overview is fine**. Each round narrows what earlier answers left open, and stops once facet, depth, and finish line are clear. After the last round the Course Guide must propose.
 
-**Result.** The Course Guide proposes a rewritten Learning Goal plus a **Goal scope**: in scope and out of scope, each a short list of facets. **That's it** confirms it, and the rewritten goal becomes the Request's Learning Goal; the goal as typed stays recorded. **Not quite** asks another round while rounds remain. **A broad overview is fine**, at any point, records a deliberate broad overview with no scope. Its Learning Goal is a one-sentence broad-overview goal the Course Guide writes from what was typed when it first asks (a bare topic is not a goal sentence).
+**Result.** The Course Guide proposes a rewritten Learning Goal plus a **Goal scope**: in scope and out of scope, each a short list of facets. The Learner may tap any entry to move it between the two lists (in scope keeps at least one) before **That's it** confirms it; the rewritten goal becomes the Request's Learning Goal; the goal as typed stays recorded. **Not quite** asks another round while rounds remain. **A broad overview is fine**, at any point, records a deliberate broad overview with no scope. Its Learning Goal is a one-sentence broad-overview goal the Course Guide writes from what was typed when it first asks (a bare topic is not a goal sentence).
 
 **Statuses.** `validity_passed` (first turn runs automatically), `awaiting_focus_answers`, `awaiting_focus_confirmation`, then `goal_focused`, from which the diagnostic starts. Status is explicit, not derived from the stored focus.
 
@@ -292,7 +292,9 @@ Scaffolding *dosage* (worked-example amount, tighter sequencing) follows Startin
 
 **Construct limits for Test courses.** The diagnostic may ask written knowledge (reagent roles, 4/4 vs 6/8, attested corpus facts). It must not claim wet-lab competence, kit playing, or living religious competence. Coverage notes must say so.
 
-**Failure.** Retry once with the fallback Generator model. If the set still fails, the Course Request is **assessment-failed**; offer **Retry diagnostic** only. Do not invent Starting Level from self-report. Do not offer a “Start from fundamentals” shortcut that looks like a completed diagnostic. Mid-diagnostic abandon: persist partial responses; do not Blueprint until the set is complete or the Learner confirms floor-from-insufficient-evidence.
+**Brand new to this.** Before the items, the Course Guide asks how much the Learner knows already. **Brand new to this** skips the items: the Starting Level is a floor with no probed capabilities, marked as the Learner's own word (`selfReportedNew`), with the statement “You're new to this, so the course starts from the very beginning.” It is never shown or stored as a diagnostic result. The Blueprint starts from the fundamentals of the whole Learning Goal (within its Goal scope) and sizes the Course for a newcomer. **I know some of it** takes the diagnostic. Eight “I don't know” answers would tell the Blueprint the same thing while making a newcomer sit through them (ADR 0021).
+
+**Failure.** Retry once with the fallback Generator model. If the set still fails, the Course Request is **assessment-failed**; offer **Retry diagnostic** only. Do not invent Starting Level from self-report, with one exception below. Do not offer a “Start from fundamentals” shortcut that looks like a completed diagnostic. Mid-diagnostic abandon: persist partial responses; do not Blueprint until the set is complete or the Learner confirms floor-from-insufficient-evidence.
 
 ### 4.4 Course Blueprint
 

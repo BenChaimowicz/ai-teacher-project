@@ -1,8 +1,8 @@
-import { Check, ChevronsRight, Home, MessageCircle, Pencil, RefreshCw, Scissors } from "lucide-react";
+import { Check, ChevronsLeft, Home, ListChecks, MessageCircle, Pencil, RefreshCw, Scissors, Sprout } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { DiagnosticAnswer } from "@senoy/db/starting-level";
-import { ThreadEnd, WorkingLine, useAutoStep } from "@/components/make-course/flow.tsx";
+import { ThreadEnd, WorkingLine } from "@/components/make-course/flow.tsx";
 import { announceRequest, errorText, requestAction } from "@/components/make-course/request-api.ts";
 import { Button } from "@/components/ui/button.tsx";
 import { LearnerEcho, CompanionLine } from "@/components/ui/chat-thread.tsx";
@@ -48,6 +48,14 @@ function writeProgress(attemptId: string, progress: SavedProgress) {
   }
 }
 
+/** "How much do you know about this already?" and its two answers (spec §4.3 Brand new to this). */
+const KNOW_ASK = "How much do you know about this already?";
+const BRAND_NEW = "Brand new to this";
+const KNOW_SOME = "I know some of it";
+
+/** The tile that skips the check on the Learner's own word. */
+const brandNewTile: OptionTile = { id: "new", label: BRAND_NEW, description: "Start from the very beginning", icon: <Sprout /> };
+
 /** How an answer reads in the thread. */
 function answerText(item: DiagnosticView["items"][number], answer: DiagnosticAnswer | undefined) {
   if (answer === "dont_know") return "I don't know";
@@ -55,9 +63,11 @@ function answerText(item: DiagnosticView["items"][number], answer: DiagnosticAns
 }
 
 /**
- * The Starting Level check (spec §4.3): it is prepared by itself once the Learning Goal is settled, then asked one question at a
- * time with I don't know always offered, then where the Course would start, with Looks right or Too easy (or, near
- * the ceiling, a short Course or a new goal). After confirming, it stays above as history.
+ * The Starting Level check (spec §4.3). Once the Learning Goal is settled the Course Guide asks how much the Learner knows
+ * already: Brand new to this skips the check (the Starting Level is their own word); I know some of it prepares the
+ * check, asked one question at a time with I don't know always offered, then where the Course would start, with Looks
+ * right or Start a bit earlier (or, near the ceiling, a short Course or a new goal). After confirming, it stays above as
+ * history.
  */
 export function LevelStage({ record }: { record: CourseRequestRecord }) {
   const navigate = useNavigate();
@@ -65,7 +75,9 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
   const [progress, setProgress] = useState<SavedProgress>({ index: 0, answers: {} });
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"prepare" | "submit" | "confirm" | "widen" | null>(null);
+  const [busy, setBusy] = useState<"prepare" | "new" | "submit" | "confirm" | "widen" | null>(null);
+  // What the Learner tapped at "How much do you know?", until the saved Request shows it.
+  const [knowPick, setKnowPick] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [loadKey, setLoadKey] = useState(0);
   const live = LEVEL_STATUSES.has(record.status);
@@ -114,7 +126,22 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
     }
   }
 
-  useAutoStep(record.status === "goal_focused" && !record.failureReason ? `diagnostic:${record.id}` : null, prepare);
+  /** Brand new to this: no check; the Starting Level is the Learner's own word and the plan comes next. */
+  async function brandNew() {
+    setKnowPick(BRAND_NEW);
+    setBusy("new");
+    setError(null);
+    try {
+      const reply = await requestAction<{ diagnostic: DiagnosticView | null }>(`/${record.id}/diagnostic/new-to-subject`, "POST", {}, "I couldn't save that. Nothing changed; pick again.");
+      if (reply.diagnostic) setDiagnostic(reply.diagnostic);
+    } catch (caught: unknown) {
+      setKnowPick(null);
+      setError(errorText(caught));
+      setAttempt((n) => n + 1);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   /** Records one answer and moves on; after the last, sends them all. */
   async function answer(itemId: string, value: DiagnosticAnswer) {
@@ -160,26 +187,76 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
     }
   }
 
+  const knowAsk = <CompanionLine>{KNOW_ASK}</CompanionLine>;
   const intro = (
     <>
+      {knowAsk}
+      <LearnerEcho>{KNOW_SOME}</LearnerEcho>
       <CompanionLine mood={live ? "think" : "idle"}>A few quick questions so I don't start too easy.</CompanionLine>
       <CompanionLine continued>
-        <span className="mk-faint">It's not a quiz or a grade, just a quick look at where to start. If you're not reasonably sure, “I don't know” is the right answer.</span>
+        <span className="mk-faint">It's not a quiz or a grade, just a quick look at where to start. If you're not reasonably sure, “I don't know” is the right answer. You'll see the plan before anything is written.</span>
       </CompanionLine>
     </>
   );
   const errorLine = error ? <CompanionLine mood="think"><span role="alert">{error}</span></CompanionLine> : null;
-  const retryTiles = (label: string, onRetry: () => void | Promise<void>, retryLabel = "Try again") => (
+  const retryTiles = (label: string, onRetry: () => void | Promise<void>) => (
     <OptionTiles key={`${record.status}-t0`}
       label={label}
       resetKey={`${attempt}-${record.status}`}
       options={[
-        { id: "retry", label: retryLabel, icon: <RefreshCw />, tone: "primary" },
+        { id: "retry", label: "Try again", icon: <RefreshCw />, tone: "primary" },
         { id: "home", label: "Back to Home", description: "It's saved; come back anytime", icon: <Home />, tone: "quiet" },
       ]}
       onPick={(option) => (option.id === "retry" ? onRetry() : navigate("/"))}
     />
   );
+
+  /** Retry, Brand new to this, or Home, after preparing the check didn't finish. */
+  const failureTiles = (label: string, retryLabel: string) => (
+    <OptionTiles key={`${record.status}-t2`}
+      label={label}
+      resetKey={`${attempt}-${record.status}`}
+      cols={3}
+      options={[
+        { id: "retry", label: retryLabel, icon: <RefreshCw />, tone: "primary" },
+        brandNewTile,
+        { id: "home", label: "Back to Home", description: "It's saved; come back anytime", icon: <Home />, tone: "quiet" },
+      ]}
+      onPick={(option) => {
+        if (option.id === "retry") return prepare();
+        if (option.id === "new") return brandNew();
+        navigate("/");
+      }}
+    />
+  );
+  const newWorking = busy === "new" ? <CompanionLine mood="think"><WorkingLine>From the very beginning, then. Saving that…</WorkingLine></CompanionLine> : null;
+
+  // Before the check exists, ask how much the Learner knows. A goal_focused Request with a failure already chose the check.
+  if (record.status === "goal_focused" && !record.failureReason && busy !== "prepare" && knowPick !== KNOW_SOME) {
+    return (
+      <>
+        <CompanionLine typing key={`know-${record.id}`}>{KNOW_ASK}</CompanionLine>
+        {knowPick ? <LearnerEcho>{knowPick}</LearnerEcho> : (
+          <OptionTiles key={`${record.status}-know`}
+            label={KNOW_ASK}
+            resetKey={attempt}
+            options={[
+              brandNewTile,
+              { id: "some", label: KNOW_SOME, description: "A few quick questions to find where to start", icon: <ListChecks /> },
+            ]}
+            onPick={(option) => {
+              if (option.id === "new") return brandNew();
+              setKnowPick(KNOW_SOME);
+              return prepare();
+            }}
+          />
+        )}
+        {newWorking}
+        {errorLine}
+        <ThreadEnd watch={`${knowPick}|${busy}|${error}`} />
+      </>
+    );
+  }
 
   if (record.status === "goal_focused" || record.status === "assessment_preparing") {
     const working = busy === "prepare" || record.status === "assessment_preparing";
@@ -188,13 +265,14 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
       <>
         {intro}
         {working ? <CompanionLine mood="think"><WorkingLine>Writing your questions… This can take a minute or two.</WorkingLine></CompanionLine> : null}
-        {!working && failure ? (
+        {!working && failure && busy !== "new" ? (
           <>
             <CompanionLine mood="think"><span role="alert">{failure}</span></CompanionLine>
-            {retryTiles("Preparing didn't finish", prepare)}
+            {failureTiles("Preparing didn't finish", "Try again")}
           </>
         ) : null}
-        <ThreadEnd watch={`${record.status}|${working}|${failure}`} />
+        {newWorking}
+        <ThreadEnd watch={`${record.status}|${working}|${failure}|${busy}`} />
       </>
     );
   }
@@ -204,9 +282,9 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
       <>
         {intro}
         <CompanionLine mood="think"><span role="alert">{error ?? record.failureReason ?? "I couldn't write questions for this goal that passed my checks."}</span></CompanionLine>
-        {busy === "prepare"
-          ? <CompanionLine mood="think"><WorkingLine>Writing a fresh set… This can take a minute or two.</WorkingLine></CompanionLine>
-          : retryTiles("The questions didn't pass", prepare, "Retry diagnostic")}
+        {busy === "prepare" ? <CompanionLine mood="think"><WorkingLine>Writing a fresh set… This can take a minute or two.</WorkingLine></CompanionLine> : null}
+        {busy === "new" ? newWorking : null}
+        {busy === null ? failureTiles("The questions didn't pass", "Retry diagnostic") : null}
         <ThreadEnd watch={`${busy}|${error}`} />
       </>
     );
@@ -222,6 +300,17 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
     );
   }
   if (!diagnostic) return live ? <>{intro}<CompanionLine typing>…</CompanionLine></> : null;
+
+  // Brand new to this: the Learner's own word, so no questions and no "small sample" note (spec §4.3).
+  if (diagnostic.items.length === 0 && diagnostic.result) {
+    return (
+      <>
+        {knowAsk}
+        <LearnerEcho>{BRAND_NEW}</LearnerEcho>
+        <CompanionLine>{diagnostic.result.remainingGapStatement}</CompanionLine>
+      </>
+    );
+  }
 
   const total = diagnostic.items.length;
   if (record.status === "assessment_ready") {
@@ -303,7 +392,8 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
       { id: "goal", label: "Change my goal", description: "Aim for something harder", icon: <Pencil /> },
     ]
     : [{ id: "right", label: "Looks right", description: "Start there", icon: <Check />, tone: "primary" }];
-  if (result.canExpandGap) tiles.push({ id: "easy", label: "Too easy, cover more", description: "Start a little earlier", icon: <ChevronsRight /> });
+  // Spec §4.3 "too easy": it adds basics back into the course, so it reads as starting earlier.
+  if (result.canExpandGap) tiles.push({ id: "easy", label: "Start a bit earlier", description: "I'm shakier than that", icon: <ChevronsLeft /> });
 
   return (
     <>
@@ -313,7 +403,7 @@ export function LevelStage({ record }: { record: CourseRequestRecord }) {
       ))}
       {gapLine}
       {ceiling ? <CompanionLine continued>You answered nearly everything. I can still make a short course toward your goal, or you can set a harder one.</CompanionLine> : null}
-      {busy === "widen" ? <CompanionLine mood="think"><WorkingLine>Covering a bit more…</WorkingLine></CompanionLine> : (
+      {busy === "widen" ? <CompanionLine mood="think"><WorkingLine>Starting a bit earlier…</WorkingLine></CompanionLine> : (
         <OptionTiles key={`${record.status}-t1`}
           label="Where your course starts"
           resetKey={`${result.remainingGapStatement}-${attempt}`}

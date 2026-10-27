@@ -105,7 +105,7 @@ The detailed checklist of capabilities a Lesson or Blueprint slot covers. Covera
 _Avoid_: Lesson goal (when meaning the checklist), Learning Goal, outcomes
 
 **Starting Level**:
-The remaining-gap input to Blueprint generation, produced by a Course Request diagnostic: evidenced versus not-evidenced prerequisite capabilities plus a short remaining-gap statement. It is not a 0–100, not a Quiz, not Progress, and not a certification of real-world performance.
+The remaining-gap input to Blueprint generation, produced by a Course Request diagnostic: evidenced versus not-evidenced prerequisite capabilities plus a short remaining-gap statement. A Learner who says they are brand new skips the diagnostic; their Starting Level is a floor with nothing probed, recorded as their own word. It is not a 0–100, not a Quiz, not Progress, and not a certification of real-world performance.
 _Avoid_: Skill level (when the relevant goal is unstated), entry point, Progress (when meaning assessed capability), placement score, proficiency
 
 **Starting Level diagnostic**:

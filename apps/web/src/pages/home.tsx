@@ -49,6 +49,8 @@ function needsCopy(status: string): { say: string; action: string; hint: string;
       };
     case "awaiting_clarification":
       return { say: "I have one question before I can plan this.", action: "Answer it", hint: "Tap an answer" };
+    case "goal_focused":
+      return { say: "One quick question about what you know already, then I can plan it.", action: "Answer it", hint: "One tap" };
     case "assessment_ready":
       return { say: "A few quick questions are waiting, so I know where to start.", action: "Start the questions", hint: "About 2 minutes" };
     case "awaiting_gap_confirmation":

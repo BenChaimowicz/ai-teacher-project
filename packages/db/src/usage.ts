@@ -80,6 +80,7 @@ export const PRODUCT_EVENT_KINDS = [
   "course_request_focused",
   "diagnostic_submitted",
   "starting_level_confirmed",
+  "starting_level_self_reported_new",
   "blueprint_approved",
   "blueprint_rejected",
   "generation_cancelled",

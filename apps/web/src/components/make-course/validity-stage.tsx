@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { LearnerEcho, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
+import { requestJson } from "@/lib/api.ts";
 import type { CourseRequestRecord } from "@/lib/course-request-types.ts";
 
 /** Statuses this stage owns. */
@@ -145,9 +146,12 @@ export function ValidityStage({ record }: StageProps) {
             resetKey={attempt}
             cols={1}
             options={options}
-            onPick={(option) => {
+            onPick={async (option) => {
               if (option.id === "change") {
-                navigate(`/new-course-request?subject=${encodeURIComponent(record.subject)}`);
+                // The new course replaces this one, so it shouldn't wait under "needs you" on Home. A failed hide
+                // only leaves it listed; the Learner still gets their new course.
+                await requestJson("/api/library/hide", "POST", { kind: "course_request", id: record.id }, "").catch(() => undefined);
+                navigate(`/new-course-request?subject=${encodeURIComponent(record.subject)}`, { replace: true });
                 return;
               }
               setPicked(option.value!);
