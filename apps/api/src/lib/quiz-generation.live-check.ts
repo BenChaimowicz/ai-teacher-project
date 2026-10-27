@@ -47,6 +47,7 @@ async function checkQuizGeneration() {
       const checked = await createQuizGenerator({ generator, judge }).generate({
         courseTitle: "Norse cosmology",
         learningGoal: "Explain how the Norse sources picture the world",
+        scope: null,
         slot,
         slots: [readingRun.slot, slot],
         assessed: [{ slotId: reading.slotId, title: reading.title, lessonGoal: reading.lessonGoal, objectives: reading.objectives, body: reading.body }],

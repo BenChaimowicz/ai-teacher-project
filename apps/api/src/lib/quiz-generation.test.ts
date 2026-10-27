@@ -24,6 +24,7 @@ const READING: AssessedLesson = {
 const INPUT: QuizInput = {
   courseTitle: "Norse cosmology",
   learningGoal: "Explain the Norse picture of the world",
+  scope: null,
   slot: QUIZ_SLOT,
   slots: [READING_SLOT, QUIZ_SLOT],
   assessed: [READING],
@@ -260,4 +261,28 @@ test("When the author's repairs run out, the fallback author writes a fresh Quiz
   const failing = scriptedJudge(ambiguous);
   await assert.rejects(createQuizGenerator({ generator, fallbackGenerator, judge: failing.judge }).generate(INPUT), QuizFailedError);
   assert.equal(failing.calls.length, 6, "Three Quizzes from each author, then the Course fails.");
+});
+
+const SCOPE = { inScope: ["the World Tree", "the Nine Worlds"], outOfScope: ["manuscript sources"] };
+
+test("With a scope, it reaches the Quiz author and Judge with their scope rules; without one, inputs and prompts are as before", async () => {
+  const scopedAuthor = scriptedGenerator(authored());
+  const scopedJudge = scriptedJudge();
+  await createQuizGenerator({ generator: scopedAuthor.generator, judge: scopedJudge.judge }).generate({ ...INPUT, scope: SCOPE });
+  const plainAuthor = scriptedGenerator(authored());
+  const plainJudge = scriptedJudge();
+  await createQuizGenerator({ generator: plainAuthor.generator, judge: plainJudge.judge }).generate(INPUT);
+
+  assert.deepEqual((scopedAuthor.calls[0]!.input as { scope: unknown }).scope, SCOPE);
+  assert.deepEqual((scopedJudge.calls[0]!.input as { scope: unknown }).scope, SCOPE);
+  assert.match(scopedAuthor.calls[0]!.systemPrompt, /Every item stays inside scope\.inScope; never test a facet in scope\.outOfScope\./);
+  assert.match(scopedJudge.calls[0]!.systemPrompt, /An item that tests a facet in scope\.outOfScope tests nothing the Course teaches: fail answerable_from_lessons for it\./);
+  for (const call of [scopedAuthor.calls[0]!, scopedJudge.calls[0]!]) assert.match(call.systemPrompt, /untrusted Learner content/);
+
+  for (const call of [plainAuthor.calls[0]!, plainJudge.calls[0]!]) {
+    assert.ok(!("scope" in (call.input as object)), "A null scope leaves the input as before.");
+    assert.doesNotMatch(call.systemPrompt, /scope\.inScope|scope\.outOfScope/);
+  }
+  assert.ok(scopedAuthor.calls[0]!.systemPrompt.startsWith(`${plainAuthor.calls[0]!.systemPrompt}\n`));
+  assert.ok(scopedJudge.calls[0]!.systemPrompt.startsWith(`${plainJudge.calls[0]!.systemPrompt}\n`));
 });

@@ -46,6 +46,7 @@ async function checkReadingGeneration() {
       const checked = await createReadingGenerator({ generator, judge }).generate({
         courseTitle: "Norse cosmology",
         learningGoal: "Explain how the Norse sources picture the world",
+        scope: null,
         slot: NORSE_READING_SLOT,
         priorLessons: [],
         profile,
