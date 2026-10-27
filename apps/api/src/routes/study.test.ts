@@ -338,7 +338,7 @@ test("A generated Quiz plays through the Quiz plugin: attempts, best score, and 
   };
   const slot = { ...reading, id: "slot2", method: "quiz" as const, title: "Check: worlds", assessesSlotIds: ["slot1"] };
   const { lesson } = await createQuizGenerator({ generator, judge }).generate({
-    courseTitle: "Norse cosmology", learningGoal: "Explain the Norse world", slot, slots: [reading, slot], profile: {},
+    courseTitle: "Norse cosmology", learningGoal: "Explain the Norse world", scope: null, slot, slots: [reading, slot], profile: {},
     assessed: [{ slotId: "slot1", title: "Worlds", lessonGoal: "Name the worlds.", objectives: reading.objectives, body: { sections: [] } }],
   });
 

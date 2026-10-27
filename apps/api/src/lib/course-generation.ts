@@ -274,6 +274,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
               checked = await generator.generate({
                 courseTitle: approved.blueprint.courseTitle,
                 learningGoal: request.learningGoal,
+                scope: request.focus?.scope ?? null,
                 slot,
                 priorLessons: [...priorLessons],
                 profile,
@@ -314,6 +315,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
           const checked = await quizGenerator.generate({
             courseTitle: approved.blueprint.courseTitle,
             learningGoal: request.learningGoal,
+            scope: request.focus?.scope ?? null,
             slot,
             slots,
             assessed,

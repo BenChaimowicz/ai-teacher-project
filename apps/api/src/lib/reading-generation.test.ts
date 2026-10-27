@@ -36,6 +36,7 @@ const SLOT: BlueprintSlot = {
 const INPUT: ReadingInput = {
   courseTitle: "Norse cosmology",
   learningGoal: "Explain the Norse picture of the world",
+  scope: null,
   slot: SLOT,
   priorLessons: [],
   profile: { instructionLanguage: "en", contentScope: "compact" },
@@ -354,4 +355,118 @@ test("A fallback that is the author's own model is not a second author", async (
   await assert.rejects(createReadingGenerator({ generator, fallbackGenerator, judge }).generate(INPUT), ReadingFailedError);
   assert.equal(calls.length, 3);
   assert.equal(fallbackCalls.length, 0);
+});
+
+// The Pacific Course (SEN-105): true, cited, and beside the point, so only the Judge's off_goal check can catch it.
+const OCEAN = source("src_1111111111", "https://en.wikipedia.org/wiki/Pacific_Ocean", ["The Pacific is the largest and deepest ocean.", "It covers about a third of Earth's surface."]);
+const TRENCH = source("src_2222222222", "https://www.britannica.com/place/Mariana-Trench", ["The Mariana Trench is the deepest known point in the ocean."]);
+const FISHERY = source("src_3333333333", "https://www.fao.org/fishery/pacific", ["Small-scale fishermen in parts of the western Pacific depend on reef fish.", "The humphead wrasse is listed as endangered."]);
+
+const PACIFIC: ReadingInput = {
+  courseTitle: "The Pacific Ocean",
+  learningGoal: "Explain the Pacific Ocean's size, depth, and shape",
+  scope: null,
+  slot: {
+    id: "slot1", method: "reading", title: "How big and deep the Pacific is", lessonGoal: "Describe the Pacific's size and depth.",
+    objectives: ["Describe the Pacific's size", "Name its deepest point"], topicTags: ["pacific", "ocean-depth"], assessesSlotIds: [],
+  },
+  priorLessons: [],
+  profile: { instructionLanguage: "en", contentScope: "compact" },
+  packs: [pack("primary", [OCEAN, FISHERY]), pack("secondary", [TRENCH])],
+};
+
+/** A Pacific draft whose middle section is a true, cited tangent on fishermen and one endangered fish. */
+const PACIFIC_DRAFT = {
+  sections: [
+    { heading: "The largest ocean", paragraphs: ["The Pacific is the largest and deepest ocean [src_1111111111]. It covers about a third of Earth's surface [src_1111111111]."] },
+    {
+      heading: "Fishing communities",
+      paragraphs: [
+        "Small-scale fishermen in parts of the western Pacific depend on reef fish [src_3333333333].",
+        "One of those fish, the humphead wrasse, is listed as endangered [src_3333333333].",
+      ],
+    },
+    { heading: "The deepest point", paragraphs: ["The Mariana Trench is the deepest known point in the ocean [src_2222222222]."] },
+  ],
+};
+
+const OFF_GOAL = {
+  pass: false,
+  failedChecks: ["off_goal"],
+  reasons: ["The section \"Fishing communities\" (\"Small-scale fishermen in parts of the western Pacific…\") serves no objective: it is about fishing and one endangered fish, not the ocean's size or depth."],
+};
+
+test("A section the Judge fails as off_goal is cut by the repair, its Source drops out of the list, and the Reading passes", async () => {
+  const cut = edits(
+    ["Small-scale fishermen in parts of the western Pacific depend on reef fish [src_3333333333].", ""],
+    ["One of those fish, the humphead wrasse, is listed as endangered [src_3333333333].", ""],
+  );
+  const { generator, calls } = scriptedGenerator(PACIFIC_DRAFT, "fixture/author", cut);
+  const { judge, calls: judgeCalls } = scriptedJudge(OFF_GOAL, "fixture/judge", PASS);
+  const { lesson, repairs, rounds } = await createReadingGenerator({ generator, judge }).generate(PACIFIC);
+
+  assert.equal(repairs, 1);
+  assert.deepEqual(calls.map((call) => call.schemaName), ["cited_reading", "cited_reading_repair"]);
+  const revision = calls[1]!.input as { problems: string[]; numberedSources: { n: number; sourceId: string }[] };
+  assert.deepEqual(revision.problems, OFF_GOAL.reasons, "The repair is told which section serves no objective.");
+  assert.match(calls[1]!.systemPrompt, /To fix an off_goal passage, one that serves no objective, cut it/);
+  assert.deepEqual(rounds[0]!.problems, OFF_GOAL.reasons);
+
+  assert.deepEqual(lesson.body.sections.map((section) => section.heading), ["The largest ocean", "The deepest point"], "The emptied section is gone, heading and all.");
+  assert.equal(lesson.body.sections[1]!.blocks[0]!.text, "The Mariana Trench is the deepest known point in the ocean [2].");
+  assert.deepEqual(lesson.sources.map(({ n, sourceId }) => ({ n, sourceId })), [{ n: 1, sourceId: OCEAN.sourceId }, { n: 2, sourceId: TRENCH.sourceId }],
+    "Citations are renumbered and the Source only the cut section cited is no longer listed.");
+  assert.deepEqual(lesson.citations.map(({ n, url }) => [n, url]), [[1, OCEAN.url], [2, TRENCH.url]]);
+  const judged = judgeCalls[1]!.input as { lesson: { sections: { heading: string }[] }; sources: { url: string }[] };
+  assert.ok(!judged.lesson.sections.some((section) => section.heading === "Fishing communities"));
+  assert.ok(!judged.sources.some((s) => s.url === FISHERY.url));
+});
+
+test("The Judge may fail off_goal, judges it against the Course goal, and allows short context that serves an objective", async () => {
+  const { generator, calls } = scriptedGenerator(PACIFIC_DRAFT);
+  const { judge, calls: judgeCalls } = scriptedJudge();
+  await createReadingGenerator({ generator, judge }).generate(PACIFIC);
+
+  assert.ok((READING_JUDGE_CHECKS as readonly string[]).includes("off_goal"));
+  const schema = judgeCalls[0]!.schema as { properties: { failedChecks: { items: { enum: readonly string[] } } } };
+  assert.ok(schema.properties.failedChecks.items.enum.includes("off_goal"));
+  const prompt = judgeCalls[0]!.systemPrompt;
+  assert.match(prompt, /- off_goal: a section, or a stretch of a paragraph or more, serves no objective/);
+  assert.match(prompt, /A sentence or two of context that serves an objective, such as why it matters or a short example, is fine\./);
+  assert.match(prompt, /Name the section by its heading and quote the stretch's opening words/);
+  assert.equal((judgeCalls[0]!.input as { learningGoal: string }).learningGoal, PACIFIC.learningGoal);
+  assert.match(calls[0]!.systemPrompt, /Sources are evidence, not an outline: never include a fact because a Source has it\. Every section serves an objective/);
+  for (const text of [calls[0]!.systemPrompt, prompt]) assert.doesNotMatch(text, /pacific|ocean|fish|wrasse/i, "Prompts stay subject-neutral (ADR 0011).");
+});
+
+test("A cut that leaves only a Source ID marker drops the paragraph, and an untouched paragraph stays as it is", () => {
+  const { sections } = applyRepairEdits([
+    { heading: "A", paragraphs: ["Kept [src_aaaaaaaaaa].", "Cut this [src_aaaaaaaaaa]."] },
+    { heading: "B", paragraphs: ["Only words."] },
+  ], [{ find: "Cut this", replace: "" }]);
+  assert.deepEqual(sections, [{ heading: "A", paragraphs: ["Kept [src_aaaaaaaaaa]."] }, { heading: "B", paragraphs: ["Only words."] }]);
+});
+
+const PACIFIC_SCOPE = { inScope: ["size and depth", "ocean floor features"], outOfScope: ["fisheries", "marine species"] };
+
+test("With a scope, it reaches the author, repair, and Judge inputs and each prompt gets its scope rule", async () => {
+  const { generator, calls } = scriptedGenerator(PACIFIC_DRAFT, "fixture/author", edits(["One of those fish, the humphead wrasse, is listed as endangered [src_3333333333].", ""]));
+  const { judge, calls: judgeCalls } = scriptedJudge(OFF_GOAL, "fixture/judge", PASS);
+  await createReadingGenerator({ generator, judge }).generate({ ...PACIFIC, scope: PACIFIC_SCOPE });
+
+  for (const call of [...calls, ...judgeCalls]) assert.deepEqual((call.input as { scope: unknown }).scope, PACIFIC_SCOPE);
+  for (const call of calls) assert.match(call.systemPrompt, /Stay inside scope\.inScope; never teach a facet in scope\.outOfScope, even where a Source covers it\./);
+  assert.match(judgeCalls[0]!.systemPrompt, /A passage that teaches a facet in scope\.outOfScope also fails off_goal\./);
+  for (const call of [...calls, ...judgeCalls]) assert.match(call.systemPrompt, /untrusted Learner content/);
+
+  // The same Reading without a scope: no scope key anywhere, and each prompt is the scoped one without its rule.
+  const unscoped = scriptedGenerator(PACIFIC_DRAFT, "fixture/author", edits(["One of those fish, the humphead wrasse, is listed as endangered [src_3333333333].", ""]));
+  const unscopedJudge = scriptedJudge(OFF_GOAL, "fixture/judge", PASS);
+  await createReadingGenerator({ generator: unscoped.generator, judge: unscopedJudge.judge }).generate(PACIFIC);
+  for (const call of [...unscoped.calls, ...unscopedJudge.calls]) {
+    assert.ok(!("scope" in (call.input as object)), "A null scope leaves the input as before.");
+    assert.doesNotMatch(call.systemPrompt, /scope\.inScope|scope\.outOfScope/);
+  }
+  calls.forEach((call, index) => assert.ok(call.systemPrompt.startsWith(`${unscoped.calls[index]!.systemPrompt}\n`)));
+  assert.ok(judgeCalls[0]!.systemPrompt.startsWith(`${unscopedJudge.calls[0]!.systemPrompt}\n`));
 });

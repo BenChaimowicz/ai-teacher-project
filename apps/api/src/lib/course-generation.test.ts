@@ -585,13 +585,22 @@ test("With a scope, a research topic ends with its focus and exclusion phrases",
     "The World Tree (Norse mythology). Describe how Yggdrasil connects the Nine Worlds. Covers: Describe Yggdrasil. Focus: the World Tree.");
 });
 
-test("A focused Request's scope reaches each Reading's research topic and the whole-Course Judge's outline", async () => {
-  const { started, topics, outlines } = await run(null, undefined, async (db, requestId) => {
+test("A focused Request's scope reaches each Reading's research topic, the Reading and Quiz generators, and the whole-Course Judge's outline", async () => {
+  const { started, topics, inputs, quizInputs, outlines } = await run(null, undefined, async (db, requestId) => {
     await db.update(courseRequests).set({
       focus: { outcome: "focused", originalGoal: "Learn Norse myths", rounds: [], proposal: null, scope: SCOPE },
     }).where(eq(courseRequests.id, requestId)).returning();
   });
   await started;
   assert.match(topics[0]!, / Focus: the World Tree; the Nine Worlds\. Not: manuscript sources\.$/);
+  assert.deepEqual(inputs[0]!.scope, SCOPE);
+  assert.deepEqual(quizInputs[0]!.scope, SCOPE);
   assert.deepEqual(outlines[0]!.scope, SCOPE);
+});
+
+test("An unfocused Request gives the Reading and Quiz generators a null scope", async () => {
+  const { started, inputs, quizInputs } = await run();
+  await started;
+  assert.equal(inputs[0]!.scope, null);
+  assert.equal(quizInputs[0]!.scope, null);
 });

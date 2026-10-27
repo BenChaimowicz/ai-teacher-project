@@ -408,7 +408,7 @@ This prototype ships `reading` and `quiz`.
 
 **Shared Lesson envelope:** Course, Blueprint slot, teaching method, title, Lesson goal, objectives, Topic tags, Lesson lineage, Sources, Citations. Generate also receives the Course Learning Goal, prior-Lesson Course context, only the write-time Teaching Profile fields this method declared, retrieved Sources or a reuse candidate, and — for a Quiz — the instructional Lessons it assesses. It returns one finished Lesson (envelope + method body). The Learner cannot open it until the Course publishes atomically.
 
-The reading and Quiz authors write to one teaching style guide: a reason to care, examples, signposting, questions that check understanding, a recap, and one teaching voice. It adds structure and explanation, never facts (ADR 0019).
+The reading and Quiz authors write to one teaching style guide: a reason to care, examples, signposting, questions that check understanding, a recap, and one teaching voice. It adds structure and explanation, never facts (ADR 0019). Sources are evidence, not an outline: the reading author includes a fact because an objective needs it, never because a Source has it. With a Goal scope, the reading and Quiz authors and Judges also receive the scope and stay inside it.
 
 **Reading body:** ordered reading sections, each with a heading and content blocks (prose and optional Demonstrative media). Numbered Citations live in the prose.
 
@@ -499,7 +499,7 @@ type JudgeResult = {
 
 If Test-course protocol finds missed factual errors, bump Judge SKU in config (`luna` → `gpt-6.1-sol`) without changing the pairing rule — never to the authoring model.
 
-**Repair budget.** Two regenerations per slot after the first failed validate (initial generate + two repairs). A Reading repair edits only the passages the failed checks name and keeps every other sentence verbatim, so a repair cannot add new problems elsewhere in the Lesson (ADR 0016). A third failure on a Reading or Quiz slot sends it to the Lesson fallback writer, which writes a fresh draft from the same Sources or Lessons with its own two repairs (ADR 0017); only a failure after those is terminal: keep unpublished Lessons before it; Course Request fails; Retry refreshes that slot’s budget on the same approved Blueprint; Revise request discards unpublished Lessons. No Course-wide repair pool. Retrieval’s 2–3 query reformulations and the one media vision repair stay inside generate and do not draw on this number. A Judge **fail** consumes a regeneration of the artifact, not a second Judge SKU, unless the Judge call itself errored.
+**Repair budget.** Two regenerations per slot after the first failed validate (initial generate + two repairs). A Reading repair edits only the passages the failed checks name and keeps every other sentence verbatim, so a repair cannot add new problems elsewhere in the Lesson (ADR 0016). A passage the Judge fails as `off_goal` is cut, not rewritten; a section the cut empties is removed, and Citations and the source list are renumbered from what remains. A third failure on a Reading or Quiz slot sends it to the Lesson fallback writer, which writes a fresh draft from the same Sources or Lessons with its own two repairs (ADR 0017); only a failure after those is terminal: keep unpublished Lessons before it; Course Request fails; Retry refreshes that slot’s budget on the same approved Blueprint; Revise request discards unpublished Lessons. No Course-wide repair pool. Retrieval’s 2–3 query reformulations and the one media vision repair stay inside generate and do not draw on this number. A Judge **fail** consumes a regeneration of the artifact, not a second Judge SKU, unless the Judge call itself errored.
 
 ### 6.2 Blueprint (before Learner review)
 
@@ -513,7 +513,7 @@ A Blueprint fail is a Blueprint revision, then Learner review again.
 
 **Code:** envelope + reading plugin `validate`; every Citation URL is in this Lesson’s retrieval set; required Demonstrative media has a hostable Media descriptor; SVG has no script / `foreignObject`.
 
-**Judge:** every factual claim is supported by a retrieved excerpt from a cited Source (a plainly marked analogy or invented example is not a claim, as long as it states no fact about the subject); every slot objective is taught; sequential coherence with prior finalized Lessons; no generated substitute of a named work; media vision on attached stills/loops (required slots fail closed; optional decorative may skip).
+**Judge:** every factual claim is supported by a retrieved excerpt from a cited Source (a plainly marked analogy or invented example is not a claim, as long as it states no fact about the subject); every slot objective is taught; sequential coherence with prior finalized Lessons; no generated substitute of a named work; every section serves a slot objective toward the Lesson goal and the Learning Goal, so a true, cited stretch that serves none fails (`off_goal`), while a sentence or two of context that serves an objective passes, and with a Goal scope so does a passage on an out-of-scope facet; media vision on attached stills/loops (required slots fail closed; optional decorative may skip).
 
 ### 6.4 Quiz (before checkpoint)
 
