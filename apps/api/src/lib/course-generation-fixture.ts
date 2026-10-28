@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import type { SourcePack } from "@senoy/research";
 import { createCourseGeneration, type CourseGeneration } from "./course-generation.ts";
+import { allSupported } from "./objective-grounding.ts";
 import { ReadingFailedError } from "./reading-generation.ts";
 
 /** A passing Judge verdict. */
@@ -50,6 +51,7 @@ export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGenerati
         return {
           judge: PASS,
           repairs: 0,
+          grounding: allSupported(slot.objectives),
           authorModelIds: ["fixture/author"],
           judgeModelId: "fixture/judge",
           rounds: [],
@@ -73,6 +75,7 @@ export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGenerati
         return {
           judge: PASS,
           repairs: 0,
+          grounding: allSupported(slot.objectives),
           authorModelIds: ["fixture/author"],
           judgeModelId: "fixture/judge",
           lesson: {

@@ -55,7 +55,10 @@ async function checkReadingGeneration() {
       outcome = { status: "checkpoint", ...checked, codeFailures: [] as string[] };
     } catch (error) {
       if (!(error instanceof ReadingFailedError)) throw error;
-      outcome = { status: "failed", lesson: error.lesson, judge: error.judge, repairs: null, rejectedSources: error.rejectedSources, codeFailures: error.codeFailures };
+      outcome = {
+        status: "failed", lesson: error.lesson, judge: error.judge, repairs: null, grounding: error.grounding,
+        rejectedSources: error.rejectedSources, codeFailures: error.codeFailures,
+      };
     }
     const latencyMs = Date.now() - startedAt.getTime();
     const run = {
@@ -76,6 +79,10 @@ async function checkReadingGeneration() {
       // A rejected Lesson is recorded for inspection; only a passing one would be checkpointed.
       const words = outcome.lesson.body.sections.flatMap((section) => section.blocks.map((block) => block.text)).join(" ").split(/\s+/).length;
       process.stdout.write(`${outcome.lesson.body.sections.length} sections · ~${words} words · ${outcome.lesson.citations.length} Sources cited\n`);
+    }
+    for (const { objective, verdict, text, reason } of outcome.grounding) {
+      if (verdict === "rewritten") process.stdout.write(`  rewritten: “${objective}” -> “${text}” — ${reason}\n`);
+      if (verdict === "unsupported") process.stdout.write(`  dropped: “${objective}” — ${reason}\n`);
     }
     for (const rejected of outcome.rejectedSources) process.stdout.write(`  vetted out: ${rejected.url} — ${rejected.reason}\n`);
     for (const failure of outcome.codeFailures) process.stdout.write(`  code: ${failure}\n`);

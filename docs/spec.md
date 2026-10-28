@@ -333,11 +333,12 @@ Approved full-Course generation is a durable Postgres-backed job. One active job
 ### 5.2 Pipeline stages after Approve
 
 1. Research is scoped per Lesson. Instructional Lessons are generated sequentially in Blueprint order, carrying forward summaries, established terminology, and prior commitments. Course coherence is prioritized over parallel generation.
-2. Lookup-before-generate runs at this time (§5.8). Quizzes are never reuse candidates.
-3. Each Quiz is generated only after the instructional Lessons it assesses are finalized, using both their content and the Blueprint objectives.
-4. Validation runs during generation and again across the finished Course (§6).
-5. Non-structural defects use targeted repair: regenerate the earliest defective Lesson and affected downstream Lessons or Quizzes, then revalidate.
-6. Publication is atomic. Intermediate artifacts are not playable.
+2. Each Lesson's objectives are grounded in its material before it is written: a Reading's against its vetted Sources' excerpts, a Quiz's against the Lessons it assesses. An objective asserting what the material does not support is softened to what it does, or dropped; what survives is what the Lesson is written and judged against, and what its checkpoint records. The approved Blueprint is not rewritten (ADR 0022).
+3. Lookup-before-generate runs at this time (§5.8). Quizzes are never reuse candidates.
+4. Each Quiz is generated only after the instructional Lessons it assesses are finalized, using both their content and its grounded Blueprint objectives.
+5. Validation runs during generation and again across the finished Course (§6).
+6. Non-structural defects use targeted repair: regenerate the earliest defective Lesson and affected downstream Lessons or Quizzes, then revalidate.
+7. Publication is atomic. Intermediate artifacts are not playable.
 
 ### 5.3 Two research calls
 
@@ -462,6 +463,8 @@ Two kinds of “cannot generate,” at two different points:
 
 **Ungrounded factual claims are a hard fail.** Validation checks each factual claim against retrieved excerpts — not merely that cited URLs exist. Bounded repair; exhaustion fails generation rather than publishing.
 
+**An objective its material cannot support is not a hard fail.** It is grounded away before writing (ADR 0022): a Lesson is never asked for a claim its evidence cannot carry, and never fails for leaving one out. A Reading whose Sources support no objective at all is hard-to-research, as if its packs were empty.
+
 Failed Requests persist with a plain-language reason and a suggested next step. No partial Course ever appears.
 
 Provenance: [Generation pipeline](https://linear.app/senoy/issue/SEN-11/generation-pipeline), [Runtime generation](https://linear.app/senoy/issue/SEN-15/runtime-generation), [Source trust scheme](https://linear.app/senoy/issue/SEN-6/source-trust-scheme) (`docs/research/source-trust-scheme.md`), [LLM provider](https://linear.app/senoy/issue/SEN-7/llm-provider) (`docs/research/llm-provider.md`), [Provider bakeoff: OpenAI vs DeepSeek](https://linear.app/senoy/issue/SEN-20/provider-bakeoff-openai-vs-deepseek), [Plugin contract](https://linear.app/senoy/issue/SEN-14/plugin-contract), [Generated demonstrative media](https://linear.app/senoy/issue/SEN-28/generated-demonstrative-media) (`docs/research/generated-demonstrative-media.md`), [Lesson reuse across Courses](https://linear.app/senoy/issue/SEN-23/lesson-reuse-across-courses), [Search synthesis failure modes](https://linear.app/senoy/issue/SEN-19/search-synthesis-failure-modes), [Copyrighted works as Learning Goals](https://linear.app/senoy/issue/SEN-26/copyrighted-works-as-learning-goals), [Quiz mechanics](https://linear.app/senoy/issue/SEN-13/quiz-mechanics), [Instructional language scope](https://linear.app/senoy/issue/SEN-27/instructional-language-scope).
@@ -513,13 +516,13 @@ A Blueprint fail is a Blueprint revision, then Learner review again.
 
 **Code:** envelope + reading plugin `validate`; every Citation URL is in this Lesson’s retrieval set; required Demonstrative media has a hostable Media descriptor; SVG has no script / `foreignObject`.
 
-**Judge:** every factual claim is supported by a retrieved excerpt from a cited Source (a plainly marked analogy or invented example is not a claim, as long as it states no fact about the subject); every slot objective is taught; sequential coherence with prior finalized Lessons; no generated substitute of a named work; every section serves a slot objective toward the Lesson goal and the Learning Goal, so a true, cited stretch that serves none fails (`off_goal`), while a sentence or two of context that serves an objective passes, and with a Goal scope so does a passage on an out-of-scope facet; media vision on attached stills/loops (required slots fail closed; optional decorative may skip).
+**Judge:** every factual claim is supported by a retrieved excerpt from a cited Source (a plainly marked analogy or invented example is not a claim, as long as it states no fact about the subject); every grounded slot objective is taught, and an objective the excerpts cannot support is not a coverage failure (ADR 0022); sequential coherence with prior finalized Lessons; no generated substitute of a named work; every section serves a slot objective toward the Lesson goal and the Learning Goal, so a true, cited stretch that serves none fails (`off_goal`), while a sentence or two of context that serves an objective passes, and with a Goal scope so does a passage on an out-of-scope facet; media vision on attached stills/loops (required slots fail closed; optional decorative may skip).
 
 ### 6.4 Quiz (before checkpoint)
 
 **Code:** `n` in 5–10, four options, exactly one correct key, no reading sections, no Demonstrative media; assessed slots exist, are `reading`, precede this Quiz, and are checkpointed.
 
-**Judge:** every Quiz-slot objective is hit by ≥1 item; each item is answerable from those Lessons only; exactly one option is unambiguously correct; distractors are plausible but wrong.
+**Judge:** every grounded Quiz-slot objective is hit by ≥1 item, and an objective the assessed Lessons do not teach is not a coverage failure (ADR 0022); each item is answerable from those Lessons only; exactly one option is unambiguously correct; distractors are plausible but wrong.
 
 If a Quiz slot lists more than 10 objectives, that is **structural**: discard unpublished Lessons and return to Blueprint review. Quizzes are always generated.
 

@@ -23,6 +23,7 @@ import { createCourseGeneration, CourseFailedError, lessonResearchTopic } from "
 import { LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
 import { QuizFailedError, type QuizGenerator, type QuizInput } from "./quiz-generation.ts";
 import { loadModelConfig } from "./model-config.ts";
+import { allSupported } from "./objective-grounding.ts";
 import { LessonUnresearchableError, ReadingFailedError, type ReadingGenerator, type ReadingInput } from "./reading-generation.ts";
 
 const APPROVED: ApprovedBlueprint = {
@@ -64,6 +65,7 @@ function recordingGenerator(fail = false) {
       return {
         judge: { pass: true, failedChecks: [], reasons: [] },
         repairs: 0,
+        grounding: allSupported(input.slot.objectives),
         authorModelIds: ["fixture/author"],
         judgeModelId: "fixture/judge",
         rounds: [],
@@ -91,6 +93,7 @@ function recordingQuizGenerator(fail = false) {
       return {
         judge: { pass: true, failedChecks: [], reasons: [] },
         repairs: 0,
+        grounding: allSupported(input.slot.objectives),
         authorModelIds: ["fixture/author"],
         judgeModelId: "fixture/judge",
         lesson: {

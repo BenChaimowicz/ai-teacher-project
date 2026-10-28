@@ -73,15 +73,21 @@ function scriptedGenerator(output: unknown, modelId = "fixture/author", ...later
 
 const PASS = { pass: true, failedChecks: [], reasons: [] };
 
+/** One objective's grounding verdict, as the grounding call returns it. */
+type Grounded = { verdict: string; text?: string; reason?: string };
+
 /**
  * Scripted Judge: one Lesson verdict per call, repeating the last; records what it was shown and who it was told wrote
- * it. Source vetting calls are recorded apart and reject the Source IDs in `rejected`.
+ * it. Source vetting and objective grounding calls are recorded apart: vetting rejects the Source IDs in `rejected`,
+ * and grounding supports every objective unless `grounded` holds another verdict for it.
  */
 function scriptedJudge(verdict: unknown = PASS, modelId = "fixture/judge", ...later: unknown[]) {
   const verdicts = [verdict, ...later];
   const calls: { input: unknown; authorModelIds: readonly string[]; schema: unknown; systemPrompt: string }[] = [];
   const vettings: { input: unknown; systemPrompt: string }[] = [];
+  const groundings: { input: unknown; authorModelIds: readonly string[]; systemPrompt: string }[] = [];
   const rejected: string[] = [];
+  const grounded = new Map<string, Grounded>();
   const judge: Judge = {
     modelId,
     async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
@@ -89,11 +95,23 @@ function scriptedJudge(verdict: unknown = PASS, modelId = "fixture/judge", ...la
         vettings.push({ input: request.input, systemPrompt: request.systemPrompt });
         return { value: request.parse({ rejected: rejected.map((sourceId) => ({ sourceId, reason: "A shop's blog." })) }), modelId: modelId };
       }
+      if (request.schemaName === "objective_grounding") {
+        groundings.push({ input: request.input, authorModelIds: request.authorModelIds, systemPrompt: request.systemPrompt });
+        const { objectives } = (request.input as { slot: { objectives: string[] } }).slot;
+        return {
+          value: request.parse({
+            objectives: objectives.map((objective) => ({
+              objective, verdict: "supported", text: "", reason: "", ...grounded.get(objective),
+            })),
+          }),
+          modelId: modelId,
+        };
+      }
       calls.push({ input: request.input, authorModelIds: request.authorModelIds, schema: request.schema, systemPrompt: request.systemPrompt });
       return { value: request.parse(verdicts[Math.min(calls.length, verdicts.length) - 1]), modelId: modelId };
     },
   };
-  return { judge, calls, vettings, rejected };
+  return { judge, calls, vettings, groundings, rejected, grounded };
 }
 
 test("A cited reading becomes numbered Citations in order of first use, with the source list behind them", async () => {
@@ -277,6 +295,53 @@ test("Packs with no excerpts are unresearchable, before any model call", async (
   await assert.rejects(createReadingGenerator({ generator, judge }).generate({ ...INPUT, packs: [pack("primary", [EMPTY])] }),
     (error: unknown) => error instanceof LessonUnresearchableError && error.slotId === INPUT.slot.id);
   assert.equal(calls.length, 0);
+});
+
+test("An objective the excerpts cannot support is rewritten to what they do, before a word is written (ADR 0022)", async () => {
+  const { generator, calls } = scriptedGenerator(authored());
+  const { judge, calls: judgeCalls, groundings, grounded } = scriptedJudge();
+  grounded.set("Name its roots", { verdict: "rewritten", text: "Say that it has roots", reason: "No excerpt gives a number of roots." });
+  const { lesson, grounding } = await createReadingGenerator({ generator, judge }).generate(INPUT);
+
+  // Grounding runs on the vetted Sources, so the author is never asked for a claim its evidence cannot carry.
+  assert.deepEqual((groundings[0]!.input as { sources: { sourceId: string }[] }).sources.map((s) => s.sourceId), [WIKI.sourceId, BRIT.sourceId]);
+  const taught = ["Describe Yggdrasil", "Say that it has roots"];
+  assert.deepEqual((calls[0]!.input as { slot: { objectives: string[] } }).slot.objectives, taught);
+  assert.deepEqual((judgeCalls[0]!.input as { slot: { objectives: string[] } }).slot.objectives, taught,
+    "The Judge checks coverage of what the Sources allow, not of the Blueprint's wording.");
+  assert.deepEqual(lesson.objectives, taught, "The checkpoint records what the Lesson taught.");
+  assert.deepEqual(grounding.map(({ objective, verdict }) => [objective, verdict]), [
+    ["Describe Yggdrasil", "supported"], ["Name its roots", "rewritten"],
+  ], "Grounding keeps the approved Blueprint's wording beside each verdict.");
+});
+
+test("An objective nothing supports is dropped, so teaching it cannot fail against leaving it out", async () => {
+  const { generator, calls } = scriptedGenerator(authored());
+  const { judge, calls: judgeCalls, grounded } = scriptedJudge();
+  grounded.set("Name its roots", { verdict: "unsupported", reason: "No excerpt mentions a root." });
+  const { lesson } = await createReadingGenerator({ generator, judge }).generate(INPUT);
+
+  assert.deepEqual(lesson.objectives, ["Describe Yggdrasil"]);
+  assert.deepEqual((calls[0]!.input as { slot: { objectives: string[] } }).slot.objectives, ["Describe Yggdrasil"]);
+  assert.deepEqual((judgeCalls[0]!.input as { slot: { objectives: string[] } }).slot.objectives, ["Describe Yggdrasil"]);
+});
+
+test("Sources that support no objective ground nothing: unresearchable, before any draft is written", async () => {
+  const { generator, calls } = scriptedGenerator(authored());
+  const { judge, grounded } = scriptedJudge();
+  for (const objective of SLOT.objectives) grounded.set(objective, { verdict: "unsupported", reason: "Nothing covers it." });
+  await assert.rejects(createReadingGenerator({ generator, judge }).generate(INPUT),
+    (error: unknown) => error instanceof LessonUnresearchableError && error.slotId === SLOT.id);
+  assert.equal(calls.length, 0, "Retry searches again rather than rewriting the same draft.");
+});
+
+test("The Judge is told not to fail coverage of an objective the excerpts cannot support", async () => {
+  const { generator } = scriptedGenerator(authored());
+  const { judge, calls } = scriptedJudge();
+  await createReadingGenerator({ generator, judge }).generate(INPUT);
+  // The author is told to teach what the excerpts support and say no more; a Judge that failed it for that would
+  // leave no passing draft at all (ADR 0022).
+  assert.match(calls[0]!.systemPrompt, /objective_coverage: .* an objective they cannot support is not a failure/);
 });
 
 test("Vetting out every Source is unresearchable, and says which were vetted out", async () => {

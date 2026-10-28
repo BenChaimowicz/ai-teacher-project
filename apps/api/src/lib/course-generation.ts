@@ -25,7 +25,7 @@ import type { TeachingMethodPlugin } from "../teaching-methods/types.ts";
 import { courseOutline, createCourseJudge, type CourseJudge } from "./course-judge.ts";
 import { LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
 import { loadModelConfig } from "./model-config.ts";
-import { createQuizGenerator, QuizFailedError, type QuizGenerator } from "./quiz-generation.ts";
+import { createQuizGenerator, QuizFailedError, type CheckedQuiz, type QuizGenerator } from "./quiz-generation.ts";
 import {
   createReadingGenerator,
   lessonEvidence,
@@ -163,7 +163,7 @@ const researchFromEnv: LessonResearch = (topic) =>
 /**
  * Researches every Reading slot at once and stores each slot's Source packs as it finishes, so one slow research call
  * no longer delays every Reading in turn. Then writes each Lesson in Blueprint order, carrying earlier Readings forward:
- * a Reading from its stored packs, a Quiz from its checkpointed Readings (spec §5.2.3), saving each as an unpublished
+ * a Reading from its stored packs, a Quiz from its checkpointed Readings (spec §5.2.4), saving each as an unpublished
  * checkpoint. Then the whole-Course Code checks and one Judge pass over the outline (spec §6.5), and atomic publish:
  * the Course snapshot, the `published` status, and the job's success in one transaction.
  *
@@ -266,7 +266,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         if (slot.method === readingPlugin.id) {
           const packs = packsBySlot.get(slot.id);
           if (!packs) throw new Error(`[course-generation: lesson] Reading slot has no stored research || slotId=${slot.id}`);
-          const { lesson, judge, rejectedSources, authorModelIds, judgeModelId } = await withPipelineEvent("reading", {
+          const { lesson, judge, grounding, rejectedSources, authorModelIds, judgeModelId } = await withPipelineEvent("reading", {
             label: slot.title, detail: { slotId: slot.id, position },
           }, async (step) => {
             let checked: CheckedReading;
@@ -282,13 +282,13 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
               });
             } catch (error) {
               // Rejected drafts are saved nowhere else, so the event keeps every draft, edit, and verdict, pass or fail.
-              if (error instanceof ReadingFailedError) step.setDetail({ rejectedSources: error.rejectedSources, rounds: error.rounds });
+              if (error instanceof ReadingFailedError) step.setDetail({ grounding: error.grounding, rejectedSources: error.rejectedSources, rounds: error.rounds });
               throw error;
             }
             step.setDetail({
               repairs: checked.repairs, judgePass: checked.judge.pass, rejectedSources: checked.rejectedSources.length,
               authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
-              rounds: checked.rounds,
+              grounding: checked.grounding, rounds: checked.rounds,
             });
             return checked;
           });
@@ -312,17 +312,24 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         const { lesson, judge, authorModelIds, judgeModelId } = await withPipelineEvent("quiz", {
           label: slot.title, detail: { slotId: slot.id, position, assessedSlotIds: slot.assessesSlotIds },
         }, async (step) => {
-          const checked = await quizGenerator.generate({
-            courseTitle: approved.blueprint.courseTitle,
-            learningGoal: request.learningGoal,
-            scope: request.focus?.scope ?? null,
-            slot,
-            slots,
-            assessed,
-            profile: writeTimeProfile(quizPlugin, resolved),
-          });
+          let checked: CheckedQuiz;
+          try {
+            checked = await quizGenerator.generate({
+              courseTitle: approved.blueprint.courseTitle,
+              learningGoal: request.learningGoal,
+              scope: request.focus?.scope ?? null,
+              slot,
+              slots,
+              assessed,
+              profile: writeTimeProfile(quizPlugin, resolved),
+            });
+          } catch (error) {
+            // A rejected Quiz is saved nowhere else, so the event keeps what its objectives grounded to.
+            if (error instanceof QuizFailedError) step.setDetail({ grounding: error.grounding });
+            throw error;
+          }
           step.setDetail({
-            repairs: checked.repairs, judgePass: checked.judge.pass,
+            repairs: checked.repairs, judgePass: checked.judge.pass, grounding: checked.grounding,
             authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
           });
           return checked;
