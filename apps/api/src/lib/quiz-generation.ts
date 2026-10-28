@@ -48,12 +48,19 @@ export type QuizInput = {
 };
 
 /**
- * A Quiz that passed the Code checks and the Judge, how many repairs it took, and its models (ADR 0015). `grounding`
- * is what the slot's objectives became once checked against the Lessons it assesses (ADR 0022).
+ * One draft of a Quiz, as its Pipeline Event records it: who wrote it, what it asked, and what failed it. A Quiz
+ * repair rewrites the whole Quiz, so every round keeps its items as written, option ids and all. `problems` is empty
+ * for the round that passed.
+ */
+export type QuizRound = { modelId: string; items: AuthoredItem[]; problems: string[] };
+
+/**
+ * A Quiz that passed the Code checks and the Judge, how many repairs it took, its models (ADR 0015), and every round
+ * written. `grounding` is what the slot's objectives became once checked against the Lessons it assesses (ADR 0022).
  */
 export type CheckedQuiz = {
   lesson: QuizLessonDraft; judge: JudgeResult; repairs: number; grounding: GroundedObjective[];
-  authorModelIds: string[]; judgeModelId: string;
+  authorModelIds: string[]; judgeModelId: string; rounds: QuizRound[];
 };
 
 /** The Quiz still failed system validation after its repairs, and after the fallback author's when there is one. */
@@ -62,12 +69,14 @@ export class QuizFailedError extends Error {
    * @param codeFailures - Code check problems; empty when only the Judge failed
    * @param judge - Judge verdict, when the Judge ran
    * @param lesson - The rejected Quiz, when one was written
+   * @param rounds - Every draft written, by every author
    * @param grounding - What the slot's objectives became against the assessed Lessons (ADR 0022)
    */
   constructor(
     public readonly codeFailures: string[],
     public readonly judge: JudgeResult | null,
     public readonly lesson: QuizLessonDraft | null = null,
+    public readonly rounds: QuizRound[] = [],
     public readonly grounding: GroundedObjective[] = [],
   ) {
     const reasons = codeFailures.length ? codeFailures : [...(judge?.failedChecks ?? []), ...(judge?.reasons ?? [])];
@@ -171,7 +180,7 @@ function authorSchema(objectives: string[]) {
 }
 
 /** One item as the author wrote it, options in the author's order. */
-type AuthoredItem = {
+export type AuthoredItem = {
   objective: string;
   prompt: string;
   options: { id: string; text: string; correct: boolean }[];
@@ -331,11 +340,14 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
         material: { lessons },
       });
       const objectives = taughtObjectives(grounding);
-      if (objectives.length === 0) throw new QuizFailedError([NO_GROUNDED_OBJECTIVE], null, null, grounding);
+      if (objectives.length === 0) throw new QuizFailedError([NO_GROUNDED_OBJECTIVE], null, null, [], grounding);
+
+      // Outside writeWith, so a failure after the fallback author carries both authors' rounds (ADR 0017/0018).
+      const rounds: QuizRound[] = [];
 
       /**
        * Writes a Quiz with `writer`, then regenerates it within the budget (spec §6.1).
-       * @throws QuizFailedError when the last regeneration still fails
+       * @throws QuizFailedError when the last regeneration still fails, carrying every round so far
        */
       const writeWith = async (writer: Generator): Promise<CheckedQuiz> => {
         let revision: Revision | null = null;
@@ -362,6 +374,8 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
             parse: parseAuthoredItems,
           });
           authors.add(author);
+          const round: QuizRound = { modelId: author, items: authored, problems: [] };
+          rounds.push(round);
           const lesson: QuizLessonDraft = {
             slotId: slot.id,
             teachingMethod: QUIZ_METHOD_ID,
@@ -382,7 +396,8 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
             ...objectives.filter((objective) => !targeted.has(objective)).map((objective) => `No item assesses the objective "${objective}".`),
           ];
           if (codeFailures.length) {
-            failure = new QuizFailedError(codeFailures, null, lesson, grounding);
+            round.problems = codeFailures;
+            failure = new QuizFailedError(codeFailures, null, lesson, rounds, grounding);
             revision = { previousDraft: authored, problems: codeFailures };
             continue;
           }
@@ -409,8 +424,9 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
             parse: judgeParser(QUIZ_JUDGE_CHECKS),
             authorModelIds: [...authors],
           });
-          if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, grounding, authorModelIds: [...authors], judgeModelId };
-          failure = new QuizFailedError([], verdict, lesson, grounding);
+          if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, grounding, authorModelIds: [...authors], judgeModelId, rounds };
+          round.problems = verdict.reasons.length ? verdict.reasons : verdict.failedChecks;
+          failure = new QuizFailedError([], verdict, lesson, rounds, grounding);
           revision = { previousDraft: authored, problems: verdict.reasons.length ? verdict.reasons : verdict.failedChecks };
         }
         throw failure!;

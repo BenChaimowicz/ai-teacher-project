@@ -324,13 +324,13 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
               profile: writeTimeProfile(quizPlugin, resolved),
             });
           } catch (error) {
-            // A rejected Quiz is saved nowhere else, so the event keeps what its objectives grounded to.
-            if (error instanceof QuizFailedError) step.setDetail({ grounding: error.grounding });
+            // A rejected Quiz is saved nowhere else, so the event keeps every draft and verdict, pass or fail.
+            if (error instanceof QuizFailedError) step.setDetail({ grounding: error.grounding, rounds: error.rounds });
             throw error;
           }
           step.setDetail({
             repairs: checked.repairs, judgePass: checked.judge.pass, grounding: checked.grounding,
-            authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
+            authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId, rounds: checked.rounds,
           });
           return checked;
         });
