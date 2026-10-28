@@ -2,6 +2,7 @@ import { createDb, loadRootEnv } from "@senoy/db";
 import { createParallelTokenKeeper, parallelAccountPath } from "@senoy/research";
 import { buildConsoleApp } from "./app.ts";
 import { createBillingService, vendorReadersFromEnv } from "./billing.ts";
+import { createDecisionsReader } from "./decisions.ts";
 import { createOpsStore, runnerFor } from "./ops-store.ts";
 import { createOpenRouterHistoryReader } from "./openrouter-history.ts";
 import { createSetupReader } from "./setup.ts";
@@ -20,7 +21,7 @@ async function start() {
   const keeper = createParallelTokenKeeper({ path: parallelAccountPath(root) });
   const billing = createBillingService({ run, readers: vendorReadersFromEnv({ env: process.env, keeper }), keeper });
   const app = buildConsoleApp(createOpsStore(run), { logger: true, setup: createSetupReader({ env: process.env }), billing,
-    openrouterHistory: createOpenRouterHistoryReader(run) });
+    openrouterHistory: createOpenRouterHistoryReader(run), decisions: createDecisionsReader({ root }) });
 
   try {
     const port = Number(process.env.CONSOLE_API_PORT ?? 3100);

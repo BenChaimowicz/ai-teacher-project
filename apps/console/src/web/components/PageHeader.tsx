@@ -11,8 +11,19 @@ import { cn } from "@/lib/cn";
  * @param props.title - The view name (or the Overview greeting)
  * @param props.description - What the view answers, in one line
  * @param props.actions - Extra view-specific controls, shown under the global ones
+ * @param props.range - Whether the time range pill applies to this view; off for views that read everything
  */
-export function PageHeader({ title, description, actions }: { title: ReactNode; description?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  description,
+  actions,
+  range = true,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  range?: boolean;
+}) {
   return (
     <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
@@ -21,7 +32,7 @@ export function PageHeader({ title, description, actions }: { title: ReactNode; 
       </div>
       <div className="flex flex-col items-end gap-2">
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <RangePicker />
+          {range && <RangePicker />}
           <RefreshButton />
         </div>
         {actions && <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>}

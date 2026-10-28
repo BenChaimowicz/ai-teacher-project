@@ -1,0 +1,33 @@
+---
+description: Logging the team's decisions about tickets in docs/decisions/
+alwaysApply: true
+---
+<!-- בס״ד -->
+
+# Decision Log
+
+Every mid-sized or bigger decision we reach in a chat about a ticket gets written to [`docs/decisions/`](../../docs/decisions/README.md) as one Markdown file: **what we decided, why, and when**. The Usage Console reads that folder off disk and shows it at **Decisions**. There is no database.
+
+## When to write one
+
+Write an entry when a teammate reading the code later would ask "why is it like that?":
+
+- A scope call on a ticket — what we are building, and what we deliberately are not.
+- Choosing one approach over another we seriously considered.
+- Changing or undoing something we already decided.
+- A number or threshold picked on purpose (a retry cap, a cadence, a cost ceiling).
+- A trade-off we accepted: cost, latency, quality, or risk.
+
+Do not write one for the obvious one-way choice, a naming tweak, a bug fix with no choice in it, or anything `CONTEXT.md`, `docs/spec.md`, or an ADR already states. A log full of noise is a log nobody reads.
+
+## How to write one
+
+1. When a decision lands in the chat, say so and write the file in the same turn — do not wait for the end of the ticket, when the why is already gone.
+2. Name it `docs/decisions/YYYY-MM-DD-short-slug.md`, dated the day it was decided.
+3. Follow the shape in [`docs/decisions/README.md`](../../docs/decisions/README.md): `date`, `tickets`, `people`, `status` front matter, a `#` heading that **is** the decision, and the why underneath.
+4. The why must name the alternative we turned down and what the decision costs us. "It's cleaner" is not a why.
+5. Quote the decision back to the user in the chat after writing it, so a wrong record gets corrected while they are still reading.
+6. Replacing an earlier decision: write a new entry with `supersedes:` and set the old entry's `status:` to `superseded` (or `reversed` when we simply undid it). Never rewrite history.
+7. An entry ships in the same PR as the work it decided.
+
+Do not invent entries for decisions the user did not make, and do not log your own implementation choices as team decisions — this is the record of what *we* agreed, not a changelog.

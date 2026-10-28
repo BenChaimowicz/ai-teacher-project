@@ -159,3 +159,18 @@ describe("Billing check", () => {
     assert.equal((await app.inject({ method: "POST", url: "/api/ops/billing/refresh?from=nope" })).statusCode, 400);
   });
 });
+
+describe("Decisions", () => {
+  const log = { decisions: [], problems: [], folder: "docs/decisions", readAt: NOW.toISOString() };
+
+  it("answers GET /decisions from the reader", async () => {
+    const app = buildConsoleApp(fakeStore().store, { decisions: async () => log });
+    const response = await app.inject({ method: "GET", url: "/api/ops/decisions" });
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.json(), log);
+  });
+
+  it("404s without a reader", async () => {
+    assert.equal((await buildConsoleApp(fakeStore().store).inject({ method: "GET", url: "/api/ops/decisions" })).statusCode, 404);
+  });
+});
