@@ -9,7 +9,8 @@ type Row = Record<string, unknown>;
 /**
  * In-memory stand-in for the Drizzle calls routes make: insert of one row or many (awaited or with returning),
  * select/where/orderBy (newest first only)/limit, conditional update/returning, conditional delete, and a transaction that restores every
- * table if its callback throws. Evaluates only equality and `is null` predicates.
+ * table if its callback throws. Evaluates equality, `is null`, and timestamp `<`/`>` predicates, and treats every
+ * condition in a `where` as a conjunction: `or(...)` is not supported.
  * @param tables - Tables the routes under test touch
  */
 export function fakeDb(tables: PgTable[]) {
@@ -29,15 +30,24 @@ export function fakeDb(tables: PgTable[]) {
     return Object.fromEntries(Object.entries(fields).map(([alias, column]) => [alias, row[keys.get(column.name)!]]));
   }
 
-  /** Evaluates equality and null predicates against one row. */
+  /** Milliseconds for a timestamp held as a Date, or as the string Drizzle sends one as. */
+  function instant(value: unknown) {
+    return value instanceof Date ? value.getTime() : new Date(String(value)).getTime();
+  }
+
+  /** Evaluates equality, null, and timestamp ordering predicates against one row, as a conjunction. */
   function matches(table: PgTable, row: Row, condition: SQL) {
     const query = dialect.sqlToQuery(condition);
     const keys = fieldsByTable.get(getTableName(table))!;
-    return [...query.sql.matchAll(/"(\w+)"\."(\w+)"\s*(=\s*\$(\d+)|is null)/gi)].every((match) => {
+    return [...query.sql.matchAll(/"(\w+)"\."(\w+)"\s*(?:([=<>])\s*\$(\d+)|is null)/gi)].every((match) => {
       if (match[1] !== getTableName(table)) return true;
       const value = row[keys.get(match[2]!)!];
       if (!match[4]) return value === null || value === undefined;
       const expected = query.params[Number(match[4]) - 1];
+      if (match[3] !== "=") {
+        if (value === null || value === undefined) return false;
+        return match[3] === "<" ? instant(value) < instant(expected) : instant(value) > instant(expected);
+      }
       return typeof value === "object" && value !== null && !(value instanceof Date)
         ? JSON.stringify(value) === (typeof expected === "string" ? expected : JSON.stringify(expected))
         : value === expected;

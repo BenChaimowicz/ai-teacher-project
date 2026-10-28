@@ -162,6 +162,13 @@
       "when": 1793042984044,
       "tag": "0022_20261026192944_goal_focus",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793218225074,
+      "tag": "0023_20261028201025_starting_level_lease",
+      "breakpoints": true
     }
   ]
 }
