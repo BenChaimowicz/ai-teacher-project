@@ -331,7 +331,16 @@ test("A generated Quiz plays through the Quiz plugin: attempts, best score, and 
       }) };
     },
   };
-  const judge: Judge = { modelId: "fixture/judge", judge: async (request) => ({ value: request.parse({ pass: true, failedChecks: [], reasons: [] }), modelId: "fixture/judge" }) };
+  // Grounding runs before the items are written, and the assessed Lesson teaches the one objective (ADR 0022).
+  const judge: Judge = {
+    modelId: "fixture/judge",
+    judge: async (request) => ({
+      value: request.parse(request.schemaName === "objective_grounding"
+        ? { objectives: [{ objective: "Name the Nine Worlds", verdict: "supported", text: "", reason: "" }] }
+        : { pass: true, failedChecks: [], reasons: [] }),
+      modelId: "fixture/judge",
+    }),
+  };
   const reading = {
     id: "slot1", method: "reading" as const, title: "Worlds", lessonGoal: "Name the worlds.", objectives: ["Name the Nine Worlds"],
     topicTags: ["norse", "worlds"], assessesSlotIds: [],

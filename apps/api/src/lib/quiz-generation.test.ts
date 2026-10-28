@@ -64,17 +64,37 @@ function scriptedGenerator(...outputs: unknown[]) {
 
 const PASS = { pass: true, failedChecks: [], reasons: [] };
 
-/** Scripted Judge: one verdict per call, repeating the last; records what it was shown. */
+/** One objective's grounding verdict, as the grounding call returns it. */
+type Grounded = { verdict: string; text?: string; reason?: string };
+
+/**
+ * Scripted Judge: one Quiz verdict per call, repeating the last; records what it was shown. Objective grounding calls
+ * are recorded apart and support every objective unless `grounded` holds another verdict for it.
+ */
 function scriptedJudge(...verdicts: unknown[]) {
   const calls: (StructuredRequest<unknown> & { authorModelIds: readonly string[] })[] = [];
+  const groundings: (StructuredRequest<unknown> & { authorModelIds: readonly string[] })[] = [];
+  const grounded = new Map<string, Grounded>();
   const judge: Judge = {
     modelId: "fixture/judge",
     async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
+      if (request.schemaName === "objective_grounding") {
+        groundings.push(request as StructuredRequest<unknown> & { authorModelIds: readonly string[] });
+        const { objectives } = (request.input as { slot: { objectives: string[] } }).slot;
+        return {
+          value: request.parse({
+            objectives: objectives.map((objective) => ({
+              objective, verdict: "supported", text: "", reason: "", ...grounded.get(objective),
+            })),
+          }),
+          modelId: "fixture/judge",
+        };
+      }
       calls.push(request as StructuredRequest<unknown> & { authorModelIds: readonly string[] });
       return { value: request.parse(verdicts.length ? verdicts[Math.min(calls.length, verdicts.length) - 1] : PASS), modelId: "fixture/judge" };
     },
   };
-  return { judge, calls };
+  return { judge, calls, groundings, grounded };
 }
 
 test("Authored items become a Quiz body the Quiz plugin accepts, each with one key among four options", async () => {
@@ -152,6 +172,50 @@ test("Deterministic failures are repaired before the Judge runs: too few items a
   const { problems } = (calls[1]!.input as { revision: { problems: string[] } }).revision;
   assert.ok(problems.includes("A Quiz has 5–10 items, not 4."), problems.join("\n"));
   assert.ok(problems.includes('No item assesses the objective "Name its roots".'), problems.join("\n"));
+});
+
+test("An objective the assessed Lessons do not teach is not asked about at all (ADR 0022)", async () => {
+  const { generator, calls } = scriptedGenerator(authored(6, "Describe Yggdrasil"));
+  const { judge, calls: judgeCalls, groundings, grounded } = scriptedJudge();
+  grounded.set("Name its roots", { verdict: "unsupported", reason: "The Reading never names a root." });
+  const { lesson, repairs, grounding } = await createQuizGenerator({ generator, judge }).generate(INPUT);
+
+  // Without this, the objective leaves no passing Quiz: an item for it is not answerable from the Lessons, and no
+  // item for it fails the Code coverage check.
+  assert.equal(repairs, 0);
+  assert.deepEqual((groundings[0]!.input as { lessons: { title: string }[] }).lessons.map((l) => l.title), [READING.title]);
+  assert.deepEqual(lesson.objectives, ["Describe Yggdrasil"], "The checkpoint records what the Quiz assessed.");
+  const schema = calls[0]!.schema as { properties: { items: { items: { properties: { objective: { enum: string[] } } } } } };
+  assert.deepEqual(schema.properties.items.items.properties.objective.enum, ["Describe Yggdrasil"], "The author cannot write an item for it.");
+  assert.deepEqual((judgeCalls[0]!.input as { slot: { objectives: string[] } }).slot.objectives, ["Describe Yggdrasil"]);
+  assert.deepEqual(grounding.map(({ objective, verdict }) => [objective, verdict]), [
+    ["Describe Yggdrasil", "supported"], ["Name its roots", "unsupported"],
+  ]);
+});
+
+test("A rewritten objective is what the Quiz assesses, and the Judge is told untaught objectives are not its failure", async () => {
+  const mixed = { items: [1, 2, 3, 4, 5, 6].map((n) => item(n, n % 2 ? "Describe Yggdrasil" : "Say that it has roots")) };
+  const { generator, calls } = scriptedGenerator(mixed);
+  const { judge, calls: judgeCalls, grounded } = scriptedJudge();
+  grounded.set("Name its roots", { verdict: "rewritten", text: "Say that it has roots", reason: "The Reading gives no number of roots." });
+  const { lesson } = await createQuizGenerator({ generator, judge }).generate(INPUT);
+
+  assert.deepEqual(lesson.objectives, ["Describe Yggdrasil", "Say that it has roots"]);
+  assert.deepEqual((calls[0]!.input as { slot: { objectives: string[] } }).slot.objectives, ["Describe Yggdrasil", "Say that it has roots"]);
+  assert.match(judgeCalls[0]!.systemPrompt, /objective_coverage: .* An objective the lessons do not teach is not a failure/);
+});
+
+test("A Quiz whose Lessons teach none of its objectives fails on that one check, before any item is written", async () => {
+  const { generator, calls } = scriptedGenerator(authored());
+  const { judge, calls: judgeCalls, grounded } = scriptedJudge();
+  for (const objective of QUIZ_SLOT.objectives) grounded.set(objective, { verdict: "unsupported", reason: "Not taught." });
+  const error = await createQuizGenerator({ generator, judge }).generate(INPUT).catch((caught: unknown) => caught);
+
+  assert.ok(error instanceof QuizFailedError);
+  assert.deepEqual(error.codeFailures, ["The Lessons this Quiz assesses teach none of its objectives."]);
+  assert.equal(error.lesson, null);
+  assert.deepEqual(error.grounding.map(({ verdict }) => verdict), ["unsupported", "unsupported"]);
+  assert.deepEqual([calls.length, judgeCalls.length], [0, 0], "Retry fails here again, without writing a Quiz each time.");
 });
 
 test("Explanations mention options by id, and the mention becomes the option's text wherever it lands", async () => {

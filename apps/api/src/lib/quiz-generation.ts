@@ -5,6 +5,7 @@ import { quizCodeFailures, type QuizLessonDraft } from "@senoy/db/lesson-checkpo
 import { QUIZ_MAX_ITEMS, QUIZ_MIN_ITEMS, QUIZ_OPTION_COUNT, type QuizItem } from "@senoy/db/quiz";
 import { QUIZ_METHOD_ID, type ReadingBody } from "@senoy/db/reading-lesson";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
+import { groundObjectives, taughtObjectives, type GroundedObjective } from "./objective-grounding.ts";
 import { createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
 import { ENGLISH_ONLY } from "./english-only.ts";
 import { ModelError } from "./openrouter.ts";
@@ -22,10 +23,16 @@ const REASONING_EFFORT = "high" as const;
 /** Regenerations after a failed Code check or Judge, each told what failed: the full budget of spec §6.1. */
 const MAX_REPAIRS = 2;
 
+/**
+ * The Lessons this Quiz assesses teach none of its objectives, so there is no Quiz to write. Only a different
+ * Blueprint can fix it, so Retry fails again on this one check, before any item is written (ADR 0022).
+ */
+const NO_GROUNDED_OBJECTIVE = "The Lessons this Quiz assesses teach none of its objectives.";
+
 /** A checkpointed Reading Lesson the Quiz assesses. */
 export type AssessedLesson = { slotId: string; title: string; lessonGoal: string; objectives: string[]; body: ReadingBody };
 
-/** What one Quiz is generated from (spec §5.2.3, §5.5). */
+/** What one Quiz is generated from (spec §5.2.4, §5.5). */
 export type QuizInput = {
   courseTitle: string;
   learningGoal: string;
@@ -40,8 +47,14 @@ export type QuizInput = {
   profile: Record<string, unknown>;
 };
 
-/** A Quiz that passed the Code checks and the Judge, how many repairs it took, and its models (ADR 0015). */
-export type CheckedQuiz = { lesson: QuizLessonDraft; judge: JudgeResult; repairs: number; authorModelIds: string[]; judgeModelId: string };
+/**
+ * A Quiz that passed the Code checks and the Judge, how many repairs it took, and its models (ADR 0015). `grounding`
+ * is what the slot's objectives became once checked against the Lessons it assesses (ADR 0022).
+ */
+export type CheckedQuiz = {
+  lesson: QuizLessonDraft; judge: JudgeResult; repairs: number; grounding: GroundedObjective[];
+  authorModelIds: string[]; judgeModelId: string;
+};
 
 /** The Quiz still failed system validation after its repairs, and after the fallback author's when there is one. */
 export class QuizFailedError extends Error {
@@ -49,11 +62,13 @@ export class QuizFailedError extends Error {
    * @param codeFailures - Code check problems; empty when only the Judge failed
    * @param judge - Judge verdict, when the Judge ran
    * @param lesson - The rejected Quiz, when one was written
+   * @param grounding - What the slot's objectives became against the assessed Lessons (ADR 0022)
    */
   constructor(
     public readonly codeFailures: string[],
     public readonly judge: JudgeResult | null,
     public readonly lesson: QuizLessonDraft | null = null,
+    public readonly grounding: GroundedObjective[] = [],
   ) {
     const reasons = codeFailures.length ? codeFailures : [...(judge?.failedChecks ?? []), ...(judge?.reasons ?? [])];
     super(`[quiz-generation: generate] Quiz failed ${codeFailures.length ? "Code" : "Judge"} checks || ${reasons.join(" || ")}`);
@@ -84,7 +99,7 @@ If the input has "revision", an independent review rejected your previousDraft f
 
 const JUDGE_PROMPT = `You independently review one Quiz before it is saved. You did not write it.
 "lessons" are the only material a Learner studied before the Quiz. Judge against them, not your own knowledge. Fail a check only for a clear problem, not for style.
-- objective_coverage: an objective of the slot has no item that assesses it.
+- objective_coverage: an objective of the slot has no item that assesses it. An objective the lessons do not teach is not a failure: no item for it could be answerable from them.
 - answerable_from_lessons: an item needs a fact the lessons do not state, or its keyed answer is not what the lessons say. A plainly invented situation in a prompt is fine when its keyed answer follows from the lessons alone.
 - single_correct_answer: by the lessons, an item's keyed option is wrong, or another option is also right or defensibly right.
 - plausible_distractors: a distractor is absurd, a joke, "all/none of the above", or so unlike the others that the answer is obvious.
@@ -302,6 +317,22 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
       // Scope is left out entirely when null, so an unfocused goal is written and judged exactly as before.
       const scope = input.scope ? { scope: input.scope } : {};
 
+      // A Quiz may test only what its Lessons teach, and a Reading teaches its grounded objectives, not always the
+      // ones the Blueprint wrote (ADR 0022). So the Quiz slot's objectives are checked against the Lessons it assesses
+      // before any item is written: an objective they do not teach would otherwise leave no passing Quiz, since an
+      // item for it fails `answerable_from_lessons` and no item for it fails the Code coverage check.
+      const grounding = await groundObjectives({
+        judge,
+        authorModelIds: [generator.modelId],
+        objectives: slot.objectives,
+        slot,
+        learningGoal: input.learningGoal,
+        scope: input.scope,
+        material: { lessons },
+      });
+      const objectives = taughtObjectives(grounding);
+      if (objectives.length === 0) throw new QuizFailedError([NO_GROUNDED_OBJECTIVE], null, null, grounding);
+
       /**
        * Writes a Quiz with `writer`, then regenerates it within the budget (spec §6.1).
        * @throws QuizFailedError when the last regeneration still fails
@@ -319,7 +350,7 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
               courseTitle: input.courseTitle,
               learningGoal: input.learningGoal,
               ...scope,
-              slot: { title: slot.title, lessonGoal: slot.lessonGoal, objectives: slot.objectives },
+              slot: { title: slot.title, lessonGoal: slot.lessonGoal, objectives },
               lessons,
               profile: input.profile,
               ...(revision ? { revision } : {}),
@@ -327,7 +358,7 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
             schemaName: "quiz_items",
             timeoutMs: AUTHOR_TIMEOUT_MS,
             reasoningEffort: REASONING_EFFORT,
-            schema: authorSchema(slot.objectives),
+            schema: authorSchema(objectives),
             parse: parseAuthoredItems,
           });
           authors.add(author);
@@ -336,7 +367,7 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
             teachingMethod: QUIZ_METHOD_ID,
             title: slot.title,
             lessonGoal: slot.lessonGoal,
-            objectives: slot.objectives,
+            objectives,
             topicTags: slot.topicTags,
             lineage: null,
             sources: [],
@@ -348,10 +379,10 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
           const codeFailures = [
             ...quizCodeFailures(lesson, input.slots, checkpointed),
             ...mentionFailures(authored),
-            ...slot.objectives.filter((objective) => !targeted.has(objective)).map((objective) => `No item assesses the objective "${objective}".`),
+            ...objectives.filter((objective) => !targeted.has(objective)).map((objective) => `No item assesses the objective "${objective}".`),
           ];
           if (codeFailures.length) {
-            failure = new QuizFailedError(codeFailures, null, lesson);
+            failure = new QuizFailedError(codeFailures, null, lesson, grounding);
             revision = { previousDraft: authored, problems: codeFailures };
             continue;
           }
@@ -360,7 +391,7 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
             systemPrompt: scoped(JUDGE_PROMPT, JUDGE_SCOPE_RULE, input.scope),
             input: {
               ...scope,
-              slot: { lessonGoal: slot.lessonGoal, objectives: slot.objectives },
+              slot: { lessonGoal: slot.lessonGoal, objectives },
               lessons,
               items: lesson.body.items.map((item, index) => ({
                 n: index + 1,
@@ -378,8 +409,8 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
             parse: judgeParser(QUIZ_JUDGE_CHECKS),
             authorModelIds: [...authors],
           });
-          if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, authorModelIds: [...authors], judgeModelId };
-          failure = new QuizFailedError([], verdict, lesson);
+          if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, grounding, authorModelIds: [...authors], judgeModelId };
+          failure = new QuizFailedError([], verdict, lesson, grounding);
           revision = { previousDraft: authored, problems: verdict.reasons.length ? verdict.reasons : verdict.failedChecks };
         }
         throw failure!;

@@ -56,7 +56,7 @@ async function checkQuizGeneration() {
       outcome = { status: "checkpoint", ...checked, codeFailures: [] as string[] };
     } catch (error) {
       if (!(error instanceof QuizFailedError)) throw error;
-      outcome = { status: "failed", lesson: error.lesson, judge: error.judge, repairs: null, codeFailures: error.codeFailures };
+      outcome = { status: "failed", lesson: error.lesson, judge: error.judge, repairs: null, grounding: error.grounding, codeFailures: error.codeFailures };
     }
     const latencyMs = Date.now() - startedAt.getTime();
     const run = {
@@ -76,6 +76,10 @@ async function checkQuizGeneration() {
     if (outcome.lesson) {
       const keys = outcome.lesson.body.items.map((item) => item.correctOptionId).join("");
       process.stdout.write(`${outcome.lesson.body.items.length} items · keys ${keys}\n`);
+    }
+    for (const { objective, verdict, text, reason } of outcome.grounding) {
+      if (verdict === "rewritten") process.stdout.write(`  rewritten: “${objective}” -> “${text}” — ${reason}\n`);
+      if (verdict === "unsupported") process.stdout.write(`  dropped: “${objective}” — ${reason}\n`);
     }
     for (const failure of outcome.codeFailures) process.stdout.write(`  code: ${failure}\n`);
     for (const reason of outcome.judge?.reasons ?? []) process.stdout.write(`  judge: ${reason}\n`);

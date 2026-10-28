@@ -4,6 +4,7 @@ import { readingCodeFailures, type LessonSource, type ReadingLessonDraft } from 
 import { READING_METHOD_ID, type NumberedSource, type ReadingSection } from "@senoy/db/reading-lesson";
 import type { PackSource, SourcePack } from "@senoy/research";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
+import { groundObjectives, taughtObjectives, type GroundedObjective } from "./objective-grounding.ts";
 import { createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
 import { ENGLISH_ONLY } from "./english-only.ts";
 import { ModelError } from "./openrouter.ts";
@@ -63,11 +64,14 @@ export type ReadingRound = {
 /**
  * A reading Lesson that passed the Code checks and the Judge, how many repairs its passing draft took, which Sources
  * were vetted out, every model that wrote a draft of it, the model that passed it (ADR 0015), and every round written.
+ * `grounding` is what the slot's objectives became once checked against the vetted Sources; `lesson.objectives` is
+ * what it taught, which is those objectives minus the dropped ones (ADR 0022).
  */
 export type CheckedReading = {
   lesson: ReadingLessonDraft;
   judge: JudgeResult;
   repairs: number;
+  grounding: GroundedObjective[];
   rejectedSources: RejectedSource[];
   authorModelIds: string[];
   judgeModelId: string;
@@ -82,6 +86,7 @@ export class ReadingFailedError extends Error {
    * @param lesson - The rejected Lesson, when one was written
    * @param rejectedSources - Sources vetted out before writing
    * @param rounds - Every draft and repair written, by every author
+   * @param grounding - What the slot's objectives became against the vetted Sources (ADR 0022)
    */
   constructor(
     public readonly codeFailures: string[],
@@ -89,6 +94,7 @@ export class ReadingFailedError extends Error {
     public readonly lesson: ReadingLessonDraft | null = null,
     public readonly rejectedSources: RejectedSource[] = [],
     public readonly rounds: ReadingRound[] = [],
+    public readonly grounding: GroundedObjective[] = [],
   ) {
     const reasons = codeFailures.length ? codeFailures : [...(judge?.failedChecks ?? []), ...(judge?.reasons ?? [])];
     super(`[reading-generation: generate] Reading Lesson failed ${codeFailures.length ? "Code" : "Judge"} checks || ${reasons.join(" || ")}`);
@@ -97,8 +103,9 @@ export class ReadingFailedError extends Error {
 }
 
 /**
- * Research left a Reading slot with no Source to ground it: every pack came back empty, or the Judge vetted out every
- * page (spec §5.9). The Course fails and discards the slot's research, so Retry searches again.
+ * Research left a Reading slot with nothing to ground it: every pack came back empty, the Judge vetted out every page
+ * (spec §5.9), or what survived supports no objective of the slot (ADR 0022). The Course fails and discards the slot's
+ * research, so Retry searches again.
  */
 export class LessonUnresearchableError extends Error {
   /**
@@ -166,7 +173,7 @@ Write replacements in the draft's voice: ${TEACHING_VOICE}`;
 const JUDGE_PROMPT = `You independently review one reading Lesson before it is saved. You did not write it.
 Each numbered Citation [n] in the Lesson points at Source n in "sources", which lists only the excerpts the Lesson may rely on. Judge against those excerpts, not your own knowledge. Fail a check only for a clear problem, not for style.
 - claim_support: a factual claim is not supported by an excerpt of a Source the Lesson cites, contradicts one, or states more certainty or consensus than the excerpts do. Paraphrase, plain descriptive wording, connective explanation, and definitions that follow from supported claims are fine, and so are signposting and questions to the Learner that state no new fact. ${ILLUSTRATION_RULE} A claim passes when any one Source cited for it, or nearby, supports it; an extra Citation that adds nothing is not a failure.
-- objective_coverage: an objective of the slot is not taught.
+- objective_coverage: an objective of the slot is not taught. Judge coverage by what the excerpts allow: an objective they cannot support is not a failure, because the author is told to teach what they do support and say no more.
 - sequential_coherence: the Lesson contradicts, ignores, or needlessly re-teaches priorLessons, or uses their terms differently.
 - named_work_substitute: the Lesson reproduces or writes a stand-in for a named work's lyrics, dialogue, notation, tablature, or text.
 - off_goal: a section, or a stretch of a paragraph or more, serves no objective of the slot toward its lessonGoal and the Course learningGoal, however true and well cited: it is there because a Source had it, not because an objective needs it. A sentence or two of context that serves an objective, such as why it matters or a short example, is fine. Name the section by its heading and quote the stretch's opening words, so it can be cut.
@@ -482,11 +489,29 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
       const retrievalUrls = new Set(input.packs.flatMap((pack) => pack.sources.map((source) => source.url)));
       // Scope is left out entirely when null, so an unfocused goal is written and judged exactly as before.
       const scope = input.scope ? { scope: input.scope } : {};
+
+      // The objectives are checked against the vetted Sources before a word is written, so the author is never asked
+      // for a claim its evidence cannot carry (ADR 0022). Grounding judges retrieved excerpts and the approved
+      // Blueprint, which no model wrote; the primary author is ruled out as for any Judge call.
+      const grounding = await groundObjectives({
+        judge,
+        authorModelIds: [generator.modelId],
+        objectives: slot.objectives,
+        slot,
+        learningGoal: input.learningGoal,
+        scope: input.scope,
+        material: { sources },
+      });
+      const objectives = taughtObjectives(grounding);
+      // Sources that support no objective of this slot ground nothing, as surely as no Source at all: the Course fails
+      // here and discards this slot's research, so Retry searches again rather than rewriting the same draft.
+      if (objectives.length === 0) throw new LessonUnresearchableError(slot.id, rejectedSources);
+
       const brief = {
         courseTitle: input.courseTitle,
         learningGoal: input.learningGoal,
         ...scope,
-        slot: { title: slot.title, lessonGoal: slot.lessonGoal, objectives: slot.objectives },
+        slot: { title: slot.title, lessonGoal: slot.lessonGoal, objectives },
         priorLessons: input.priorLessons,
         profile: input.profile,
         sources,
@@ -544,7 +569,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
             teachingMethod: READING_METHOD_ID,
             title: slot.title,
             lessonGoal: slot.lessonGoal,
-            objectives: slot.objectives,
+            objectives,
             topicTags: slot.topicTags,
             lineage: null,
             ...numberCitations(authored, evidence),
@@ -561,7 +586,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
           const codeFailures = readingCodeFailures(lesson, retrievalUrls);
           if (codeFailures.length) {
             round.problems = codeFailures;
-            failure = new ReadingFailedError(codeFailures, null, lesson, rejectedSources, rounds);
+            failure = new ReadingFailedError(codeFailures, null, lesson, rejectedSources, rounds, grounding);
             revision = { previousDraft: authored, numberedSources, problems: [...codeFailures, ...skippedEditsNote(skipped)] };
             continue;
           }
@@ -571,7 +596,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
             input: {
               learningGoal: input.learningGoal,
               ...scope,
-              slot: { lessonGoal: slot.lessonGoal, objectives: slot.objectives },
+              slot: { lessonGoal: slot.lessonGoal, objectives },
               priorLessons: input.priorLessons,
               lesson: lesson.body,
               sources: lesson.sources.map(({ n, sourceId, title, url, publisher }) => {
@@ -586,9 +611,9 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
             parse: judgeParser(READING_JUDGE_CHECKS),
             authorModelIds: [...authors],
           });
-          if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, rejectedSources, authorModelIds: [...authors], judgeModelId, rounds };
+          if (verdict.pass) return { lesson, judge: verdict, repairs: attempt, grounding, rejectedSources, authorModelIds: [...authors], judgeModelId, rounds };
           round.problems = verdict.reasons.length ? verdict.reasons : verdict.failedChecks;
-          failure = new ReadingFailedError([], verdict, lesson, rejectedSources, rounds);
+          failure = new ReadingFailedError([], verdict, lesson, rejectedSources, rounds, grounding);
           revision = { previousDraft: authored, numberedSources, problems: [...(verdict.reasons.length ? verdict.reasons : verdict.failedChecks), ...skippedEditsNote(skipped)] };
         }
         throw failure!;
