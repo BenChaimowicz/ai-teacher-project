@@ -78,6 +78,7 @@ export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGenerati
           grounding: allSupported(slot.objectives),
           authorModelIds: ["fixture/author"],
           judgeModelId: "fixture/judge",
+          rounds: [],
           lesson: {
             slotId: slot.id, teachingMethod: "quiz", title: slot.title, lessonGoal: slot.lessonGoal,
             objectives: slot.objectives, topicTags: slot.topicTags, lineage: null, sources: [], citations: [],

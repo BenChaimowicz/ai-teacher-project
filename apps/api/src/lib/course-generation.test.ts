@@ -21,10 +21,11 @@ import { fakeDb } from "../routes/fake-db.ts";
 import type { CourseJudge, CourseOutline } from "./course-judge.ts";
 import { createCourseGeneration, CourseFailedError, lessonResearchTopic } from "./course-generation.ts";
 import { LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
-import { QuizFailedError, type QuizGenerator, type QuizInput } from "./quiz-generation.ts";
+import { QuizFailedError, type AuthoredItem, type QuizGenerator, type QuizInput, type QuizRound } from "./quiz-generation.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { allSupported } from "./objective-grounding.ts";
 import { LessonUnresearchableError, ReadingFailedError, type ReadingGenerator, type ReadingInput } from "./reading-generation.ts";
+import { installUsageTracking, type PipelineEventFinish, type PipelineEventStart, type UsageSink } from "./usage-tracking.ts";
 
 const APPROVED: ApprovedBlueprint = {
   sequenceMode: "linear",
@@ -83,19 +84,39 @@ function recordingGenerator(fail = false) {
   return { readingGenerator, inputs };
 }
 
+/** One item as the stub Quiz author wrote it, before its options were placed. */
+const QUIZ_ITEM: AuthoredItem = {
+  objective: "Describe Yggdrasil",
+  prompt: "Question 1?",
+  options: ["a", "b", "c", "d"].map((id) => ({ id: `opt${id}`, text: `${id}1`, correct: id === "c" })),
+  explanations: { brief: "B.", standard: "S.", detailed: "D." },
+};
+
+/** The rounds the stub Quiz author reports: a draft the Judge rejected, then the rewrite. */
+const QUIZ_ROUNDS: QuizRound[] = [
+  { modelId: "fixture/author", items: [QUIZ_ITEM], problems: ["Item 1 is not in the Reading."] },
+  { modelId: "fixture/fallback", items: [QUIZ_ITEM], problems: [] },
+];
+
 /** Quiz generator returning six fixed items for whichever slot it is given; `fail` throws a Judge failure. */
 function recordingQuizGenerator(fail = false) {
   const inputs: QuizInput[] = [];
   const quizGenerator: QuizGenerator = {
     async generate(input) {
       inputs.push(input);
-      if (fail) throw new QuizFailedError([], { pass: false, failedChecks: ["answerable_from_lessons"], reasons: ["Item 1 is not in the Reading."] });
+      if (fail) {
+        throw new QuizFailedError(
+          [], { pass: false, failedChecks: ["answerable_from_lessons"], reasons: ["Item 1 is not in the Reading."] }, null,
+          [QUIZ_ROUNDS[0]!, { ...QUIZ_ROUNDS[1]!, problems: ["Item 1 is not in the Reading."] }],
+        );
+      }
       return {
         judge: { pass: true, failedChecks: [], reasons: [] },
         repairs: 0,
         grounding: allSupported(input.slot.objectives),
         authorModelIds: ["fixture/author"],
         judgeModelId: "fixture/judge",
+        rounds: QUIZ_ROUNDS,
         lesson: {
           slotId: input.slot.id, teachingMethod: "quiz", title: input.slot.title, lessonGoal: input.slot.lessonGoal,
           objectives: input.slot.objectives, topicTags: input.slot.topicTags, lineage: null, sources: [], citations: [],
@@ -144,6 +165,25 @@ function recordingControl() {
     async settle(_transaction, status) { check(); settled.push(status); },
   };
   return { control, progress, settled, lose: () => { lost = true; } };
+}
+
+/** Records each Pipeline Event's kind and the detail it finished with, while tracking is installed. */
+function eventSink() {
+  const kinds = new Map<string, PipelineEventStart["kind"]>();
+  const events: { kind: PipelineEventStart["kind"]; detail: Record<string, unknown> | null }[] = [];
+  const sink: UsageSink = {
+    async startPipelineEvent(row: PipelineEventStart) {
+      const id = `event${kinds.size + 1}`;
+      kinds.set(id, row.kind);
+      return id;
+    },
+    async finishPipelineEvent(id: string, row: PipelineEventFinish) { events.push({ kind: kinds.get(id)!, detail: row.detail }); },
+    async insertUsageRecord() {},
+    async setUsageMeasurement() {},
+    async insertProductEvent() {},
+    async insertApiRequest() {},
+  };
+  return { sink, detail: (kind: PipelineEventStart["kind"]) => events.find((event) => event.kind === kind)!.detail };
 }
 
 type Failure = "reading" | "quiz" | "course" | null;
@@ -306,6 +346,25 @@ test("A Quiz that fails its checks is not saved; the Reading checkpoint stays an
   assert.equal(stored().status, "generation_failed");
   assert.match(stored().failureReason!, /“Check: the World Tree”/);
   assert.equal(rows.get(publishedCourses)!.length, 0);
+});
+
+test("A Quiz's Pipeline Event keeps every round it took, pass or fail, as a Reading's does (SEN-91)", async () => {
+  for (const fail of [false, true]) {
+    const recording = eventSink();
+    const uninstall = installUsageTracking({ sink: recording.sink, log: { error() {} } });
+    try {
+      const { started } = await run(fail ? "quiz" : null);
+      if (fail) await assert.rejects(started, QuizFailedError);
+      else await started;
+    } finally {
+      uninstall();
+    }
+    const detail = recording.detail("quiz")!;
+    assert.deepEqual(detail.rounds, fail
+      ? [QUIZ_ROUNDS[0], { ...QUIZ_ROUNDS[1], problems: ["Item 1 is not in the Reading."] }]
+      : QUIZ_ROUNDS);
+    assert.equal(detail.slotId, "slot2", "Alongside what the step already recorded.");
+  }
 });
 
 test("Nothing is playable while generation runs; the Course publishes only at the end", async () => {

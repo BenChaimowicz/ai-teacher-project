@@ -214,6 +214,7 @@ test("A Quiz whose Lessons teach none of its objectives fails on that one check,
   assert.ok(error instanceof QuizFailedError);
   assert.deepEqual(error.codeFailures, ["The Lessons this Quiz assesses teach none of its objectives."]);
   assert.equal(error.lesson, null);
+  assert.deepEqual(error.rounds, [], "No draft was written, so there is no round.");
   assert.deepEqual(error.grounding.map(({ verdict }) => verdict), ["unsupported", "unsupported"]);
   assert.deepEqual([calls.length, judgeCalls.length], [0, 0], "Retry fails here again, without writing a Quiz each time.");
 });
@@ -245,6 +246,7 @@ test("A mention of a missing option, or a repeated option id, fails the Code che
     "Item 1's explanation mentions an option id the item does not have.",
     "Item 2 gives two options the same id.",
   ]);
+  assert.deepEqual(error.rounds[0]!.problems, error.codeFailures, "A round failed by the Code checks keeps them.");
   assert.equal(calls.length, 0);
 });
 
@@ -265,10 +267,15 @@ test("A Judge failing twice is repaired twice", async () => {
   const overstated = { pass: false, failedChecks: ["explanation_support"], reasons: ["Item 5's explanation adds a detail the lessons do not state."] };
   const { generator, calls } = scriptedGenerator(authored());
   const { judge } = scriptedJudge(overstated, overstated, PASS);
-  const { repairs } = await createQuizGenerator({ generator, judge }).generate(INPUT);
+  const { repairs, rounds } = await createQuizGenerator({ generator, judge }).generate(INPUT);
 
   assert.equal(repairs, 2);
   assert.equal(calls.length, 3);
+  // Rejected drafts are saved nowhere else, so the passing Quiz carries them for its Pipeline Event (SEN-91).
+  assert.deepEqual(rounds.map((round) => [round.modelId, round.problems]), [
+    ["fixture/author", overstated.reasons], ["fixture/author", overstated.reasons], ["fixture/author", []],
+  ]);
+  assert.deepEqual(rounds.map((round) => round.items), [authored().items, authored().items, authored().items]);
 });
 
 test("A Quiz still failing after its two repairs throws with the last verdict and draft", async () => {
@@ -281,6 +288,10 @@ test("A Quiz still failing after its two repairs throws with the last verdict an
   assert.equal(calls.length, 3, "One draft and two repairs.");
   assert.deepEqual(error.judge?.failedChecks, ["single_correct_answer"]);
   assert.equal(error.lesson?.body.items.length, 6);
+  assert.deepEqual(error.rounds.map((round) => [round.modelId, round.problems]), [
+    ["fixture/author", ambiguous.reasons], ["fixture/author", ambiguous.reasons], ["fixture/author", ambiguous.reasons],
+  ]);
+  assert.deepEqual(error.rounds[0]!.items, authored().items, "Each round keeps the items as written, option ids and all.");
 });
 
 test("A Quiz whose assessed Reading is not checkpointed fails its Code checks without a Judge call", async () => {
@@ -321,9 +332,16 @@ test("When the author's repairs run out, the fallback author writes a fresh Quiz
   assert.deepEqual(judgeCalls.at(-1)!.authorModelIds, ["fixture/fallback"]);
   assert.deepEqual(checked.authorModelIds, ["fixture/fallback"]);
   assert.equal(checked.repairs, 1);
+  assert.deepEqual(checked.rounds.map((round) => round.modelId),
+    ["fixture/author", "fixture/author", "fixture/author", "fixture/fallback", "fixture/fallback"],
+    "Rounds span both authors, so the event shows every model that wrote a draft.");
+  assert.deepEqual(checked.rounds.map((round) => round.problems.length), [1, 1, 1, 1, 0]);
 
   const failing = scriptedJudge(ambiguous);
-  await assert.rejects(createQuizGenerator({ generator, fallbackGenerator, judge: failing.judge }).generate(INPUT), QuizFailedError);
+  await assert.rejects(
+    createQuizGenerator({ generator, fallbackGenerator, judge: failing.judge }).generate(INPUT),
+    (error: unknown) => error instanceof QuizFailedError && error.rounds.length === 6 && error.rounds.at(-1)!.modelId === "fixture/fallback",
+  );
   assert.equal(failing.calls.length, 6, "Three Quizzes from each author, then the Course fails.");
 });
 
