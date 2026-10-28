@@ -10,6 +10,8 @@ Before this change the API designed the Blueprint inside the request, so a resta
 
 The Starting Level diagnostic still runs inside its API request. Its `assessment_preparing` is unstuck without a job: the API process remembers which checks it is preparing, and loading one it is not preparing (the API restarted) returns it to `validity_passed` with **Try again**. That is exact for the one API process (docs/deploy.md). Making it a job is the move if the API ever runs as more than one process.
 
+**Amended by ADR 0023.** The diagnostic takes the lease rather than the job: preparation leases its Request in Postgres, so more than one API serves it correctly and nothing depends on process memory.
+
 Rejected:
 - **A separate `blueprint_jobs` table.** It would copy the claim and lease code for a row with the same shape.
 - **One row per Request whose kind changes at Approve.** The finished Blueprint job's record would be overwritten, and `claims` would mix the two runs.

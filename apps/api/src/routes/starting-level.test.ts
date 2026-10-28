@@ -166,12 +166,14 @@ test("Retry diagnostic prepares a fresh set and clears the reason", async () => 
   }
 });
 
-test("A check left preparing by an API restart can be started again", async () => {
+test("A check whose preparing API stopped can be started again once its lease has lapsed", async () => {
   const { app, url, requestRow } = await testApp("assessment_preparing");
   try {
+    // The lease the stopped API held, no longer being pushed out.
+    Object.assign(requestRow, { preparingToken: randomUUID(), preparingUntil: new Date(Date.now() - 1000) });
     const reopened = await app.inject({ method: "GET", url });
     assert.deepEqual([reopened.json().courseRequest.status, reopened.json().courseRequest.failureReason], ["goal_focused", PREPARE_INTERRUPTED_REASON]);
-    assert.equal(requestRow.status, "goal_focused");
+    assert.deepEqual([requestRow.status, requestRow.preparingToken, requestRow.preparingUntil], ["goal_focused", null, null]);
     const started = await app.inject({ method: "POST", url });
     assert.deepEqual([started.json().courseRequest.status, started.json().courseRequest.failureReason], ["assessment_ready", null]);
   } finally {
@@ -179,28 +181,75 @@ test("A check left preparing by an API restart can be started again", async () =
   }
 });
 
-test("A check still being prepared by this process is left alone", async () => {
+/**
+ * Two route instances on one store, as two API processes against one database (SEN-89). Only the first prepares with
+ * `build`; the second stands in for the API the Learner's other tab, or the other person, is reading through.
+ * @param build - How the preparing instance builds its item set
+ */
+async function twoApis(build: DiagnosticBuilder["build"]) {
   const learner = savedLearner();
   const { db, rows } = fakeDb([courseRequests, startingLevelDiagnostics]);
+  /** One API process on the shared store. */
+  async function api(builder: DiagnosticBuilder) {
+    const app = Fastify();
+    app.decorate("db", db);
+    app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
+    await app.register(startingLevelRoutes, { diagnosticBuilder: builder });
+    return app;
+  }
+  const writeGapStatement = async () => "Gap";
+  const preparer = await api({ build, writeGapStatement });
+  const reader = await api({ build: async () => structuredClone(draft), writeGapStatement });
+  const [request] = await db.insert(courseRequests).values({
+    learnerId: learner.id, subject: "Drums", learningGoal: "Play Iris by the Goo Goo Dolls", status: "goal_focused",
+  }).returning();
+  const url = `/api/course-requests/${request!.id}/diagnostic`;
+  return { preparer, reader, rows, requestRow: rows.get(courseRequests)![0]!, url };
+}
+
+/** Lets a preparation reach its claim before the other API reads the Request. */
+async function claimed() {
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
+test("A check one API is preparing is left alone by another API on the same database", async () => {
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
-  const app = Fastify();
-  app.decorate("db", db);
-  app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
-  await app.register(startingLevelRoutes, {
-    diagnosticBuilder: { async build() { await gate; return structuredClone(draft); }, async writeGapStatement() { return "Gap"; } },
-  });
-  const [request] = await db.insert(courseRequests).values({ learnerId: learner.id, subject: "Drums", learningGoal: "Play", status: "goal_focused" }).returning();
-  const url = `/api/course-requests/${request!.id}/diagnostic`;
+  const { preparer, reader, rows, requestRow, url } = await twoApis(async () => { await gate; return structuredClone(draft); });
   try {
-    const preparing = app.inject({ method: "POST", url });
-    await new Promise((resolve) => setImmediate(resolve));
-    assert.equal((await app.inject({ method: "GET", url })).json().courseRequest.status, "assessment_preparing");
+    const preparing = preparer.inject({ method: "POST", url });
+    await claimed();
+    for (let poll = 0; poll < 3; poll += 1) {
+      assert.equal((await reader.inject({ method: "GET", url })).json().courseRequest.status, "assessment_preparing", "The other API waits with the Learner.");
+    }
     release();
     assert.equal((await preparing).json().courseRequest.status, "assessment_ready");
-    assert.equal(rows.get(courseRequests)![0]!.status, "assessment_ready");
+    assert.deepEqual([requestRow.status, requestRow.preparingToken, requestRow.preparingUntil], ["assessment_ready", null, null]);
+    assert.equal(rows.get(startingLevelDiagnostics)!.length, 1);
   } finally {
-    await app.close();
+    await preparer.close();
+    await reader.close();
+  }
+});
+
+test("A preparation that lost its lease saves no attempt the Learner can never reach", async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const { preparer, reader, rows, requestRow, url } = await twoApis(async () => { await gate; return structuredClone(draft); });
+  try {
+    const preparing = preparer.inject({ method: "POST", url });
+    await claimed();
+    // The preparing API stops pushing its lease out, as a killed process does, and the other API hands the check back.
+    requestRow.preparingUntil = new Date(Date.now() - 1000);
+    const handed = await reader.inject({ method: "GET", url });
+    assert.deepEqual([handed.json().courseRequest.status, handed.json().courseRequest.failureReason], ["goal_focused", PREPARE_INTERRUPTED_REASON]);
+    release();
+    assert.equal((await preparing).statusCode, 409, "The finished preparation says so rather than writing over the hand-back.");
+    assert.equal(requestRow.status, "goal_focused");
+    assert.equal(rows.get(startingLevelDiagnostics)!.length, 0);
+  } finally {
+    await preparer.close();
+    await reader.close();
   }
 });
 

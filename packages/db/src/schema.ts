@@ -40,6 +40,14 @@ export const courseRequests = pgTable("course_requests", {
   revisedFromId: uuid("revised_from_id").references((): AnyPgColumn => courseRequests.id),
   /** Plain-language reason the last step failed, with its next step; cleared when the Learner tries again. */
   failureReason: text("failure_reason"),
+  /**
+   * The API preparing this Request's Starting Level check holds it with `preparingToken` until `preparingUntil`,
+   * pushed out while it works. A lapsed lease (that API stopped) lets any API hand the check back for **Try again**;
+   * every write the preparation makes checks it still holds its token. Both are set exactly while the Request is
+   * `assessment_preparing`, and null otherwise (SEN-89).
+   */
+  preparingToken: uuid("preparing_token"),
+  preparingUntil: timestamp("preparing_until", { withTimezone: true }),
   /** Set when the Learner removed it from Home and the sidebar. Nothing else changes; it's just not listed. */
   hiddenAt: timestamp("hidden_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
