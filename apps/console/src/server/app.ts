@@ -1,5 +1,6 @@
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import type { BillingService } from "./billing.ts";
+import type { DecisionsReader } from "./decisions.ts";
 import type { OpsStore } from "./ops-store.ts";
 import type { OpenRouterHistoryReader } from "./openrouter-history.ts";
 import type { SetupReader } from "./setup.ts";
@@ -23,6 +24,8 @@ export type ConsoleAppOptions = {
   openrouterHistory?: OpenRouterHistoryReader;
   /** The billing check; without it `/billing` answers 404. */
   billing?: BillingService;
+  /** The team's decision log on disk; without it `/decisions` answers 404. */
+  decisions?: DecisionsReader;
   /** Whether Fastify logs (Pino); tests leave it off. */
   logger?: boolean;
   /** The current instant, injected for tests; defaults to the wall clock. */
@@ -131,6 +134,10 @@ export function buildConsoleApp(store: OpsStore, options: ConsoleAppOptions = {}
 
       ops.get("/setup", (request, reply) =>
         answer(request, reply, "GET /setup", async () => (options.setup ? options.setup() : null), "Setup is not available"));
+
+      ops.get("/decisions", (request, reply) =>
+        answer(request, reply, "GET /decisions", async () => (options.decisions ? options.decisions() : null),
+          "The decision log is not available"));
 
       ops.get("/openrouter-history", (request, reply) =>
         answer(request, reply, "GET /openrouter-history", async () => (options.openrouterHistory ? options.openrouterHistory() : null),

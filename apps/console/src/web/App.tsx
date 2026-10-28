@@ -7,6 +7,7 @@ import { Billing } from "@/views/Billing";
 import { Calls } from "@/views/Calls";
 import { CourseRequestDetail } from "@/views/CourseRequestDetail";
 import { CourseRequests } from "@/views/CourseRequests";
+import { Decisions } from "@/views/Decisions";
 import { Failures } from "@/views/Failures";
 import { LearnerActivity } from "@/views/LearnerActivity";
 import { OpenRouterHistory } from "@/views/OpenRouterHistory";
@@ -30,6 +31,7 @@ export function App() {
             <Route path="failures" element={<Failures />} />
             <Route path="activity" element={<LearnerActivity />} />
             <Route path="api" element={<ApiTraffic />} />
+            <Route path="decisions" element={<Decisions />} />
             <Route path="*" element={<EmptyState title="No such view" hint="Pick one from the left." />} />
           </Route>
         </Routes>

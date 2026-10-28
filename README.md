@@ -21,6 +21,10 @@ pnpm dash
 
 The Usage Console has no login. Its API listens on this machine only (`127.0.0.1`), so it is not reachable from elsewhere.
 
+## Decisions
+
+Every mid-sized or bigger decision the team makes about a ticket is one Markdown file in [`docs/decisions/`](docs/decisions/README.md): what we decided, why, and when. The Usage Console reads that folder off disk and shows it under **Decisions**, so an entry written now appears on the next refresh — there is no database and nothing to migrate. Architectural choices still get a full ADR in [`docs/adr/`](docs/adr).
+
 ## Migrations
 
 `pnpm db:generate --name <what_it_does>` writes `<number>_<UTC timestamp>_<name>.sql` (for example `0016_20261024140056_usage_console.sql`) and its journal entry. The number is drizzle's order; the timestamp says when it was made. Drizzle applies only migrations whose journal `when` is later than the last one applied to the shared database, so when another branch's migration was applied first, re-stamp yours (raise its `when` and its file timestamp) before `pnpm db:migrate`.

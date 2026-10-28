@@ -483,3 +483,40 @@ export type OpsOpenRouterHistory = {
   /** Every stored row, newest day first, then by cost. */
   rows: OpsOpenRouterActivityRow[];
 };
+
+/** What a logged decision still is: the default, replaced by a later one, or simply undone. */
+export const DECISION_STATUSES = ["active", "superseded", "reversed"] as const;
+export type DecisionStatus = (typeof DECISION_STATUSES)[number];
+
+/** One entry in the team's decision log: a Markdown file in `docs/decisions/`. */
+export type OpsDecision = {
+  /** The file name without `.md`, e.g. `2026-10-28-objective-grounding`. */
+  id: string;
+  /** The decision itself — the file's `#` heading. */
+  decision: string;
+  /** Why we decided it: the Markdown body under the heading. */
+  why: string;
+  /** When we decided it, `YYYY-MM-DD`. */
+  when: string;
+  /** Linear ids the decision was made about; empty when it spans the project. */
+  tickets: string[];
+  /** Who decided. */
+  people: string[];
+  status: DecisionStatus;
+  /** Ids of the entries this one replaces. */
+  supersedes: string[];
+  /** Repo-relative path, so the console can say which file to edit. */
+  path: string;
+};
+
+/**
+ * `GET /api/ops/decisions` — the decision log read off disk, newest first. A file the parser could not read is
+ * reported in `problems` rather than dropped, so a malformed entry is visible instead of silently missing.
+ */
+export type OpsDecisionLog = {
+  decisions: OpsDecision[];
+  problems: { path: string; problem: string }[];
+  /** Repo-relative folder the entries were read from. */
+  folder: string;
+  readAt: string;
+};
