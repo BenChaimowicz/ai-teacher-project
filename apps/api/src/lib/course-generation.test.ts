@@ -19,7 +19,7 @@ import {
 import type { SourcePack } from "@senoy/research";
 import { fakeDb } from "../routes/fake-db.ts";
 import type { CourseJudge, CourseOutline } from "./course-judge.ts";
-import { createCourseGeneration, CourseFailedError, lessonResearchTopic } from "./course-generation.ts";
+import { createCourseGeneration, CourseFailedError, failureReason, lessonResearchTopic } from "./course-generation.ts";
 import { LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
 import { QuizFailedError, type AuthoredItem, type QuizGenerator, type QuizInput, type QuizRound } from "./quiz-generation.ts";
 import { loadModelConfig } from "./model-config.ts";
@@ -295,7 +295,11 @@ test("A Lesson that fails its checks is not saved, no Quiz is generated without 
   assert.equal(rows.get(unpublishedLessons)!.length, 0);
   assert.equal(quizInputs.length, 0);
   assert.equal(stored().status, "generation_failed");
-  assert.match(stored().failureReason!, /couldn't write the Lesson “The World Tree” so that it passed our quality checks/);
+  // The first Lesson failing keeps no Lessons, so Retry must not promise any back (SEN-95).
+  assert.equal(
+    stored().failureReason,
+    "We couldn't write the Lesson “The World Tree” so that it passed our quality checks. Retry tries that Lesson again.",
+  );
   assert.equal(rows.get(publishedCourses)!.length, 0);
   assert.deepEqual(job.settled, ["failed"]);
 });
@@ -345,7 +349,21 @@ test("A Quiz that fails its checks is not saved; the Reading checkpoint stays an
   assert.deepEqual((rows.get(unpublishedLessons)! as (typeof unpublishedLessons.$inferSelect)[]).map((row) => row.slotId), ["slot1"]);
   assert.equal(stored().status, "generation_failed");
   assert.match(stored().failureReason!, /“Check: the World Tree”/);
+  // One Reading is checkpointed, so the failure names what Retry keeps (SEN-95).
+  assert.match(stored().failureReason!, /Retry tries again from there, keeping the Lesson already written\.$/);
   assert.equal(rows.get(publishedCourses)!.length, 0);
+});
+
+test("The failure counts the Lessons Retry keeps, and promises none when none are checkpointed (SEN-95)", () => {
+  const lesson = { kind: "lesson", title: "The World Tree" } as const;
+  const checkFailed = new ReadingFailedError([], { pass: false, failedChecks: ["claim_support"], reasons: ["Unsupported."] });
+  assert.match(failureReason(lesson, checkFailed, 0), /quality checks\. Retry tries that Lesson again\.$/);
+  assert.match(failureReason(lesson, checkFailed, 1), /Retry tries again from there, keeping the Lesson already written\.$/);
+  assert.match(failureReason(lesson, checkFailed, 3), /Retry tries again from there, keeping the 3 Lessons already written\.$/);
+
+  const unresearchable = new LessonUnresearchableError("slot1");
+  assert.match(failureReason(lesson, unresearchable, 0), /Retry searches for it again\.$/);
+  assert.match(failureReason(lesson, unresearchable, 2), /Retry searches for it again, keeping the 2 Lessons already written\.$/);
 });
 
 test("A Quiz's Pipeline Event keeps every round it took, pass or fail, as a Reading's does (SEN-91)", async () => {
