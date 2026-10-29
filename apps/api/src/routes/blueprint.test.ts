@@ -17,7 +17,7 @@ import {
 import { createFixtureBlueprintBuilder } from "../lib/blueprint-fixture.ts";
 import { createBlueprintJob, REDESIGN_FAILED_REASON } from "../lib/blueprint-job.ts";
 import { BlueprintFailedError, type BlueprintBuilder, type BlueprintInput } from "../lib/blueprint.ts";
-import type { GenerationControl } from "../lib/generation-job.ts";
+import { jobOwner, type GenerationControl } from "../lib/generation-job.ts";
 import { blueprintRoutes } from "./blueprint.ts";
 import { courseRequestRoutes } from "./course-requests.ts";
 import { fakeDb } from "./fake-db.ts";
@@ -318,6 +318,34 @@ test("An interrupted job resumes and clears the failure reason; a failed check d
     Object.assign(jobs()[0]!, { status: "failed" });
     assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/resume` })).statusCode, 409);
     assert.equal(requestRow.status, "generation_failed");
+  } finally {
+    await app.close();
+  }
+});
+
+test("Every queued job belongs to the stack that queued it, so another developer's worker on the shared database never claims it", async () => {
+  const { app, jobs, url } = await testApp();
+  try {
+    assert.equal((await app.inject({ method: "POST", url })).statusCode, 202);
+    assert.equal(jobs("blueprint")[0]!.owner, jobOwner(), "Preparing queues a Blueprint job for this stack.");
+  } finally {
+    await app.close();
+  }
+});
+
+test("Retry and Resume move a job queued by another stack to this one, so this stack's worker runs it on this code", async () => {
+  const { app, jobs, requestRow, generationUrl } = await generatingApp("failed");
+  try {
+    assert.equal(jobs()[0]!.owner, jobOwner(), "Approve queues the Course job for this stack.");
+    Object.assign(requestRow, { status: "generation_failed", failureReason: "We couldn't write the Lesson." });
+    Object.assign(jobs()[0]!, { owner: "another-developer" });
+    assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/retry` })).statusCode, 200);
+    assert.equal(jobs()[0]!.owner, jobOwner());
+
+    Object.assign(requestRow, { status: "generation_cancelled", failureReason: null });
+    Object.assign(jobs()[0]!, { status: "cancelled", owner: "another-developer" });
+    assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/resume` })).statusCode, 200);
+    assert.equal(jobs()[0]!.owner, jobOwner());
   } finally {
     await app.close();
   }

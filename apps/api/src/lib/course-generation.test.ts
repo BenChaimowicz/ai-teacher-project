@@ -22,7 +22,7 @@ import type { SourcePack } from "@senoy/research";
 import { fakeDb } from "../routes/fake-db.ts";
 import type { CourseJudge, CourseOutline } from "./course-judge.ts";
 import { createCourseGeneration, CourseFailedError, failureReason, lessonResearchTopic, researchQueries, searchForEvidence } from "./course-generation.ts";
-import { LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
+import { LeaseLostError, type GenerationControl, type SettledStatus, type WorkerIdentity } from "./generation-job.ts";
 import { QuizFailedError, type AuthoredItem, type QuizGenerator, type QuizInput, type QuizRound } from "./quiz-generation.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { allSupported } from "./objective-grounding.ts";
@@ -196,6 +196,7 @@ type Failure = "reading" | "quiz" | "course" | null;
  * @param fail - Which stage fails its checks
  * @param courseJudgeOverride - Replaces the recording whole-Course Judge
  * @param before - Prepares storage before the run, as an earlier run would have left it
+ * @param worker - The worker the run executes on
  */
 async function run(
   fail: Failure = null,
@@ -203,6 +204,7 @@ async function run(
   before?: (db: Database, requestId: string) => Promise<void>,
   approved: ApprovedBlueprint = APPROVED,
   research: (topic: string) => Promise<SourcePack[]> = async () => PACKS,
+  worker?: WorkerIdentity,
 ) {
   const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
@@ -246,7 +248,7 @@ async function run(
   });
   const job = recordingControl();
   const started = generation.start({
-    db: db as unknown as Database, courseRequestId: request!.id, learnerId: learner!.id, approved, control: job.control,
+    db: db as unknown as Database, courseRequestId: request!.id, learnerId: learner!.id, approved, control: job.control, worker,
   });
   /** The stored Request. */
   const stored = () => (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
@@ -508,6 +510,18 @@ test("A passing Course publishes atomically: Course, Module, both Lessons, the p
   assert.equal(stored().status, "published");
   assert.equal(stored().failureReason, null);
   assert.equal(rows.get(unpublishedLessons)!.length, 2, "Checkpoints stay after publish.");
+});
+
+test("The Course-generation Pipeline Event records the worker host and commit the run executed on", async () => {
+  const recording = eventSink();
+  const uninstall = installUsageTracking({ sink: recording.sink, log: { error() {} } });
+  const worker: WorkerIdentity = { host: "bens-laptop", owner: "ben", commit: "0c4cc91", dirty: false };
+  try {
+    await (await run(null, undefined, undefined, APPROVED, undefined, worker)).started;
+  } finally {
+    uninstall();
+  }
+  assert.deepEqual(recording.detail("course_generation")!.worker, worker);
 });
 
 test("A failed whole-Course Judge publishes nothing, keeps the checkpoints, and fails the Request", async () => {

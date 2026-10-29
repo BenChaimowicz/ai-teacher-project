@@ -24,7 +24,7 @@ import { quizPlugin } from "../teaching-methods/quiz.ts";
 import { readingPlugin } from "../teaching-methods/reading.ts";
 import type { TeachingMethodPlugin } from "../teaching-methods/types.ts";
 import { courseOutline, createCourseJudge, type CourseJudge } from "./course-judge.ts";
-import { enqueueJob, LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
+import { enqueueJob, LeaseLostError, type GenerationControl, type SettledStatus, type WorkerIdentity } from "./generation-job.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createQuizGenerator, QuizFailedError, type CheckedQuiz, type QuizGenerator } from "./quiz-generation.ts";
 import {
@@ -45,6 +45,8 @@ export type GenerationStart = {
   learnerId: string;
   approved: ApprovedBlueprint;
   control: GenerationControl;
+  /** The worker running the job, recorded on the `course_generation` Pipeline Event. */
+  worker?: WorkerIdentity;
 };
 
 /** Full-Course generation for an approved Blueprint, through atomic publish; the worker runs it as a durable job (spec §5.1). */
@@ -247,9 +249,9 @@ const researchFromEnv: LessonResearch = (topic) =>
  */
 export function createCourseGeneration(options: CourseGenerationOptions = {}): CourseGeneration {
   return {
-    start({ db, courseRequestId, learnerId, approved, control }) {
+    start({ db, courseRequestId, learnerId, approved, control, worker }) {
       return withPipelineEvent("course_generation", {
-        label: approved.blueprint.courseTitle, courseRequestId, learnerId,
+        label: approved.blueprint.courseTitle, courseRequestId, learnerId, detail: worker ? { worker } : undefined,
       }, (event) => run({ db, courseRequestId, learnerId, approved, control }, event));
     },
   };

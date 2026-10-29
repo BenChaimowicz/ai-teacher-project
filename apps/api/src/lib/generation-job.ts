@@ -1,3 +1,4 @@
+import { hostname } from "node:os";
 import { and, eq, sql } from "drizzle-orm";
 import { generationJobs, type Database, type GenerationJobKind, type GenerationJobStatus, type GenerationStage, type Transaction } from "@senoy/db";
 
@@ -8,6 +9,17 @@ export type JobLease = {
   courseRequestId: string;
   learnerId: string;
   claimToken: string;
+};
+
+/** The worker and code a run executed on, recorded on its Pipeline Event so a run says what code it ran (SEN-92). */
+export type WorkerIdentity = {
+  host: string;
+  /** The `jobOwner()` the worker claims for. */
+  owner: string;
+  /** `git rev-parse HEAD` when the run started; null outside a git checkout. */
+  commit: string | null;
+  /** Whether the checkout had uncommitted changes; null when unknown. */
+  dirty: boolean | null;
 };
 
 /** This run no longer holds its job: the Learner cancelled, or the lease lapsed and another worker claimed it. */
@@ -36,36 +48,54 @@ export interface GenerationControl {
 }
 
 /**
+ * Whose stack queues and claims jobs here. The API stamps it on every job it queues and a worker claims only jobs with
+ * its own, so developers sharing one database never run each other's jobs. `JOB_OWNER` when set; else, on Railway, the
+ * environment id, which the API and worker services share; else this machine's hostname, which a developer's API and
+ * worker share. Any other host that splits the API and worker must set the same `JOB_OWNER` on both.
+ * @param env - Environment to read
+ */
+export function jobOwner(env: NodeJS.ProcessEnv = process.env): string {
+  const owner = env.JOB_OWNER?.trim();
+  if (owner) return owner;
+  return env.RAILWAY_ENVIRONMENT_ID ? `railway:${env.RAILWAY_ENVIRONMENT_ID}` : hostname();
+}
+
+/**
  * Queues a Request's job of one kind: a fresh row, or its finished row again (Try again after a failed Blueprint).
  * Call it in the transaction that moves the Request to `blueprint_preparing` or `generating`, so the two never disagree.
+ * The job belongs to this stack's `jobOwner()`, even when another stack queued it before.
  * @param transaction - The transaction moving the Request
  * @param job - The Request, its Learner, and what the job produces
  */
 export async function enqueueJob(transaction: Transaction, job: { courseRequestId: string; learnerId: string; kind: GenerationJobKind }) {
   const [requeued] = await transaction.update(generationJobs)
-    .set({ status: "queued", stage: null, currentSlotId: null, claimToken: null, leaseExpiresAt: null, updatedAt: new Date() })
+    .set({ status: "queued", owner: jobOwner(), stage: null, currentSlotId: null, claimToken: null, leaseExpiresAt: null, updatedAt: new Date() })
     .where(and(eq(generationJobs.courseRequestId, job.courseRequestId), eq(generationJobs.kind, job.kind)))
     .returning({ id: generationJobs.id });
-  if (!requeued) await transaction.insert(generationJobs).values({ ...job, status: "queued" });
+  if (!requeued) await transaction.insert(generationJobs).values({ ...job, status: "queued", owner: jobOwner() });
 }
 
 /**
- * Claims the oldest job that is queued or whose lease lapsed, with a fresh claim token. Concurrent workers skip rows
- * another worker is claiming, so each job has one holder.
+ * Claims the oldest job of `owner` that is queued or whose lease lapsed, with a fresh claim token. Concurrent workers
+ * skip rows another worker is claiming, so each job has one holder. A job queued before jobs had owners is claimed by
+ * the first worker to see it and becomes that worker's, so it is never stranded.
  * @param db - Database
  * @param leaseMs - How long the claim holds before it must be renewed
+ * @param owner - Only jobs this stack queued (`jobOwner()`)
  * @returns The lease, or null when no job is waiting
  */
-export async function claimGenerationJob(db: Database, leaseMs: number): Promise<JobLease | null> {
+export async function claimGenerationJob(db: Database, leaseMs: number, owner: string): Promise<JobLease | null> {
   const next = sql`(
     select ${generationJobs.id} from ${generationJobs}
-    where ${generationJobs.status} = 'queued' or (${generationJobs.status} = 'running' and ${generationJobs.leaseExpiresAt} < now())
+    where (${generationJobs.owner} = ${owner} or ${generationJobs.owner} is null)
+      and (${generationJobs.status} = 'queued' or (${generationJobs.status} = 'running' and ${generationJobs.leaseExpiresAt} < now()))
     order by ${generationJobs.createdAt}
     limit 1
     for update skip locked
   )`;
   const [claimed] = await db.update(generationJobs).set({
     status: "running",
+    owner,
     claimToken: sql`gen_random_uuid()`,
     leaseExpiresAt: sql`now() + ${`${leaseMs} milliseconds`}::interval`,
     claims: sql`${generationJobs.claims} + 1`,

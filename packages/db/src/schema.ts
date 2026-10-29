@@ -136,6 +136,12 @@ export const generationJobs = pgTable(
     stage: generationStage("stage"),
     /** The Blueprint slot being written while the stage is `lesson`. */
     currentSlotId: text("current_slot_id"),
+    /**
+     * The stack that queued the job (`jobOwner()`); only a worker with the same owner claims it, so developers sharing
+     * one database never run each other's jobs. Null on jobs queued before SEN-92: the first worker to claim one makes
+     * it its own.
+     */
+    owner: text("owner"),
     claimToken: uuid("claim_token"),
     leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
     /** How many times a worker has claimed the job. */
