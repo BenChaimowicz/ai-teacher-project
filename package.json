@@ -2,7 +2,7 @@
   "name": "ai-teacher",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.15.0",
+  "packageManager": "pnpm@12.15.0",
   "scripts": {
     "apps": "node scripts/apps.mjs",
     "apps:plain": "pnpm --parallel --filter @senoy/web --filter @senoy/api --filter @senoy/worker --filter @senoy/console dev",
@@ -25,10 +25,5 @@
     "db:seed": "pnpm --filter @senoy/db seed",
     "parallel:login": "pnpm --filter @senoy/research exec tsx src/parallel-login.ts",
     "openrouter:import": "pnpm --filter @senoy/console exec tsx src/server/import-openrouter-history.ts"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
   }
 }
