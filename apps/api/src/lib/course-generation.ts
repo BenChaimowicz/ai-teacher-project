@@ -83,8 +83,15 @@ export class CourseFailedError extends Error {
 /** Where generation stopped, so its failure can be told in plain language. */
 type Stage = { kind: "research" } | { kind: "lesson"; title: string } | { kind: "course" };
 
-/** What the Learner can do after a failed check: a fresh attempt at the failed step (spec §5.1). */
-const RETRY_STEP = "Retry tries again from there, keeping the Lessons already written.";
+/**
+ * The clause promising back the Lessons a Retry keeps, or nothing at all when none were checkpointed: the first Lesson
+ * failing keeps no Lessons, so the failure must not say it does (SEN-95).
+ * @param written - How many Lessons are checkpointed for the Course Request
+ */
+function keptClause(written: number): string {
+  if (written === 0) return "";
+  return `, keeping the ${written === 1 ? "Lesson" : `${written} Lessons`} already written`;
+}
 
 /** What the Learner can do after an interruption: for a transient failure, Retry is Resume (spec §5.1). */
 const RESUME_STEP = "Retry continues from the next unfinished Lesson.";
@@ -103,15 +110,17 @@ export function failedCheck(error: unknown): boolean {
  * The Learner-facing reason generation stopped. A failed check is said plainly; anything else is an interruption.
  * @param stage - Where generation stopped
  * @param error - What stopped it
+ * @param written - How many Lessons are checkpointed, so a Retry only promises back Lessons there are (SEN-95)
  */
-export function failureReason(stage: Stage, error: unknown): string {
+export function failureReason(stage: Stage, error: unknown, written: number): string {
   if (stage.kind === "research") return `Generation was interrupted while researching your Lessons. ${RESUME_STEP}`;
   if (stage.kind === "lesson") {
     if (error instanceof LessonUnresearchableError) {
-      return `We couldn't find reliable Sources for the Lesson “${stage.title}”. Retry searches for it again, keeping the Lessons already written.`;
+      return `We couldn't find reliable Sources for the Lesson “${stage.title}”. Retry searches for it again${keptClause(written)}.`;
     }
+    const retryStep = written === 0 ? "Retry tries that Lesson again." : `Retry tries again from there${keptClause(written)}.`;
     return failedCheck(error)
-      ? `We couldn't write the Lesson “${stage.title}” so that it passed our quality checks. ${RETRY_STEP}`
+      ? `We couldn't write the Lesson “${stage.title}” so that it passed our quality checks. ${retryStep}`
       : `Generation was interrupted while writing the Lesson “${stage.title}”. ${RESUME_STEP}`;
   }
   if (error instanceof CourseFailedError && error.needsNewBlueprint) {
@@ -377,13 +386,16 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       // A run that lost its job records nothing: Cancel already moved the Request, or another worker owns it.
       if (error instanceof LeaseLostError) throw error;
       try {
+        // What the failure can promise a Retry keeps depends on how many Lessons are checkpointed (SEN-95).
+        const written = await db.select({ id: unpublishedLessons.id }).from(unpublishedLessons)
+          .where(eq(unpublishedLessons.courseRequestId, courseRequestId));
         await db.transaction(async (transaction) => {
           await control.settle(transaction, settledStatus(error));
           if (error instanceof LessonUnresearchableError) {
             await transaction.delete(lessonResearch)
               .where(and(eq(lessonResearch.courseRequestId, courseRequestId), eq(lessonResearch.slotId, error.slotId)));
           }
-          await transaction.update(courseRequests).set({ status: "generation_failed", failureReason: failureReason(stage, error) })
+          await transaction.update(courseRequests).set({ status: "generation_failed", failureReason: failureReason(stage, error, written.length) })
             .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "generating"))).returning({ id: courseRequests.id });
         });
       } catch (recordError) {
