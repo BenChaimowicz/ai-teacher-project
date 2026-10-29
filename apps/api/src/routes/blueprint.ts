@@ -17,7 +17,7 @@ import {
   type SequenceMode,
 } from "@senoy/db";
 import { IRRELEVANT_REASONS, type BlueprintFeedback, type IrrelevantReason } from "@senoy/db/blueprint";
-import { enqueueJob } from "../lib/generation-job.ts";
+import { enqueueJob, jobOwner } from "../lib/generation-job.ts";
 import { studyLinksByCourseId } from "../lib/study.ts";
 import { recordProductEvent } from "../lib/usage-tracking.ts";
 
@@ -330,7 +330,7 @@ export async function blueprintRoutes(app: FastifyInstance) {
 
   /**
    * Queues the Request's stopped job again: same job, same approved Blueprint, and the next claim continues from the
-   * next unfinished Lesson.
+   * next unfinished Lesson. The job moves to this stack's owner, so this stack's worker runs it (SEN-92).
    * @param action - Route name, for errors and logs
    * @param from - The job statuses this action accepts
    */
@@ -345,7 +345,7 @@ export async function blueprintRoutes(app: FastifyInstance) {
         const status = job ? from[job.status] : undefined;
         if (!job || status !== row.status) return reply.code(409).send({ error: `This Course cannot be ${action === "resume" ? "resumed" : "retried"}.` });
         const queued = await app.db.transaction(async (transaction) => {
-          const [requeued] = await transaction.update(generationJobs).set({ status: "queued", stage: null, currentSlotId: null, updatedAt: new Date() })
+          const [requeued] = await transaction.update(generationJobs).set({ status: "queued", owner: jobOwner(), stage: null, currentSlotId: null, updatedAt: new Date() })
             .where(and(eq(generationJobs.id, job.id), eq(generationJobs.status, job.status))).returning({ id: generationJobs.id });
           if (!requeued) throw new RequestChangedError();
           const [moved] = await transaction.update(courseRequests).set({ status: "generating", failureReason: null }).where(and(

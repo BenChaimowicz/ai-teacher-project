@@ -9,7 +9,7 @@ import {
 } from "@senoy/db";
 import { blueprintSlots, type SequenceFailure } from "@senoy/db/blueprint";
 import { BlueprintFailedError, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, type BlueprintBuilder } from "./blueprint.ts";
-import { LeaseLostError, type GenerationControl } from "./generation-job.ts";
+import { LeaseLostError, type GenerationControl, type WorkerIdentity } from "./generation-job.ts";
 import { withPipelineEvent } from "./usage-tracking.ts";
 
 /** What one run of a claimed Blueprint job receives. */
@@ -18,6 +18,8 @@ export type BlueprintJobStart = {
   courseRequestId: string;
   learnerId: string;
   control: GenerationControl;
+  /** The worker running the job, recorded on the `blueprint` Pipeline Event. */
+  worker?: WorkerIdentity;
 };
 
 /** Blueprint design and system validation before Learner review; the worker runs it as a durable job (spec §5.1). */
@@ -57,7 +59,9 @@ export const REDESIGN_FAILED_REASON = "Your lessons were written, but together t
 export function createBlueprintJob(builder: BlueprintBuilder = createBlueprintBuilder()): BlueprintJob {
   return {
     start(input) {
-      return withPipelineEvent("blueprint", { courseRequestId: input.courseRequestId, learnerId: input.learnerId }, async (event) => {
+      return withPipelineEvent("blueprint", {
+        courseRequestId: input.courseRequestId, learnerId: input.learnerId, detail: input.worker ? { worker: input.worker } : undefined,
+      }, async (event) => {
         const { db, courseRequestId, learnerId, control } = input;
         let reviewed: typeof courseBlueprints.$inferSelect | undefined;
         let sequenceFailure: SequenceFailure | undefined;
