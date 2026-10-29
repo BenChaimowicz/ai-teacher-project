@@ -39,16 +39,19 @@ test("A lesson that fails its checks says why; Retry writes it again and the Cou
   await page.goto(await confirmedRequest(`Play Iris by the Goo Goo Dolls [fail-once] ${randomUUID()}`));
   await makeCourse(page);
 
+  // The first Reading fails before anything is written, so there is nothing to promise back (SEN-95).
   const reason = page.getByRole("alert");
   await expect(reason).toHaveText(
-    /^We couldn't write the Lesson “.+” so that it passed our quality checks\. Retry tries again from there, keeping the Lessons already written\.$/,
+    /^We couldn't write the Lesson “.+” so that it passed our quality checks\. Retry tries that Lesson again\.$/,
     { timeout: 15_000 });
   await expect(page.getByRole("list", { name: "Lessons" }).getByText("stopped here")).toBeVisible();
   await page.getByRole("button", { name: /^Retry/ }).click();
   await expect(page.getByText(/^Writing lesson \d of 3/)).toBeVisible();
 
   // The second Reading fails once too; the first stays written.
-  await expect(reason).toBeVisible({ timeout: 15_000 });
+  await expect(reason).toHaveText(
+    /^We couldn't write the Lesson “.+” so that it passed our quality checks\. Retry tries again from there, keeping the Lesson already written\.$/,
+    { timeout: 15_000 });
   await page.getByRole("button", { name: /^Retry/ }).click();
   await expect(page.getByText("Your course is ready.")).toBeVisible({ timeout: 20_000 });
 });
