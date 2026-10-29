@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { blueprintSlots, type ApprovedBlueprint, type BlueprintSlot, type JudgeResult } from "@senoy/db/blueprint";
 import type { GoalScope } from "@senoy/db/course-request";
 import {
+  courseBlueprints,
   courseCodeFailures,
   courseRequests,
   learners,
@@ -23,7 +24,7 @@ import { quizPlugin } from "../teaching-methods/quiz.ts";
 import { readingPlugin } from "../teaching-methods/reading.ts";
 import type { TeachingMethodPlugin } from "../teaching-methods/types.ts";
 import { courseOutline, createCourseJudge, type CourseJudge } from "./course-judge.ts";
-import { LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
+import { enqueueJob, LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createQuizGenerator, QuizFailedError, type CheckedQuiz, type QuizGenerator } from "./quiz-generation.ts";
 import {
@@ -124,7 +125,7 @@ export function failureReason(stage: Stage, error: unknown, written: number): st
       : `Generation was interrupted while writing the Lesson “${stage.title}”. ${RESUME_STEP}`;
   }
   if (error instanceof CourseFailedError && error.needsNewBlueprint) {
-    return "Together, the finished Lessons don't reach your Learning Goal, so this Course can't be published, and retrying won't change that. Start a new Course Request from Home.";
+    return "Together, the finished Lessons don't reach your Learning Goal, so this Course can't be published, and writing them again wouldn't change that — the plan has to change. We're planning it again now; the lessons written under the old plan are gone.";
   }
   return failedCheck(error)
     ? `The finished Lessons didn't fit together well enough to publish as one Course. Retry checks them again.`
@@ -156,6 +157,57 @@ export function lessonResearchTopic(subject: string, slot: BlueprintSlot, scope:
 }
 
 /**
+ * The queries one Reading slot is searched with, in order, until something usable comes back: an empty Source pack
+ * means hard to research, so it is retried with broader queries before the Course can fail for it (spec §5.9, SEN-85).
+ * Broadening is by deletion, not rephrasing: the scoped topic, then the same topic without its objective list and
+ * out-of-scope clause, then the bare title and subject. No model writes these, so a re-search costs only vendor calls.
+ * @param subject - The Course Request subject
+ * @param slot - The Blueprint slot
+ * @param scope - The Learner-confirmed focus of the Learning Goal, or null (SEN-90)
+ */
+export function researchQueries(subject: string, slot: BlueprintSlot, scope: GoalScope | null): string[] {
+  const focus = scope?.inScope.length ? ` Focus: ${scope.inScope.join("; ")}.` : "";
+  return [
+    lessonResearchTopic(subject, slot, scope),
+    `${slot.title} (${subject}). ${slot.lessonGoal}${focus}`,
+    `${slot.title} (${subject})`,
+  ];
+}
+
+/** A vendor that timed out or failed said nothing about the topic: not evidence that it is hard to research (spec §5.9). */
+function unfinished(pack: SourcePack): boolean {
+  return pack.status === "timed_out" || pack.status === "error";
+}
+
+/** How the search for one Reading's evidence ended. */
+export type SlotSearch = {
+  /** Packs of the last query tried: the one that found evidence, or the one the search gave up on. */
+  packs: SourcePack[];
+  /** Queries tried, in order. */
+  queries: string[];
+  /** True when a vendor never answered, so there is nothing to conclude about the topic and Retry should search again. */
+  interrupted: boolean;
+};
+
+/**
+ * Searches one Reading's topic with broader queries until a pack has something to cite (spec §5.9). Stops early when
+ * a vendor times out or fails: a call that never answered says nothing about how researchable the topic is, so
+ * broadening the query would be answering the wrong question, and the Course is interrupted rather than failed.
+ * @param research - The research call
+ * @param queries - The queries to try, broadest last
+ */
+export async function searchForEvidence(research: LessonResearch, queries: string[]): Promise<SlotSearch> {
+  let packs: SourcePack[] = [];
+  for (const [attempt, query] of queries.entries()) {
+    packs = await research(query);
+    const tried = queries.slice(0, attempt + 1);
+    if (lessonEvidence(packs).size > 0) return { packs, queries: tried, interrupted: false };
+    if (packs.some(unfinished)) return { packs, queries: tried, interrupted: true };
+  }
+  return { packs, queries, interrupted: false };
+}
+
+/**
  * Only the write-time Teaching Profile values a plugin declared (spec §5.5).
  * @param plugin - The slot's Teaching-method plugin
  * @param profile - The Learner's resolved Teaching Profile
@@ -183,9 +235,14 @@ const researchFromEnv: LessonResearch = (topic) =>
  *
  * Any failure publishes nothing and keeps the checkpoints. A failed check fails the job and an interruption leaves it
  * `interrupted`; either moves the Request to `generation_failed` with a plain-language reason, and Retry queues the
- * job again (spec §5.1). A Reading with no usable Source also discards its research, so Retry searches again.
- * Targeted repair of a Lesson the whole-Course Judge names is not built; Retry judges the Course again. A sequence that
- * misses the goal ends the job `needs_new_blueprint` with no Retry: the structural return is SEN-85.
+ * job again (spec §5.1). Packs with nothing to cite are never stored, and vetting that empties a Reading's evidence
+ * discards its stored packs, so either way Retry searches for that Reading again.
+ * Targeted repair of a Lesson the whole-Course Judge names is not built; Retry judges the Course again.
+ *
+ * A sequence that misses the goal is the one failure Retry cannot help, so the run makes the structural return itself
+ * (spec §5.1, SEN-85): the job ends `needs_new_blueprint`, every unpublished Lesson and stored pack of the failed plan
+ * is discarded, the approved snapshot is cleared with the Judge's reasons left on the draft, and the Request goes to
+ * `blueprint_preparing` with a queued Blueprint job — so the Learner comes back to a new plan to review, not a dead end.
  * @param options - Injected research, Generators, and Judge; tests pass fixtures
  */
 export function createCourseGeneration(options: CourseGenerationOptions = {}): CourseGeneration {
@@ -228,18 +285,28 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       const stored = await db.select().from(lessonResearch).where(eq(lessonResearch.courseRequestId, courseRequestId));
       const packsBySlot = new Map(stored.map((row) => [row.slotId, row.sourcePacks as SourcePack[]]));
       const unresearched = slots.filter((slot) => slot.method === readingPlugin.id && !finishedSlotIds.has(slot.id) && !packsBySlot.has(slot.id));
+      /** Slots whose whole query ladder came back with nothing to cite, and whether a vendor simply never answered. */
+      const empty = new Map<string, boolean>();
       if (unresearched.length) {
         stage = { kind: "research" };
         await control.progress("research", null);
         // Every call runs to the end, even after one fails, so each finished slot is stored and Resume skips it.
         const outcomes = await Promise.allSettled(unresearched.map(async (slot) => {
-          const packs = await withPipelineEvent("research", { label: slot.title, detail: { slotId: slot.id } }, async (step) => {
-            const found = await research(lessonResearchTopic(request.subject, slot, request.focus?.scope ?? null));
-            step.setDetail({ packs: found.map((pack) => ({ adapter: pack.adapter, status: pack.status, sources: pack.sources.length })) });
+          const search = await withPipelineEvent("research", { label: slot.title, detail: { slotId: slot.id } }, async (step) => {
+            const found = await searchForEvidence(research, researchQueries(request.subject, slot, request.focus?.scope ?? null));
+            step.setDetail({
+              queries: found.queries, interrupted: found.interrupted,
+              packs: found.packs.map((pack) => ({ adapter: pack.adapter, status: pack.status, sources: pack.sources.length })),
+            });
             return found;
           });
-          await holding((transaction) => transaction.insert(lessonResearch).values({ courseRequestId, slotId: slot.id, sourcePacks: packs }));
-          packsBySlot.set(slot.id, packs);
+          // Packs with nothing to cite are not stored, so a Retry searches again instead of resuming from them.
+          if (lessonEvidence(search.packs).size === 0) {
+            empty.set(slot.id, search.interrupted);
+            return;
+          }
+          await holding((transaction) => transaction.insert(lessonResearch).values({ courseRequestId, slotId: slot.id, sourcePacks: search.packs }));
+          packsBySlot.set(slot.id, search.packs);
         }));
         const failed = outcomes.find((outcome) => outcome.status === "rejected");
         if (failed) {
@@ -251,6 +318,11 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       const unresearchable = slots.find((slot) => slot.method === readingPlugin.id && !finishedSlotIds.has(slot.id) &&
         lessonEvidence(packsBySlot.get(slot.id) ?? []).size === 0);
       if (unresearchable) {
+        // A vendor that never answered leaves the topic unjudged: that is an interruption Retry searches again, not a
+        // Lesson we can say is hard to research (spec §5.9, SEN-85).
+        if (empty.get(unresearchable.id)) {
+          throw new Error(`[course-generation: research] Research did not finish for this Reading || slotId=${unresearchable.id}`);
+        }
         stage = { kind: "lesson", title: unresearchable.title };
         throw new LessonUnresearchableError(unresearchable.id);
       }
@@ -389,14 +461,33 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         // What the failure can promise a Retry keeps depends on how many Lessons are checkpointed (SEN-95).
         const written = await db.select({ id: unpublishedLessons.id }).from(unpublishedLessons)
           .where(eq(unpublishedLessons.courseRequestId, courseRequestId));
+        const settled = settledStatus(error);
+        // A sequence that misses the goal is the plan's fault, so the Request goes back for a new one (spec §5.1, SEN-85).
+        const [plan] = settled === "needs_new_blueprint"
+          ? await db.select().from(courseBlueprints).where(eq(courseBlueprints.courseRequestId, courseRequestId)).limit(1)
+          : [];
         await db.transaction(async (transaction) => {
-          await control.settle(transaction, settledStatus(error));
+          await control.settle(transaction, settled);
           if (error instanceof LessonUnresearchableError) {
             await transaction.delete(lessonResearch)
               .where(and(eq(lessonResearch.courseRequestId, courseRequestId), eq(lessonResearch.slotId, error.slotId)));
           }
-          await transaction.update(courseRequests).set({ status: "generation_failed", failureReason: failureReason(stage, error, written.length) })
+          const structural = plan !== undefined && error instanceof CourseFailedError ? error : null;
+          const [moved] = await transaction.update(courseRequests)
+            .set({ status: structural ? "blueprint_preparing" : "generation_failed", failureReason: failureReason(stage, error, written.length) })
             .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "generating"))).returning({ id: courseRequests.id });
+          // Only a Request this run still owned is taken apart: one that moved on (a Cancel, or a publish) keeps everything.
+          if (!structural || !moved) return;
+          // Nothing written under the failed plan survives it: its Lessons are discarded (spec §5.1), and its stored
+          // research is keyed to slot ids the new plan will not have.
+          await transaction.delete(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
+          await transaction.delete(lessonResearch).where(eq(lessonResearch.courseRequestId, courseRequestId));
+          // The approved snapshot goes, so no worker generates this plan again; the draft carries why it has to change.
+          const { learnerFeedback: _marks, ...draft } = plan.draft;
+          await transaction.update(courseBlueprints)
+            .set({ draft: { ...draft, sequenceFailure: { reasons: structural.judge?.reasons ?? [] } }, approved: null, approvedAt: null })
+            .where(eq(courseBlueprints.id, plan.id)).returning({ id: courseBlueprints.id });
+          await enqueueJob(transaction, { courseRequestId, learnerId, kind: "blueprint" });
         });
       } catch (recordError) {
         if (recordError instanceof LeaseLostError) throw error;

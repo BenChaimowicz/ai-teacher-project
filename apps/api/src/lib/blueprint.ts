@@ -37,6 +37,11 @@ export type BlueprintInput = {
   profile: { instructionLanguage: "en"; quizCadence: QuizCadence; explanationOrder: ExplanationOrder };
   /** Set when the Learner reviewed a design and marked Lessons as not relevant (spec §4.4): redesign from their marks. */
   revision?: { previousBlueprint: CourseBlueprint; feedback: BlueprintFeedback };
+  /**
+   * Set by the structural return, after the finished Course's sequence missed the Learning Goal (spec §6.5, SEN-85):
+   * redesign a plan that reaches it. Never set together with `revision`, which belongs to a plan not yet generated.
+   */
+  sequenceRedesign?: { previousBlueprint: CourseBlueprint; reasons: string[] };
 };
 
 /** Revisions after the first design fails its checks (spec §6.2): initial design + two revisions, like a Lesson's repairs. */
@@ -113,6 +118,11 @@ If "learnerMarkedIrrelevant" is present, the Learner marked those Lessons of an 
 const LEARNER_REVISE_PROMPT = `${AUTHOR_PROMPT}
 
 You are redesigning a Course Blueprint after the Learner reviewed it. "previousBlueprint" is the design they saw. "learnerMarkedIrrelevant" lists the Lessons they marked as not relevant to them, and "learnerReason" says why when they gave a reason (already_know: they already know it; not_my_goal: it is not what they want from this Course). Return a complete Blueprint without those Lessons. Do not teach their content again under another title, unless the Learning Goal cannot be reached without it; then fold in only what is needed, inside another Lesson. Keep the Lessons the Learner did not mark, and follow every rule above, including the Quiz cadence and the Lesson count.`;
+
+const SEQUENCE_REDESIGN_PROMPT = `${AUTHOR_PROMPT}
+
+You are planning a Course again after the first plan failed. "previousBlueprint" is that plan. Every Lesson in it was written and passed its own checks, but the finished Course was then judged on whether the Lessons, taken in order, reach the Learning Goal — and it failed. "sequenceProblems" is what that review said.
+Design a different plan that reaches the Learning Goal. Change what the problems point at: what the sequence is missing, the order it teaches in, or where it stops short. Do not return the same plan with new titles, and do not simply add Lessons to the end. Every Lesson written from the old plan has been discarded, so you are free to plan the whole Course again.`;
 
 const JUDGE_PROMPT = `You independently review a Course Blueprint before the Learner sees it. You did not write it.
 "inPlace" capabilities are already evidenced for this Learner; "remainingGap" capabilities are not. Fail a check only for a clear problem, not for style.
@@ -291,10 +301,19 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
         ...(marked ? { learnerMarkedIrrelevant: marked, learnerReason: input.revision!.feedback.reason } : {}),
       };
       const author = { schemaName: "course_blueprint", timeoutMs: AUTHOR_TIMEOUT_MS, reasoningMaxTokens: AUTHOR_REASONING_TOKENS, schema: BLUEPRINT_SCHEMA, parse: parseAuthoredBlueprint };
-      // After Learner review, the first design is a redesign of the plan they marked (spec §4.4).
+      // After Learner review, the first design is a redesign of the plan they marked (spec §4.4); after the structural
+      // return, of the plan whose written Lessons did not reach the goal (spec §6.5, SEN-85).
       const first = input.revision
         ? await generator.generateStructured({
           ...author, systemPrompt: authorPrompt(LEARNER_REVISE_PROMPT), input: { ...authorInput, previousBlueprint: authoredShape(input.revision.previousBlueprint) },
+        })
+        : input.sequenceRedesign
+        ? await generator.generateStructured({
+          ...author, systemPrompt: authorPrompt(SEQUENCE_REDESIGN_PROMPT),
+          input: {
+            ...authorInput, previousBlueprint: authoredShape(input.sequenceRedesign.previousBlueprint),
+            sequenceProblems: input.sequenceRedesign.reasons,
+          },
         })
         : await generator.generateStructured({ ...author, systemPrompt: authorPrompt(AUTHOR_PROMPT), input: authorInput });
       let blueprint = first.value;

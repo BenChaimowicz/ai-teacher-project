@@ -169,6 +169,13 @@
       "when": 1793218225074,
       "tag": "0023_20261028201025_starting_level_lease",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793273699426,
+      "tag": "0024_20261029113459_revised_job",
+      "breakpoints": true
     }
   ]
 }

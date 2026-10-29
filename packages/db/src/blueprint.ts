@@ -54,12 +54,24 @@ export type IrrelevantReason = (typeof IRRELEVANT_REASONS)[number];
 /** The Learner's marks on a Blueprint under review. The next Blueprint run revises from them, then they are gone. */
 export type BlueprintFeedback = { irrelevantSlotIds: string[]; reason: IrrelevantReason | null };
 
+/**
+ * Why a finished Course's sequence had to be planned again: the whole-Course Judge found that the written Lessons,
+ * taken in order, do not reach the Learning Goal (spec §6.5). Carried on the draft so the structural return's
+ * redesign knows what to avoid (SEN-85).
+ */
+export type SequenceFailure = { reasons: string[] };
+
 /** The Module and Lesson sequence for the remaining gap alone. */
 export type CourseBlueprint = {
   courseTitle: string;
   modules: BlueprintModule[];
   /** Set on a draft while its revision from the Learner's review is queued (SEN-87). */
   learnerFeedback?: BlueprintFeedback;
+  /**
+   * Set on a draft the structural return un-approved, while its redesign is queued (SEN-85). Never set together with
+   * `learnerFeedback`: the return clears the Learner's marks, which belong to a plan that has already been generated.
+   */
+  sequenceFailure?: SequenceFailure;
 };
 
 /** The binary verdict of a Judge check (spec §6.1). */

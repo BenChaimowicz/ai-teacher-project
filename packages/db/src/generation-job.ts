@@ -11,14 +11,16 @@ export type GenerationJobKind = (typeof GENERATION_JOB_KINDS)[number];
  * Where a generation job is in its lifecycle (spec §5.1). `queued` waits for a worker; `running` is held by one
  * worker's lease; `cancelled` and `interrupted` keep their checkpoints and wait for the Learner's Resume; `failed`
  * (checks did not pass) waits for the Learner's Retry; `needs_new_blueprint` (the finished Lessons, taken in order, do
- * not reach the Learning Goal) and `succeeded` (published) are final. Retrying cannot fix a sequence: that needs the
- * structural return to Blueprint review (spec §6.5, SEN-85).
+ * not reach the Learning Goal), `revised` (the Learner took the Request's subject to a new Request instead, so this one
+ * stays failed with its checkpoints discarded, spec §5.1), and `succeeded` (published) are final. Retrying cannot fix
+ * a sequence: that needs the structural return to Blueprint review (spec §6.5, SEN-85), which queues the Request's
+ * Blueprint job again and leaves this one `needs_new_blueprint` until the new plan is approved.
  *
  * The Request's status moves in the same transaction as the job's: the Request is `blueprint_preparing` exactly while
  * its Blueprint job is `queued` or `running`, and `generating` exactly while its Course job is. A Blueprint job ends
  * `succeeded` or `failed`; it is never cancelled or interrupted.
  */
-export const GENERATION_JOB_STATUSES = ["queued", "running", "cancelled", "interrupted", "failed", "needs_new_blueprint", "succeeded"] as const;
+export const GENERATION_JOB_STATUSES = ["queued", "running", "cancelled", "interrupted", "failed", "needs_new_blueprint", "revised", "succeeded"] as const;
 
 /** One generation job status. */
 export type GenerationJobStatus = (typeof GENERATION_JOB_STATUSES)[number];

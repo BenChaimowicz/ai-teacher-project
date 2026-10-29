@@ -172,7 +172,14 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
       <>
         {view ? (
           <>
-            <CompanionLine mood="think"><WorkingLine>Redoing the plan without those lessons… This takes a minute or two.</WorkingLine></CompanionLine>
+            {/* A reason here came from the structural return: the plan is being redone because its lessons missed the
+                goal, not because the Learner unticked any (SEN-85). */}
+            {record.failureReason ? <CompanionLine mood="think"><span role="alert">{record.failureReason}</span></CompanionLine> : null}
+            <CompanionLine mood="think">
+              <WorkingLine>
+                {record.failureReason ? "Working out a better plan… This takes a minute or two." : "Redoing the plan without those lessons… This takes a minute or two."}
+              </WorkingLine>
+            </CompanionLine>
             <PlanCard view={view} subject={record.subject} className="mk-dim" />
           </>
         ) : (
@@ -181,7 +188,7 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
           </CompanionLine>
         )}
         {loadError ? <CompanionLine continued><span className="mk-faint">{loadError} Still trying…</span></CompanionLine> : null}
-        <ThreadEnd watch={`${record.status}|${Boolean(view)}`} />
+        <ThreadEnd watch={`${record.status}|${Boolean(view)}|${record.failureReason}`} />
       </>
     );
   }

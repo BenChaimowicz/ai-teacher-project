@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { and, eq, isNull } from "drizzle-orm";
-import { courseRequests, TEACHING_PROFILE_VERSION, type ValidityClarification } from "@senoy/db";
+import { courseRequests, generationJobs, unpublishedLessons, TEACHING_PROFILE_VERSION, type ValidityClarification } from "@senoy/db";
 import { recordProductEvent, withPipelineEvent } from "../lib/usage-tracking.ts";
 import { createValidityGate, type ValidityGate } from "../lib/validity.ts";
 
@@ -155,11 +155,23 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
       }
       // The current (possibly focused) goal carries over as editable text; `focus` does not, so the draft goes through
       // Validity and focusing again, where a precise goal passes straight through (SEN-90).
-      const [draft] = await app.db.insert(courseRequests).values({
-        learnerId: request.currentLearner.id, subject: row.subject, learningGoal: row.learningGoal,
-        status: "draft", revisedFromId: row.id,
-      }).returning(requestFields);
-      if (!draft) throw new Error("Revised Request was not saved.");
+      const draft = await app.db.transaction(async (transaction) => {
+        const [created] = await transaction.insert(courseRequests).values({
+          learnerId: request.currentLearner.id, subject: row.subject, learningGoal: row.learningGoal,
+          status: "draft", revisedFromId: row.id,
+        }).returning(requestFields);
+        if (!created) throw new Error("Revised Request was not saved.");
+        // After a generation failure the revised draft takes over: the failed Request stays failed, its unpublished
+        // Lessons are discarded, and its job ends `revised` so nothing can Retry it (spec §5.1). Published Courses are
+        // in their own tables and are never touched; a rejected Request never generated and has nothing to discard.
+        if (row.status === "generation_failed") {
+          await transaction.delete(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, row.id));
+          await transaction.update(generationJobs).set({ status: "revised", claimToken: null, leaseExpiresAt: null, updatedAt: new Date() })
+            .where(and(eq(generationJobs.courseRequestId, row.id), eq(generationJobs.kind, "course")))
+            .returning({ id: generationJobs.id });
+        }
+        return created;
+      });
       void recordProductEvent("course_request_created", {
         learnerId: request.currentLearner.id, courseRequestId: draft.id, detail: { revisedFromId: row.id, from: row.status },
       });

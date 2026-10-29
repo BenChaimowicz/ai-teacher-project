@@ -3,7 +3,9 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { test } from "node:test";
 import {
+  courseBlueprints,
   courseRequests,
+  generationJobs,
   learners,
   lessonResearch,
   parseTeachingProfileAnswers,
@@ -19,7 +21,7 @@ import {
 import type { SourcePack } from "@senoy/research";
 import { fakeDb } from "../routes/fake-db.ts";
 import type { CourseJudge, CourseOutline } from "./course-judge.ts";
-import { createCourseGeneration, CourseFailedError, failureReason, lessonResearchTopic } from "./course-generation.ts";
+import { createCourseGeneration, CourseFailedError, failureReason, lessonResearchTopic, researchQueries, searchForEvidence } from "./course-generation.ts";
 import { LeaseLostError, type GenerationControl, type SettledStatus } from "./generation-job.ts";
 import { QuizFailedError, type AuthoredItem, type QuizGenerator, type QuizInput, type QuizRound } from "./quiz-generation.ts";
 import { loadModelConfig } from "./model-config.ts";
@@ -48,8 +50,9 @@ const APPROVED: ApprovedBlueprint = {
   },
 };
 
-/** Every table a generation run touches. */
-const TABLES = [courseRequests, learners, startingLevelDiagnostics, lessonResearch, unpublishedLessons, publishedCourses, publishedModules, publishedLessons];
+/** Every table a generation run touches, including the ones the structural return writes (SEN-85). */
+const TABLES = [courseRequests, learners, startingLevelDiagnostics, lessonResearch, unpublishedLessons, publishedCourses,
+  publishedModules, publishedLessons, courseBlueprints, generationJobs];
 
 /** One grounded Source: research with nothing to cite fails the Course before writing (spec §5.9). */
 const SOURCE = { sourceId: "src_aaaaaaaaaa", url: "https://en.wikipedia.org/wiki/Yggdrasil", excerpts: [{ id: "e1", text: "Yggdrasil is the world tree." }] };
@@ -216,6 +219,14 @@ async function run(
       remainingGapStatement: "Your Course would start at the World Tree.",
     },
   });
+  // The approved plan the run generates from, as Approve stored it, with its job: the structural return un-approves
+  // this row and queues the Blueprint job again (SEN-85).
+  await db.insert(courseBlueprints).values({
+    courseRequestId: request!.id, learnerId: learner!.id, draft: approved.blueprint, sequenceMode: approved.sequenceMode,
+    judge: { pass: true, failedChecks: [], reasons: [] }, approved, approvedAt: new Date(approved.approvedAt),
+  });
+  await db.insert(generationJobs).values({ courseRequestId: request!.id, learnerId: learner!.id, kind: "blueprint", status: "succeeded" });
+  await db.insert(generationJobs).values({ courseRequestId: request!.id, learnerId: learner!.id, kind: "course", status: "running" });
   await before?.(db, request!.id);
   const topics: string[] = [];
   const { readingGenerator, inputs } = recordingGenerator(fail === "reading");
@@ -280,7 +291,73 @@ test("Research with no usable Source fails the Course before writing, and discar
   assert.equal(stored().status, "generation_failed");
   assert.match(stored().failureReason!, /^We couldn't find reliable Sources for the Lesson “The World Tree”\. Retry searches for it again/);
   assert.deepEqual(job.settled, ["failed"]);
-  assert.equal(rows.get(lessonResearch)!.length, 0, "The empty research is discarded.");
+  assert.equal(rows.get(lessonResearch)!.length, 0, "Packs with nothing to cite are not stored, so Retry searches again.");
+});
+
+test("An empty Source pack is searched again with broader queries before the Course can fail for it (spec §5.9)", async () => {
+  const empty = [{ slot: "primary", status: "empty_vendor", sources: [] }, { slot: "secondary", status: "empty_filtered", sources: [] }] as unknown as SourcePack[];
+  const { started, rows, topics, inputs, stored, job } = await run(null, undefined, undefined, APPROVED, async () => empty);
+  await assert.rejects(started, (error: unknown) => error instanceof LessonUnresearchableError && error.slotId === "slot1");
+
+  assert.deepEqual(topics, researchQueries("Norse mythology", APPROVED.blueprint.modules[0]!.slots[0]!, null),
+    "Three queries, broadest last, before the Lesson is called hard to research.");
+  assert.equal(topics.length, 3);
+  assert.doesNotMatch(topics[1]!, /Covers:/, "The second query drops the objective list.");
+  assert.equal(topics[2], "The World Tree (Norse mythology)", "The third is the bare title and subject.");
+  assert.equal(inputs.length, 0, "Nothing is written from empty research.");
+  assert.equal(rows.get(lessonResearch)!.length, 0);
+  assert.equal(stored().status, "generation_failed");
+  assert.match(stored().failureReason!, /^We couldn't find reliable Sources for the Lesson “The World Tree”\./);
+  assert.deepEqual(job.settled, ["failed"]);
+});
+
+test("A broader query that finds Sources stops the ladder: those packs are stored and the Course is written from them", async () => {
+  const empty = [{ slot: "primary", status: "empty_vendor", sources: [] }] as unknown as SourcePack[];
+  const { started, rows, topics, inputs, stored } = await run(null, undefined, undefined, APPROVED,
+    async (topic) => (/Covers:/.test(topic) ? empty : PACKS));
+  await started;
+
+  assert.equal(topics.length, 2, "The ladder stops at the query that found something.");
+  const research = rows.get(lessonResearch)! as (typeof lessonResearch.$inferSelect)[];
+  assert.deepEqual(research.map((row) => row.sourcePacks), [PACKS], "Only the packs with something to cite are stored.");
+  assert.deepEqual(inputs[0]!.packs, PACKS);
+  assert.equal(stored().status, "published");
+});
+
+test("A vendor that never answered is an interruption, not a hard-to-research Lesson (SEN-85)", async () => {
+  for (const status of ["timed_out", "error"] as const) {
+    const unfinished = [{ slot: "primary", status, sources: [] }, { slot: "secondary", status: "empty_vendor", sources: [] }] as unknown as SourcePack[];
+    const { started, rows, topics, stored, job } = await run(null, undefined, undefined, APPROVED, async () => unfinished);
+    await assert.rejects(started, /Research did not finish/);
+
+    assert.equal(topics.length, 1, `A ${status} call says nothing about the topic, so broadening the query would answer the wrong question.`);
+    assert.equal(rows.get(lessonResearch)!.length, 0, "Nothing is stored, so Retry searches again.");
+    assert.deepEqual(job.settled, ["interrupted"], `A ${status} call is retried, not a terminal failure.`);
+    assert.equal(stored().status, "generation_failed");
+    assert.match(stored().failureReason!, /^Generation was interrupted while researching your Lessons\./);
+    assert.doesNotMatch(stored().failureReason!, /reliable Sources/);
+  }
+});
+
+test("The query ladder broadens by deletion, keeping the Learner's confirmed scope until the last query (SEN-90)", () => {
+  const slot = APPROVED.blueprint.modules[0]!.slots[0]!;
+  const scope = { inScope: ["Cosmology"], outOfScope: ["Later retellings"] };
+  const queries = researchQueries("Norse mythology", slot, scope);
+  assert.equal(queries[0], lessonResearchTopic("Norse mythology", slot, scope));
+  assert.equal(queries[1], "The World Tree (Norse mythology). Describe how Yggdrasil connects the Nine Worlds. Focus: Cosmology.");
+  assert.equal(queries[2], "The World Tree (Norse mythology)");
+  assert.deepEqual(new Set(queries).size, 3, "Each query is a different search.");
+});
+
+test("The search for one Reading's evidence stops at the first pack with something to cite", async () => {
+  const empty = [{ slot: "primary", status: "empty_vendor", sources: [] }] as unknown as SourcePack[];
+  const asked: string[] = [];
+  const found = await searchForEvidence(async (query) => { asked.push(query); return query === "c" ? PACKS : empty; }, ["a", "b", "c"]);
+  assert.deepEqual([asked, found.queries, found.interrupted], [["a", "b", "c"], ["a", "b", "c"], false]);
+  assert.deepEqual(found.packs, PACKS);
+
+  const gaveUp = await searchForEvidence(async () => empty, ["a", "b"]);
+  assert.deepEqual([gaveUp.queries, gaveUp.interrupted], [["a", "b"], false]);
 });
 
 test("The whole-Course Judge is told every model that wrote a Lesson; a checkpoint from before SEN-57 names the primary", async () => {
@@ -444,20 +521,47 @@ test("A failed whole-Course Judge publishes nothing, keeps the checkpoints, and 
   assert.deepEqual(job.settled, ["failed"], "A Lesson the Judge names waits for Retry.");
 });
 
-test("A whole-Course sequence that misses the goal ends the job for good: no Retry, and the reason says so", async () => {
+test("A whole-Course sequence that misses the goal makes the structural return: Lessons discarded, plan un-approved, redesign queued", async () => {
   const { started, rows, stored, job } = await run(null, () => ({
     async judge() {
       return { pass: false, failedChecks: ["sequence_reaches_goal"], reasons: ["Covers two myths, not the main stories."] };
     },
   }));
   await assert.rejects(started, CourseFailedError);
-  assert.deepEqual(job.settled, ["needs_new_blueprint"]);
+  assert.deepEqual(job.settled, ["needs_new_blueprint"], "Retrying the same plan is never offered.");
   assert.equal(rows.get(publishedCourses)!.length, 0);
-  assert.equal(rows.get(unpublishedLessons)!.length, 2, "Checkpoints stay until the structural return (SEN-85) discards them.");
-  assert.equal(stored().status, "generation_failed");
+  assert.equal(rows.get(unpublishedLessons)!.length, 0, "Every Lesson written under the failed plan is discarded (spec §5.1).");
+  assert.equal(rows.get(lessonResearch)!.length, 0, "Its research is keyed to slot ids the new plan will not have.");
+
+  const [plan] = rows.get(courseBlueprints)! as (typeof courseBlueprints.$inferSelect)[];
+  assert.deepEqual([plan!.approved, plan!.approvedAt], [null, null], "No worker generates this plan again.");
+  assert.deepEqual(plan!.draft.sequenceFailure, { reasons: ["Covers two myths, not the main stories."] },
+    "The redesign is told what the sequence failed on.");
+  assert.equal(plan!.draft.courseTitle, "Norse cosmology", "The failed plan is still there for the redesign to read.");
+
+  assert.equal(stored().status, "blueprint_preparing", "The Request returns to Blueprint review by way of a new design.");
   assert.match(stored().failureReason!, /don't reach your Learning Goal/);
-  assert.match(stored().failureReason!, /Start a new Course Request from Home/);
+  assert.match(stored().failureReason!, /planning it again/);
   assert.doesNotMatch(stored().failureReason!, /Retry /);
+  const jobs = rows.get(generationJobs)! as (typeof generationJobs.$inferSelect)[];
+  assert.deepEqual(jobs.find((row) => row.kind === "blueprint")!.status, "queued", "The redesign is queued in the same transaction.");
+});
+
+test("A structural failure leaves a Request that moved on alone: nothing is discarded and no redesign is queued", async () => {
+  const { started, rows, stored } = await run(null, (tables) => ({
+    async judge() {
+      // The Learner cancelled while the whole-Course Judge was reading the outline.
+      (tables.get(courseRequests)![0] as { status: string }).status = "generation_cancelled";
+      return { pass: false, failedChecks: ["sequence_reaches_goal"], reasons: ["Covers two myths."] };
+    },
+  }));
+  await assert.rejects(started, CourseFailedError);
+  assert.equal(stored().status, "generation_cancelled");
+  assert.equal(rows.get(unpublishedLessons)!.length, 2, "Checkpoints of a Request this run no longer owns are kept.");
+  const [plan] = rows.get(courseBlueprints)! as (typeof courseBlueprints.$inferSelect)[];
+  assert.notEqual(plan!.approved, null, "The approved plan survives a failure that is no longer ours to record.");
+  const jobs = rows.get(generationJobs)! as (typeof generationJobs.$inferSelect)[];
+  assert.equal(jobs.find((row) => row.kind === "blueprint")!.status, "succeeded");
 });
 
 test("Publish is all or nothing: a Request that stopped generating leaves no published rows", async () => {
