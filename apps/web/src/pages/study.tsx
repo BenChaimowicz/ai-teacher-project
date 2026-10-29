@@ -15,6 +15,7 @@ import { PageLoader } from "@/components/ui/loader.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
 import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
 import { requestJson } from "@/lib/api.ts";
+import { markOpened } from "@/lib/course-list.ts";
 import type { StudyLesson, StudyModule, StudyPayload } from "@/lib/study-types.ts";
 import { renderForTeachingMethod } from "@/teaching-methods/register.ts";
 
@@ -156,6 +157,11 @@ function StudyScreen() {
   const [switchError, setSwitchError] = useState<string | null>(null);
 
   const sectionAdvance = record?.resolved?.sectionAdvance.value ?? "continuous";
+
+  // Opening a Course makes it the current course in the sidebar and on Home.
+  useEffect(() => {
+    if (courseId) markOpened({ kind: "course", id: courseId });
+  }, [courseId]);
 
   useEffect(() => {
     if (!courseId) return;

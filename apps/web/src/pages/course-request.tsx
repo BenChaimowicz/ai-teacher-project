@@ -1,6 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useCompanionLines } from "@/components/companion/companion-provider.tsx";
 import { FlowSteps, FlowTitle, MAKE_STEPS } from "@/components/make-course/flow.tsx";
 import { FOCUS_STATUSES, FocusHistory, FocusStage } from "@/components/make-course/focus-stage.tsx";
@@ -14,6 +14,7 @@ import { ChatThread } from "@/components/ui/chat-thread.tsx";
 import { PageLoader } from "@/components/ui/loader.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
 import { requestJson } from "@/lib/api.ts";
+import { markOpened } from "@/lib/course-list.ts";
 import type { CourseRequestRecord } from "@/lib/course-request-types.ts";
 
 const LINES = {
@@ -53,11 +54,22 @@ function linesOf(status: string) {
  */
 export function CourseRequestPage() {
   const { requestId } = useParams<{ requestId: string }>();
-  const [record, setRecord] = useState<CourseRequestRecord | null>(null);
+  // New course hands over the Request it just saved, so the thread carries on without a loader in between.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const state = (location.state as { courseRequest?: CourseRequestRecord } | null)?.courseRequest;
+  const handed = state && state.id === requestId ? state : null;
+  const [record, setRecord] = useState<CourseRequestRecord | null>(handed);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
 
+  // History keeps navigation state across a reload; drop it once used, so a reload fetches the Request fresh.
   useEffect(() => {
+    if (state) navigate(location.pathname, { replace: true });
+  }, []);
+
+  useEffect(() => {
+    if (retry === 0 && handed) return;
     let cancelled = false;
     setRecord(null);
     setError(null);
@@ -66,6 +78,11 @@ export function CourseRequestPage() {
       .catch((caught: unknown) => { if (!cancelled) setError(errorText(caught, "Could not load this course.")); });
     return () => { cancelled = true; };
   }, [requestId, retry]);
+
+  // Opening a Course Request makes it the current course in the sidebar.
+  useEffect(() => {
+    if (requestId) markOpened({ kind: "course_request", id: requestId });
+  }, [requestId]);
 
   useEffect(() => onRequestChange((next) => {
     if (next.id === requestId) setRecord(next);
@@ -88,7 +105,7 @@ export function CourseRequestPage() {
     <div className="mk-page">
       <ShellTitle><FlowTitle>{record.status === "draft" ? "New course" : record.subject}</FlowTitle></ShellTitle>
       <ShellActions><FlowSteps current={stepOf(record.status)} /></ShellActions>
-      <ChatThread key={record.id}>
+      <ChatThread key={record.id} replay>
         <RequestHistory record={record} />
         {VALIDITY_STATUSES.has(record.status) ? <ValidityStage record={record} /> : null}
         {FOCUS_STATUSES.has(record.status) ? <FocusStage record={record} /> : null}

@@ -18,7 +18,7 @@
 }
 
 /* ---------- top bar: the screen's title in the display serif, and the steps ---------- */
-.mk-title { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; line-height: 1; letter-spacing: 0.005em; }
+.mk-title { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 1.6rem; line-height: 1; letter-spacing: 0.005em; }
 
 /* Steps: a small diamond per step. Done is apricot, the current one gold, the rest a dark cut. */
 .mk-steps { display: flex; gap: 6px; align-items: center; font-size: 0.78rem; color: var(--faint); list-style: none; margin: 0; padding: 0; }
@@ -32,27 +32,28 @@
 @media (max-width: 1100px) { .mk-steps li:not(.now):not(.sep) { display: none; } .mk-steps .sep { display: none; } }
 
 /* question progress in the top bar (profile) */
-.mk-qprog { display: flex; align-items: center; gap: 10px; font-family: var(--font-code); font-size: 0.72rem; color: var(--text-muted); }
+.mk-qprog { display: flex; align-items: center; gap: 10px; font-family: var(--font-label); font-size: 0.72rem; color: var(--text-muted); }
 .mk-qprog b { color: var(--a); font-weight: 700; }
 .mk-qprog .k-segs { width: 160px; }
 
 /* ---------- inline question header ---------- */
 .mk-qhead { display: inline-flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 /* "3 of 8": a mono eyebrow, as the mock labels its lessons */
-.mk-qnum { font-family: var(--font-code); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--a); white-space: nowrap; }
+.mk-qnum { font-family: var(--font-label); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--a); white-space: nowrap; }
 
 /* ---------- topic field (the only free text) ---------- */
 .mk-topic { margin: 8px 0 4px 46px; }
-.mk-topic form { display: flex; gap: 8px; align-items: center; }
+/* the button stretches to the field's height */
+.mk-topic form { display: flex; gap: 8px; align-items: stretch; }
 .mk-topic .k-field { flex: 1; }
-.mk-sugg-h { margin-top: 16px; font-family: var(--font-code); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
-.mk-sugg { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-/* a suggestion: a small paper tab that lifts on hover */
+.mk-sugg-h { margin-top: 16px; font-family: var(--font-label); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.mk-sugg { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+/* a suggestion: a paper gift tag (`.k-gift`) that lifts on hover */
 .mk-chip {
-  display: inline-flex; align-items: center; gap: 8px; padding: 8px 13px; border: 0; border-radius: 10px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 27px; border: 0; border-radius: 4px 10px 10px 4px; cursor: pointer;
   font: inherit; font-size: 0.86rem; font-weight: 500; color: var(--text); background: var(--panel); box-shadow: var(--sheet);
   animation: k-pop 0.35s var(--ease-pop) backwards; animation-delay: calc(var(--i, 0) * 50ms);
-  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.3), box-shadow 0.18s;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.3), box-shadow 0.18s, rotate 0.18s;
 }
 .mk-chip:hover { transform: translateY(-2px); box-shadow: var(--stack); }
 .mk-chip:active { transform: translateY(0); }
@@ -63,7 +64,7 @@
 .mk-focus { padding: 16px 18px; }
 .mk-focus-goal { font-weight: 700; font-size: 1rem; line-height: 1.45; overflow-wrap: anywhere; }
 .mk-scope { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
-.mk-scope h5 { font-family: var(--font-code); font-size: 0.64rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--a); }
+.mk-scope h5 { font-family: var(--font-label); font-size: 0.64rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--a); }
 .mk-scope .out h5 { color: var(--faint); }
 .mk-scope ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 5px; }
 /* each facet: a small paper diamond, apricot for covered, a dark cut for left out */
@@ -96,7 +97,7 @@
 .mk-cover { width: 44px; height: 44px; border-radius: 11px; flex: none; display: grid; place-items: center; color: var(--a); background: var(--panel-2); box-shadow: var(--sheet); }
 .mk-cover.big { width: 84px; height: 84px; border-radius: 16px; box-shadow: var(--stack); }
 .mk-summary { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
-.mk-summary span { font-family: var(--font-code); font-size: 0.7rem; padding: 4px 9px; border-radius: 7px; background: var(--well); box-shadow: var(--inset); color: var(--text-muted); }
+.mk-summary span { font-family: var(--font-label); font-size: 0.7rem; padding: 4px 9px; border-radius: 7px; background: var(--well); box-shadow: var(--inset); color: var(--text-muted); }
 .mk-summary span b { color: var(--text); font-weight: 700; }
 /* one paper pip per Lesson: apricot for a reading, cream for a quiz; unticked ones fold away */
 .mk-plan-bar { display: flex; height: 6px; gap: 4px; margin-top: 14px; }
@@ -112,14 +113,14 @@ label.mk-lesson:focus-within { outline: 2px solid var(--a); outline-offset: 1px;
 .mk-lesson.off .lt small { text-decoration: none; }
 .mk-lesson.off .k-rib { opacity: 0.5; }
 .mk-lesson input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.mk-lesson .n { width: 22px; flex: none; color: var(--faint); font-family: var(--font-code); font-size: 0.75rem; text-align: right; }
+.mk-lesson .n { width: 22px; flex: none; color: var(--faint); font-family: var(--font-label); font-size: 0.75rem; text-align: right; }
 .mk-lesson .lt { flex: 1; min-width: 0; font-weight: 600; font-size: 0.92rem; overflow-wrap: anywhere; }
 .mk-lesson .lt small { display: block; font-weight: 400; color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
 /* the tick: a cut-out well that fills with apricot */
 .mk-check { width: 20px; height: 20px; border-radius: 5px; flex: none; display: grid; place-items: center; background: var(--well); box-shadow: var(--inset); transition: background var(--dur-fast); }
 .mk-check.on { background: var(--a); box-shadow: 0 2px 0 var(--a-deep); }
 .mk-check.on::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--on-a); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
-.mk-module { margin-top: 16px; font-family: var(--font-code); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.mk-module { margin-top: 16px; font-family: var(--font-label); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
 
 /* Step by step / Jump around: a cut-out track; the pick is a paper tab sitting in it */
 .mk-seg { display: inline-flex; gap: 2px; margin-top: 16px; padding: 3px; border: 0; border-radius: 11px; background: var(--well); box-shadow: var(--inset); }
@@ -140,16 +141,26 @@ label.mk-lesson:focus-within { outline: 2px solid var(--a); outline-offset: 1px;
 .mk-stages li { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; color: var(--faint); }
 .mk-stages li.done { color: var(--text-muted); }
 .mk-stages li.now { color: var(--text); font-weight: 600; }
-/* a stage's mark: a cut-out well; done fills apricot, the one being made holds a gold thread, a stop is red */
+/* a stage's mark: a cut-out well; done fills apricot, the one being made spins a paper pinwheel, a stop is red */
 .mk-dot { width: 20px; height: 20px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--well); box-shadow: var(--inset); }
 .mk-dot svg { width: 12px; height: 12px; }
 .mk-stages li.done .mk-dot, .mk-wlist li.done .mk-dot { background: var(--a); color: var(--on-a); box-shadow: none; }
-.mk-stages li.now .mk-dot::after, .mk-wlist li.now .mk-dot::after { content: ""; width: 7px; height: 7px; transform: rotate(45deg); background: var(--gold); animation: k-pulse 1.2s infinite; }
+/* the pinwheel: four folded blades, light and shaded in turn, spinning on a cream pin */
+.mk-stages li.now .mk-dot::after, .mk-wlist li.now .mk-dot::after {
+  content: ""; grid-area: 1 / 1; width: 14px; height: 14px;
+  background: conic-gradient(var(--gold) 0 25%, #a9772c 25% 50%, var(--gold) 50% 75%, #a9772c 75%);
+  clip-path: polygon(50% 50%, 50% 0, 100% 0, 50% 50%, 100% 50%, 100% 100%, 50% 50%, 50% 100%, 0 100%, 50% 50%, 0 50%, 0 0);
+  animation: mk-pinwheel 1.6s linear infinite;
+}
+.mk-stages li.now .mk-dot::before, .mk-wlist li.now .mk-dot::before {
+  content: ""; grid-area: 1 / 1; z-index: 1; width: 3px; height: 3px; border-radius: 50%; background: var(--b);
+}
+@keyframes mk-pinwheel { to { rotate: 360deg; } }
 .mk-stages li.miss .mk-dot, .mk-wlist li.miss .mk-dot { color: var(--miss); box-shadow: var(--inset), inset 0 0 0 1.5px var(--miss); }
 .mk-pct-wrap { display: flex; align-items: center; gap: 10px; }
-.mk-pct { font-family: var(--font-display); font-size: 2.4rem; font-weight: 400; line-height: 1; color: var(--a); }
+.mk-pct { font-family: var(--font-display); font-size: 2.4rem; font-weight: var(--weight-display); line-height: 1; color: var(--a); }
 .mk-making .k-bar { margin-top: 18px; }
-.mk-meta { display: flex; justify-content: space-between; gap: 10px; font-family: var(--font-code); font-size: 0.72rem; color: var(--faint); margin-top: 8px; }
+.mk-meta { display: flex; justify-content: space-between; gap: 10px; font-family: var(--font-label); font-size: 0.72rem; color: var(--faint); margin-top: 8px; }
 .mk-meta .cur { color: var(--text-muted); }
 .mk-wlist { list-style: none; margin: 16px 0 0; padding: 14px 0 0; border-top: 1px solid var(--line); display: grid; gap: 8px; }
 .mk-wlist li { display: flex; align-items: center; gap: 10px; font-size: 0.86rem; color: var(--faint); }
@@ -193,17 +204,17 @@ label.mk-lesson:focus-within { outline: 2px solid var(--a); outline-offset: 1px;
 @media (max-width: 899px) { .mk-profile { padding: 22px 16px 120px; } }
 /* the live summary: a plum sheet, like "How you like to learn" pinned in the sidebar */
 .mk-panel { position: sticky; top: 8px; border-radius: 14px; padding: 16px; background: var(--plum); box-shadow: var(--stack); }
-.mk-panel .k { font-family: var(--font-code); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--a); }
-.mk-panel h3 { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; line-height: 1.1; margin-top: 6px; }
-.mk-panel .hint { font-family: var(--font-code); font-size: 0.64rem; color: var(--text-muted); margin-top: 4px; }
+.mk-panel .k { font-family: var(--font-label); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--a); }
+.mk-panel h3 { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 1.6rem; line-height: 1.1; margin-top: 6px; }
+.mk-panel .hint { font-family: var(--font-label); font-size: 0.64rem; color: var(--text-muted); margin-top: 4px; }
 .mk-plines { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 2px; }
 .mk-pline {
   width: 100%; display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 8px; text-align: left; font: inherit; color: inherit;
   padding: 7px 8px; border-radius: 9px; border: 0; background: none; transition: background var(--dur-fast), box-shadow var(--dur-fast);
 }
-.mk-pline .pk { font-family: var(--font-code); font-size: 0.64rem; color: var(--text-muted); }
+.mk-pline .pk { font-family: var(--font-label); font-size: 0.64rem; color: var(--text-muted); }
 .mk-pline .pv { font-size: 0.82rem; font-weight: 600; color: var(--faint); }
-.mk-pline .pe { font-family: var(--font-code); font-size: 0.6rem; color: var(--a); opacity: 0; transition: opacity var(--dur-fast); }
+.mk-pline .pe { font-family: var(--font-label); font-size: 0.6rem; color: var(--a); opacity: 0; transition: opacity var(--dur-fast); }
 .mk-pline.set .pv { color: var(--text); }
 .mk-pline.def .pv { color: var(--text-muted); font-weight: 500; }
 .mk-pline.now { background: var(--plum-2); box-shadow: inset 0 0 0 1px var(--a-line); }
@@ -212,7 +223,7 @@ label.mk-lesson:focus-within { outline: 2px solid var(--a); outline-offset: 1px;
 .mk-pline:not(:disabled):hover { background: var(--plum-2); }
 .mk-pline:not(:disabled):hover .pe, .mk-pline:not(:disabled):focus-visible .pe { opacity: 1; }
 .mk-pline.fresh { animation: mk-fresh 0.9s ease-out; }
-.mk-defaulttag { font-family: var(--font-code); font-size: 0.6rem; color: var(--text-muted); font-weight: 500; }
+.mk-defaulttag { font-family: var(--font-label); font-size: 0.6rem; color: var(--text-muted); font-weight: 500; }
 .mk-oneliner { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--plum-2); font-size: 0.82rem; line-height: 1.5; color: var(--text-muted); }
 .mk-oneliner b { color: var(--text); font-weight: 700; }
 @keyframes mk-fresh { 0% { background: var(--a-soft); } 100% { background: transparent; } }
@@ -221,14 +232,14 @@ label.mk-lesson:focus-within { outline: 2px solid var(--a); outline-offset: 1px;
 .mk-ret { max-width: 760px; margin: 0 auto; padding: 32px 28px 160px; }
 .mk-ret .head { display: flex; gap: 16px; align-items: center; }
 .mk-ret .head .av { flex: none; line-height: 0; }
-.mk-ret h1 { font-family: var(--font-display); font-weight: 400; font-size: 2.5rem; line-height: 1; letter-spacing: 0.005em; }
+.mk-ret h1 { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 2.5rem; line-height: 1; letter-spacing: 0.005em; }
 .mk-ret .head p { color: var(--text-muted); font-size: 0.9rem; margin-top: 6px; }
 .mk-bigcard { margin-top: 22px; border-radius: 14px; padding: 6px; background: var(--panel); box-shadow: var(--stack); list-style: none; }
 .mk-bline { display: grid; grid-template-columns: 34px 120px 1fr auto; gap: 12px; align-items: center; padding: 12px; border-radius: 10px; }
 .mk-bline + .mk-bline { border-top: 1px solid var(--line); }
 .mk-bline .ic { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: var(--a); background: var(--well); box-shadow: var(--inset); }
 .mk-bline .ic svg { width: 17px; height: 17px; }
-.mk-bline .bk { font-family: var(--font-code); font-size: 0.7rem; color: var(--text-muted); }
+.mk-bline .bk { font-family: var(--font-label); font-size: 0.7rem; color: var(--text-muted); }
 .mk-bline .bv { font-weight: 600; min-width: 0; }
 .mk-bline .bv small { display: block; color: var(--text-muted); font-weight: 400; font-size: 0.8rem; margin-top: 1px; }
 /* change: a ghost tab, as the kit's ghost button */

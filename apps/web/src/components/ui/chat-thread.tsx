@@ -1,16 +1,38 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { COMPANION_NAME } from "@/lib/brand-marks.ts";
 import { prefersReducedMotion } from "@/lib/cheer.ts";
 import { Jongi, type JongiMood } from "@/components/companion/jongi.tsx";
 import { cn } from "@/lib/utils";
 
+/** The kit's entrance animations: what a replayed thread skips. */
+const ENTRANCES = new Set(["k-in", "k-pop"]);
+
+type ChatThreadProps = {
+  children: ReactNode;
+  className?: string;
+  label?: string;
+  /**
+   * The thread opens on saved history (a Course Request, a quiz in progress): whatever is there when it mounts shows at
+   * once instead of every line fading in together. Lines added later still animate.
+   */
+  replay?: boolean;
+};
+
 /**
  * Chat-like column: the companion's lines, the Learner's echoed picks, and cards.
  * History scrolls up; put the current step's OptionTiles right after the latest CompanionLine.
  */
-export function ChatThread({ children, className, label = `Conversation with ${COMPANION_NAME}` }: { children: ReactNode; className?: string; label?: string }) {
+export function ChatThread({ children, className, label = `Conversation with ${COMPANION_NAME}`, replay = false }: ChatThreadProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!replay || typeof ref.current?.getAnimations !== "function") return;
+    for (const animation of ref.current.getAnimations({ subtree: true })) {
+      if ("animationName" in animation && ENTRANCES.has((animation as CSSAnimation).animationName)) animation.finish();
+    }
+    // Only what is there on mount is history.
+  }, []);
   return (
-    <div className={cn("k-thread", className)} role="log" aria-label={label} aria-live="polite">
+    <div ref={ref} className={cn("k-thread", className)} role="log" aria-label={label} aria-live="polite">
       {children}
     </div>
   );

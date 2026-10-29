@@ -9,10 +9,10 @@
 
 /* ---------- small shared bits ---------- */
 .k-mono { font-family: var(--font-code); }
-.k-wordmark { font-family: var(--font-display); font-weight: 400; font-size: 1.45rem; line-height: 1; letter-spacing: 0.01em; color: var(--text); }
+.k-wordmark { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 1.45rem; line-height: 1; letter-spacing: 0.01em; color: var(--text); }
 .k-sec-h {
   display: flex; align-items: center; gap: 8px; padding: 0 4px 6px;
-  font-family: var(--font-code); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
+  font-family: var(--font-label); font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
 }
 .k-sec-h::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .k-sec-h .n { order: 2; color: var(--faint); letter-spacing: 0.06em; }
@@ -22,7 +22,7 @@
    done (cream), stopped (neutral). Solid red is for the streak. */
 .k-rib {
   display: inline-flex; align-items: center; gap: 6px; height: 19px; padding: 0 12px 0 8px; flex: none; white-space: nowrap;
-  font-family: var(--font-code); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; line-height: 1;
+  font-family: var(--font-label); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; line-height: 1;
   clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 50%, 100% 100%, 0 100%); border-radius: 2px 0 0 2px;
   color: #e8b07a; background: rgba(var(--a-rgb), 0.16);
 }
@@ -73,6 +73,32 @@
 .k-btn.link { padding: 0; color: var(--a); font-weight: 600; background: none; }
 .k-btn.link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .k-btn:disabled:not(.primary) { opacity: 0.5; box-shadow: none; }
+/* .k-gift: a paper gift tag. A punched hole on the left (it shows --gift-hole, the surface behind; the caller leaves
+   ~27px of left padding for it), and each tag in a row hangs at a slightly different tilt that straightens on hover. */
+.k-gift { position: relative; rotate: -1deg; }
+.k-gift:nth-child(3n + 2) { rotate: 0.8deg; }
+.k-gift:nth-child(3n) { rotate: -0.4deg; }
+.k-gift:hover { rotate: 0deg; }
+.k-gift::before {
+  content: ""; position: absolute; left: 10px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%;
+  background: var(--gift-hole, var(--bg)); box-shadow: var(--recess);
+}
+/* .folded: a sheet with its top-right corner turned down; hover peels it further and nudges the trailing arrow.
+   The corner is clipped off the button (the clip reaches past the other edges, so the shadows survive),
+   so the fold reads right on any surface. */
+.k-btn.folded {
+  --fold: 13px; position: relative; padding-right: 18px; transition: transform 0.12s, box-shadow 0.12s, background var(--dur-fast), color var(--dur-fast), clip-path 0.18s;
+  clip-path: polygon(-30px -30px, calc(100% - var(--fold)) -30px, calc(100% - var(--fold)) 0, 100% var(--fold), calc(100% + 30px) var(--fold), calc(100% + 30px) calc(100% + 30px), -30px calc(100% + 30px));
+}
+.k-btn.folded::after {
+  content: ""; position: absolute; top: 0; right: 0; width: var(--fold); height: var(--fold); border-radius: 0 0 0 3px;
+  background: linear-gradient(225deg, transparent 50%, var(--a-deep) 50%); filter: drop-shadow(-1px 1px 1px rgba(0, 0, 0, 0.35));
+  transition: width 0.18s, height 0.18s;
+}
+.k-btn.folded:hover:not(:disabled) { --fold: 18px; }
+.k-btn.folded:disabled::after { background: linear-gradient(225deg, transparent 50%, #232b48 50%); filter: none; }
+.k-btn.folded svg { transition: transform var(--dur-fast); }
+.k-btn.folded:hover:not(:disabled) svg { transform: translateX(3px); }
 .k-kbd { font-family: var(--font-code); font-size: 0.64rem; font-weight: 500; padding: 2px 6px; border-radius: 4px; background: rgba(0, 0, 0, 0.18); color: inherit; opacity: 0.75; }
 
 /* ---------- input ----------
@@ -129,7 +155,7 @@
 .k-typing i:nth-child(3) { animation-delay: 0.3s; }
 .k-tcard { margin: 8px 0 4px 46px; padding: 18px; border-radius: 14px; animation: k-in 0.3s ease-out both; background: var(--panel); box-shadow: var(--sheet); }
 .k-tcard.flush { margin-left: 0; }
-.k-tcard h4 { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; line-height: 1.1; color: var(--text); }
+.k-tcard h4 { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 1.5rem; line-height: 1.1; color: var(--text); }
 .k-tcard .sub { color: var(--text-muted); font-size: 0.86rem; margin-top: 4px; }
 .k-tcard .sub + * { margin-top: 14px; }
 
@@ -167,7 +193,7 @@
 .k-tile .td { display: block; color: var(--text-muted); font-size: 0.8rem; font-weight: 400; margin-top: 2px; line-height: 1.4; }
 /* The number key hangs from the top edge like a small bookmark tab. */
 .k-tile kbd {
-  position: absolute; top: -1px; right: 12px; font-family: var(--font-code); font-size: 0.66rem; font-weight: 500; line-height: 1;
+  position: absolute; top: -1px; right: 12px; font-family: var(--font-label); font-size: 0.66rem; font-weight: 500; line-height: 1;
   color: var(--on-a); background: var(--b-deep); padding: 5px 7px 8px; border-radius: 0 0 4px 4px;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%);
 }
@@ -225,15 +251,42 @@
 .k-ring .label { position: relative; font-family: var(--font-ui); font-weight: 600; font-size: 0.8rem; }
 
 /* ---------- course rows (sidebar) and cards ---------- */
-.k-clist { display: flex; flex-direction: column; gap: 2px; }
+.k-clist { display: flex; flex-direction: column; gap: 1px; }
+/* the current course (SEN-97): one large sheet lifted onto the sidebar, with its progress and a way back in */
+.k-ccur {
+  display: flex; flex-direction: column; gap: 10px; width: 100%; text-align: left; padding: 12px 12px 11px; border-radius: 14px; color: var(--text); text-decoration: none;
+  background: var(--panel); box-shadow: var(--sheet); transition: box-shadow 0.15s, transform 0.15s;
+}
+.k-ccur:hover { box-shadow: inset 0 0 0 1px var(--a-line), var(--sheet); }
+.k-ccur.active { box-shadow: inset 0 0 0 1px var(--a-line), var(--sheet); }
+.k-ccur .top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.k-ccur .k-cico { width: 36px; height: 36px; border-radius: 9px; }
+.k-ccur .k-cico svg { width: 20px; height: 20px; }
+.k-ccur .k-cico .k-cdot { border-color: var(--panel); }
+.k-ccur .t {
+  flex: 1; min-width: 0; font-family: var(--font-display); font-weight: var(--weight-display); font-size: 0.92rem; line-height: 1.2;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+}
+.k-removable .k-ccur .t { padding-right: 18px; }
+.k-ccur .m { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.k-ccur .m .k-cbar { flex: 1; width: auto; height: 5px; }
+.k-ccur .k-rib { height: 17px; padding: 0 10px 0 6px; font-size: 0.56rem; }
+.k-ccur .go { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 0.82rem; color: var(--a); }
+.k-ccur .go svg { width: 16px; height: 16px; transition: transform var(--dur-fast); }
+.k-ccur:hover .go svg { transform: translateX(3px); }
+/* every other course: a quiet single line */
 .k-crow {
-  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 7px; border-radius: 9px; color: #cfcade; text-decoration: none;
-  transition: background 0.15s, box-shadow 0.15s, color 0.15s;
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 6px 7px; border-radius: 9px; color: var(--text-muted); text-decoration: none;
+  transition: background 0.15s, color 0.15s;
 }
 .k-crow:hover { background: rgba(255, 255, 255, 0.03); color: var(--text); }
 .k-crow.active { background: var(--panel); box-shadow: var(--sheet); color: var(--text); }
-.k-crow .t { flex: 1; min-width: 0; font-weight: 500; font-size: 0.84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.k-crow .k-rib { height: 17px; padding: 0 10px 0 6px; font-size: 0.56rem; }
+.k-crow .k-cico { width: 22px; height: 22px; border-radius: 6px; }
+.k-crow .k-cico svg { width: 13px; height: 13px; }
+.k-crow .t { flex: 1; min-width: 0; font-weight: 500; font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.k-crow .b { flex: none; font-family: var(--font-label); font-size: 0.66rem; color: var(--faint); }
+.k-removable .k-crow .b { transition: opacity var(--dur-fast); }
+.k-removable:hover .k-crow .b, .k-removable:focus-within .k-crow .b { opacity: 0; }
 .k-cdot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--a); }
 .k-cdot.making { background: var(--gold); animation: k-pulse 1.4s infinite; }
 .k-cdot.needs { background: var(--ribbon); box-shadow: 0 0 0 3px rgba(200, 71, 59, 0.22); }
@@ -253,7 +306,7 @@
 .k-cbar { width: 34px; height: 4px; border-radius: 2px; background: #080b16; box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.7); overflow: hidden; flex: none; }
 .k-cbar i { display: block; height: 100%; background: var(--a); transition: width 0.6s; }
 .k-cbar.writing { background: linear-gradient(90deg, rgba(231, 178, 80, 0.15), rgba(231, 178, 80, 0.65), rgba(231, 178, 80, 0.15)); background-size: 200% 100%; animation: k-shimmer 1.4s linear infinite; }
-.k-see-all { font-family: var(--font-code); font-size: 0.66rem; color: var(--a); padding: 4px 7px; text-align: left; text-decoration: none; }
+.k-see-all { font-family: var(--font-label); font-size: 0.66rem; color: var(--a); padding: 4px 7px; text-align: left; text-decoration: none; }
 .k-see-all:hover { text-decoration: underline; }
 
 .k-ccard {
@@ -275,11 +328,26 @@ a.k-ccard:hover { transform: translateY(-2px); box-shadow: var(--stack); }
 .k-ccard .sub { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; line-height: 1.35; }
 .k-ccard .k-rib { margin-left: auto; align-self: flex-start; }
 .k-ccard .k-segs { margin-top: 14px; }
-.k-ccard .m { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-family: var(--font-code); font-size: 0.66rem; color: var(--faint); }
+.k-ccard .m { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-family: var(--font-label); font-size: 0.66rem; color: var(--faint); }
+
+/* ---------- washi tape ----------
+   A translucent strip with pinked ends, stuck across the middle of a sheet's top edge.
+   <Tape> picks the tint, width and angle from its seed. */
+.k-tape {
+  --tape-c: rgba(var(--b-rgb), 0.24);
+  position: absolute; top: -9px; left: 50%; z-index: 3; width: var(--tape-w, 76px); height: 20px; pointer-events: none;
+  translate: -50% 0; rotate: var(--tape-r, -3deg); background-color: var(--tape-c);
+  clip-path: polygon(0 0, 100% 0, 96% 25%, 100% 50%, 96% 75%, 100% 100%, 0 100%, 4% 75%, 0 50%, 4% 25%);
+  animation: k-in 0.35s ease-out both;
+}
+.k-tape.apricot { --tape-c: rgba(var(--a-rgb), 0.32); }
+.k-tape.plum { --tape-c: rgba(176, 132, 214, 0.3); }
+.k-tape.gold { --tape-c: rgba(var(--gold-rgb), 0.28); }
 
 /* ---------- companion card (markup is phase 2's; paper styling only) ---------- */
-.k-buddy { position: relative; border-radius: 12px; padding: 11px; overflow: hidden; flex: none; background: var(--panel); box-shadow: var(--sheet); }
-.k-buddy .top { display: flex; gap: 12px; align-items: center; }
+.k-buddy-wrap { position: relative; flex: none; }
+.k-buddy { position: relative; border-radius: 12px; padding: 16px 16px 14px; overflow: hidden; flex: none; background: var(--panel); box-shadow: var(--sheet); }
+.k-buddy .top { display: flex; gap: 14px; align-items: center; }
 .k-buddy .av { position: relative; width: 60px; height: 60px; flex: none; border-radius: 50%; cursor: pointer; padding: 0; border: 0; background: none; -webkit-tap-highlight-color: transparent; }
 .k-buddy .av:focus-visible { outline: 2px solid var(--a); outline-offset: 4px; }
 .k-buddy .goal { position: absolute; inset: -3px; width: calc(100% + 6px); height: calc(100% + 6px); transform: rotate(-90deg); }
@@ -287,16 +355,16 @@ a.k-ccard:hover { transform: translateY(-2px); box-shadow: var(--stack); }
 .k-buddy .goal .track { stroke: #080b16; }
 .k-buddy .goal .val { stroke: var(--a); transition: stroke-dashoffset 0.8s ease; }
 .k-buddy .id { flex: 1; min-width: 0; }
-.k-buddy .id .nm { font-family: var(--font-display); font-weight: 400; font-size: 1.35rem; line-height: 1.1; }
-.k-buddy .brow { display: flex; gap: 8px; margin-top: 6px; font-size: 0.84rem; }
-.k-buddy .brow > span { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 8px; background: #10152a; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5); }
+.k-buddy .id .nm { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 1.2rem; line-height: 1.1; }
+.k-buddy .brow { display: flex; gap: 6px; margin-top: 9px; font-size: 0.82rem; }
+.k-buddy .brow > span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 8px; background: #10152a; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5); }
 .k-buddy .brow b { font-weight: 600; }
-.k-buddy .brow svg { width: 13px; height: 13px; color: var(--a); }
-.k-buddy .brow > span:first-child svg { color: var(--ribbon-text); }
+.k-buddy .brow svg { width: 13px; height: 13px; color: var(--ribbon-text); }
 .k-buddy .brow small { font-size: 0.68rem; color: var(--text-muted); margin-left: -2px; }
-.k-buddy .say-wrap { min-height: calc(2 * 1.4em + 14px + 10px); padding-top: 10px; font-size: 0.82rem; }
+/* room for one line of speech: a two-line remark grows the card rather than every one-liner leaving a gap */
+.k-buddy .say-wrap { min-height: calc(1.4em + 16px + 14px); padding-top: 14px; font-size: 0.82rem; }
 .k-buddy .say {
-  position: relative; width: fit-content; max-width: 100%; min-width: 64px; padding: 7px 10px; border-radius: 3px 10px 10px 10px; line-height: 1.4;
+  position: relative; width: fit-content; max-width: 100%; min-width: 64px; padding: 8px 12px; border-radius: 3px 10px 10px 10px; line-height: 1.4;
   background: #1d2440; color: #e9e2d4; box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.6);
 }
 .k-buddy .say .text { position: relative; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; animation: k-say-pop 0.38s var(--ease-pop); }
@@ -345,7 +413,7 @@ a.k-ccard:hover { transform: translateY(-2px); box-shadow: var(--stack); }
 /* The cheer chip: a little cream ribbon that floats up. */
 .k-chip-float {
   position: fixed; z-index: 60; pointer-events: none; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
-  font-family: var(--font-code); font-weight: 500; font-size: 0.72rem; letter-spacing: 0.04em; color: var(--on-a);
+  font-family: var(--font-label); font-weight: 500; font-size: 0.72rem; letter-spacing: 0.04em; color: var(--on-a);
   background: var(--b); padding: 5px 14px 5px 9px; border-radius: 3px 0 0 3px;
   clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 50%, 100% 100%, 0 100%);
   filter: drop-shadow(1px 3px 2px rgba(0, 0, 0, 0.55));
@@ -358,14 +426,14 @@ a.k-ccard:hover { transform: translateY(-2px); box-shadow: var(--stack); }
   position: fixed; z-index: 91; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
   border-radius: 14px; padding: 22px; background: var(--panel); box-shadow: var(--stack), 0 30px 60px -24px rgba(0, 0, 0, 0.9); animation: k-dialog-in 0.3s var(--ease-pop);
 }
-.k-dialog h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.75rem; line-height: 1.1; }
+.k-dialog h2 { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 1.75rem; line-height: 1.1; }
 .k-dialog .body { margin-top: 10px; color: var(--text-muted); line-height: 1.6; font-size: 0.92rem; }
 .k-dialog .actions { margin-top: 22px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 
 /* ---------- empty and error states ---------- */
 .k-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 32px 20px; border-radius: 14px; background: var(--panel); box-shadow: var(--sheet); }
 .k-state.error { background: linear-gradient(180deg, #24192a, #1f1626); box-shadow: inset 0 0 0 1px rgba(var(--miss-rgb), 0.35), var(--sheet); }
-.k-state h3 { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; line-height: 1.1; }
+.k-state h3 { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 1.6rem; line-height: 1.1; }
 .k-state p { color: var(--text-muted); max-width: 420px; line-height: 1.55; font-size: 0.92rem; }
 .k-state .art { width: 64px; height: 64px; }
 
@@ -413,4 +481,5 @@ a.k-ccard:hover { transform: translateY(-2px); box-shadow: var(--stack); }
 .k-remove:hover { color: var(--ribbon-text); }
 .k-remove:focus-visible { opacity: 1; outline: 2px solid var(--a); outline-offset: 2px; }
 .k-removable.row > .k-remove { top: 50%; right: 4px; transform: translateY(-50%); width: 20px; height: 20px; }
+.k-removable.cur > .k-remove { top: 10px; right: 8px; width: 20px; height: 20px; }
 @media (hover: none) { .k-remove { opacity: 1; } }

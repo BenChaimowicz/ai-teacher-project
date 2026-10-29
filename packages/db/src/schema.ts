@@ -50,6 +50,8 @@ export const courseRequests = pgTable("course_requests", {
   preparingUntil: timestamp("preparing_until", { withTimezone: true }),
   /** Set when the Learner removed it from Home and the sidebar. Nothing else changes; it's just not listed. */
   hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+  /** When the Learner last opened its screen; the most recent one across the Library is the current course (SEN-97). */
+  lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -223,6 +225,8 @@ export const publishedCourses = pgTable("published_courses", {
   publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
   /** Set when the Learner removed it from Home and the sidebar. Nothing else changes; it's just not listed. */
   hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+  /** When the Learner last opened it in Study; the most recent one across the Library is the current course (SEN-97). */
+  lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
 });
 
 /** Named grouping of Lessons inside a published Course. */

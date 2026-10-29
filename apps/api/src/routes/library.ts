@@ -18,6 +18,7 @@ export async function libraryRoutes(app: FastifyInstance) {
           subject: courseRequests.subject,
           learningGoal: courseRequests.learningGoal,
           status: courseRequests.status,
+          lastOpenedAt: courseRequests.lastOpenedAt,
         })
         .from(courseRequests)
         // A published Request is listed as its Course.
@@ -29,6 +30,7 @@ export async function libraryRoutes(app: FastifyInstance) {
         .select({
           id: publishedCourses.id,
           title: publishedCourses.title,
+          lastOpenedAt: publishedCourses.lastOpenedAt,
         })
         .from(publishedCourses)
         .where(and(eq(publishedCourses.learnerId, learnerId), isNull(publishedCourses.hiddenAt)))
@@ -51,6 +53,7 @@ export async function libraryRoutes(app: FastifyInstance) {
               status: link?.courseCompleted ? "Completed" : "Published",
               href: link?.href ?? null,
               progress: { completed: link?.completed ?? 0, total: link?.total ?? 0 },
+              lastOpenedAt: course.lastOpenedAt?.toISOString() ?? null,
             };
           }),
           ...requests.map((row) => ({
@@ -60,6 +63,7 @@ export async function libraryRoutes(app: FastifyInstance) {
             learningGoal: row.learningGoal,
             status: row.status,
             href: `/course-requests/${row.id}`,
+            lastOpenedAt: row.lastOpenedAt?.toISOString() ?? null,
           })),
         ],
       };
@@ -94,6 +98,31 @@ export async function libraryRoutes(app: FastifyInstance) {
       const message = error instanceof Error ? error.message : String(error);
       request.log.error(`[library.ts: libraryRoutes] Failed to hide a Library item || learnerId=${learnerId} || kind=${String(kind)} || id=${id} || ${message}`);
       return reply.code(500).send({ error: "Couldn't remove that course. Try again." });
+    }
+  });
+
+  // Notes that the Learner opened a Course (Study) or a Course Request's screen; the latest one is the current course.
+  app.post("/api/library/opened", async (request, reply) => {
+    const learnerId = request.currentLearner.id;
+    const body = request.body as { kind?: unknown; id?: unknown } | null;
+    const kind = body?.kind;
+    const id = typeof body?.id === "string" ? body.id : null;
+    if ((kind !== "course" && kind !== "course_request") || !id || !/^[\da-f-]{36}$/i.test(id)) {
+      return reply.code(400).send({ error: "Say which course was opened." });
+    }
+    try {
+      const table = kind === "course" ? publishedCourses : courseRequests;
+      const opened = await app.db
+        .update(table)
+        .set({ lastOpenedAt: new Date() })
+        .where(and(eq(table.id, id), eq(table.learnerId, learnerId)))
+        .returning({ id: table.id });
+      if (!opened.length) return reply.code(404).send({ error: "That course wasn't found." });
+      return reply.code(204).send();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      request.log.error(`[library.ts: libraryRoutes] Failed to note an opened Library item || learnerId=${learnerId} || kind=${String(kind)} || id=${id} || ${message}`);
+      return reply.code(500).send({ error: "Couldn't note that course as opened." });
     }
   });
 

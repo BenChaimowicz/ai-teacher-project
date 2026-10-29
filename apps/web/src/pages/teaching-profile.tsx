@@ -375,7 +375,7 @@ function ProfileConversation({ present, saved, save, reset }: ConversationProps)
               <div className="k-card flat absolute right-0 bottom-12 z-10 w-60 p-1.5" role="menu">
                 <button type="button" role="menuitem" className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-[var(--a-soft)]" onClick={() => { setMenuOpen(false); setResetOpen(true); }}>
                   Reset to defaults
-                  <small className="mt-0.5 block font-mono text-[0.62rem] text-[var(--faint)]">deletes your answers</small>
+                  <small className="mt-0.5 block text-[0.62rem] text-[var(--faint)]">deletes your answers</small>
                 </button>
               </div>
             ) : null}

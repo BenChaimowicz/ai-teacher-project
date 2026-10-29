@@ -25,7 +25,7 @@ Defined in `src/index.css` (`:root`) and `src/styles/kit.css` (component classes
 | `--line`, `--line-2`, `--a-soft`, `--a-line`, `--b-soft` | Hairlines and soft fills. |
 | `--text`, `--read`, `--text-muted`, `--faint` | Text: UI, lesson body, secondary, tertiary. All pass AA on desk, paper and plum. |
 | `--good`, `--miss` (`--on-good`, `--on-miss`) | Right / not quite, as rims rather than glows. |
-| `--font-ui` (Space Grotesk), `--font-display` (Instrument Serif, headings), `--font-read` (Manrope, lesson default), `--font-code` (JetBrains Mono), `--font-book` (Literata), `--font-legible` (Atkinson Hyperlegible) | No italics anywhere: a base rule sets `font-style: normal` and turns off synthesis. |
+| `--font-ui` (Space Grotesk), `--font-display` (Baloo 2, headings, weight `--weight-display`), `--font-read` (Manrope, lesson default), `--font-code` (JetBrains Mono, code and keys only), `--font-label` (labels and meta lines, = `--font-ui`), `--font-book` (Literata), `--font-legible` (Atkinson Hyperlegible) | No italics anywhere: a base rule sets `font-style: normal` and turns off synthesis. |
 | `--dur-fast`, `--dur`, `--dur-slow`, `--ease-pop` | Motion. Respect `prefersReducedMotion()`. |
 
 Status labels use the notched ribbon class `.k-rib` (tones: learning, making, needs, done, stopped, streak).
@@ -63,9 +63,10 @@ Lines are one or two short sentences: kind, low-key, never childish or chatty. U
 
 | Export | File | Props | Notes |
 | --- | --- | --- | --- |
-| `Button`, `buttonVariants` | `button.tsx` | `button` props + `variant?: "primary" \| "secondary" \| "ghost" \| "quiet" \| "danger" \| "link"`, `size?: "default" \| "sm" \| "lg" \| "icon"`, `asChild?` | `asChild` wraps a `Link`. Aliases `default`/`outline`/`destructive` exist for older screens; don't use them in new code. `type` defaults to `"button"`. |
+| `Button`, `buttonVariants` | `button.tsx` | `button` props + `variant?: "primary" \| "secondary" \| "ghost" \| "quiet" \| "danger" \| "link"`, `size?: "default" \| "sm" \| "lg" \| "icon"`, `asChild?` | `asChild` wraps a `Link`. Aliases `default`/`outline`/`destructive` exist for older screens; don't use them in new code. `type` defaults to `"button"`. `className="folded"` turns its top-right corner down (pair with a trailing arrow icon); `.k-gift` makes a chip a hung gift tag. |
 | `Card` | `card.tsx` | `div` props + `tone?: "accent" \| "flat"`, `interactive?` | Padding is the caller's. |
-| `ChatThread` | `chat-thread.tsx` | `{ children, className?, label? }` | `role="log"`, polite live region. |
+| `Tape` | `tape.tsx` | `{ seed: string }` | Washi tape across the middle of a sheet's top edge. Tint, width and angle come from `seed`. Parent must be positioned and not clip. Used sparingly: Jongi's card, home's Continue card, streak box, needs-you cards. |
+| `ChatThread` | `chat-thread.tsx` | `{ children, className?, label?, replay? }` | `role="log"`, polite live region. `replay` for threads that open on saved history: what is there on mount shows at once, later lines still fade in. |
 | `CompanionLine` | `chat-thread.tsx` | `{ children, typing?, delayMs? = 520, continued?, mood?: JongiMood, onShown? }` | `typing` only for new lines, not history on reload. Show the step's `OptionTiles` after `onShown`. Avatar: a 32px round-tile Jongi. (Was `NibblesLine`.) |
 | `LearnerEcho` | `chat-thread.tsx` | `{ children, verdict?: "good" \| "miss" }` | The Learner's pick, on the right. |
 | `ThreadCard` | `chat-thread.tsx` | `{ title?, sub?, children?, flush?, className? }` | Plan, progress panel, score inside the thread. |
@@ -79,7 +80,7 @@ Lines are one or two short sentences: kind, low-key, never childish or chatty. U
 | `Input` | `input.tsx` | `input` props + `trailing?`, `invalid?`, `fieldClassName?` | Needs a visible `<label>` or `aria-label`. `fieldClassName` styles the wrapper. |
 | `Textarea` | `input.tsx` | `textarea` props + `invalid?`, `fieldClassName?` | |
 | `Loader` | `loader.tsx` | `{ size? = 96, label?, className? }` | Being replaced by the page-flip loader (SEN-97 phase 1). Under 48px renders inline (no dots/label): use 18–24 in buttons and rows, 72–96 for a panel. |
-| `PageLoader` | `loader.tsx` | `{ label? = "Loading…" }` | Centred, for a whole screen. |
+| `PageLoader` | `loader.tsx` | `{ label? = "Loading…" }` | Centred, for a whole screen. Invisible for its first 300 ms, so fast loads don't flash it. |
 | `Logo` | `logo.tsx` | `{ size? = 28, tile?, className? }` | Jongi's folded paper head in a scholar cap (fixed paper colours). `tile` puts it on the ink-navy rounded tile (32px and up). Same markup as the favicon `public/jongi-logo.svg`. |
 | `BrandLink` | `logo.tsx` | `{ size? }` | Logo + wordmark linking Home. Used by `AppShell`. |
 | `SegmentedProgress` | `progress.tsx` | `{ segments: SegmentState[], label, className? }` | `SegmentState = "todo" \| "done" \| "now" \| "writing" \| "miss"`. |

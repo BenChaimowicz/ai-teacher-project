@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { LearnerEcho, CompanionLine } from "@/components/ui/chat-thread.tsx";
@@ -50,14 +51,17 @@ export function TopicField({ initial = "", onSubmit }: TopicFieldProps) {
           value={value}
           onChange={(event) => setValue(event.target.value)}
         />
-        <Button type="submit" disabled={!trimmed}>Continue</Button>
+        <Button type="submit" className="folded" disabled={!trimmed}>
+          Continue
+          <ArrowRight aria-hidden="true" />
+        </Button>
       </form>
       {!initial ? (
         <>
           <p className="mk-sugg-h" id="topic-sugg">or try one of these</p>
           <div className="mk-sugg" role="group" aria-labelledby="topic-sugg">
             {SUGGESTIONS.map(([topic, icon], index) => (
-              <button key={topic} type="button" className="mk-chip" style={{ "--i": index } as CSSProperties} onClick={() => onSubmit(topic)}>
+              <button key={topic} type="button" className="mk-chip k-gift" style={{ "--i": index } as CSSProperties} onClick={() => onSubmit(topic)}>
                 <CourseIcon name={icon} size={14} />
                 {topic}
               </button>

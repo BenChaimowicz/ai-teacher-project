@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 type LoaderProps = {
@@ -51,13 +51,22 @@ export function Loader({ size = 96, label, className }: LoaderProps) {
   );
 }
 
+/** How long a page load may take before the loader shows: quicker loads just show the page. */
+const PAGE_LOADER_DELAY_MS = 300;
+
 /**
- * Centred page loader for a whole screen or panel.
+ * Centred page loader for a whole screen or panel. It waits {@link PAGE_LOADER_DELAY_MS} before appearing, so a fast
+ * load doesn't flash it; until then the space is held and screen readers already hear the label.
  */
 export function PageLoader({ label = "Loading…" }: { label?: string }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisible(true), PAGE_LOADER_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
   return (
     <div className="grid min-h-[50vh] place-items-center p-8">
-      <Loader size={80} label={label} />
+      {visible ? <Loader size={80} label={label} /> : <span className="sr-only" role="status">{label}</span>}
     </div>
   );
 }
