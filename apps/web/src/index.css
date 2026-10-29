@@ -3,7 +3,7 @@
 @import "@fontsource/space-grotesk/500.css";
 @import "@fontsource/space-grotesk/600.css";
 @import "@fontsource/space-grotesk/700.css";
-@import "@fontsource/instrument-serif/400.css";
+@import "@fontsource/baloo-2/700.css";
 @import "@fontsource-variable/literata";
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
@@ -75,9 +75,11 @@
 
   /* type: no italics anywhere (see the base rule below) */
   --font-ui: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Instrument Serif", Georgia, serif;
+  --font-display: "Baloo 2", ui-rounded, ui-sans-serif, system-ui, sans-serif;
+  --weight-display: 700; /* every display rule uses this, so the font and its weight change together */
   --font-read: "Manrope Variable", "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-code: "JetBrains Mono", ui-monospace, monospace;
+  --font-label: var(--font-ui); /* small caps-style labels and meta lines; mono is kept for real code and keys */
   --font-book: "Literata Variable", "Literata", Georgia, serif;
   --font-legible: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
 
@@ -168,6 +170,11 @@
     font-style: normal !important;
     font-synthesis: none;
   }
+  /* In the base layer so a component's own focus style (kit.css, layer components) wins over it. */
+  :focus-visible {
+    outline: 2px solid var(--a);
+    outline-offset: 2px;
+  }
 }
 
 html,
@@ -185,9 +192,17 @@ body {
   background: var(--bg);
 }
 
-:focus-visible {
-  outline: 2px solid var(--a);
-  outline-offset: 2px;
+/* Paper grain: one fixed layer of fibre noise over everything, so every sheet reads as paper stock.
+   Soft-light keeps it in the surface's own colour; it never takes clicks. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -0.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -36,7 +36,39 @@ export type LibraryItem = {
   learningGoal?: string;
   /** Published Courses only: completed / total Lessons. */
   progress?: { completed: number; total: number };
+  /** ISO time the Learner last opened it, or null if never (SEN-97). */
+  lastOpenedAt?: string | null;
 };
+
+/**
+ * Notes on the server that the Learner opened this course, so it becomes the current course. Fire and forget:
+ * a failure only means the sidebar keeps its previous current course.
+ * @param course - The course's kind and id
+ */
+export function markOpened(course: Pick<LibraryItem, "kind" | "id">) {
+  fetch("/api/library/opened", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ kind: course.kind, id: course.id }),
+  })
+    .then((response) => {
+      if (response.ok) notifyLibraryChanged();
+    })
+    .catch(() => undefined);
+}
+
+/**
+ * The current course: the one opened most recently. When none has been opened yet, the first one, so callers keep
+ * their own order as the fallback.
+ * @param items - Candidates in the caller's preferred fallback order
+ */
+export function currentCourse<T extends { lastOpenedAt?: string | null }>(items: T[]): T | null {
+  let latest: T | null = null;
+  for (const item of items) {
+    if (item.lastOpenedAt && (!latest?.lastOpenedAt || item.lastOpenedAt > latest.lastOpenedAt)) latest = item;
+  }
+  return latest ?? items[0] ?? null;
+}
 
 /** How a course reads to the Learner. Glossary statuses stay in code. */
 export type CourseListStatus = "learning" | "making" | "needs" | "done" | "stopped";
@@ -53,6 +85,7 @@ export type CourseListItem = {
   badge: string;
   icon: CourseIconName;
   progress?: { completed: number; total: number };
+  lastOpenedAt?: string | null;
 };
 
 const MAKING = new Set(["awaiting_validity", "assessment_preparing", "blueprint_preparing", "generating"]);
@@ -64,7 +97,7 @@ const FAILED = new Set(["generation_failed", "assessment_failed"]);
  * @param item - Library row
  */
 export function toCourseListItem(item: LibraryItem): CourseListItem {
-  const base = { key: `${item.kind}-${item.id}`, id: item.id, kind: item.kind, title: item.title, href: item.href, icon: pickCourseIcon(item.title) };
+  const base = { key: `${item.kind}-${item.id}`, id: item.id, kind: item.kind, title: item.title, href: item.href, icon: pickCourseIcon(item.title), lastOpenedAt: item.lastOpenedAt ?? null };
   if (item.kind === "course") {
     const progress = item.progress ?? { completed: 0, total: 0 };
     if (item.status === "Completed") return { ...base, status: "done", badge: "✓ done", progress };

@@ -437,7 +437,7 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
         )
       ) : (
         <div ref={thread}>
-          <ChatThread label="Quiz">
+          <ChatThread label="Quiz" replay>
             <CompanionLine>
               {perItem
                 ? `${count[0]!.toUpperCase()}${count.slice(1)} questions, one at a time. Pick an answer, then Check it.`

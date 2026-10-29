@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { QUIZ_METHOD_ID } from "@senoy/db/reading-lesson";
 import { ArrowRight, BookOpen, Flame, Play, Plus, RefreshCw, SlidersHorizontal } from "lucide-react";
@@ -14,8 +14,10 @@ import { Jongi } from "@/components/companion/jongi.tsx";
 import { ProgressBar, ProgressRing } from "@/components/ui/progress.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
 import { COMPANION_NAME, type CourseIconName } from "@/lib/brand-marks.ts";
-import { LIBRARY_CHANGED_EVENT, toCourseListItem, type CourseListItem, type LibraryItem } from "@/lib/course-list.ts";
+import { LIBRARY_CHANGED_EVENT, currentCourse, toCourseListItem, type CourseListItem, type LibraryItem } from "@/lib/course-list.ts";
 import { RemovableCourse } from "@/components/ui/remove-course.tsx";
+import { Tape } from "@/components/ui/tape.tsx";
+import { cn } from "@/lib/utils";
 import type { StudyPayload } from "@/lib/study-types.ts";
 import "@/components/learn/learn.css";
 
@@ -74,7 +76,9 @@ type Row = { item: LibraryItem; course: CourseListItem };
 function groupLibrary(items: LibraryItem[]) {
   const rows: Row[] = items.map((item) => ({ item, course: toCourseListItem(item) }));
   const learning = rows.filter((row) => row.course.status === "learning");
-  const resume = learning.find((row) => (row.item.progress?.completed ?? 0) > 0) ?? learning[0] ?? null;
+  // The course opened most recently, as in the sidebar; before any has been opened, the first one already started.
+  const started = [...learning].sort((a, b) => Number((b.item.progress?.completed ?? 0) > 0) - Number((a.item.progress?.completed ?? 0) > 0));
+  const resume = currentCourse(started.map((row) => ({ row, lastOpenedAt: row.item.lastOpenedAt })))?.row ?? null;
   const live = new Set(rows.filter((row) => row.course.status !== "stopped" && row.course.badge !== "couldn't finish").map((row) => row.item.title.trim().toLowerCase()));
   const seenNeeds = new Set<string>();
   const needs: Row[] = [];
@@ -198,6 +202,7 @@ function TodayStrip({ lessonsDone }: { lessonsDone: number }) {
         </div>
       </div>
       <div className="l-tbox" style={{ "--i": 1 } as CSSProperties}>
+        <Tape seed="today-streak" />
         <span className="ic streak" aria-hidden="true">
           <Flame />
         </span>
@@ -237,6 +242,7 @@ function NeedsCard({ row }: { row: Row }) {
     : [];
   return (
     <div className="k-ccard l-needs">
+      <Tape seed={row.course.key} />
       <CourseCardBody course={row.course} sub={row.item.learningGoal} />
       <div className="say">
         <span className="av" aria-hidden="true">
@@ -316,6 +322,11 @@ function FirstRun() {
   const navigate = useNavigate();
   const [topic, setTopic] = useState("");
   const [shown, setShown] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
+  // The field is inert until the greeting shows, so it takes focus then rather than on mount.
+  useEffect(() => {
+    if (shown) field.current?.focus();
+  }, [shown]);
 
   /**
    * Opens New course with the topic filled in.
@@ -335,35 +346,37 @@ function FirstRun() {
           Hi, I'm {COMPANION_NAME}. What would you like to learn?
         </CompanionLine>
       </ChatThread>
-      {shown ? (
+      {/* Laid out from the start so the steps below don't jump; it appears once the greeting shows. */}
+      <div className={cn("l-first", !shown && "waiting")} inert={!shown}>
         <div className="k-tcard">
           <form className="l-topic" onSubmit={submit}>
             <label htmlFor="first-topic" className="sr-only">
               What would you like to learn?
             </label>
             <input
+              ref={field}
               id="first-topic"
               autoComplete="off"
-              autoFocus
               placeholder="A topic, a skill, anything you're curious about"
               value={topic}
               onChange={(event) => setTopic(event.target.value)}
             />
-            <Button type="submit" disabled={!topic.trim()}>
+            <Button type="submit" className="folded" disabled={!topic.trim()}>
               Continue
+              <ArrowRight aria-hidden="true" />
             </Button>
           </form>
           <p className="l-sugg-h">or try one of these</p>
           <div className="l-sugg">
             {SUGGESTIONS.map(([label, icon], index) => (
-              <button key={label} type="button" className="l-chip" style={{ "--i": index } as CSSProperties} onClick={() => setTopic(label)}>
+              <button key={label} type="button" className="l-chip k-gift" style={{ "--i": index } as CSSProperties} onClick={() => setTopic(label)}>
                 <CourseIcon name={icon} size={14} />
                 {label}
               </button>
             ))}
           </div>
         </div>
-      ) : null}
+      </div>
       <div className="l-how">
         {[
           ["01", "Tell me a topic", "Anything. One line is enough."],
@@ -483,10 +496,14 @@ export function HomePage() {
           <p className="k-sec-h">continue</p>
           <RemovableCourse course={resume.course}>
             <ContinueHero row={resume} study={study} />
+            <Tape seed={resume.course.key} />
           </RemovableCourse>
         </>
       ) : null}
-      {tilesShown ? <LinkTiles tiles={tiles} label="What to do now" cols={2} /> : null}
+      {/* Laid out from the start so nothing below moves; they pop in once the greeting shows. */}
+      <div className={cn("l-tiles-slot", !tilesShown && "waiting")} inert={!tilesShown}>
+        <LinkTiles tiles={tiles} label="What to do now" cols={2} />
+      </div>
 
       <TodayStrip lessonsDone={lessonsDone} />
 

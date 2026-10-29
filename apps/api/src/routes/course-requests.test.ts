@@ -39,7 +39,7 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
   const columnKeys = {
     id: "id", learner_id: "learnerId", subject: "subject", learning_goal: "learningGoal", status: "status",
     created_at: "createdAt", validity: "validity", clarification: "clarification", focus: "focus", revised_from_id: "revisedFromId",
-    failure_reason: "failureReason", hidden_at: "hiddenAt",
+    failure_reason: "failureReason", hidden_at: "hiddenAt", last_opened_at: "lastOpenedAt",
   } as const;
   /** Projects precisely the selected columns, as Postgres does. */
   function project(row: CourseRequest, fields?: Record<string, PgColumn>) {
@@ -63,7 +63,7 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
       values: (values: typeof courseRequests.$inferInsert) => ({
         returning: async (fields?: Record<string, PgColumn>) => {
           if (failWrites) throw new Error("Database unavailable");
-          const row = { id: randomUUID(), createdAt: new Date(), validity: null, clarification: null, focus: null, revisedFromId: null, failureReason: null, hiddenAt: null, ...values } as CourseRequest;
+          const row = { id: randomUUID(), createdAt: new Date(), validity: null, clarification: null, focus: null, revisedFromId: null, failureReason: null, hiddenAt: null, lastOpenedAt: null, ...values } as CourseRequest;
           rows.push(row);
           return [project(row, fields)];
         },
@@ -225,11 +225,35 @@ test("Saved Course Request can be reopened from Library and Open items", async (
         learningGoal: "Explain the mythic corpus.",
         status: "awaiting_validity",
         href: `/course-requests/${courseRequest.id}`,
+        // Only the Library says when it was last opened; it picks the current course from it.
+        ...(url === "/api/library" ? { lastOpenedAt: null } : {}),
       }]);
     }
     const reopened = await app.inject({ method: "GET", url: `/api/course-requests/${courseRequest.id}` });
     assert.equal(reopened.statusCode, 200);
     assert.deepEqual(reopened.json(), { courseRequest });
+  } finally {
+    await app.close();
+  }
+});
+
+test("Opening a Course Request is noted in the Library, for the Learner's own Requests only", async () => {
+  const { app, rows } = await testApp();
+  try {
+    const created = await app.inject({ method: "POST", url: "/api/course-requests", payload: { subject: "Norse mythology", learningGoal: "Explain the mythic corpus." } });
+    const { courseRequest } = created.json();
+
+    const before = Date.now();
+    const opened = await app.inject({ method: "POST", url: "/api/library/opened", payload: { kind: "course_request", id: courseRequest.id } });
+    assert.equal(opened.statusCode, 204);
+    const [item] = (await app.inject({ method: "GET", url: "/api/library" })).json().items as { lastOpenedAt: string }[];
+    assert.ok(Date.parse(item!.lastOpenedAt) >= before);
+
+    rows[0]!.learnerId = randomUUID();
+    const someoneElses = await app.inject({ method: "POST", url: "/api/library/opened", payload: { kind: "course_request", id: courseRequest.id } });
+    assert.equal(someoneElses.statusCode, 404);
+    const unnamed = await app.inject({ method: "POST", url: "/api/library/opened", payload: { kind: "lesson", id: courseRequest.id } });
+    assert.equal(unnamed.statusCode, 400);
   } finally {
     await app.close();
   }

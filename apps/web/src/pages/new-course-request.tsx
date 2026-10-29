@@ -62,7 +62,7 @@ export function NewCourseRequestPage() {
    */
   async function compose(subject: string, learningGoal: string) {
     const { courseRequest } = await requestAction("", "POST", { subject, learningGoal }, "Could not save your course. Please try again.");
-    navigate(`/course-requests/${courseRequest.id}`, { replace: true });
+    navigate(`/course-requests/${courseRequest.id}`, { replace: true, state: { courseRequest } });
   }
 
   return (
