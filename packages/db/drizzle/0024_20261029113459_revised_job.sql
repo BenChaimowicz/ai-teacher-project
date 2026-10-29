@@ -1,0 +1,1 @@
+ALTER TYPE "public"."generation_job_status" ADD VALUE 'revised' BEFORE 'succeeded';

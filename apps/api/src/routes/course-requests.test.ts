@@ -85,11 +85,13 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
         },
       }),
     }),
-    update: () => ({
+    /** Only Course Requests are stored here; a write to another table (a job, a checkpoint) is accepted and dropped. */
+    update: (table: unknown) => ({
       set: (changes: Partial<CourseRequest>) => ({
         where: (condition: SQL) => ({
           returning: async (fields?: Record<string, PgColumn>) => {
             if (failWrites) throw new Error("Database unavailable");
+            if (table !== courseRequests) return [];
             return rows.filter((row) => matches(row, condition)).map((row) => {
               Object.assign(row, changes);
               return project(row, fields);
@@ -98,6 +100,24 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
         }),
       }),
     }),
+    delete: (table: unknown) => ({
+      where: async (condition: SQL) => {
+        if (failWrites) throw new Error("Database unavailable");
+        if (table !== courseRequests) return [];
+        for (const row of rows.filter((candidate) => matches(candidate, condition))) rows.splice(rows.indexOf(row), 1);
+        return [];
+      },
+    }),
+    /** Restores every Request if the callback throws, as a rolled-back transaction does. */
+    transaction: async <T>(run: (transaction: unknown) => Promise<T>) => {
+      const snapshot = rows.map((row) => ({ ...row }));
+      try {
+        return await run(db);
+      } catch (error) {
+        rows.splice(0, rows.length, ...snapshot);
+        throw error;
+      }
+    },
   };
   const app = Fastify();
   app.decorate("db", db as unknown as Database);
@@ -380,6 +400,22 @@ test("Revising a failed focused Request carries the focused goal as editable tex
     const draft = revised.json().courseRequest;
     assert.equal(draft.learningGoal, "Retell the main stories.");
     assert.equal(draft.focus, null, "The draft goes through Validity and focusing again.");
+  } finally { await app.close(); }
+});
+
+test("Only a rejected or failed Request is revised here: a published or generating Course is never taken apart", async () => {
+  const { app, rows } = await testApp();
+  try {
+    const row = await createRequest(app);
+    const stored = rows.find((candidate) => candidate.id === row.id)!;
+    for (const status of ["published", "generating", "generation_cancelled", "blueprint_review", "draft"] as const) {
+      Object.assign(stored, { status });
+      const revised = await app.inject({ method: "POST", url: `/api/course-requests/${row.id}/revise` });
+      assert.equal(revised.statusCode, 409, `${status}: ${revised.body}`);
+      assert.deepEqual(revised.json(), { error: "Only a rejected or failed Request can be revised here." });
+      assert.equal(stored.status, status, "The Request is unchanged.");
+      assert.equal(rows.length, 1, "No draft is created.");
+    }
   } finally { await app.close(); }
 });
 

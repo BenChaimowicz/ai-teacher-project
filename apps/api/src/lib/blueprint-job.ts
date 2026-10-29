@@ -7,7 +7,7 @@ import {
   startingLevelDiagnostics,
   type Database,
 } from "@senoy/db";
-import { blueprintSlots } from "@senoy/db/blueprint";
+import { blueprintSlots, type SequenceFailure } from "@senoy/db/blueprint";
 import { BlueprintFailedError, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, type BlueprintBuilder } from "./blueprint.ts";
 import { LeaseLostError, type GenerationControl } from "./generation-job.ts";
 import { withPipelineEvent } from "./usage-tracking.ts";
@@ -38,6 +38,9 @@ export function blueprintFailureReason(error: unknown): string {
 /** Shown when redesigning from the Learner's marks failed; the plan they reviewed is still there. */
 export const REVISE_FAILED_REASON = "We couldn't redo the plan without those lessons. Here it is as it was: try again, or make it as it is.";
 
+/** Shown when the structural return's redesign failed; the plan whose lessons missed the goal is still there (SEN-85). */
+export const REDESIGN_FAILED_REASON = "Your lessons were written, but together they didn't reach your goal, and I couldn't come up with a better plan just now. Try again for a fresh plan, or change what you asked for.";
+
 /**
  * Creates the Blueprint job. A run designs from the confirmed Starting Level and the Learner's Teaching Profile, then
  * saves the checked draft and moves the Request to `blueprint_review` in one transaction that proves it still holds
@@ -57,9 +60,12 @@ export function createBlueprintJob(builder: BlueprintBuilder = createBlueprintBu
       return withPipelineEvent("blueprint", { courseRequestId: input.courseRequestId, learnerId: input.learnerId }, async (event) => {
         const { db, courseRequestId, learnerId, control } = input;
         let reviewed: typeof courseBlueprints.$inferSelect | undefined;
+        let sequenceFailure: SequenceFailure | undefined;
         try {
           [reviewed] = await db.select().from(courseBlueprints).where(eq(courseBlueprints.courseRequestId, courseRequestId)).limit(1);
           const feedback = reviewed && !reviewed.approved ? reviewed.draft.learnerFeedback : undefined;
+          // Left on the draft by the structural return, naming the sequence the written Lessons failed (SEN-85).
+          sequenceFailure = reviewed && !reviewed.approved ? reviewed.draft.sequenceFailure : undefined;
           const [request] = await db.select().from(courseRequests).where(eq(courseRequests.id, courseRequestId)).limit(1);
           const [learner] = await db.select().from(learners).where(eq(learners.id, learnerId)).limit(1);
           const [attempt] = await db.select().from(startingLevelDiagnostics)
@@ -82,6 +88,7 @@ export function createBlueprintJob(builder: BlueprintBuilder = createBlueprintBu
               explanationOrder: profile.explanationOrder.value,
             },
             ...(reviewed && feedback?.irrelevantSlotIds.length ? { revision: { previousBlueprint: reviewed.draft, feedback } } : {}),
+            ...(reviewed && sequenceFailure ? { sequenceRedesign: { previousBlueprint: reviewed.draft, reasons: sequenceFailure.reasons } } : {}),
           });
           event.setDetail({
             courseTitle: checked.blueprint.courseTitle,
@@ -97,7 +104,10 @@ export function createBlueprintJob(builder: BlueprintBuilder = createBlueprintBu
             } else {
               await transaction.insert(courseBlueprints).values({ courseRequestId, learnerId, draft: checked.blueprint, judge: checked.judge });
             }
-            const [ready] = await transaction.update(courseRequests).set({ status: "blueprint_review", failureReason: null })
+            // A redesign after the structural return keeps the Request's reason: it is why this new plan exists, and the
+            // Learner has not read it yet (SEN-85). Every other run clears the reason it just made good on.
+            const [ready] = await transaction.update(courseRequests)
+              .set({ status: "blueprint_review", ...(sequenceFailure ? {} : { failureReason: null }) })
               .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "blueprint_preparing"))).returning({ id: courseRequests.id });
             if (!ready) throw new Error(`[blueprint-job: start] Request is no longer preparing a Blueprint || requestId=${courseRequestId}`);
             await control.settle(transaction, "succeeded");
@@ -109,11 +119,13 @@ export function createBlueprintJob(builder: BlueprintBuilder = createBlueprintBu
             await db.transaction(async (transaction) => {
               await control.settle(transaction, "failed");
               if (reviewed) {
-                const { learnerFeedback: _cleared, ...draft } = reviewed.draft;
+                const { learnerFeedback: _cleared, sequenceFailure: _failed, ...draft } = reviewed.draft;
                 await transaction.update(courseBlueprints).set({ draft }).where(eq(courseBlueprints.id, reviewed.id)).returning({ id: courseBlueprints.id });
               }
+              // A failed redesign after the structural return leaves the plan that could not be generated on screen:
+              // Try again designs from scratch, and the Learner can revise the Request instead (SEN-85).
               await transaction.update(courseRequests).set(reviewed
-                ? { status: "blueprint_review", failureReason: REVISE_FAILED_REASON }
+                ? { status: "blueprint_review", failureReason: sequenceFailure ? REDESIGN_FAILED_REASON : REVISE_FAILED_REASON }
                 : { status: "starting_level_confirmed", failureReason: blueprintFailureReason(error) })
                 .where(and(eq(courseRequests.id, courseRequestId), eq(courseRequests.status, "blueprint_preparing"))).returning({ id: courseRequests.id });
             });

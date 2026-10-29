@@ -66,6 +66,16 @@ The worker claims the job from Postgres and generates the Course in three steps:
 
 The Request screen shows the stage, the current Lesson, and N of M. **Cancel** stops the job and keeps finished research and Lessons. **Resume** continues from the next unfinished Lesson without re-running finished research, as does a restarted worker after a crash.
 
+When generation cannot finish, the Request says why in plain language and offers what can actually help (spec §5.1):
+
+- An interruption — a provider timeout, a crash — is resumed by **Retry** from the next unfinished Lesson.
+- A Lesson that failed its checks is written again by **Retry** with a fresh repair budget; the Lessons already written are kept.
+- A Reading whose Source packs come back empty is searched again with two broader queries before the Course fails for it. A vendor that timed out or errored is not treated as empty: that is an interruption, and Retry searches again.
+- **Revise request** opens an editable new Request with the same subject and goal. The failed Request stays in history with its reason, its unpublished Lessons are discarded, and it can no longer be retried.
+- When the finished Lessons individually pass but together miss the Learning Goal, no Retry can help, so the plan goes back: the unpublished Lessons and their research are discarded, the approved plan is un-approved, and a new Blueprint is designed from what the whole-Course Judge said. The Learner comes back to a new plan to review, with the reason it changed.
+
+Published Courses are never touched by any of this: nothing is published until the whole Course passes, and a published Request has no failure path left.
+
 To design one real Blueprint against OpenRouter and the configured Supabase database (after `pnpm db:migrate`):
 
 ```bash

@@ -15,10 +15,11 @@ import {
   type StartingLevel,
 } from "@senoy/db";
 import { createFixtureBlueprintBuilder } from "../lib/blueprint-fixture.ts";
-import { createBlueprintJob } from "../lib/blueprint-job.ts";
+import { createBlueprintJob, REDESIGN_FAILED_REASON } from "../lib/blueprint-job.ts";
 import { BlueprintFailedError, type BlueprintBuilder, type BlueprintInput } from "../lib/blueprint.ts";
 import type { GenerationControl } from "../lib/generation-job.ts";
 import { blueprintRoutes } from "./blueprint.ts";
+import { courseRequestRoutes } from "./course-requests.ts";
 import { fakeDb } from "./fake-db.ts";
 
 /** A Learner with a saved Teaching Profile that asks for a Quiz after every reading. */
@@ -85,6 +86,8 @@ async function testApp(status: CourseRequestStatus = "starting_level_confirmed",
   app.decorate("db", db);
   app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
   await app.register(blueprintRoutes);
+  // Revise request lives with the Course Request routes but acts on this Request's job and checkpoints (SEN-85).
+  await app.register(courseRequestRoutes, { validityGate: { async evaluate() { throw new Error("Validity is not part of these checks."); } } });
   await db.insert(learners).values(learner).returning();
   const [request] = await db.insert(courseRequests).values({
     learnerId: learner.id, subject: "Drum kit", learningGoal: "Play Iris by the Goo Goo Dolls", status,
@@ -111,7 +114,7 @@ async function testApp(status: CourseRequestStatus = "starting_level_confirmed",
     assert.equal((await app.inject({ method: "POST", url })).statusCode, 202);
     assert.equal(await runBlueprintJob(), null);
   }
-  return { app, rows, inputs: recording.inputs, jobs, url, requestRow: rows.get(courseRequests)![0]!, runBlueprintJob, designBlueprint };
+  return { app, db, rows, inputs: recording.inputs, jobs, url, requestId: request!.id, requestRow: rows.get(courseRequests)![0]!, runBlueprintJob, designBlueprint };
 }
 
 test("Preparing queues a Blueprint job whose run designs from the confirmed gap and write-time Profile; review shows only titles and Lesson goals", async () => {
@@ -344,6 +347,89 @@ test("Retry queues a failed job again on the same Blueprint and clears the reaso
     assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/retry` })).statusCode, 409, "Retrying cannot fix a sequence.");
     assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/resume` })).statusCode, 409);
     assert.equal(requestRow.status, "generation_failed");
+  } finally {
+    await app.close();
+  }
+});
+
+test("Revise request after a generation failure discards the unpublished Lessons and leaves nothing to Retry", async () => {
+  const { app, db, rows, jobs, requestRow, generationUrl, requestId, first } = await generatingApp("failed");
+  try {
+    await db.insert(unpublishedLessons).values({
+      courseRequestId: requestId, slotId: first.id, position: 0, teachingMethod: "reading", title: first.title,
+      lessonGoal: first.lessonGoal, objectives: first.objectives, topicTags: first.topicTags, lineage: null,
+      sources: [], citations: [], judge: { pass: true, failedChecks: [], reasons: [] },
+      body: { sections: [{ heading: "Written before the failure", blocks: [{ kind: "prose", text: "A tree [1]." }] }] },
+    }).returning();
+    Object.assign(requestRow, { status: "generation_failed", failureReason: "We couldn't write the Lesson." });
+    assert.equal(rows.get(unpublishedLessons)!.length, 1, "One Lesson was checkpointed before the failure.");
+    assert.equal((await app.inject({ method: "GET", url: `/api/course-requests/${requestId}/blueprint` })).json().generation.finishedLessons, 1);
+
+    const revised = await app.inject({ method: "POST", url: `/api/course-requests/${requestId}/revise` });
+    assert.equal(revised.statusCode, 201, revised.body);
+    const draft = revised.json().courseRequest;
+    assert.equal(draft.status, "draft");
+    assert.equal(draft.revisedFromId, requestId);
+    assert.equal(draft.subject, "Drum kit", "The failed Request's subject carries over as editable text.");
+
+    assert.equal(rows.get(unpublishedLessons)!.length, 0, "The failed Request's unpublished Lessons are discarded.");
+    assert.deepEqual([requestRow.status, requestRow.failureReason], ["generation_failed", "We couldn't write the Lesson."],
+      "The failed Request stays in history with its reason.");
+    assert.deepEqual([jobs()[0]!.status, jobs()[0]!.claimToken], ["revised", null]);
+    assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/retry` })).statusCode, 409, "No Retry once the Request was revised.");
+    assert.equal((await app.inject({ method: "POST", url: `${generationUrl}/resume` })).statusCode, 409);
+    assert.equal(rows.get(unpublishedLessons)!.length, 0);
+  } finally {
+    await app.close();
+  }
+});
+
+test("The structural return's redesign plans again from the sequence the written Lessons failed, and keeps the reason on screen", async () => {
+  const { app, rows, inputs, jobs, url, requestRow, designBlueprint, runBlueprintJob } = await testApp();
+  try {
+    await designBlueprint();
+    await app.inject({ method: "POST", url: `${url}/approve`, payload: { sequenceMode: "linear" } });
+    const plan = rows.get(courseBlueprints)![0] as typeof courseBlueprints.$inferSelect;
+    const reviewed = plan.draft.modules[0]!.slots[0]!.title;
+    // As the failing generation run left it: approval gone, the Judge's reasons on the draft, Blueprint job queued.
+    Object.assign(plan, {
+      approved: null, approvedAt: null,
+      draft: { ...plan.draft, sequenceFailure: { reasons: ["Covers two rudiments, not a whole song."] } },
+    });
+    Object.assign(requestRow, { status: "blueprint_preparing", failureReason: "Together, the finished Lessons don't reach your Learning Goal." });
+    Object.assign(jobs("blueprint")[0]!, { status: "queued", claimToken: null, leaseExpiresAt: null });
+
+    assert.equal(await runBlueprintJob(), null);
+    assert.deepEqual(inputs[1]!.sequenceRedesign?.reasons, ["Covers two rudiments, not a whole song."]);
+    assert.equal(inputs[1]!.sequenceRedesign?.previousBlueprint.modules[0]!.slots[0]!.title, reviewed, "The redesign sees the plan that failed.");
+    assert.equal(inputs[1]!.revision, undefined, "A structural redesign is not a redesign from the Learner's marks.");
+    assert.equal(requestRow.status, "blueprint_review");
+    assert.match(String(requestRow.failureReason), /don't reach your Learning Goal/, "The reason the plan changed is still unread.");
+    assert.equal(rows.get(courseBlueprints)!.length, 1, "The redesign replaces the draft.");
+    assert.equal((rows.get(courseBlueprints)![0] as typeof courseBlueprints.$inferSelect).draft.sequenceFailure, undefined);
+    assert.equal((await app.inject({ method: "GET", url })).json().blueprint.approved, false, "The new plan waits for Approve.");
+  } finally {
+    await app.close();
+  }
+});
+
+test("A redesign that fails after the structural return leaves the plan that could not be generated on screen", async () => {
+  const { app, rows, jobs, url, requestRow, designBlueprint, runBlueprintJob } = await testApp();
+  try {
+    await designBlueprint();
+    await app.inject({ method: "POST", url: `${url}/approve`, payload: { sequenceMode: "linear" } });
+    const plan = rows.get(courseBlueprints)![0] as typeof courseBlueprints.$inferSelect;
+    Object.assign(plan, {
+      approved: null, approvedAt: null, draft: { ...plan.draft, sequenceFailure: { reasons: ["Stops short of the song."] } },
+    });
+    Object.assign(requestRow, { status: "blueprint_preparing", failureReason: "Together, the finished Lessons don't reach your Learning Goal." });
+    Object.assign(jobs("blueprint")[0]!, { status: "queued", claimToken: null, leaseExpiresAt: null });
+
+    assert.ok(await runBlueprintJob(recordingBuilder(true).builder) instanceof BlueprintFailedError);
+    assert.equal(requestRow.status, "blueprint_review");
+    assert.equal(requestRow.failureReason, REDESIGN_FAILED_REASON);
+    assert.equal((rows.get(courseBlueprints)![0] as typeof courseBlueprints.$inferSelect).draft.sequenceFailure, undefined,
+      "The marker is cleared, so Try again designs from scratch rather than from a plan that is gone.");
   } finally {
     await app.close();
   }
