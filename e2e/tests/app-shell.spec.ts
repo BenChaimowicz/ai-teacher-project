@@ -27,7 +27,7 @@ test("on a narrow screen the sidebar is a drawer that Esc closes", async ({ page
   const toggle = page.getByRole("button", { name: "Show sidebar" });
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await toggle.click();
-  await expect(page.getByRole("link", { name: "How you like to learn" })).toBeVisible();
+  await expect(page.getByTestId("sidebar-inner").getByRole("link", { name: "How you like to learn" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Show sidebar" })).toHaveAttribute("aria-expanded", "false");
 });
