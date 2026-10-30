@@ -5,6 +5,7 @@
   "packageManager": "pnpm@12.15.0",
   "scripts": {
     "apps": "node scripts/apps.mjs",
+    "jongi:pack": "node scripts/pack-jongi-frames.mjs",
     "apps:plain": "pnpm --parallel --filter @senoy/web --filter @senoy/api --filter @senoy/worker --filter @senoy/console dev",
     "dash": "pnpm --filter @senoy/console dev",
     "check": "pnpm typecheck && pnpm test",
