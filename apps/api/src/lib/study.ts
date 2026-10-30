@@ -80,17 +80,21 @@ export async function loadCourseContext(
   courseId: string,
 ): Promise<CourseContext | null> {
   try {
-    const course = await store.findCourse(learnerId, courseId);
+    // Only the completions need the Lesson ids; the rest share one round trip. Nothing read for a Course that isn't
+    // this Learner's is returned.
+    const [course, modules, lessons, completedAt] = await Promise.all([
+      store.findCourse(learnerId, courseId),
+      store.listModules(courseId),
+      store.listLessons(courseId),
+      store.courseCompletedAt(learnerId, courseId),
+    ]);
     if (!course) return null;
-    const modules = await store.listModules(courseId);
-    const lessons = await store.listLessons(courseId);
     const completedIds = await store.completedLessonIds(
       learnerId,
       lessons.map((row) => row.id),
     );
     const sequenceMode = parseSequenceMode(course.sequenceMode);
     const lockedIds = lockedLessonIds(lessons, completedIds, sequenceMode);
-    const completedAt = await store.courseCompletedAt(learnerId, courseId);
     return { course, sequenceMode, modules, lessons, completedIds, lockedIds, completedAt };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -169,8 +173,9 @@ export async function loadStudyCourse(
  */
 export async function recordCourseCompletion(store: StudyStore, learnerId: string, courseId: string): Promise<void> {
   try {
-    if (await store.courseCompletedAt(learnerId, courseId)) return;
-    const lessonIds = (await store.listLessons(courseId)).map((row) => row.id);
+    const [completedAt, lessons] = await Promise.all([store.courseCompletedAt(learnerId, courseId), store.listLessons(courseId)]);
+    if (completedAt) return;
+    const lessonIds = lessons.map((row) => row.id);
     const completedIds = await store.completedLessonIds(learnerId, lessonIds);
     if (isCourseComplete(lessonIds, completedIds)) {
       await store.insertCourseCompletion(learnerId, courseId);
@@ -220,12 +225,15 @@ export async function loadCourseSummary(
     const { course, modules, lessons, completedAt } = context;
     if (!completedAt) return { ok: false, status: 409, error: "This Course is not complete yet." };
 
-    const quizzes: CourseSummaryQuiz[] = [];
-    for (const row of lessons) {
-      if (row.teachingMethod !== QUIZ_METHOD_ID) continue;
-      const best = bestQuizScore(submittedScores(await store.listQuizAttempts(learnerId, row.id)));
-      quizzes.push({ lessonId: row.id, title: row.title, best });
-    }
+    const quizzes: CourseSummaryQuiz[] = await Promise.all(
+      lessons
+        .filter((row) => row.teachingMethod === QUIZ_METHOD_ID)
+        .map(async (row) => ({
+          lessonId: row.id,
+          title: row.title,
+          best: bestQuizScore(submittedScores(await store.listQuizAttempts(learnerId, row.id))),
+        })),
+    );
 
     return {
       ok: true,
@@ -279,30 +287,34 @@ export async function studyLinksByCourseId(
     }
     if (courseIds.length === 0) return links;
 
-    const lessonRows = await db
-      .select({
-        id: publishedLessons.id,
-        publishedCourseId: publishedLessons.publishedCourseId,
-        position: publishedLessons.position,
-      })
-      .from(publishedLessons)
-      .where(inArray(publishedLessons.publishedCourseId, courseIds))
-      .orderBy(asc(publishedLessons.position));
-
-    const lessonIds = lessonRows.map((row) => row.id);
-    const completedRows =
-      lessonIds.length === 0
-        ? []
-        : await db
-            .select({ lessonId: lessonCompletions.lessonId })
-            .from(lessonCompletions)
-            .where(and(eq(lessonCompletions.learnerId, learnerId), inArray(lessonCompletions.lessonId, lessonIds)));
-    const completedIds = new Set(completedRows.map((row) => row.lessonId));
-
-    const courseCompletionRows = await db
+    // Course completions don't depend on the Lessons-then-completions chain, so they run alongside it.
+    const lessonsWithCompletions = (async () => {
+      const lessonRows = await db
+        .select({
+          id: publishedLessons.id,
+          publishedCourseId: publishedLessons.publishedCourseId,
+          position: publishedLessons.position,
+        })
+        .from(publishedLessons)
+        .where(inArray(publishedLessons.publishedCourseId, courseIds))
+        .orderBy(asc(publishedLessons.position));
+      const lessonIds = lessonRows.map((row) => row.id);
+      const completedRows =
+        lessonIds.length === 0
+          ? []
+          : await db
+              .select({ lessonId: lessonCompletions.lessonId })
+              .from(lessonCompletions)
+              .where(and(eq(lessonCompletions.learnerId, learnerId), inArray(lessonCompletions.lessonId, lessonIds)));
+      return { lessonRows, completedRows };
+    })();
+    const courseCompletionsQuery = db
       .select({ courseId: courseCompletions.publishedCourseId })
       .from(courseCompletions)
       .where(and(eq(courseCompletions.learnerId, learnerId), inArray(courseCompletions.publishedCourseId, courseIds)));
+
+    const [{ lessonRows, completedRows }, courseCompletionRows] = await Promise.all([lessonsWithCompletions, courseCompletionsQuery]);
+    const completedIds = new Set(completedRows.map((row) => row.lessonId));
     const completedCourseIds = new Set(courseCompletionRows.map((row) => row.courseId));
 
     const lessonsByCourse = new Map<string, string[]>();

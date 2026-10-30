@@ -111,11 +111,13 @@ const RETRYABLE: Requeueable = {
  * @returns The view, or null before Approve
  */
 async function generationView(db: Database, requestId: string, blueprint: BlueprintRow | null): Promise<GenerationView | null> {
-  const [job] = await db.select().from(generationJobs).where(courseJobOf(requestId)).limit(1);
-  if (!job || !blueprint?.approved) return null;
+  if (!blueprint?.approved) return null;
+  const [[job], finished] = await Promise.all([
+    db.select().from(generationJobs).where(courseJobOf(requestId)).limit(1),
+    db.select({ slotId: unpublishedLessons.slotId }).from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, requestId)),
+  ]);
+  if (!job) return null;
   const slots = blueprintSlots(blueprint.approved.blueprint);
-  const finished = await db.select({ slotId: unpublishedLessons.slotId }).from(unpublishedLessons)
-    .where(eq(unpublishedLessons.courseRequestId, requestId));
   const index = job.status === "running" && job.stage === "lesson" ? slots.findIndex((slot) => slot.id === job.currentSlotId) : -1;
   return {
     status: job.status,
@@ -173,9 +175,11 @@ export async function blueprintRoutes(app: FastifyInstance) {
       const learnerId = request.currentLearner.id;
       const row = await ownedRequest(request.params.requestId, learnerId, reply);
       if (!row) return reply;
-      const blueprint = await blueprintOf(row.id);
-      const course = row.status === "published" ? await publishedCourseOf(row.id, learnerId) : null;
-      const generation = await generationView(app.db, row.id, blueprint);
+      // The Blueprint-then-generation chain and the published Course are independent.
+      const [{ blueprint, generation }, course] = await Promise.all([
+        blueprintOf(row.id).then(async (blueprint) => ({ blueprint, generation: await generationView(app.db, row.id, blueprint) })),
+        row.status === "published" ? publishedCourseOf(row.id, learnerId) : null,
+      ]);
       return { courseRequest: row, blueprint: blueprint ? learnerView(blueprint) : null, course, generation };
     } catch (error) {
       return fail(reply, request.log, "get", request.params.requestId, error, "Failed to load the Course Blueprint.");
