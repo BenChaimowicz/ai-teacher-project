@@ -89,7 +89,7 @@ Four screens. Always dark, with five switchable accent palettes. The visual and 
 
 **Product name.** **Knibbler** (silent **k** — spelled *Knibbler*, pronounced like "Nibbler"). Sidebar lockup, browser tab title, greeting, empty states. The logo is the companion's silhouette in a graduation cap; the favicon follows the current palette.
 
-**Companion.** **Nibbles**, a hamster, voices the Course Guide and the scripted turns of every screen (the name lives in one constant; it may change). Low-key, kind, brief; never childish. It presents policy and system state; it cannot override policy or invent decisions. The flow is chat-*like*: Nibbles' line, then tap-to-choose options directly under it. The only free text is where the Learner names what to learn (Compose, Revise request, and **Something else** while focusing the goal). There is no open chat.
+**Companion.** **Nibbles**, a cut-paper raccoon, voices the Course Guide and the scripted turns of every screen (the name lives in one constant; it may change). Low-key, kind, brief; never childish. It presents policy and system state; it cannot override policy or invent decisions. The flow is chat-*like*: Nibbles' line, then tap-to-choose options directly under it. The only free text is where the Learner names what to learn (Compose, Revise request, and **Something else** while focusing the goal). There is no open chat.
 
 **Sidebar.** Present on every screen, collapsible, and never scrolls: a compact companion card (streak, today's minutes against a daily goal), New course, one line per Course (4–5 at most, then "see all on Home"), and "How you like to learn" pinned at the bottom. In Study it shows the Course outline instead of the Course list. Rewards are non-numeric (no points, XP, or levels).
 

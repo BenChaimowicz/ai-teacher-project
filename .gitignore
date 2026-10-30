@@ -36,3 +36,6 @@ Thumbs.db
 
 # Blender keeps the previous save as <name>.blend1
 *.blend1
+
+# Jongi's rendered frames, before pnpm jongi:pack tiles them into frames/
+apps/web/src/components/companion/.jongi-frames/

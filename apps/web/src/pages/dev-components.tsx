@@ -81,32 +81,42 @@ function Cell({ label, children }: { label: string; children: ReactNode }) {
 }
 
 const JONGI_MOODS: { mood: JongiMood; label: string; note: string }[] = [
-  { mood: "idle", label: "Idle", note: "Breathes, blinks, ear-flicks." },
-  { mood: "think", label: "Thinking", note: "Paw to chin. Eyes up." },
-  { mood: "cheer", label: "Win", note: "A one-shot hop, then idle." },
-  { mood: "rest", label: "Resting", note: "Cap slips. Back soon." },
+  { mood: "idle", label: "Idle", note: "Breathes, blinks. Every 20 s he lies down to read, behind a smoke puff." },
+  { mood: "think", label: "Thinking", note: "Paw to chin, eyes up, thought bubbles that pop." },
+  { mood: "cheer", label: "Win", note: "A one-shot hop and cap toss, then idle." },
+  { mood: "rest", label: "Resting", note: "Eyes shut, cap slipped, drifting Zs." },
 ];
 
 /** Jongi in every mood and framing, with a button that replays the Win. */
 function JongiSection() {
+  const handles = useRef<(JongiHandle | null)[]>([]);
   const wins = useRef<(JongiHandle | null)[]>([]);
   return (
-    <Section title="jongi" note="The companion. Scene tiles at 168, the sidebar card's tile at 56, chat avatars at 32 and 24. Pointer look-at on the first row.">
+    <Section
+      title="jongi"
+      note="The companion, as rendered frames from jongi.blend. Head-and-shoulders tiles at 128 (hover to flick an ear, click to poke), the sidebar card's tile at 56, chat avatars at 32 and 24. Pointer look-at on the first row. The full and scene framings only have Idle and Win."
+    >
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {JONGI_MOODS.map((m, index) => (
-          <div key={m.mood} className="flex flex-col items-center gap-2 rounded-xl bg-[var(--panel)] p-3" data-jongi-tile={m.mood}>
+          <div
+            key={m.mood}
+            className="flex flex-col items-center gap-2 rounded-xl bg-[var(--panel)] p-3"
+            data-jongi-tile={m.mood}
+            onMouseEnter={() => handles.current[index]?.flick()}
+            onClick={() => handles.current[index]?.poke()}
+          >
             <Jongi
               ref={(handle) => {
-                wins.current[index] = handle;
+                handles.current[index] = handle;
               }}
-              size={168}
-              framing="scene"
+              size={128}
               mood={m.mood}
+              tile
               track
               label={`${m.label} Jongi`}
             />
             <span className="text-sm font-semibold">{m.label}</span>
-            <span className="text-xs text-muted-foreground">{m.note}</span>
+            <span className="text-center text-xs text-muted-foreground">{m.note}</span>
           </div>
         ))}
       </div>
@@ -122,11 +132,34 @@ function JongiSection() {
         <Cell label="24 round">
           <Jongi size={24} tile="round" />
         </Cell>
+      </div>
+      <div className="mt-6 flex flex-wrap items-end gap-8">
+        <Cell label="168 scene · idle">
+          <Jongi
+            ref={(handle) => {
+              wins.current[0] = handle;
+            }}
+            size={168}
+            framing="scene"
+            track
+          />
+        </Cell>
         <Cell label="140 full · cheer">
-          <Jongi size={140} framing="full" mood="cheer" />
+          <Jongi
+            ref={(handle) => {
+              wins.current[1] = handle;
+            }}
+            size={140}
+            framing="full"
+            mood="cheer"
+          />
         </Cell>
         <Cell label="Win">
-          <Button variant="secondary" size="sm" onClick={() => wins.current.forEach((handle) => handle?.win())}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => [...handles.current, ...wins.current].forEach((handle) => handle?.win())}
+          >
             Replay the win
           </Button>
         </Cell>

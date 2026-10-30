@@ -1,11 +1,9 @@
 /*
- * Jongi, the companion (SEN-97). Ported from docs/uis/redesign/10-papercraft-jongi.html.
- * Transform origins are in viewBox units (0 0 400 420), as in the mock.
- * --j-phase (set per instance) offsets the idle loops so several Jongis never move in lockstep.
+ * Jongi, the companion (SEN-104). The animation is in the rendered frames (see jongi.tsx); this file
+ * lays out the layers: the paper discs (scene), the frame, the drawn pupils, and the poof on top.
  */
 .jongi { position: relative; display: inline-block; flex: none; vertical-align: middle; line-height: 0; }
-.jongi svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.jongi.j-bust svg { overflow: hidden; }
+.jongi.j-bust { overflow: hidden; }
 
 /* the mock's avatar tile: a small paper square, lit from the middle */
 .jongi.j-tile {
@@ -15,96 +13,13 @@
 }
 .jongi.j-tile.j-round { --j-tile-r: 50%; }
 
-.jongi svg * { transform-box: view-box; }
-.jongi .j-body { transform-origin: 200px 350px; }
-.jongi .j-ride { transform-origin: 200px 240px; }
-.jongi .j-ears { transform-origin: 200px 122px; }
-.jongi .j-ear-l { transform-origin: 146px 116px; }
-.jongi .j-ear-r { transform-origin: 254px 116px; }
-.jongi .j-tsway, .jongi .j-tflick { transform-origin: 266px 83px; }
-.jongi .j-capg { transform-origin: 209px 96px; }
-.jongi .j-arm { transform-origin: 138px 236px; }
-.jongi .j-tail { transform-origin: 262px 325px; }
-.jongi .j-hop { transform-origin: 200px 356px; }
-.jongi .j-blink { transform-box: fill-box; transform-origin: center; }
-.jongi .j-nose { transform-box: fill-box; transform-origin: 50% 0; }
-.jongi .j-gsh, .jongi .j-td, .jongi .j-cf, .jongi .j-zz, .jongi .j-disc-in { transform-box: fill-box; transform-origin: center; }
-
-/* happy eyes swap in during a Win */
-.jongi .j-eye-happy { opacity: 0; transition: opacity 0.08s; }
-.jongi.j-happy .j-eye-happy { opacity: 1; }
-.jongi.j-happy .j-eye-open { opacity: 0; }
-
-/* always: tassel sway, nose twitch, the ribbon tail */
-.jongi .j-tsway { animation: jongi-tsway 3.6s ease-in-out var(--j-phase, 0s) infinite; }
-.jongi .j-nose { animation: jongi-nose 3.4s linear var(--j-phase, 0s) infinite; }
-.jongi .j-tail { animation: jongi-tailw 5s ease-in-out var(--j-phase, 0s) infinite; }
-
-/* Idle: breathing, a head bob, ear flicks, the tassel flicking */
-.jongi.j-idle .j-body { animation: jongi-breathe 4.2s ease-in-out var(--j-phase, 0s) infinite; }
-.jongi.j-idle .j-ride { animation: jongi-bob 4.2s ease-in-out calc(var(--j-phase, 0s) - 3.9s) infinite; }
-.jongi.j-idle .j-ear-r { animation: jongi-flick-r 7s linear var(--j-phase, 0s) infinite; }
-.jongi.j-idle .j-ear-l { animation: jongi-flick-l 7s linear var(--j-phase, 0s) infinite; }
-.jongi.j-idle .j-tflick { animation: jongi-tflick 7s linear var(--j-phase, 0s) infinite; }
-
-/* Thinking: paw to chin, eyes up and darting, a tilt, three diamonds */
-.jongi.j-think .j-body { animation: jongi-breathe 5s ease-in-out infinite; }
-.jongi.j-think .j-ride { animation: jongi-tilt 5s ease-in-out infinite; }
-.jongi.j-think .j-look2 { animation: jongi-dart 5s ease-in-out infinite; }
-.jongi.j-think .j-arm-r { animation: jongi-tap 2.4s ease-in-out infinite; }
-.jongi .j-td { animation: jongi-tdot 1.8s ease-in-out infinite; }
-
-/* Resting: slow breath, a doze nod, cap slipped, Zs */
-.jongi.j-rest .j-body { animation: jongi-breathe-slow 5.6s ease-in-out infinite; }
-.jongi.j-rest .j-ride { animation: jongi-doze 5.6s ease-in-out -5.2s infinite; }
-.jongi.j-rest .j-tsway { animation-duration: 6s; }
-.jongi .j-zz { animation: jongi-zz 5.4s ease-in-out infinite; }
-
-/* Win confetti: paper triangles, once */
-.jongi .j-cf { opacity: 0; animation: jongi-cf 1.5s linear both; }
-
-@keyframes jongi-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.012, 1.028); } }
-@keyframes jongi-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes jongi-flick-r {
-  0%, 78%, 100% { transform: rotate(0); } 80% { transform: rotate(16deg) scale(0.9, 1); }
-  82.5% { transform: rotate(-6deg) scale(1.02, 1); } 85% { transform: rotate(4deg); } 88% { transform: rotate(0); }
-}
-@keyframes jongi-flick-l {
-  0%, 30%, 100% { transform: rotate(0); } 32% { transform: rotate(-9deg) scale(0.94, 1); }
-  34.5% { transform: rotate(3deg); } 37% { transform: rotate(0); }
-}
-@keyframes jongi-tflick {
-  0%, 31% { transform: rotate(0); } 33% { transform: rotate(10deg); } 36% { transform: rotate(-6deg); } 39% { transform: rotate(2deg); }
-  42%, 80% { transform: rotate(0); } 82% { transform: rotate(-24deg); } 86% { transform: rotate(15deg); } 90% { transform: rotate(-8deg); }
-  94% { transform: rotate(3deg); } 97%, 100% { transform: rotate(0); }
-}
-@keyframes jongi-tsway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
-@keyframes jongi-nose { 0%, 60%, 68%, 100% { transform: scaleY(1); } 62%, 66% { transform: scaleY(0.8); } 64% { transform: scaleY(1); } }
-@keyframes jongi-tailw { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(3deg); } }
-@keyframes jongi-tilt { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(2deg) translateY(-1px); } }
-@keyframes jongi-dart { 0%, 40%, 100% { transform: translate(0, 0); } 45%, 80% { transform: translate(-3px, 1px); } }
-@keyframes jongi-tap { 0%, 100% { transform: rotate(98deg); } 50% { transform: rotate(92deg); } }
-@keyframes jongi-tdot {
-  0% { transform: scale(0) rotate(-45deg); opacity: 0; } 20% { transform: scale(1.15) rotate(0); opacity: 1; }
-  30%, 70% { transform: scale(1); opacity: 1; } 90%, 100% { transform: scale(0) rotate(30deg); opacity: 0; }
-}
-@keyframes jongi-breathe-slow { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.02, 1.045); } }
-@keyframes jongi-doze { 0%, 100% { transform: translate(0, 6px) rotate(3deg); } 50% { transform: translate(0, 1px) rotate(2deg); } }
-@keyframes jongi-zz {
-  0% { transform: translate(0, 0) rotate(-10deg) scale(0.6); opacity: 0; } 20% { opacity: 0.9; }
-  100% { transform: translate(20px, -50px) rotate(12deg) scale(1.1); opacity: 0; }
-}
-@keyframes jongi-cf {
-  0% { transform: translate(0, -6px) rotate(0) scaleX(1); opacity: 0; } 10% { opacity: 1; }
-  50% { transform: translate(6px, 26px) rotate(160deg) scaleX(-1); }
-  100% { transform: translate(-4px, 60px) rotate(320deg) scaleX(1); opacity: 0; }
-}
-
-/* Reduced motion: hold each mood's still pose (Win shows happy eyes only, from the component). */
-@media (prefers-reduced-motion: reduce) {
-  .jongi * { animation: none !important; transition: none !important; }
-  .jongi .j-td, .jongi .j-zz { opacity: 1; }
-}
+.jongi .j-discs { position: absolute; inset: 0; width: 100%; height: 100%; }
+.jongi .j-stage, .jongi .j-body, .jongi .j-frame, .jongi .j-puff { position: absolute; inset: 0; display: block; }
+/* the click squash pivots at his feet */
+.jongi .j-body { transform-origin: 50% 92%; }
+.jongi .j-frame, .jongi .j-puff { background-repeat: no-repeat; }
+.jongi .j-puff { visibility: hidden; }
+.jongi .j-eyes { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
 
 /* Sidebar card: Jongi's tile sits centred in the today's-goal ring. */
 .k-buddy .av > .jongi { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }

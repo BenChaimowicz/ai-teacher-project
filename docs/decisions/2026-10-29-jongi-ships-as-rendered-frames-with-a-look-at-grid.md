@@ -2,7 +2,7 @@
 date: 2026-10-29
 tickets: SEN-104
 people: Ben
-status: active
+status: superseded
 ---
 
 # Blender hands the web app pre-rendered frames: a sprite sheet per mood plus a small grid of head and eye angles for look-at
