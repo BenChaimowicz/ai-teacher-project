@@ -8,11 +8,21 @@ import { studyLinksByCourseId } from "../lib/study.ts";
  * @param app - Fastify app
  */
 export async function libraryRoutes(app: FastifyInstance) {
+  /** The Learner's published Courses still in the Library. */
+  function visibleCourses(learnerId: string) {
+    return and(eq(publishedCourses.learnerId, learnerId), isNull(publishedCourses.hiddenAt));
+  }
+
+  /** Subquery of those Courses' ids, so their Study links load alongside them. */
+  function visibleCourseIds(learnerId: string) {
+    return app.db.select({ id: publishedCourses.id }).from(publishedCourses).where(visibleCourses(learnerId));
+  }
+
   app.get("/api/library", async (request, reply) => {
     try {
       const learnerId = request.currentLearner.id;
 
-      // The Requests query and the Courses-then-links chain don't depend on each other, so they share one round trip.
+      // Requests, Courses and their Study links share one round trip.
       const requestsQuery = app.db
         .select({
           id: courseRequests.id,
@@ -27,25 +37,21 @@ export async function libraryRoutes(app: FastifyInstance) {
         // Newest first, so a Learner who started the same subject again lands on the latest Request.
         .orderBy(desc(courseRequests.createdAt), desc(courseRequests.id));
 
-      const coursesWithLinks = (async () => {
-        const courses = await app.db
-          .select({
-            id: publishedCourses.id,
-            title: publishedCourses.title,
-            lastOpenedAt: publishedCourses.lastOpenedAt,
-          })
-          .from(publishedCourses)
-          .where(and(eq(publishedCourses.learnerId, learnerId), isNull(publishedCourses.hiddenAt)))
-          .orderBy(desc(publishedCourses.publishedAt), desc(publishedCourses.id));
-        const links = await studyLinksByCourseId(
-          app.db,
-          learnerId,
-          courses.map((course) => course.id),
-        );
-        return { courses, links };
-      })();
+      const coursesQuery = app.db
+        .select({
+          id: publishedCourses.id,
+          title: publishedCourses.title,
+          lastOpenedAt: publishedCourses.lastOpenedAt,
+        })
+        .from(publishedCourses)
+        .where(visibleCourses(learnerId))
+        .orderBy(desc(publishedCourses.publishedAt), desc(publishedCourses.id));
 
-      const [requests, { courses, links }] = await Promise.all([requestsQuery, coursesWithLinks]);
+      const [requests, courses, links] = await Promise.all([
+        requestsQuery,
+        coursesQuery,
+        studyLinksByCourseId(app.db, learnerId, visibleCourseIds(learnerId)),
+      ]);
 
       return {
         items: [
@@ -134,7 +140,7 @@ export async function libraryRoutes(app: FastifyInstance) {
   app.get("/api/open-items", async (request, reply) => {
     try {
       const learnerId = request.currentLearner.id;
-      // As in GET /api/library: the Requests query runs alongside the Courses-then-links chain.
+      // As in GET /api/library: one round trip.
       const requestsQuery = app.db
         .select({
           id: courseRequests.id,
@@ -148,24 +154,20 @@ export async function libraryRoutes(app: FastifyInstance) {
         // Newest first, so a Learner who started the same subject again lands on the latest Request.
         .orderBy(desc(courseRequests.createdAt), desc(courseRequests.id));
 
-      const coursesWithLinks = (async () => {
-        const courses = await app.db
-          .select({
-            id: publishedCourses.id,
-            title: publishedCourses.title,
-          })
-          .from(publishedCourses)
-          .where(and(eq(publishedCourses.learnerId, learnerId), isNull(publishedCourses.hiddenAt)))
-          .orderBy(desc(publishedCourses.publishedAt), desc(publishedCourses.id));
-        const links = await studyLinksByCourseId(
-          app.db,
-          learnerId,
-          courses.map((course) => course.id),
-        );
-        return { courses, links };
-      })();
+      const coursesQuery = app.db
+        .select({
+          id: publishedCourses.id,
+          title: publishedCourses.title,
+        })
+        .from(publishedCourses)
+        .where(visibleCourses(learnerId))
+        .orderBy(desc(publishedCourses.publishedAt), desc(publishedCourses.id));
 
-      const [requestRows, { courses, links }] = await Promise.all([requestsQuery, coursesWithLinks]);
+      const [requestRows, courses, links] = await Promise.all([
+        requestsQuery,
+        coursesQuery,
+        studyLinksByCourseId(app.db, learnerId, visibleCourseIds(learnerId)),
+      ]);
 
       const courseItems = courses.flatMap((course) => {
         const link = links.get(course.id);

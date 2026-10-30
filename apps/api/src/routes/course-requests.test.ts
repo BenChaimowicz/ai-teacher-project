@@ -70,7 +70,9 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
       }),
     }),
     select: (fields?: Record<string, PgColumn>) => ({
+      /** Joins (the Library's Study links) only ever read tables this store leaves empty. */
       from: (table: unknown) => ({
+        leftJoin() { return this; },
         where: (condition: SQL) => {
           const matched = table === courseRequests ? rows.filter((row) => matches(row, condition)) : [];
           const result = matched.map((row) => project(row, fields));
@@ -78,6 +80,7 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
             limit: async (count: number) => result.slice(0, count),
             /** Supports only the newest-first order the Library asks for. */
             orderBy: async (...order: SQL[]) => {
+              if (table !== courseRequests) return [];
               assert.match(dialect.sqlToQuery(order[0]!).sql, /"(created|published)_at" desc/);
               return [...matched].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map((row) => project(row, fields));
             },

@@ -20,6 +20,7 @@ import {
   loadCourseContext,
   recordCourseCompletion,
   studyPayload,
+  type CourseContext,
   type StudyCoursePayload,
 } from "./study.ts";
 import type { LessonRow, QuizAttemptRow, StudyStore } from "./study-store.ts";
@@ -72,8 +73,9 @@ export type QuizRequest = {
   profile: ResolvedTeachingProfile;
 };
 
-/** Loaded Quiz plus its attempts. */
+/** Loaded Quiz plus its attempts, and the Course it was loaded from. */
 type QuizContext = {
+  course: CourseContext;
   lesson: LessonRow;
   body: QuizBody;
   attempts: QuizAttemptRow[];
@@ -87,7 +89,11 @@ type QuizContext = {
  * @param request - Quiz request
  */
 async function loadQuiz(store: StudyStore, request: QuizRequest): Promise<QuizContext | QuizError> {
-  const context = await loadCourseContext(store, request.learnerId, request.courseId);
+  // The attempts are keyed by the requested Lesson, so they load with the Course; they're dropped if it isn't a Quiz here.
+  const [context, attempts] = await Promise.all([
+    loadCourseContext(store, request.learnerId, request.courseId),
+    store.listQuizAttempts(request.learnerId, request.lessonId),
+  ]);
   if (!context) return { ok: false, status: 404, error: "Published Course not found." };
   const lesson = context.lessons.find((row) => row.id === request.lessonId);
   if (!lesson || lesson.teachingMethod !== QUIZ_METHOD_ID) {
@@ -96,9 +102,8 @@ async function loadQuiz(store: StudyStore, request: QuizRequest): Promise<QuizCo
   if (context.lockedIds.has(lesson.id)) return { ok: false, status: 403, error: LOCKED_LESSON_ERROR };
   const body = parseQuizBody(lesson.body);
   if (!body) return { ok: false, status: 400, error: "This Quiz has no questions." };
-  const attempts = await store.listQuizAttempts(request.learnerId, lesson.id);
   const draft = attempts.find((row) => row.status === "draft") ?? null;
-  return { lesson, body, attempts, draft, latest: draft ?? attempts.at(-1) ?? null };
+  return { course: context, lesson, body, attempts, draft, latest: draft ?? attempts.at(-1) ?? null };
 }
 
 /**
@@ -276,12 +281,12 @@ export function submitQuiz(store: StudyStore, request: QuizRequest): Promise<Qui
     });
     if (outcome.ok) await recordCourseCompletion(store, request.learnerId, request.courseId);
 
-    const next = await reload(store, request);
-    if (!next.ok) return next;
-    const context = await loadCourseContext(store, request.learnerId, request.courseId);
-    const study = context ? studyPayload(context) : null;
+    // One reload serves both the Quiz and the Study payload.
+    const next = await loadQuiz(store, request);
+    if ("ok" in next) return next;
+    const study = studyPayload(next.course);
     if (!study) return { ok: false, status: 404, error: "Published Course not found." };
-    return { ok: true, quiz: next.quiz, study };
+    return { ok: true, quiz: quizView(next, request.profile), study };
   });
 }
 

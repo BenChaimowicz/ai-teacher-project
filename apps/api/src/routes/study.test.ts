@@ -43,8 +43,8 @@ function memoryStore(quizBody: QuizBody): StudyStore {
     async listLessons() {
       return SEEDED_LESSONS.map((lesson) => ({ ...lesson, ...(lesson.id === SEEDED_QUIZ_LESSON_ID ? { body: quizBody } : {}) }));
     },
-    async completedLessonIds(_learnerId, lessonIds) {
-      return new Set(lessonIds.filter((id) => completions.has(id)));
+    async completedLessonIds() {
+      return new Set(completions);
     },
     async insertCompletion(_learnerId, lessonId) {
       completions.add(lessonId);

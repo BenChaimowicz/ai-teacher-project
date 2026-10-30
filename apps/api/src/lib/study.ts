@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, type SQLWrapper } from "drizzle-orm";
 import {
   bestQuizScore,
   canSwitchSequenceMode,
@@ -80,19 +80,15 @@ export async function loadCourseContext(
   courseId: string,
 ): Promise<CourseContext | null> {
   try {
-    // Only the completions need the Lesson ids; the rest share one round trip. Nothing read for a Course that isn't
-    // this Learner's is returned.
-    const [course, modules, lessons, completedAt] = await Promise.all([
+    // Every read shares one round trip. Nothing read for a Course that isn't this Learner's is returned.
+    const [course, modules, lessons, completedIds, completedAt] = await Promise.all([
       store.findCourse(learnerId, courseId),
       store.listModules(courseId),
       store.listLessons(courseId),
+      store.completedLessonIds(learnerId, courseId),
       store.courseCompletedAt(learnerId, courseId),
     ]);
     if (!course) return null;
-    const completedIds = await store.completedLessonIds(
-      learnerId,
-      lessons.map((row) => row.id),
-    );
     const sequenceMode = parseSequenceMode(course.sequenceMode);
     const lockedIds = lockedLessonIds(lessons, completedIds, sequenceMode);
     return { course, sequenceMode, modules, lessons, completedIds, lockedIds, completedAt };
@@ -173,10 +169,13 @@ export async function loadStudyCourse(
  */
 export async function recordCourseCompletion(store: StudyStore, learnerId: string, courseId: string): Promise<void> {
   try {
-    const [completedAt, lessons] = await Promise.all([store.courseCompletedAt(learnerId, courseId), store.listLessons(courseId)]);
+    const [completedAt, lessons, completedIds] = await Promise.all([
+      store.courseCompletedAt(learnerId, courseId),
+      store.listLessons(courseId),
+      store.completedLessonIds(learnerId, courseId),
+    ]);
     if (completedAt) return;
     const lessonIds = lessons.map((row) => row.id);
-    const completedIds = await store.completedLessonIds(learnerId, lessonIds);
     if (isCourseComplete(lessonIds, completedIds)) {
       await store.insertCourseCompletion(learnerId, courseId);
       void recordProductEvent("course_completed", { learnerId, detail: { courseId, lessons: lessonIds.length } });
@@ -270,51 +269,37 @@ export type CourseStudyLink = {
 };
 
 /**
- * Study href at the Current Lesson for each published Course, plus Progress counts.
+ * Study href at the Current Lesson for each published Course, plus Progress counts. Lessons with their completions and
+ * the Course completions are two statements in one round trip, and the Courses are a subquery, so callers don't read
+ * them first.
  * @param db - Drizzle client
  * @param learnerId - Current Learner
- * @param courseIds - Published Course ids
+ * @param courseIds - Subquery selecting the published Course ids, e.g. `db.select({ id: publishedCourses.id })...`
+ * @returns Links for the Courses that have Lessons or a completion; callers default the rest
  */
 export async function studyLinksByCourseId(
   db: Database,
   learnerId: string,
-  courseIds: string[],
+  courseIds: SQLWrapper,
 ): Promise<Map<string, CourseStudyLink>> {
   try {
-    const links = new Map<string, CourseStudyLink>();
-    for (const courseId of courseIds) {
-      links.set(courseId, { href: null, completed: 0, total: 0, courseCompleted: false });
-    }
-    if (courseIds.length === 0) return links;
-
-    // Course completions don't depend on the Lessons-then-completions chain, so they run alongside it.
-    const lessonsWithCompletions = (async () => {
-      const lessonRows = await db
+    const [lessonRows, courseCompletionRows] = await Promise.all([
+      db
         .select({
           id: publishedLessons.id,
           publishedCourseId: publishedLessons.publishedCourseId,
-          position: publishedLessons.position,
+          completedLessonId: lessonCompletions.lessonId,
         })
         .from(publishedLessons)
+        .leftJoin(lessonCompletions, and(eq(lessonCompletions.lessonId, publishedLessons.id), eq(lessonCompletions.learnerId, learnerId)))
         .where(inArray(publishedLessons.publishedCourseId, courseIds))
-        .orderBy(asc(publishedLessons.position));
-      const lessonIds = lessonRows.map((row) => row.id);
-      const completedRows =
-        lessonIds.length === 0
-          ? []
-          : await db
-              .select({ lessonId: lessonCompletions.lessonId })
-              .from(lessonCompletions)
-              .where(and(eq(lessonCompletions.learnerId, learnerId), inArray(lessonCompletions.lessonId, lessonIds)));
-      return { lessonRows, completedRows };
-    })();
-    const courseCompletionsQuery = db
-      .select({ courseId: courseCompletions.publishedCourseId })
-      .from(courseCompletions)
-      .where(and(eq(courseCompletions.learnerId, learnerId), inArray(courseCompletions.publishedCourseId, courseIds)));
-
-    const [{ lessonRows, completedRows }, courseCompletionRows] = await Promise.all([lessonsWithCompletions, courseCompletionsQuery]);
-    const completedIds = new Set(completedRows.map((row) => row.lessonId));
+        .orderBy(asc(publishedLessons.position)),
+      db
+        .select({ courseId: courseCompletions.publishedCourseId })
+        .from(courseCompletions)
+        .where(and(eq(courseCompletions.learnerId, learnerId), inArray(courseCompletions.publishedCourseId, courseIds))),
+    ]);
+    const completedIds = new Set(lessonRows.flatMap((row) => (row.completedLessonId ? [row.completedLessonId] : [])));
     const completedCourseIds = new Set(courseCompletionRows.map((row) => row.courseId));
 
     const lessonsByCourse = new Map<string, string[]>();
@@ -324,7 +309,8 @@ export async function studyLinksByCourseId(
       lessonsByCourse.set(row.publishedCourseId, list);
     }
 
-    for (const courseId of courseIds) {
+    const links = new Map<string, CourseStudyLink>();
+    for (const courseId of new Set([...lessonsByCourse.keys(), ...completedCourseIds])) {
       const ordered = lessonsByCourse.get(courseId) ?? [];
       const completed = ordered.filter((id) => completedIds.has(id)).length;
       const current = currentLessonId(ordered, completedIds);
