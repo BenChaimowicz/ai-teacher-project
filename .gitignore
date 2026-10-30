@@ -33,3 +33,6 @@ Thumbs.db
 
 # Parallel Account API login (pnpm parallel:login); holds a refresh token
 .parallel-account.json
+
+# Blender keeps the previous save as <name>.blend1
+*.blend1
