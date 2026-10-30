@@ -7,7 +7,8 @@ import type { Database } from "@senoy/db";
 type Row = Record<string, unknown>;
 
 /**
- * In-memory stand-in for the Drizzle calls routes make: insert of one row or many (awaited or with returning),
+ * In-memory stand-in for the Drizzle calls routes make: insert of one row or many (awaited, with returning, or as an
+ * `onConflictDoUpdate` upsert),
  * select/where/orderBy (newest first only)/limit, conditional update/returning, conditional delete, and a transaction that restores every
  * table if its callback throws. Evaluates equality, `is null`, and timestamp `<`/`>` predicates, and treats every
  * condition in a `where` as a conjunction: `or(...)` is not supported.
@@ -80,8 +81,22 @@ export function fakeDb(tables: PgTable[]) {
             return row;
           });
         }
+        /** Updates the row whose `target` columns match each value instead of inserting it, as a unique key would. */
+        function upsert({ target, set }: { target: PgColumn[]; set: Row }) {
+          const keys = fieldsByTable.get(getTableName(table))!;
+          const targetKeys = target.map((column) => keys.get(column.name)!);
+          for (const value of Array.isArray(values) ? values : [values]) {
+            const existing = rows.get(table)!.find((row) => targetKeys.every((key) => row[key] === value[key]));
+            if (existing) Object.assign(existing, set);
+            else {
+              rows.get(table)!.push(withDefaults(table, value));
+              inserts.push({ table, values: value });
+            }
+          }
+        }
         return {
           returning: async (fields?: Record<string, PgColumn>) => insert().map((row) => project(table, row, fields)),
+          onConflictDoUpdate: async (config: { target: PgColumn[]; set: Row }) => upsert(config),
           then: (resolve: (value: unknown) => unknown) => resolve((insert(), undefined)),
         };
       },
