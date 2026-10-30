@@ -224,6 +224,26 @@ test("A Blueprint that misses the whole Learning Goal is revised before review, 
   assert.deepEqual(calls[1]!.input.problems, ["Failed check: sequence_reaches_goal", SEQUENCE_FAIL.reasons[0]]);
 });
 
+const ORDER_FAIL = { pass: false, failedChecks: ["natural_order", "prerequisite_order"], reasons: ["Ragnarök's prelude comes before the creation myth.", "Lesson 1 relies on Fenrir and Hel, introduced in Lesson 3."] };
+
+test("A Blueprint that breaks the subject's natural order, or uses figures a later Lesson introduces, is revised before review", async () => {
+  const { generator, calls } = queuedGenerator(authored(), authored());
+  const verdicts = queuedJudge(ORDER_FAIL, PASS);
+  const schemas: unknown[] = [];
+  const judge: Judge = { ...verdicts.judge, judge: (request) => (schemas.push(request.schema), verdicts.judge.judge(request)) };
+  const checked = await createBlueprintBuilder({ generator, judge }).build(INPUT);
+  assert.equal(checked.judge.pass, true);
+  const enumerated = (schemas[0] as { properties: { failedChecks: { items: { enum: readonly string[] } } } }).properties.failedChecks.items.enum;
+  assert.ok(enumerated.includes("natural_order") && enumerated.includes("prerequisite_order"), "The Judge's schema lets it fail both.");
+  assert.match(verdicts.prompts[0]!, /prerequisite_order: .*relies on a figure, term, or event a later Lesson first introduces/);
+  assert.match(verdicts.prompts[0]!, /natural_order: .*narrative corpus from creation to its end/);
+  assert.match(calls[0]!.systemPrompt, /natural internal order, follow it unless a prerequisite requires otherwise/, "The author is told the rule the Judge checks.");
+  for (const input of [...calls.map((call) => call.input), ...verdicts.inputs]) {
+    assert.ok(!("remainingGapStatement" in input), "The Learner-facing statement reads as a Lesson order, so neither role sees it.");
+  }
+  assert.deepEqual(calls[1]!.input.problems, ["Failed check: natural_order", "Failed check: prerequisite_order", ...ORDER_FAIL.reasons]);
+});
+
 test("A Blueprint still failing after two revisions fails with its last verdict; each Judge fail is a revision, never a re-ask", async () => {
   const { generator, calls } = queuedGenerator(authored());
   const verdicts = queuedJudge(COVERAGE_FAIL);
