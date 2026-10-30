@@ -12,7 +12,8 @@ export async function libraryRoutes(app: FastifyInstance) {
     try {
       const learnerId = request.currentLearner.id;
 
-      const requests = await app.db
+      // The Requests query and the Courses-then-links chain don't depend on each other, so they share one round trip.
+      const requestsQuery = app.db
         .select({
           id: courseRequests.id,
           subject: courseRequests.subject,
@@ -26,21 +27,25 @@ export async function libraryRoutes(app: FastifyInstance) {
         // Newest first, so a Learner who started the same subject again lands on the latest Request.
         .orderBy(desc(courseRequests.createdAt), desc(courseRequests.id));
 
-      const courses = await app.db
-        .select({
-          id: publishedCourses.id,
-          title: publishedCourses.title,
-          lastOpenedAt: publishedCourses.lastOpenedAt,
-        })
-        .from(publishedCourses)
-        .where(and(eq(publishedCourses.learnerId, learnerId), isNull(publishedCourses.hiddenAt)))
-        .orderBy(desc(publishedCourses.publishedAt), desc(publishedCourses.id));
+      const coursesWithLinks = (async () => {
+        const courses = await app.db
+          .select({
+            id: publishedCourses.id,
+            title: publishedCourses.title,
+            lastOpenedAt: publishedCourses.lastOpenedAt,
+          })
+          .from(publishedCourses)
+          .where(and(eq(publishedCourses.learnerId, learnerId), isNull(publishedCourses.hiddenAt)))
+          .orderBy(desc(publishedCourses.publishedAt), desc(publishedCourses.id));
+        const links = await studyLinksByCourseId(
+          app.db,
+          learnerId,
+          courses.map((course) => course.id),
+        );
+        return { courses, links };
+      })();
 
-      const links = await studyLinksByCourseId(
-        app.db,
-        learnerId,
-        courses.map((course) => course.id),
-      );
+      const [requests, { courses, links }] = await Promise.all([requestsQuery, coursesWithLinks]);
 
       return {
         items: [
@@ -129,7 +134,8 @@ export async function libraryRoutes(app: FastifyInstance) {
   app.get("/api/open-items", async (request, reply) => {
     try {
       const learnerId = request.currentLearner.id;
-      const requestRows = await app.db
+      // As in GET /api/library: the Requests query runs alongside the Courses-then-links chain.
+      const requestsQuery = app.db
         .select({
           id: courseRequests.id,
           subject: courseRequests.subject,
@@ -142,20 +148,24 @@ export async function libraryRoutes(app: FastifyInstance) {
         // Newest first, so a Learner who started the same subject again lands on the latest Request.
         .orderBy(desc(courseRequests.createdAt), desc(courseRequests.id));
 
-      const courses = await app.db
-        .select({
-          id: publishedCourses.id,
-          title: publishedCourses.title,
-        })
-        .from(publishedCourses)
-        .where(and(eq(publishedCourses.learnerId, learnerId), isNull(publishedCourses.hiddenAt)))
-        .orderBy(desc(publishedCourses.publishedAt), desc(publishedCourses.id));
+      const coursesWithLinks = (async () => {
+        const courses = await app.db
+          .select({
+            id: publishedCourses.id,
+            title: publishedCourses.title,
+          })
+          .from(publishedCourses)
+          .where(and(eq(publishedCourses.learnerId, learnerId), isNull(publishedCourses.hiddenAt)))
+          .orderBy(desc(publishedCourses.publishedAt), desc(publishedCourses.id));
+        const links = await studyLinksByCourseId(
+          app.db,
+          learnerId,
+          courses.map((course) => course.id),
+        );
+        return { courses, links };
+      })();
 
-      const links = await studyLinksByCourseId(
-        app.db,
-        learnerId,
-        courses.map((course) => course.id),
-      );
+      const [requestRows, { courses, links }] = await Promise.all([requestsQuery, coursesWithLinks]);
 
       const courseItems = courses.flatMap((course) => {
         const link = links.get(course.id);
