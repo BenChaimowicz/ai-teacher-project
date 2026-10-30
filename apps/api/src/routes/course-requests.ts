@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { and, eq, isNull } from "drizzle-orm";
-import { courseRequests, generationJobs, unpublishedLessons, TEACHING_PROFILE_VERSION, type ValidityClarification } from "@senoy/db";
+import { courseRequests, generationJobs, unpublishedLessons, TEACHING_PROFILE_VERSION, type Database, type ValidityClarification } from "@senoy/db";
 import { recordProductEvent, withPipelineEvent } from "../lib/usage-tracking.ts";
 import { createValidityGate, type ValidityGate } from "../lib/validity.ts";
 
@@ -158,7 +158,8 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
       }
       // The current (possibly focused) goal carries over as editable text; `focus` does not, so the draft goes through
       // Validity and focusing again, where a precise goal passes straight through (SEN-90).
-      const draft = await app.db.transaction(async (transaction) => {
+      // Only a failed Request has Lessons and a job to end with the new draft, so only it needs a transaction (SEN-102).
+      const revise = async (transaction: Pick<Database, "insert" | "delete" | "update">) => {
         const [created] = await transaction.insert(courseRequests).values({
           learnerId: request.currentLearner.id, subject: row.subject, learningGoal: row.learningGoal,
           status: "draft", revisedFromId: row.id,
@@ -174,7 +175,8 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
             .returning({ id: generationJobs.id });
         }
         return created;
-      });
+      };
+      const draft = row.status === "generation_failed" ? await app.db.transaction(revise) : await revise(app.db);
       void recordProductEvent("course_request_created", {
         learnerId: request.currentLearner.id, courseRequestId: draft.id, detail: { revisedFromId: row.id, from: row.status },
       });

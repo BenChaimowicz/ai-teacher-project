@@ -63,16 +63,16 @@ export function jobOwner(env: NodeJS.ProcessEnv = process.env): string {
 /**
  * Queues a Request's job of one kind: a fresh row, or its finished row again (Try again after a failed Blueprint).
  * Call it in the transaction that moves the Request to `blueprint_preparing` or `generating`, so the two never disagree.
- * The job belongs to this stack's `jobOwner()`, even when another stack queued it before.
+ * The job belongs to this stack's `jobOwner()`, even when another stack queued it before. One upsert on the
+ * (Request, kind) unique key, so it costs one round trip either way (SEN-102).
  * @param transaction - The transaction moving the Request
  * @param job - The Request, its Learner, and what the job produces
  */
 export async function enqueueJob(transaction: Transaction, job: { courseRequestId: string; learnerId: string; kind: GenerationJobKind }) {
-  const [requeued] = await transaction.update(generationJobs)
-    .set({ status: "queued", owner: jobOwner(), stage: null, currentSlotId: null, claimToken: null, leaseExpiresAt: null, updatedAt: new Date() })
-    .where(and(eq(generationJobs.courseRequestId, job.courseRequestId), eq(generationJobs.kind, job.kind)))
-    .returning({ id: generationJobs.id });
-  if (!requeued) await transaction.insert(generationJobs).values({ ...job, status: "queued", owner: jobOwner() });
+  await transaction.insert(generationJobs).values({ ...job, status: "queued", owner: jobOwner() }).onConflictDoUpdate({
+    target: [generationJobs.courseRequestId, generationJobs.kind],
+    set: { status: "queued", owner: jobOwner(), stage: null, currentSlotId: null, claimToken: null, leaseExpiresAt: null, updatedAt: new Date() },
+  });
 }
 
 /**
