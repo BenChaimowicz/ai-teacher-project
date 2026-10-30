@@ -7,7 +7,7 @@ import { judgeParser, judgeSchema } from "./judge-result.ts";
 import { groundObjectives, taughtObjectives, type GroundedObjective } from "./objective-grounding.ts";
 import { createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
 import { ENGLISH_ONLY } from "./english-only.ts";
-import { ModelError } from "./openrouter.ts";
+import { ModelError, type StructuredTransport } from "./openrouter.ts";
 import { ILLUSTRATION_RULE, READING_STYLE, TEACHING_VOICE } from "./teaching-style.ts";
 
 /** Writing a cited reading with reasoning can take the author model well past the transport's 60 s default. */
@@ -433,8 +433,11 @@ export function numberCitations(sections: AuthoredSection[], evidence: Map<strin
   return { body: { sections: body }, sources, citations };
 }
 
-/** Dependencies of the generator; omitted ports are created lazily from config. */
-export type ReadingGeneratorOptions = { generator?: Generator; fallbackGenerator?: Generator; judge?: Judge };
+/**
+ * Dependencies of the generator; omitted ports are created lazily from config, over `transport` when given (a run's
+ * transport that stops when the run loses its job, SEN-93).
+ */
+export type ReadingGeneratorOptions = { generator?: Generator; fallbackGenerator?: Generator; judge?: Judge; transport?: StructuredTransport };
 
 /**
  * Creates a lazy reading generator: `generateCitedReading` (spec §5.4), then the Code checks, then one Judge pass, with
@@ -444,7 +447,7 @@ export type ReadingGeneratorOptions = { generator?: Generator; fallbackGenerator
 export function createReadingGenerator(options: ReadingGeneratorOptions = {}): ReadingGenerator {
   /** Resolves ports on first use. Tests that inject `generator` and `judge` get no fallback unless they inject one. */
   function ports() {
-    const created = options.generator && options.judge ? null : createModelPorts({ authors: "lesson" });
+    const created = options.generator && options.judge ? null : createModelPorts({ authors: "lesson", transport: options.transport });
     return {
       generator: options.generator ?? created!.generator,
       fallbackGenerator: options.fallbackGenerator ?? created?.fallbackGenerator ?? null,

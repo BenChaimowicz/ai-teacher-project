@@ -11,6 +11,7 @@ import {
   recordProductEvent,
   recordUsage,
   researchUsageRow,
+  withClaim,
   withPipelineEvent,
   type PipelineEventFinish,
   type PipelineEventStart,
@@ -152,6 +153,46 @@ test("Pipeline Events nest, inherit the Request and Learner, and own the Usage R
     }
     assert.equal(usage.find((row) => row.modelId === "Slot A")!.pipelineEventId, events.find((event) => event.label === "Slot A")!.id);
     assert.equal(usage.find((row) => row.modelId === "Slot B")!.pipelineEventId, events.find((event) => event.label === "Slot B")!.id);
+  });
+});
+
+test("Steps a worker runs under a claim keep its token, nested ones too; a step outside any claim has none (SEN-93)", async () => {
+  await withTracking(false, async ({ events }) => {
+    await withClaim("claim1", () => withPipelineEvent("course_generation", { courseRequestId: "req1" }, () =>
+      withPipelineEvent("reading", { label: "Slot A" }, async () => undefined)));
+    await withPipelineEvent("validity", { courseRequestId: "req2" }, async () => undefined);
+    assert.deepEqual(events.map((event) => [event.kind, event.claimToken]), [["course_generation", "claim1"], ["reading", "claim1"], ["validity", null]]);
+    assert.equal(events[0]!.parentId, null, "A claim is not a step: the run's first step has no parent.");
+    assert.equal(events[1]!.parentId, events[0]!.id);
+  });
+});
+
+test("A call cut off by the transport's signal throws the signal's reason: recorded, never retried, and nothing sent after (SEN-93)", async () => {
+  await withTracking(false, async ({ usage }) => {
+    const lost = new AbortController();
+    const reason = new Error("[generation-job: lease] This run no longer holds the job || jobId=job1");
+    let calls = 0;
+    const transport = createTrackedTransport({
+      apiKey: "k",
+      signal: lost.signal,
+      // A long model call: it ends only when its signal aborts it.
+      fetch: (_input, init) => {
+        calls += 1;
+        const signal = init!.signal!;
+        return new Promise((_resolve, reject) => {
+          if (signal.aborted) reject(signal.reason);
+          signal.addEventListener("abort", () => reject(signal.reason));
+        });
+      },
+    });
+    const { generator } = createModelPorts({ config: CONFIG, transport, log: { warn: () => {} } });
+    const pending = generator.generateStructured(REQUEST);
+    lost.abort(reason);
+    await assert.rejects(pending, (error) => error === reason, "Not a ModelError, so neither the retry nor the fallback runs.");
+    await assert.rejects(transport.complete("fixture/model", REQUEST), (error) => error === reason);
+    assert.equal(calls, 1, "Nothing is sent once the signal aborted.");
+    assert.equal(usage.length, 1, "The cut-off call is recorded; the refused one never started.");
+    assert.equal(usage[0]!.error, reason.message);
   });
 });
 

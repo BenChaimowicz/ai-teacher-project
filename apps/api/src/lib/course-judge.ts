@@ -3,6 +3,7 @@ import { blueprintSlots, type ApprovedBlueprint, type JudgeResult } from "@senoy
 import { lessonCommitments, type LessonCheckpoint } from "@senoy/db/publication";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
 import { createModelPorts, type Judge } from "./model-ports.ts";
+import type { StructuredTransport } from "./openrouter.ts";
 
 /** The Judge reads one short outline, but reasons at high effort over the whole sequence. */
 const JUDGE_TIMEOUT_MS = 3 * 60 * 1000;
@@ -89,8 +90,11 @@ export function courseOutline(approved: ApprovedBlueprint, checkpoints: readonly
   };
 }
 
-/** Dependencies of the Judge; an omitted port is created lazily from config. */
-export type CourseJudgeOptions = { judge?: Judge };
+/**
+ * Dependencies of the Judge; an omitted port is created lazily from config, over `transport` when given (a run's
+ * transport that stops when the run loses its job, SEN-93).
+ */
+export type CourseJudgeOptions = { judge?: Judge; transport?: StructuredTransport };
 
 /**
  * Creates the whole-Course Judge. It must be a different model from every one that wrote a Lesson.
@@ -99,7 +103,7 @@ export type CourseJudgeOptions = { judge?: Judge };
 export function createCourseJudge(options: CourseJudgeOptions = {}): CourseJudge {
   return {
     async judge(outline, authorModelIds) {
-      const judge = options.judge ?? createModelPorts().judge;
+      const judge = options.judge ?? createModelPorts({ transport: options.transport }).judge;
       // Scope is left out entirely when null, so an unfocused Course is judged exactly as before.
       const { scope, ...unscoped } = outline;
       const { value } = await judge.judge({

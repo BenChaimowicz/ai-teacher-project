@@ -36,7 +36,7 @@ import {
   type PriorLesson,
   type ReadingGenerator,
 } from "./reading-generation.ts";
-import { trackResearchRun, withPipelineEvent, type PipelineEventScope } from "./usage-tracking.ts";
+import { createTrackedTransport, trackResearchRun, withPipelineEvent, type PipelineEventScope } from "./usage-tracking.ts";
 
 /** What one run of a claimed generation job receives. */
 export type GenerationStart = {
@@ -218,10 +218,23 @@ export function writeTimeProfile(plugin: TeachingMethodPlugin, profile: Resolved
   return Object.fromEntries(plugin.writeTimeFields.map((field) => [field, profile[field].value]));
 }
 
-/** Research run against both vendors with keys from the environment; each vendor call becomes a Usage Record,
- * measured against the vendor balance when the meter is on. */
-const researchFromEnv: LessonResearch = (topic) =>
-  runResearch(topic, { ...researchAdaptersFromEnv(process.env), env: process.env, ...trackResearchRun() });
+/**
+ * Research run against both vendors with keys from the environment; each vendor call becomes a Usage Record, measured
+ * against the vendor balance when the meter is on. Once `signal` aborts, calls in flight stop and the search throws its
+ * reason instead of returning packs it never finished (SEN-93).
+ * @param signal - The run's `GenerationControl.signal`
+ */
+function researchUntil(signal: AbortSignal): LessonResearch {
+  /** fetch that also stops when the run loses its job. */
+  const fetch: typeof globalThis.fetch = (input, init) =>
+    globalThis.fetch(input, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, signal]) : signal });
+  return async (topic) => {
+    signal.throwIfAborted();
+    const packs = await runResearch(topic, { ...researchAdaptersFromEnv(process.env), env: process.env, fetch, ...trackResearchRun() });
+    signal.throwIfAborted();
+    return packs;
+  };
+}
 
 /**
  * Researches every Reading slot at once and stores each slot's Source packs as it finishes, so one slow research call
@@ -233,7 +246,8 @@ const researchFromEnv: LessonResearch = (topic) =>
  * A slot that already has stored research is not researched again, and one that has a checkpoint is not generated
  * again, so a resumed or reclaimed job continues from the next unfinished Lesson; earlier Readings reach later ones
  * from their checkpoints. Every write first proves the run still holds its job, so after Cancel or a lapsed lease the
- * run stops at its next stage and saves nothing.
+ * run saves nothing; and its model and research calls stop as soon as the worker learns of the loss, so it does not
+ * keep paying until its stage ends (SEN-93).
  *
  * Any failure publishes nothing and keeps the checkpoints. A failed check fails the job and an interruption leaves it
  * `interrupted`; either moves the Request to `generation_failed` with a plain-language reason, and Retry queues the
@@ -271,8 +285,10 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       }
       const resolved = resolveTeachingProfile(learner.teachingProfileAnswers);
       const profile = writeTimeProfile(readingPlugin, resolved);
-      const research = options.research ?? researchFromEnv;
-      const generator = options.readingGenerator ?? createReadingGenerator();
+      // Every model and research call of this run stops the moment the worker learns it lost the job (SEN-93).
+      const transport = createTrackedTransport({ signal: control.signal });
+      const research = options.research ?? researchUntil(control.signal);
+      const generator = options.readingGenerator ?? createReadingGenerator({ transport });
       const priorLessons: PriorLesson[] = [];
       /** Runs one write only while this run still holds the job. */
       const holding = (write: (transaction: Transaction) => Promise<unknown>) => db.transaction(async (transaction) => {
@@ -331,7 +347,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
 
       // Lessons are written one at a time in Blueprint order. A Quiz reads its Readings from their checkpoints, not
       // this run's memory, so it assesses exactly what was saved; every Reading it assesses precedes it.
-      const quizGenerator = options.quizGenerator ?? createQuizGenerator();
+      const quizGenerator = options.quizGenerator ?? createQuizGenerator({ transport });
       for (const [position, slot] of slots.entries()) {
         const saved = finished.find((row) => row.slotId === slot.id);
         if (slot.method === readingPlugin.id && saved) {
@@ -431,7 +447,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         .where(eq(startingLevelDiagnostics.courseRequestId, courseRequestId))
         .orderBy(desc(startingLevelDiagnostics.createdAt)).limit(1);
       if (!diagnostic?.startingLevel) throw new Error(`[course-generation: publish] Request has no Starting Level || requestId=${courseRequestId}`);
-      const courseJudge = options.courseJudge ?? createCourseJudge();
+      const courseJudge = options.courseJudge ?? createCourseJudge({ transport });
       // A checkpoint from before SEN-57 names no author; the primary Generator wrote it.
       const authors = new Set(checkpoints.flatMap((checkpoint) =>
         checkpoint.authorModelIds.length ? checkpoint.authorModelIds : [loadModelConfig().generatorModel]));
@@ -457,7 +473,9 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         await control.settle(transaction, "succeeded");
       }));
     } catch (error) {
-      // A run that lost its job records nothing: Cancel already moved the Request, or another worker owns it.
+      // A run that lost its job records nothing: Cancel already moved the Request, or another worker owns it. A call cut
+      // off by that loss may end in any error, but the loss is what stopped the run.
+      if (control.signal.aborted) throw control.signal.reason;
       if (error instanceof LeaseLostError) throw error;
       try {
         // What the failure can promise a Retry keeps depends on how many Lessons are checkpointed (SEN-95).

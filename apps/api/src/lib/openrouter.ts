@@ -27,6 +27,11 @@ export type OpenRouterOptions = {
   fetch?: typeof globalThis.fetch;
   apiKey?: string;
   /**
+   * Cuts off every call this transport makes once aborted, such as a generation run that lost its job (SEN-93). A call
+   * it cuts off, or one started after, throws the signal's reason rather than a `ModelError`, so the ports never retry it.
+   */
+  signal?: AbortSignal;
+  /**
    * Sees every call this transport makes, successful or not, once it ends. It is awaited, and anything it throws is
    * ignored: observing never changes what the call returns or throws.
    */
@@ -236,7 +241,7 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
       response = await (options.fetch ?? globalThis.fetch)("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: options.signal ? AbortSignal.any([AbortSignal.timeout(timeoutMs), options.signal]) : AbortSignal.timeout(timeoutMs),
         body: JSON.stringify({
           model: modelId,
           messages: [
@@ -327,12 +332,15 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
         }
       };
 
+      options.signal?.throwIfAborted();
       let value: T;
       try {
         value = await send(modelId, request, reasoning, timeoutMs, providerOrder, state);
       } catch (error) {
-        await observe(error ?? new Error("Unknown failure"));
-        throw error;
+        // Cut off by the caller: its reason, not a timeout or a bad reply (which the ports would retry).
+        const thrown = options.signal?.aborted ? options.signal.reason : error;
+        await observe(thrown ?? new Error("Unknown failure"));
+        throw thrown;
       }
       await observe(undefined);
       return value;

@@ -333,7 +333,9 @@ export const quizAttempts = pgTable(
 /**
  * One step of the platform's own work (validity, a diagnostic, a Lesson write, publish), tied to the Course Request it
  * serves. Steps nest through `parentId` (Course generation → one Reading → its research). Written `running` when the
- * step starts and closed when it returns or throws. Tracking writes never fail the step (ADR 0008).
+ * step starts and closed when it returns or throws. Tracking writes never fail the step (ADR 0008). A step a worker ran
+ * for a claimed job keeps the claim's token, so once no running job holds that claim, the next claim closes the steps
+ * its dead or stopped run left open (SEN-93).
  */
 export const pipelineEvents = pgTable(
   "pipeline_events",
@@ -353,11 +355,15 @@ export const pipelineEvents = pgTable(
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     durationMs: integer("duration_ms"),
+    /** The generation job claim the worker ran this step under; null for steps the API ran. */
+    claimToken: uuid("claim_token"),
   },
   (table) => [
     index("pipeline_events_started").on(table.startedAt),
     index("pipeline_events_request").on(table.courseRequestId),
     index("pipeline_events_parent").on(table.parentId),
+    // Only open steps: every claim looks for the ones whose claim ended.
+    index("pipeline_events_running_claim").on(table.claimToken).where(sql`${table.status} = 'running'`),
   ],
 );
 

@@ -26,6 +26,7 @@ import { LeaseLostError, type GenerationControl, type SettledStatus, type Worker
 import { QuizFailedError, type AuthoredItem, type QuizGenerator, type QuizInput, type QuizRound } from "./quiz-generation.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { allSupported } from "./objective-grounding.ts";
+import { ModelError } from "./openrouter.ts";
 import { LessonUnresearchableError, ReadingFailedError, type ReadingGenerator, type ReadingInput } from "./reading-generation.ts";
 import { installUsageTracking, type PipelineEventFinish, type PipelineEventStart, type UsageSink } from "./usage-tracking.ts";
 
@@ -154,20 +155,24 @@ function recordingCourseJudge(fail = false) {
 }
 
 /**
- * Job control recording what generation reports and how it settles; `lose` makes the job lost (a Cancel) from then on.
+ * Job control recording what generation reports and how it settles; `lose` makes the job lost (a Cancel) from then on,
+ * and `abort` is the worker's heartbeat noticing that loss, which also aborts the run's signal.
  */
 function recordingControl() {
   const progress: string[] = [];
   const settled: SettledStatus[] = [];
-  let lost = false;
+  const lost = new AbortController();
+  let gone = false;
   /** Throws once the job is lost. */
-  const check = () => { if (lost) throw new LeaseLostError("job1"); };
+  const check = () => { if (gone) throw new LeaseLostError("job1"); };
   const control: GenerationControl = {
+    signal: lost.signal,
     async progress(stage, slotId) { check(); progress.push(slotId ? `${stage}:${slotId}` : stage); },
     async hold() { check(); },
     async settle(_transaction, status) { check(); settled.push(status); },
   };
-  return { control, progress, settled, lose: () => { lost = true; } };
+  const lose = () => { gone = true; };
+  return { control, progress, settled, lose, abort: () => { lose(); lost.abort(new LeaseLostError("job1")); } };
 }
 
 /** Records each Pipeline Event's kind and the detail it finished with, while tracking is installed. */
@@ -646,6 +651,36 @@ test("A cancelled run stops at its next stage: the Lesson in flight is not saved
   const stored = (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
   assert.equal(stored.status, "generation_cancelled", "Cancel's status stands.");
   assert.equal(stored.failureReason, null);
+});
+
+test("A run whose call was cut off because it lost its job ends with the loss, not the call's error, and records nothing (SEN-93)", async () => {
+  const { db, rows } = fakeDb(TABLES);
+  const [learner] = await db.insert(learners).values({
+    id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
+  }).returning();
+  const [request] = await db.insert(courseRequests).values({
+    learnerId: learner!.id, subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world", status: "generation_cancelled",
+  }).returning();
+  const { control, settled, abort } = recordingControl();
+  const generation = createCourseGeneration({
+    research: async () => PACKS,
+    readingGenerator: {
+      // The heartbeat learns of the Cancel while the Reading is written, and the model call it cuts off fails.
+      async generate() {
+        abort();
+        throw new ModelError("network");
+      },
+    },
+    quizGenerator: recordingQuizGenerator().quizGenerator,
+    courseJudge: recordingCourseJudge().courseJudge,
+  });
+
+  await assert.rejects(generation.start({ db, courseRequestId: request!.id, learnerId: learner!.id, approved: APPROVED, control }), LeaseLostError);
+  assert.deepEqual(settled, [], "The job is no longer this run's to settle.");
+  assert.equal(rows.get(unpublishedLessons)!.length, 0);
+  const stored = (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
+  assert.equal(stored.status, "generation_cancelled", "Cancel's status stands.");
+  assert.equal(stored.failureReason, null, "No interruption is reported for a cut-off call.");
 });
 
 test("A whole-Course failure fails the job; nothing publishes", async () => {
