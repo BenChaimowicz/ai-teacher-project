@@ -18,7 +18,7 @@ import {
   type UsageVendor,
 } from "@senoy/db";
 import type { ResearchAdapter, ResearchAdapterId, ResearchCallObservation, ResearchOptions, SourcePackStatus } from "@senoy/research";
-import { createOpenRouterTransport, type ModelCallObservation, type StructuredTransport } from "./openrouter.ts";
+import { createOpenRouterTransport, type ModelCallObservation, type OpenRouterOptions, type StructuredTransport } from "./openrouter.ts";
 import type { MeasuredCall, MeasuredVendor, Measurement, ResearchMeter } from "./research-measurement.ts";
 
 /**
@@ -41,6 +41,8 @@ export type PipelineEventStart = {
   courseRequestId: string | null;
   learnerId: string | null;
   detail: Record<string, unknown> | null;
+  /** The job claim the step runs under (`withClaim`); null outside a worker's run. */
+  claimToken: string | null;
 };
 
 /** How a Pipeline Event ended. */
@@ -70,8 +72,8 @@ export type UsageSink = {
   insertApiRequest(row: ApiRequestRow): Promise<void>;
 };
 
-/** The Course Request, Learner, and innermost Pipeline Event the current code runs for. */
-export type TrackingContext = { pipelineEventId: string | null; courseRequestId: string | null; learnerId: string | null };
+/** The Course Request, Learner, innermost Pipeline Event, and job claim the current code runs for. */
+export type TrackingContext = { pipelineEventId: string | null; courseRequestId: string | null; learnerId: string | null; claimToken: string | null };
 
 /** Which model port and which of its attempts is calling the transport (ADR 0015). */
 export type ModelCallFrame = { role: Extract<UsageRole, "generator" | "fallback_generator" | "judge">; attempt: number };
@@ -132,6 +134,16 @@ export function installUsageTracking(options: { db?: Database; sink?: UsageSink;
 /** The current tracking context, if any step set one. */
 export function currentTrackingContext(): TrackingContext | undefined {
   return contextStorage.getStore();
+}
+
+/**
+ * Runs one claimed job's run so every Pipeline Event it starts keeps the claim's token. Once no running job holds that
+ * token, the next claim closes whatever the run left open (SEN-93).
+ * @param claimToken - The run's claim token
+ * @param fn - The run
+ */
+export function withClaim<T>(claimToken: string, fn: () => Promise<T>): Promise<T> {
+  return contextStorage.run({ pipelineEventId: null, courseRequestId: null, learnerId: null, claimToken }, fn);
 }
 
 /**
@@ -203,12 +215,13 @@ export async function withPipelineEvent<T>(
   const parent = contextStorage.getStore();
   const courseRequestId = options.courseRequestId ?? parent?.courseRequestId ?? null;
   const learnerId = options.learnerId ?? parent?.learnerId ?? null;
+  const claimToken = parent?.claimToken ?? null;
   const facts = `kind=${kind} || courseRequestId=${courseRequestId}`;
   const id = await safely("withPipelineEvent", facts, (sink) => sink.startPipelineEvent({
-    parentId: parent?.pipelineEventId ?? null, kind, label: options.label ?? null, courseRequestId, learnerId, detail,
+    parentId: parent?.pipelineEventId ?? null, kind, label: options.label ?? null, courseRequestId, learnerId, detail, claimToken,
   })) ?? null;
   // Without an id, records made inside still attach to the enclosing step.
-  const context = { pipelineEventId: id ?? parent?.pipelineEventId ?? null, courseRequestId, learnerId };
+  const context = { pipelineEventId: id ?? parent?.pipelineEventId ?? null, courseRequestId, learnerId, claimToken };
   const startedAt = performance.now();
   const finish = async (status: PipelineEventFinish["status"], error: string | null) => {
     if (!id) return;
@@ -335,7 +348,7 @@ export async function recordModelCall(call: ModelCallObservation): Promise<void>
  * The OpenRouter transport the model ports use by default: every call it makes becomes a Usage Record.
  * @param options - Transport options other than the observer
  */
-export function createTrackedTransport(options: { fetch?: typeof globalThis.fetch; apiKey?: string } = {}): StructuredTransport {
+export function createTrackedTransport(options: Omit<OpenRouterOptions, "observe"> = {}): StructuredTransport {
   return createOpenRouterTransport({ ...options, observe: recordModelCall });
 }
 

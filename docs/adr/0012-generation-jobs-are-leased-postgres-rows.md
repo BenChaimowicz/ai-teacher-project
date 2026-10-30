@@ -10,6 +10,8 @@ The generation code stays in the API package, and the worker imports it through 
 
 Cancel takes effect at the next stage boundary or write, not mid-call. A model or research call already in flight finishes and is discarded. Aborting it would mean passing a signal through research and every Generator, and the spend saved is one Lesson at most.
 
+**Amended by ADR 0025.** A Course run that loses its job now stops its model and research calls in flight within a third of the lease. A stage lasts minutes, so a cancelled run kept its worker busy and kept paying until it ended. The claim is one `WITH … UPDATE … FROM` statement, and the next claim closes the Pipeline Events a lost run left open.
+
 Rejected:
 - **A job-queue library (pg-boss, graphile-worker).** The spec rules out a second job system. One job type with one row per Request does not need retries, schedules, or fan-out.
 - **LISTEN/NOTIFY instead of polling.** Supabase's pooler does not keep session-level listeners. A 2 s poll is cheap at one Learner.

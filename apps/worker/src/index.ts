@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import pino from "pino";
-import { createDb, loadRootEnv, warmDb } from "@senoy/db";
+import { createDb, DEFAULT_POOL_SIZE, loadRootEnv, warmDb } from "@senoy/db";
 import { createFixtureBlueprintBuilder } from "@senoy/api/blueprint-fixture";
 import { createBlueprintJob } from "@senoy/api/blueprint-job";
 import { createCourseGeneration } from "@senoy/api/course-generation";
@@ -24,10 +24,10 @@ async function startWorker() {
       throw new Error("DATABASE_URL is missing. Copy .env.example to .env.");
     }
 
-    // Both connections open now, so the first claim and its writes don't pay connection setup (SEN-103).
-    const pool = 2;
-    const db = createDb(url, { max: pool });
-    await warmDb(db, pool);
+    // More connections than a run has queries in flight, so postgres.js never pipelines one onto a busy connection,
+    // which the Supabase pooler can lose (SEN-70, SEN-93). All open now, so the first claim doesn't pay setup (SEN-103).
+    const db = createDb(url, { max: DEFAULT_POOL_SIZE });
+    await warmDb(db, DEFAULT_POOL_SIZE);
     installUsageTracking({
       db,
       log,
@@ -67,6 +67,8 @@ async function startWorker() {
     };
     process.once("SIGINT", () => void shutdown());
     process.once("SIGTERM", () => void shutdown());
+    // Closing the terminal window: on Windows, Node has about 10 s before the process is killed outright.
+    process.once("SIGHUP", () => void shutdown());
 
     log.info("worker ready; claiming Blueprint and generation jobs");
     await worker.run();

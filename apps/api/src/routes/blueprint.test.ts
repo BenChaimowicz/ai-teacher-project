@@ -66,6 +66,7 @@ type JobRow = typeof generationJobs.$inferSelect;
 /** Job control for a run that holds `job`: settling writes the job's status, as the Postgres control does. */
 function heldControl(job: JobRow): GenerationControl {
   return {
+    signal: new AbortController().signal,
     async progress() {},
     async hold() {},
     async settle(_transaction, status) {
