@@ -1,7 +1,6 @@
 import { createServer } from "node:http";
-import { sql } from "drizzle-orm";
 import pino from "pino";
-import { createDb, loadRootEnv } from "@senoy/db";
+import { createDb, loadRootEnv, warmDb } from "@senoy/db";
 import { createFixtureBlueprintBuilder } from "@senoy/api/blueprint-fixture";
 import { createBlueprintJob } from "@senoy/api/blueprint-job";
 import { createCourseGeneration } from "@senoy/api/course-generation";
@@ -25,8 +24,10 @@ async function startWorker() {
       throw new Error("DATABASE_URL is missing. Copy .env.example to .env.");
     }
 
-    const db = createDb(url, { max: 2 });
-    await db.execute(sql`select 1`);
+    // Both connections open now, so the first claim and its writes don't pay connection setup (SEN-103).
+    const pool = 2;
+    const db = createDb(url, { max: pool });
+    await warmDb(db, pool);
     installUsageTracking({
       db,
       log,
