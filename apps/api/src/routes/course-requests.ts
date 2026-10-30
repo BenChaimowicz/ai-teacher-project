@@ -36,13 +36,16 @@ function editableFields(body: unknown) {
   return { subject: subject.trim(), learningGoal: learningGoal.trim() };
 }
 
+/** A Course Request id: a UUID. */
+const REQUEST_ID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
+
 /** Creates, reviews, clarifies, and revises unpublished Learner-owned Course Requests. */
 export async function courseRequestRoutes(app: FastifyInstance, options: CourseRequestOptions = {}) {
   const gate = options.validityGate ?? createValidityGate();
 
   /** Validates the ID and reads a private Request, never leaking another Learner's history. */
   async function ownedRequest(id: string, learnerId: string, reply: FastifyReply) {
-    if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(id)) {
+    if (!REQUEST_ID.test(id)) {
       reply.code(400).send({ error: "Invalid Course Request id." });
       return null;
     }
@@ -185,19 +188,21 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
 
   app.patch<RequestParams>("/api/course-requests/:requestId", async (request, reply) => {
     try {
-      const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
-      if (!row) return reply;
-      if (row.status !== "draft") return reply.code(409).send({ error: "Only a draft Request can be edited." });
+      const { requestId } = request.params;
+      if (!REQUEST_ID.test(requestId)) return reply.code(400).send({ error: "Invalid Course Request id." });
       if (request.currentLearner.teachingProfileVersion !== TEACHING_PROFILE_VERSION || request.currentLearner.teachingProfileAnswers == null) {
         return reply.code(409).send({ error: "Save your Teaching Profile before creating a Course Request." });
       }
       const fields = editableFields(request.body);
       if (!fields) return reply.code(400).send({ error: "Enter a subject and Learning Goal." });
+      // One conditional write: it lands only on this Learner's draft. The Request is read only to say why it didn't.
       const [updated] = await app.db.update(courseRequests).set({ ...fields, status: "awaiting_validity" }).where(and(
-        eq(courseRequests.id, row.id), eq(courseRequests.learnerId, request.currentLearner.id), eq(courseRequests.status, "draft"),
+        eq(courseRequests.id, requestId), eq(courseRequests.learnerId, request.currentLearner.id), eq(courseRequests.status, "draft"),
       )).returning(requestFields);
-      if (!updated) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
-      return { courseRequest: updated };
+      if (updated) return { courseRequest: updated };
+      const row = await ownedRequest(requestId, request.currentLearner.id, reply);
+      if (!row) return reply;
+      return reply.code(409).send({ error: row.status !== "draft" ? "Only a draft Request can be edited." : "This Request changed. Reload it before continuing." });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       request.log.error(`[course-requests.ts: courseRequestRoutes] Failed to save revised Request || requestId=${request.params.requestId} || ${message}`);

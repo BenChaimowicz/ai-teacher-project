@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import {
   courseCompletions,
   lessonCompletions,
@@ -56,7 +56,8 @@ export type StudyStore = {
   listModules(courseId: string): Promise<ModuleRow[]>;
   /** Lessons in Course order. */
   listLessons(courseId: string): Promise<LessonRow[]>;
-  completedLessonIds(learnerId: string, lessonIds: string[]): Promise<Set<string>>;
+  /** This Learner's completed Lessons in one Course, read with the Course's Lessons in one statement. */
+  completedLessonIds(learnerId: string, courseId: string): Promise<Set<string>>;
   /** Idempotent: Progress never drops and never double-counts. */
   insertCompletion(learnerId: string, lessonId: string): Promise<void>;
   setSequenceMode(courseId: string, mode: SequenceMode): Promise<void>;
@@ -130,12 +131,12 @@ export function drizzleStudyStore(db: Database): StudyStore {
         .orderBy(asc(publishedLessons.position));
     },
 
-    async completedLessonIds(learnerId, lessonIds) {
-      if (lessonIds.length === 0) return new Set();
+    async completedLessonIds(learnerId, courseId) {
       const rows = await db
         .select({ lessonId: lessonCompletions.lessonId })
         .from(lessonCompletions)
-        .where(and(eq(lessonCompletions.learnerId, learnerId), inArray(lessonCompletions.lessonId, lessonIds)));
+        .innerJoin(publishedLessons, eq(publishedLessons.id, lessonCompletions.lessonId))
+        .where(and(eq(lessonCompletions.learnerId, learnerId), eq(publishedLessons.publishedCourseId, courseId)));
       return new Set(rows.map((row) => row.lessonId));
     },
 

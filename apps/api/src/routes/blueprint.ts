@@ -107,17 +107,23 @@ const RETRYABLE: Requeueable = {
  * What the Waiting screen shows of a Request's Course job: stage, current Lesson, and N of M, never a draft or its Sources.
  * @param db - Database
  * @param requestId - The Request
- * @param blueprint - Its stored Blueprint
+ * @param blueprint - Its stored Blueprint, or the read of it still in flight so the job reads overlap it
  * @returns The view, or null before Approve
  */
-async function generationView(db: Database, requestId: string, blueprint: BlueprintRow | null): Promise<GenerationView | null> {
-  if (!blueprint?.approved) return null;
-  const [[job], finished] = await Promise.all([
+async function generationView(
+  db: Database,
+  requestId: string,
+  blueprint: BlueprintRow | null | Promise<BlueprintRow | null>,
+): Promise<GenerationView | null> {
+  // A Blueprint already in hand and not approved needs no job reads.
+  if (!(blueprint instanceof Promise) && !blueprint?.approved) return null;
+  const [approvedBlueprint, [job], finished] = await Promise.all([
+    blueprint,
     db.select().from(generationJobs).where(courseJobOf(requestId)).limit(1),
     db.select({ slotId: unpublishedLessons.slotId }).from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, requestId)),
   ]);
-  if (!job) return null;
-  const slots = blueprintSlots(blueprint.approved.blueprint);
+  if (!job || !approvedBlueprint?.approved) return null;
+  const slots = blueprintSlots(approvedBlueprint.approved.blueprint);
   const index = job.status === "running" && job.stage === "lesson" ? slots.findIndex((slot) => slot.id === job.currentSlotId) : -1;
   return {
     status: job.status,
@@ -161,12 +167,12 @@ export async function blueprintRoutes(app: FastifyInstance) {
     return reply.code(500).send({ error: message });
   }
 
-  /** Where a published Request's Course opens in Study; null until it publishes. */
+  /** Where a published Request's Course opens in Study; null until it publishes. The Course and its link are one round trip. */
   async function publishedCourseOf(requestId: string, learnerId: string) {
-    const [course] = await app.db.select({ id: publishedCourses.id }).from(publishedCourses)
-      .where(and(eq(publishedCourses.courseRequestId, requestId), eq(publishedCourses.learnerId, learnerId))).limit(1);
+    const courseOfRequest = () => app.db.select({ id: publishedCourses.id }).from(publishedCourses)
+      .where(and(eq(publishedCourses.courseRequestId, requestId), eq(publishedCourses.learnerId, learnerId)));
+    const [[course], links] = await Promise.all([courseOfRequest().limit(1), studyLinksByCourseId(app.db, learnerId, courseOfRequest())]);
     if (!course) return null;
-    const links = await studyLinksByCourseId(app.db, learnerId, [course.id]);
     return { href: links.get(course.id)?.href ?? null };
   }
 
@@ -175,9 +181,11 @@ export async function blueprintRoutes(app: FastifyInstance) {
       const learnerId = request.currentLearner.id;
       const row = await ownedRequest(request.params.requestId, learnerId, reply);
       if (!row) return reply;
-      // The Blueprint-then-generation chain and the published Course are independent.
-      const [{ blueprint, generation }, course] = await Promise.all([
-        blueprintOf(row.id).then(async (blueprint) => ({ blueprint, generation: await generationView(app.db, row.id, blueprint) })),
+      // The Blueprint, the job reads and the published Course share one round trip.
+      const blueprintRead = blueprintOf(row.id);
+      const [blueprint, generation, course] = await Promise.all([
+        blueprintRead,
+        generationView(app.db, row.id, blueprintRead),
         row.status === "published" ? publishedCourseOf(row.id, learnerId) : null,
       ]);
       return { courseRequest: row, blueprint: blueprint ? learnerView(blueprint) : null, course, generation };
@@ -325,7 +333,7 @@ export async function blueprintRoutes(app: FastifyInstance) {
       });
       if (!cancelled) return reply.code(409).send({ error: "This Course is not being generated." });
       void recordProductEvent("generation_cancelled", { learnerId, courseRequestId: row.id });
-      const generation = await generationView(app.db, row.id, await blueprintOf(row.id));
+      const generation = await generationView(app.db, row.id, blueprintOf(row.id));
       return { courseRequest: cancelled, generation };
     } catch (error) {
       return fail(reply, request.log, "cancel", request.params.requestId, error, "Failed to cancel generation.");
@@ -363,7 +371,7 @@ export async function blueprintRoutes(app: FastifyInstance) {
         });
         if (!queued) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
         void recordProductEvent("generation_retried", { learnerId, courseRequestId: row.id, detail: { action, from: status } });
-        const generation = await generationView(app.db, row.id, await blueprintOf(row.id));
+        const generation = await generationView(app.db, row.id, blueprintOf(row.id));
         return { courseRequest: queued, generation };
       } catch (error) {
         return fail(reply, request.log, action, request.params.requestId, error, `Failed to ${action} generation.`);
