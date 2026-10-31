@@ -6,6 +6,7 @@ import { createDecisionsReader } from "./decisions.ts";
 import { createOpsStore, runnerFor } from "./ops-store.ts";
 import { createOpenRouterHistoryReader } from "./openrouter-history.ts";
 import { createSetupReader } from "./setup.ts";
+import { createSetupChecklistService } from "./setup-checklist.ts";
 
 /**
  * Starts the Usage Console API (`/api/ops/*`) on `CONSOLE_API_PORT` (default 3100). The console's Vite dev server
@@ -21,7 +22,8 @@ async function start() {
   const keeper = createParallelTokenKeeper({ path: parallelAccountPath(root) });
   const billing = createBillingService({ run, readers: vendorReadersFromEnv({ env: process.env, keeper }), keeper });
   const app = buildConsoleApp(createOpsStore(run), { logger: true, setup: createSetupReader({ env: process.env }), billing,
-    openrouterHistory: createOpenRouterHistoryReader(run), decisions: createDecisionsReader({ root }) });
+    openrouterHistory: createOpenRouterHistoryReader(run), decisions: createDecisionsReader({ root }),
+    setupChecklist: createSetupChecklistService(run, process.env.CONSOLE_OPERATOR?.trim() || null) });
 
   try {
     const port = Number(process.env.CONSOLE_API_PORT ?? 3100);

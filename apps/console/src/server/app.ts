@@ -4,6 +4,7 @@ import type { DecisionsReader } from "./decisions.ts";
 import type { OpsStore } from "./ops-store.ts";
 import type { OpenRouterHistoryReader } from "./openrouter-history.ts";
 import type { SetupReader } from "./setup.ts";
+import { isSetupChecklistItem, type SetupChecklistService } from "./setup-checklist.ts";
 import {
   assertUuid,
   parseApiRequestQuery,
@@ -26,6 +27,8 @@ export type ConsoleAppOptions = {
   billing?: BillingService;
   /** The team's decision log on disk; without it `/decisions` answers 404. */
   decisions?: DecisionsReader;
+  /** The founders' shared setup checklist; without it `/setup-checklist` answers 404. */
+  setupChecklist?: SetupChecklistService;
   /** Whether Fastify logs (Pino); tests leave it off. */
   logger?: boolean;
   /** The current instant, injected for tests; defaults to the wall clock. */
@@ -73,6 +76,31 @@ async function answer<T>(
 function idParam(request: FastifyRequest): string {
   const { id } = request.params as { id?: string };
   return assertUuid(id ?? "", "id");
+}
+
+/** Host names a request to this console may carry; anything else is a page on another site reaching us (DNS rebinding). */
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
+
+/**
+ * Refuses a checklist write that did not come from this machine's console screen, so the only people who can tick
+ * items are those running the console against the shared database. Answers 403 for a non-loopback Host or a console
+ * with no `CONSOLE_OPERATOR`, and 415 for a body that is not JSON (which a browser cannot send cross-site without a
+ * CORS preflight this API never grants).
+ * @param request - The Fastify request
+ * @param reply - The Fastify reply
+ * @param operator - Who this console ticks items as, or null
+ * @returns The reply when refused, else null
+ */
+function refuseChecklistWrite(request: FastifyRequest, reply: FastifyReply, operator: string | null) {
+  const host = (request.headers.host ?? "").replace(/:\d+$/, "").toLowerCase();
+  if (!LOOPBACK_HOSTS.has(host)) return reply.code(403).send({ error: "The setup checklist only takes changes from this machine." });
+  if (!(request.headers["content-type"] ?? "").startsWith("application/json")) {
+    return reply.code(415).send({ error: "Send the change as JSON." });
+  }
+  if (!operator) {
+    return reply.code(403).send({ error: "Set CONSOLE_OPERATOR in .env to your name to tick items, then restart the console." });
+  }
+  return null;
 }
 
 /**
@@ -138,6 +166,22 @@ export function buildConsoleApp(store: OpsStore, options: ConsoleAppOptions = {}
       ops.get("/decisions", (request, reply) =>
         answer(request, reply, "GET /decisions", async () => (options.decisions ? options.decisions() : null),
           "The decision log is not available"));
+
+      ops.get("/setup-checklist", (request, reply) =>
+        answer(request, reply, "GET /setup-checklist", async () => (options.setupChecklist ? options.setupChecklist.read() : null),
+          "The setup checklist is not available"));
+
+      ops.put("/setup-checklist/items/:key", async (request, reply) => {
+        const checklist = options.setupChecklist;
+        if (!checklist) return reply.code(404).send({ error: "The setup checklist is not available" });
+        const refused = refuseChecklistWrite(request, reply, checklist.operator);
+        if (refused) return refused;
+        const { key } = request.params as { key: string };
+        if (!isSetupChecklistItem(key)) return reply.code(404).send({ error: "No such checklist item" });
+        const done = (request.body as { done?: unknown } | null)?.done;
+        if (typeof done !== "boolean") return reply.code(400).send({ error: "Body must be { \"done\": true | false }" });
+        return answer(request, reply, "PUT /setup-checklist/items/:key", () => checklist.setDone(key, done));
+      });
 
       ops.get("/openrouter-history", (request, reply) =>
         answer(request, reply, "GET /openrouter-history", async () => (options.openrouterHistory ? options.openrouterHistory() : null),

@@ -13,6 +13,7 @@ import { LearnerActivity } from "@/views/LearnerActivity";
 import { OpenRouterHistory } from "@/views/OpenRouterHistory";
 import { Overview } from "@/views/Overview";
 import { PipelineSteps } from "@/views/PipelineSteps";
+import { SetupChecklist } from "@/views/SetupChecklist";
 
 /** The Usage Console: routes for every view inside the shared shell. */
 export function App() {
@@ -32,6 +33,7 @@ export function App() {
             <Route path="activity" element={<LearnerActivity />} />
             <Route path="api" element={<ApiTraffic />} />
             <Route path="decisions" element={<Decisions />} />
+            <Route path="setup" element={<SetupChecklist />} />
             <Route path="*" element={<EmptyState title="No such view" hint="Pick one from the left." />} />
           </Route>
         </Routes>

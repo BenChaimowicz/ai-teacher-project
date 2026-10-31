@@ -526,3 +526,18 @@ export const openrouterActivity = pgTable(
   },
   (table) => [unique("openrouter_activity_day_key_endpoint").on(table.day, table.keyHash, table.endpointId)],
 );
+
+/**
+ * The founders' shared setup checklist (domain, email, vendor access). The sections and items themselves live in code
+ * (`apps/console/src/server/setup-checklist.ts`); this table holds only progress, one row per item ever ticked, keyed
+ * by the item's stable key, so re-reading never duplicates an item. Never holds credentials or other secrets.
+ */
+export const setupChecklistProgress = pgTable("setup_checklist_progress", {
+  /** The item's stable key in code, e.g. `domain.auto-renew`. */
+  itemKey: text("item_key").primaryKey(),
+  /** When the item was ticked; null once it is unticked again. */
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  /** Who ticked it (the console's `CONSOLE_OPERATOR`); null once it is unticked again. */
+  completedBy: text("completed_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

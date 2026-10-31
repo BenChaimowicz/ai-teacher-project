@@ -520,3 +520,34 @@ export type OpsDecisionLog = {
   folder: string;
   readAt: string;
 };
+
+/** One item on the founders' setup checklist, with who ticked it and when. */
+export type OpsSetupChecklistItem = {
+  /** Stable key, e.g. `domain.auto-renew`. */
+  key: string;
+  label: string;
+  /** When it was ticked, ISO; null while open. */
+  completedAt: string | null;
+  /** Who ticked it; null while open, or when the console that ticked it had no `CONSOLE_OPERATOR`. */
+  completedBy: string | null;
+};
+
+/** One section of the setup checklist. */
+export type OpsSetupChecklistSection = {
+  key: string;
+  title: string;
+  /** What the section is for, in a sentence or two. */
+  intro: string;
+  items: OpsSetupChecklistItem[];
+  done: number;
+  total: number;
+};
+
+/** `GET /api/ops/setup-checklist` — the founders' shared setup checklist with its progress. */
+export type OpsSetupChecklist = {
+  sections: OpsSetupChecklistSection[];
+  done: number;
+  total: number;
+  /** Who this console ticks items as (`CONSOLE_OPERATOR`); null means it can read but not tick. */
+  operator: string | null;
+};
