@@ -75,6 +75,7 @@ function recordingGenerator(fail = false, unfit = false) {
       const url = "https://en.wikipedia.org/w/index.php?oldid=1";
       return {
         judge: { pass: true, failedChecks: [], reasons: [] },
+        media: { status: "none" },
         repairs: 0,
         grounding: allSupported(input.slot.objectives),
         authorModelIds: ["fixture/author"],

@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@senoy/db": "workspace:*",
+    "@senoy/media": "workspace:*",
     "drizzle-orm": "^0.44.5"
   },
   "devDependencies": {

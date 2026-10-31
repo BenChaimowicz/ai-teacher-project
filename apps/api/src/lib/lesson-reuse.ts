@@ -17,7 +17,7 @@ import {
 import { loadModelConfig } from "./model-config.ts";
 import { createModelPorts, type Generator } from "./model-ports.ts";
 import { ModelError, type StructuredTransport } from "./openrouter.ts";
-import { authoredSections, type ReuseSeed } from "./reading-generation.ts";
+import { authoredSections, mediaProposalOf, type ReuseSeed } from "./reading-generation.ts";
 
 /** Every published Reading on one subject that a slot could reuse (spec §5.8). */
 export type FindReuseCandidates = (subject: string) => Promise<ReuseCandidate[]>;
@@ -174,6 +174,7 @@ export function reuseSeed(candidate: ReuseCandidate, profile: ReadingProfile): R
     lessonGoal: candidate.lessonGoal,
     objectives: candidate.objectives,
     sections: authoredSections(candidate.body, candidate.sources),
+    media: mediaProposalOf(candidate.body),
     writtenFor: candidate.writtenFor,
     verbatimAllowed: verbatimAllowed(candidate, profile),
     // A checkpoint from before SEN-57 names no author; the primary Generator wrote it.

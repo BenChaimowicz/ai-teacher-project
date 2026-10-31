@@ -1,7 +1,9 @@
 import type { BlueprintSlot } from "./blueprint.ts";
 import type { LessonLineage } from "./lesson-reuse.ts";
 import { parseQuizBody, QUIZ_MAX_ITEMS, QUIZ_MIN_ITEMS, QUIZ_OPTION_COUNT, type QuizBody } from "./quiz.ts";
-import { QUIZ_METHOD_ID, READING_METHOD_ID, type NumberedSource, type ReadingBody } from "./reading-lesson.ts";
+import {
+  mediaBlockFailures, proseBlocks, QUIZ_METHOD_ID, READING_METHOD_ID, type MediaBlock, type NumberedSource, type ReadingBody,
+} from "./reading-lesson.ts";
 
 /**
  * One Source in a Lesson's stored source list (spec §5.3), numbered as its inline Citations are.
@@ -45,9 +47,12 @@ const CITATION_MARKER = /\[(\d+)\]/g;
 /** A Source ID marker the Generator wrote that was not resolved to a number. */
 const SOURCE_ID_MARKER = /\[[^\]]*\bsrc_[^\]]*\]/;
 
+/** Media blocks one Reading may carry: a single optional figure until required media lands (SEN-115). */
+export const MAX_MEDIA_BLOCKS = 1;
+
 /**
- * Code checks for a reading Lesson before checkpoint (spec §6.3): envelope, reading-method shape, and Citations
- * that resolve to this Lesson's retrieval set. No Demonstrative media is generated yet, so there is no media check.
+ * Code checks for a reading Lesson before checkpoint (spec §6.3): envelope, reading-method shape, Citations that
+ * resolve to this Lesson's retrieval set, and a hostable, well-formed descriptor behind every media block.
  * @param lesson - The finished Lesson
  * @param retrievalUrls - URLs of every Source in the Source packs retrieved for this Lesson
  * @returns Learner-invisible failure messages; empty when the Lesson passes
@@ -65,7 +70,11 @@ export function readingCodeFailures(lesson: ReadingLessonDraft, retrievalUrls: R
   if (sections.some((section) => !section.heading.trim() || section.blocks.length === 0)) {
     failures.push("Every reading section needs a heading and at least one content block.");
   }
-  const prose = sections.flatMap((section) => section.blocks).map((block) => block.text);
+  const prose = sections.flatMap(proseBlocks).map((block) => block.text);
+  if (sections.some((section) => proseBlocks(section).length === 0)) failures.push("Every reading section needs prose, not only media.");
+  const media = sections.flatMap((section) => section.blocks).filter((block): block is MediaBlock => block.kind === "media");
+  if (media.length > MAX_MEDIA_BLOCKS) failures.push(`A Reading carries at most ${MAX_MEDIA_BLOCKS} media block.`);
+  for (const block of media) failures.push(...mediaBlockFailures(block));
   if (prose.some((text) => !text.trim())) failures.push("Every content block needs text.");
   if (prose.some((text) => SOURCE_ID_MARKER.test(text))) failures.push("A Citation points at a Source ID outside this Lesson's Source packs.");
 

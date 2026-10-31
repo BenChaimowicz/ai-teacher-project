@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { BlueprintSlot } from "./blueprint.ts";
 import { quizCodeFailures, readingCodeFailures, type QuizLessonDraft, type ReadingLessonDraft } from "./lesson-checkpoint.ts";
+import type { MediaDescriptorFields, MediaLicense } from "./media.ts";
+import type { MediaBlock } from "./reading-lesson.ts";
 
 const RETRIEVED = new Set(["https://en.wikipedia.org/w/index.php?oldid=1", "https://www.britannica.com/topic/Yggdrasil"]);
 
@@ -43,18 +45,77 @@ test("A Citation URL outside the retrieval set fails", () => {
 
 test("An unresolved Source ID marker fails as a Citation to an unknown Source", () => {
   const lesson = valid();
-  lesson.body.sections[0]!.blocks[0]!.text = "Yggdrasil stands at the centre [1][src_ffffffffff].";
+  lesson.body.sections[0]!.blocks[0] = { kind: "prose", text: "Yggdrasil stands at the centre [1][src_ffffffffff]." };
   assert.ok(readingCodeFailures(lesson, RETRIEVED).some((failure) => failure.includes("Source ID")));
 });
 
 test("Inline numbers and the source list must agree both ways", () => {
   const dangling = valid();
-  dangling.body.sections[0]!.blocks[0]!.text = "Yggdrasil stands at the centre [3].";
+  dangling.body.sections[0]!.blocks[0] = { kind: "prose", text: "Yggdrasil stands at the centre [3]." };
   assert.ok(readingCodeFailures(dangling, RETRIEVED).some((failure) => failure.includes("no Source")));
 
   const unused = valid();
-  unused.body.sections[1]!.blocks[0]!.text = "Accounts of its roots differ [1].";
+  unused.body.sections[1]!.blocks[0] = { kind: "prose", text: "Accounts of its roots differ [1]." };
   assert.ok(readingCodeFailures(unused, RETRIEVED).some((failure) => failure.includes("cited inline")));
+});
+
+/** A public-domain Norse plate, attached with the writer's caption and alt. */
+function mediaBlock(overrides: Partial<MediaDescriptorFields> = {}): MediaBlock {
+  return {
+    kind: "media",
+    caption: "One artist's depiction of Yggdrasil.",
+    alt: "An engraving of a great ash tree whose roots reach three wells.",
+    descriptor: {
+      id: "d0a1e001-0000-4000-8000-000000000001",
+      kind: "image",
+      origin: "library",
+      license: "public_domain",
+      licenseUrl: null,
+      caption: "Yggdrasil, after Friedrich Wilhelm Heine (1886).",
+      alt: "An engraving of a great ash tree.",
+      source: { title: "File:Yggdrasil.jpg", author: "Friedrich Wilhelm Heine", url: "https://commons.wikimedia.org/wiki/File:Yggdrasil.jpg" },
+      storageKey: "library/norse/yggdrasil-heine.jpg",
+      mimeType: "image/jpeg",
+      byteSize: 120_000,
+      sha256: "a".repeat(64),
+      width: 800,
+      height: 1000,
+      mediaCategory: "norse-mythic-depiction",
+      topicTags: ["yggdrasil"],
+      ...overrides,
+    },
+  };
+}
+
+test("A Reading with one hostable raster media block passes the Code checks", () => {
+  const lesson = valid();
+  lesson.body.sections[0]!.blocks.push(mediaBlock());
+  assert.deepEqual(readingCodeFailures(lesson, RETRIEVED), []);
+});
+
+test("A media block with an unhostable licence, an SVG file, or no alt text fails", () => {
+  const nonCommercial = valid();
+  nonCommercial.body.sections[0]!.blocks.push(mediaBlock({ license: "cc_by_nc" as MediaLicense }));
+  assert.ok(readingCodeFailures(nonCommercial, RETRIEVED).some((failure) => failure.includes("the product can host")));
+
+  const svg = valid();
+  svg.body.sections[0]!.blocks.push(mediaBlock({ mimeType: "image/svg+xml" }));
+  assert.ok(readingCodeFailures(svg, RETRIEVED).some((failure) => failure.includes("image/svg+xml")));
+
+  const noAlt = valid();
+  noAlt.body.sections[0]!.blocks.push({ ...mediaBlock(), alt: " " });
+  assert.ok(readingCodeFailures(noAlt, RETRIEVED).some((failure) => failure.includes("alt text")));
+});
+
+test("A Reading carries at most one media block, and no section is media alone", () => {
+  const two = valid();
+  two.body.sections[0]!.blocks.push(mediaBlock());
+  two.body.sections[1]!.blocks.push(mediaBlock());
+  assert.ok(readingCodeFailures(two, RETRIEVED).some((failure) => failure.includes("at most 1")));
+
+  const alone = valid();
+  alone.body.sections.push({ heading: "A picture", blocks: [mediaBlock()] });
+  assert.ok(readingCodeFailures(alone, RETRIEVED).some((failure) => failure.includes("only media")));
 });
 
 test("A Lesson with no Citations, no sections, or an empty envelope fails", () => {

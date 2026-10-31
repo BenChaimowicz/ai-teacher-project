@@ -551,8 +551,8 @@ export const mediaLicense = pgEnum("media_license", MEDIA_LICENSES);
 /**
  * One piece of Demonstrative media in the library: the Media catalog (spec §2). The bytes live in the private bucket
  * under `storageKey`; this row is the catalog, and Storage object metadata is not. Lookup is by `mediaCategory` plus
- * `topicTags`. There is deliberately no Lesson column: which Lessons use a file is a join added when a Lesson first
- * does, and a published Lesson copies these fields so a later catalog edit cannot change it.
+ * `topicTags`. There is deliberately no Lesson column: a Reading's media block copies these fields into its body, so a
+ * later catalog edit cannot change it, and which published Lessons use a file is a query over those bodies (SEN-55).
  */
 export const mediaDescriptors = pgTable(
   "media_descriptors",

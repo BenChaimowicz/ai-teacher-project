@@ -29,6 +29,7 @@ import type { TeachingMethodPlugin } from "../teaching-methods/types.ts";
 import { courseOutline, createCourseJudge, type CourseJudge } from "./course-judge.ts";
 import { enqueueJob, LeaseLostError, type GenerationControl, type SettledStatus, type WorkerIdentity } from "./generation-job.ts";
 import { createReuseFit, findReuseCandidates, reuseSeed, type FindReuseCandidates, type ReuseFit } from "./lesson-reuse.ts";
+import { createMediaLibrary } from "./media-library.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createQuizGenerator, QuizFailedError, type CheckedQuiz, type QuizGenerator } from "./quiz-generation.ts";
 import {
@@ -306,7 +307,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       // Every model and research call of this run stops the moment the worker learns it lost the job (SEN-93).
       const transport = createTrackedTransport({ signal: control.signal });
       const research = options.research ?? researchUntil(control.signal);
-      const generator = options.readingGenerator ?? createReadingGenerator({ transport });
+      const generator = options.readingGenerator ?? createReadingGenerator({ transport, media: createMediaLibrary(db) });
       const reuseFit = options.reuseFit ?? createReuseFit({ transport });
       const findCandidates = options.findReuseCandidates ?? ((subject: string) => findReuseCandidates(db, subject));
       let pool: Promise<ReuseCandidate[]> | null = null;
@@ -453,7 +454,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
           step.setDetail({
             repairs: checked.repairs, judgePass: checked.judge.pass, rejectedSources: checked.rejectedSources.length,
             authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
-            grounding: checked.grounding, rounds: checked.rounds, lineage: checked.lesson.lineage,
+            grounding: checked.grounding, rounds: checked.rounds, lineage: checked.lesson.lineage, media: checked.media,
           });
           return checked;
         });

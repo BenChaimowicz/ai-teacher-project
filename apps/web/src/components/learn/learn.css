@@ -237,6 +237,13 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
   opacity: 0; transform: translate(-50%, 4px); transition: opacity 0.15s, transform 0.15s;
 }
 .l-cite:hover::after, .l-cite:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+.l-figure { margin: calc(var(--r-lh) * 0.9em) 0; font-family: var(--font-ui); }
+.l-figure img { display: block; max-width: 100%; height: auto; max-height: 70vh; margin: 0 auto; border-radius: 8px; border: 1px solid var(--line); background: var(--line); }
+.l-figure figcaption { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; text-align: center; }
+.l-figure-caption { font-size: 0.9rem; color: var(--text); line-height: 1.45; }
+.l-figure-credit { font-size: 0.72rem; color: var(--faint); }
+.l-figure-credit a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 2px; }
+.l-figure-credit a:hover { text-decoration-color: var(--a); }
 .l-sources { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 0.84rem; color: var(--text-muted); }
 .l-sources h2 { font-family: var(--font-label); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); font-weight: 500; margin-bottom: 8px; }
 .l-sources ol { list-style: none; padding: 0; margin: 0; }
@@ -296,7 +303,7 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
 .l-book-view { overflow: hidden; }
 .l-read.lay-book .l-flow { position: relative; column-count: 2; column-gap: 64px; column-fill: auto; transition: transform 0.45s cubic-bezier(0.3, 0.8, 0.3, 1); }
 @media (max-width: 899px) { .l-read.lay-book .l-flow { position: relative; column-count: 1; } .l-read.lay-book { padding: 10px 20px 30px; } }
-.l-read.lay-book .l-lhead, .l-read.lay-book .l-sources li { break-inside: avoid; }
+.l-read.lay-book .l-lhead, .l-read.lay-book .l-sources li, .l-read.lay-book .l-figure { break-inside: avoid; }
 .l-read.lay-book .l-prose h2 { break-after: avoid; margin-top: 26px; }
 .l-read.lay-book .l-prose { margin-top: 22px; }
 .l-read.lay-book .l-lhead h1 { font-size: 2.3rem; }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { loadRootEnv, parseTeachingProfileAnswers, resolveTeachingProfile, type BlueprintSlot } from "@senoy/db";
+import { loadRootEnv, parseTeachingProfileAnswers, proseBlocks, resolveTeachingProfile, type BlueprintSlot } from "@senoy/db";
 import { redact, type SourcePack } from "@senoy/research";
 import { readingPlugin } from "../teaching-methods/reading.ts";
 import { writeTimeProfile } from "./course-generation.ts";
@@ -77,7 +77,7 @@ async function checkReadingGeneration() {
     process.stdout.write(`${outcome.status} · ${(latencyMs / 1000).toFixed(1)} s · repairs ${outcome.repairs ?? "exhausted"} · wrote ${outPath}\n`);
     if (outcome.lesson) {
       // A rejected Lesson is recorded for inspection; only a passing one would be checkpointed.
-      const words = outcome.lesson.body.sections.flatMap((section) => section.blocks.map((block) => block.text)).join(" ").split(/\s+/).length;
+      const words = outcome.lesson.body.sections.flatMap((section) => proseBlocks(section).map((block) => block.text)).join(" ").split(/\s+/).length;
       process.stdout.write(`${outcome.lesson.body.sections.length} sections · ~${words} words · ${outcome.lesson.citations.length} Sources cited\n`);
     }
     for (const { objective, verdict, text, reason } of outcome.grounding) {

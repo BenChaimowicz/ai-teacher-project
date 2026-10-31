@@ -78,8 +78,14 @@ export type MediaDescriptorFields = {
   topicTags: string[];
 };
 
+/**
+ * The MIME types a Reading may attach today: raster stills a vision model can look at. SVG waits for rasterizing and
+ * its no-script check (SEN-115), so the product-owned SVG diagrams are never picked yet.
+ */
+export const ATTACHABLE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+
 /** Storage keys are lowercase ASCII path segments, so `/media/<key>` needs no escaping and no key is ambiguous. */
-const STORAGE_KEY = /^[a-z0-9][a-z0-9_.-]*(\/[a-z0-9][a-z0-9_.-]*)*$/;
+export const STORAGE_KEY_PATTERN = /^[a-z0-9][a-z0-9_.-]*(\/[a-z0-9][a-z0-9_.-]*)*$/;
 
 /** Topic tags are short lowercase kebab-case labels, the shape the Blueprint already uses. */
 const TOPIC_TAG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -119,7 +125,7 @@ export function mediaDescriptorFailures(descriptor: MediaDescriptorFields): stri
 
   if (!caption.trim()) failures.push("The caption is empty.");
   if (!alt.trim()) failures.push("The alt text is empty.");
-  if (!STORAGE_KEY.test(storageKey)) failures.push(`Storage key "${storageKey}" is not lowercase path segments.`);
+  if (!STORAGE_KEY_PATTERN.test(storageKey)) failures.push(`Storage key "${storageKey}" is not lowercase path segments.`);
   if (!/^[a-z]+\/[a-z0-9.+-]+$/.test(mimeType)) failures.push(`MIME type "${mimeType}" is malformed.`);
   if (!Number.isInteger(byteSize) || byteSize <= 0) failures.push("Byte size must be a positive integer.");
   if (!SHA256.test(sha256)) failures.push("The SHA-256 digest must be 64 lowercase hex characters.");
@@ -143,4 +149,45 @@ function isHttpUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Reads descriptor fields back out of stored JSON, such as the snapshot a Lesson's media block carries. It checks only
+ * the shape of each field; whether the descriptor obeys the catalog's rules is {@link mediaDescriptorFailures}'s call.
+ * @param raw - Unknown JSON
+ * @returns The fields, or null when any is missing or the wrong type
+ */
+export function parseMediaDescriptorFields(raw: unknown): MediaDescriptorFields | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  const strings = ["id", "kind", "origin", "license", "caption", "alt", "storageKey", "mimeType", "sha256", "mediaCategory"] as const;
+  if (strings.some((key) => typeof row[key] !== "string")) return null;
+  if (row.licenseUrl !== null && typeof row.licenseUrl !== "string") return null;
+  if (typeof row.byteSize !== "number") return null;
+  if ((row.width !== null && typeof row.width !== "number") || (row.height !== null && typeof row.height !== "number")) return null;
+  if (!Array.isArray(row.topicTags) || row.topicTags.some((tag) => typeof tag !== "string")) return null;
+  let source: MediaSource | null = null;
+  if (row.source !== null) {
+    const value = row.source as Record<string, unknown> | undefined;
+    if (!value || typeof value !== "object" || typeof value.title !== "string" || typeof value.author !== "string" || typeof value.url !== "string") return null;
+    source = { title: value.title, author: value.author, url: value.url };
+  }
+  return {
+    id: row.id as string,
+    kind: row.kind as MediaKind,
+    origin: row.origin as MediaOrigin,
+    license: row.license as MediaLicense,
+    licenseUrl: row.licenseUrl as string | null,
+    caption: row.caption as string,
+    alt: row.alt as string,
+    source,
+    storageKey: row.storageKey as string,
+    mimeType: row.mimeType as string,
+    byteSize: row.byteSize,
+    sha256: row.sha256 as string,
+    width: row.width as number | null,
+    height: row.height as number | null,
+    mediaCategory: row.mediaCategory as MediaCategory,
+    topicTags: row.topicTags as string[],
+  };
 }
