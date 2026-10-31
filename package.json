@@ -2,7 +2,7 @@
   "name": "ai-teacher",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@12.16.1",
   "scripts": {
     "apps": "node scripts/apps.mjs",
     "jongi:pack": "node scripts/pack-jongi-frames.mjs",

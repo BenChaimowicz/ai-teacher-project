@@ -197,6 +197,13 @@
       "when": 1793367861247,
       "tag": "0027_20261030134421_pipeline_event_claim",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793438391108,
+      "tag": "0028_20261031091951_setup_checklist",
+      "breakpoints": true
     }
   ]
 }

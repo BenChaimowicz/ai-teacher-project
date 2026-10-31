@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { buildConsoleApp } from "./app.ts";
 import type { BillingService } from "./billing.ts";
 import type { OpsStore } from "./ops-store.ts";
+import { buildSetupChecklist, type SetupChecklistService } from "./setup-checklist.ts";
 
 const NOW = new Date("2026-10-24T12:00:00.000Z");
 const ID = "0b8c2a52-7a52-4c3e-9a3c-2f1e5b0d9a11";
@@ -172,5 +173,75 @@ describe("Decisions", () => {
 
   it("404s without a reader", async () => {
     assert.equal((await buildConsoleApp(fakeStore().store).inject({ method: "GET", url: "/api/ops/decisions" })).statusCode, 404);
+  });
+});
+
+describe("Setup checklist", () => {
+  /**
+   * A checklist that records each tick.
+   * @param operator - Who this console ticks as
+   */
+  function fakeChecklist(operator: string | null = "Ben") {
+    const ticks: { itemKey: string; done: boolean }[] = [];
+    const service: SetupChecklistService = {
+      operator,
+      read: async () => buildSetupChecklist([], operator),
+      setDone: async (itemKey, done) => {
+        ticks.push({ itemKey, done });
+        return buildSetupChecklist(done ? [{ itemKey, completedAt: NOW.toISOString(), completedBy: operator }] : [], operator);
+      },
+    };
+    return { service, ticks };
+  }
+
+  const json = { "content-type": "application/json", host: "127.0.0.1:3100" };
+  const url = "/api/ops/setup-checklist/items/domain.lock";
+
+  it("answers GET /setup-checklist from the service", async () => {
+    const app = buildConsoleApp(fakeStore().store, { setupChecklist: fakeChecklist().service });
+    const response = await app.inject({ method: "GET", url: "/api/ops/setup-checklist" });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.json().total, 69);
+  });
+
+  it("ticks and unticks an item", async () => {
+    const { service, ticks } = fakeChecklist();
+    const app = buildConsoleApp(fakeStore().store, { setupChecklist: service });
+    const ticked = await app.inject({ method: "PUT", url, headers: json, payload: { done: true } });
+    assert.equal(ticked.statusCode, 200);
+    assert.equal(ticked.json().done, 1);
+    const unticked = await app.inject({ method: "PUT", url, headers: json, payload: { done: false } });
+    assert.equal(unticked.json().done, 0);
+    assert.deepEqual(ticks, [{ itemKey: "domain.lock", done: true }, { itemKey: "domain.lock", done: false }]);
+  });
+
+  const refusals: [string, Record<string, string>, unknown, number, string | null][] = [
+    ["a request from another host (DNS rebinding)", { ...json, host: "evil.example:3100" }, { done: true }, 403, "Ben"],
+    ["a cross-site form post", { "content-type": "text/plain", host: "127.0.0.1:3100" }, '{"done":true}', 415, "Ben"],
+    ["a console with no CONSOLE_OPERATOR", json, { done: true }, 403, null],
+    ["a body without a boolean", json, { done: "yes" }, 400, "Ben"],
+  ];
+  for (const [what, headers, payload, status, operator] of refusals) {
+    it(`refuses ${what} without saving`, async () => {
+      const { service, ticks } = fakeChecklist(operator);
+      const app = buildConsoleApp(fakeStore().store, { setupChecklist: service });
+      const response = await app.inject({ method: "PUT", url, headers, payload: payload as string });
+      assert.equal(response.statusCode, status);
+      assert.deepEqual(ticks, []);
+    });
+  }
+
+  it("404s an item that is not on the list", async () => {
+    const { service, ticks } = fakeChecklist();
+    const app = buildConsoleApp(fakeStore().store, { setupChecklist: service });
+    const response = await app.inject({ method: "PUT", url: "/api/ops/setup-checklist/items/smtp.password", headers: json, payload: { done: true } });
+    assert.equal(response.statusCode, 404);
+    assert.deepEqual(ticks, []);
+  });
+
+  it("404s without a service", async () => {
+    const app = buildConsoleApp(fakeStore().store);
+    assert.equal((await app.inject({ method: "GET", url: "/api/ops/setup-checklist" })).statusCode, 404);
+    assert.equal((await app.inject({ method: "PUT", url, headers: json, payload: { done: true } })).statusCode, 404);
   });
 });

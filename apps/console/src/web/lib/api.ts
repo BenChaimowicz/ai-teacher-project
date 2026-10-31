@@ -36,21 +36,29 @@ export function buildQuery(params: QueryParams = {}): string {
 
 /**
  * One request to an `/api/ops/*` route, without retries.
- * @param method - `GET` or `POST`
+ * @param method - `GET`, `POST`, or `PUT`
  * @param path - Route below `/api/ops/`, e.g. `summary` or `usage-records/abc`
  * @param params - Query parameters
  * @param signal - Abort signal
+ * @param body - JSON body, sent only when given
  * @returns The parsed JSON body
  * @throws ApiError when the API is unreachable, answers non-2xx, or returns non-JSON
  */
-async function opsFetchOnce<T>(method: "GET" | "POST", path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
+async function opsFetchOnce<T>(
+  method: "GET" | "POST" | "PUT",
+  path: string,
+  params?: QueryParams,
+  signal?: AbortSignal,
+  body?: unknown,
+): Promise<T> {
   const url = `/api/ops/${path}${buildQuery(params)}`;
-  const where = method === "GET" ? "opsGet" : "opsPost";
+  const where = { GET: "opsGet", POST: "opsPost", PUT: "opsPut" }[method];
   const headers: Record<string, string> = { accept: "application/json" };
+  if (body !== undefined) headers["content-type"] = "application/json";
 
   let response: Response;
   try {
-    response = await fetch(url, { method, headers, signal });
+    response = await fetch(url, { method, headers, signal, body: body === undefined ? undefined : JSON.stringify(body) });
   } catch (error) {
     if ((error as Error).name === "AbortError") throw error;
     throw new ApiError(
@@ -134,4 +142,15 @@ export async function opsGet<T>(path: string, params?: QueryParams, signal?: Abo
  */
 export function opsPost<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
   return opsFetchOnce<T>("POST", path, params, signal);
+}
+
+/**
+ * PUTs a JSON body to an `/api/ops/*` route once (no retries, like `opsPost`).
+ * @param path - Route below `/api/ops/`, e.g. `setup-checklist/items/domain.lock`
+ * @param body - The JSON body
+ * @returns The parsed JSON body
+ * @throws ApiError when the API is unreachable, answers non-2xx, or returns non-JSON
+ */
+export function opsPut<T>(path: string, body: unknown): Promise<T> {
+  return opsFetchOnce<T>("PUT", path, undefined, undefined, body);
 }

@@ -21,6 +21,8 @@ pnpm dash
 
 The Usage Console has no login. Its API listens on this machine only (`127.0.0.1`), so it is not reachable from elsewhere.
 
+**Knibbler Setup** (`/setup` in the Usage Console) is the founders' shared setup checklist: domain, email, vendor access, and authentication email. Progress is stored in the shared database (`setup_checklist_progress`), so a tick on one founder's console shows on the other's after a refresh. Set `CONSOLE_OPERATOR` in `.env` to your name to tick items; without it the checklist is read-only. The items themselves live in `apps/console/src/server/setup-checklist.ts`. It never holds credentials or recovery codes — those go in the shared password manager.
+
 ## Decisions
 
 Every mid-sized or bigger decision the team makes about a ticket is one Markdown file in [`docs/decisions/`](docs/decisions/README.md): what we decided, why, and when. The Usage Console reads that folder off disk and shows it under **Decisions**, so an entry written now appears on the next refresh — there is no database and nothing to migrate. Architectural choices still get a full ADR in [`docs/adr/`](docs/adr).
