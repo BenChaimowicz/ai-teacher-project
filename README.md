@@ -60,11 +60,12 @@ Course Requests can be saved with a subject and Learning Goal, then reopened fro
 
 Once the Starting Level is confirmed, **Design my Course Blueprint** designs a Course of 3–6 Lessons for the remaining gap: Readings, with Quizzes placed by the Teaching Profile's Quiz cadence, each Quiz naming the Readings it assesses. The Code checks and an independent Judge run before the Learner sees titles and Lesson goals with a Sequence mode choice. Closing and returning keeps the review. **Approve** stores the approved snapshot, moves the Request to generating, and queues its generation job.
 
-The worker claims the job from Postgres and generates the Course in three steps:
+The worker claims the job from Postgres and generates the Course in four steps:
 
-1. **Research.** Every Reading is researched at once (Parallel Pro and You.com per Reading), and each Reading's Source packs are stored in `lesson_research` as soon as they return.
-2. **Writing.** Lessons are written one at a time in Blueprint order. Each Reading is written from its stored packs and carries earlier Readings forward, and each Quiz is written from the checkpointed Readings it assesses. Every finished Lesson is saved as an unpublished checkpoint.
-3. **Publishing.** The whole-Course Code checks and Judge run, then the Course publishes atomically.
+1. **Reuse.** Published Readings on the same subject that share a Topic tag with a Reading slot are offered to one fit call per slot, which judges them on objectives (spec §5.8). A slot that reuses one gets a copy of that Lesson's Source packs and is not researched. With no candidates, no call is made.
+2. **Research.** Every other Reading is researched at once (Parallel Pro and You.com per Reading), and each Reading's Source packs are stored in `lesson_research` as soon as they return.
+3. **Writing.** Lessons are written one at a time in Blueprint order. Each Reading is written from its stored packs and carries earlier Readings forward; a reused one is taken verbatim or adapted to its slot, passes the same checks, and is researched and written afresh if it can't be made to fit. Each Quiz is written from the checkpointed Readings it assesses. Every finished Lesson is saved as an unpublished checkpoint, with the write-time Teaching Profile values it was written for.
+4. **Publishing.** The whole-Course Code checks and Judge run, then the Course publishes atomically.
 
 The Request screen shows the stage, the current Lesson, and N of M. **Cancel** stops the job and keeps finished research and Lessons. **Resume** continues from the next unfinished Lesson without re-running finished research, as does a restarted worker after a crash.
 
@@ -93,6 +94,14 @@ pnpm check:validity:live
 ```
 
 This opt-in check makes billable model calls for corpus study, named-song skills, descriptive versus operational harm, protected copies, and an unsupported premise with clarification. Temporary Learners and Requests are rolled back, including on failure; existing data is untouched.
+
+To exercise Lesson reuse (spec §5.8) on a real published Reading, against OpenRouter and the configured Supabase database:
+
+```bash
+pnpm check:reuse:live [subject]
+```
+
+This opt-in check makes billable model calls: the fit call on a slot asking for what the subject's oldest reusable Reading teaches, and on one asking for something unrelated, then the verbatim-or-adapt pass and the reading checks on that Reading. It writes nothing. The subject defaults to "Norse mythology".
 
 Generator and Judge share one native-fetch OpenRouter transport. Defaults live in `apps/api/src/lib/model-config.ts`; optional server-only overrides are listed in `.env.example`. Judge calls require a different author model ID. Research vendors remain direct; validity makes no research calls. A reply that is invalid or cut off is retried once on the same model, then once on the configured fallback, and each reply names the model that wrote it so the Judge never judges its own author's work (ADR 0015). Provider schemas are also checked in application code, including stage-specific clarification invariants.
 

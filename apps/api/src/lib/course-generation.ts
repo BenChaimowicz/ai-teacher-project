@@ -11,12 +11,15 @@ import {
   publishedCourses,
   publishedLessons,
   publishedModules,
+  readingProfile,
   resolveTeachingProfile,
+  retrievable,
   startingLevelDiagnostics,
   unpublishedLessons,
   type Database,
   type ReadingBody,
   type ResolvedTeachingProfile,
+  type ReuseCandidate,
   type Transaction,
 } from "@senoy/db";
 import { researchAdaptersFromEnv, runResearch, type SourcePack } from "@senoy/research";
@@ -25,6 +28,7 @@ import { readingPlugin } from "../teaching-methods/reading.ts";
 import type { TeachingMethodPlugin } from "../teaching-methods/types.ts";
 import { courseOutline, createCourseJudge, type CourseJudge } from "./course-judge.ts";
 import { enqueueJob, LeaseLostError, type GenerationControl, type SettledStatus, type WorkerIdentity } from "./generation-job.ts";
+import { createReuseFit, findReuseCandidates, reuseSeed, type FindReuseCandidates, type ReuseFit } from "./lesson-reuse.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createQuizGenerator, QuizFailedError, type CheckedQuiz, type QuizGenerator } from "./quiz-generation.ts";
 import {
@@ -32,6 +36,7 @@ import {
   lessonEvidence,
   LessonUnresearchableError,
   ReadingFailedError,
+  ReuseUnfitError,
   type CheckedReading,
   type PriorLesson,
   type ReadingGenerator,
@@ -57,9 +62,14 @@ export interface CourseGeneration {
 /** Primary and Secondary research for one Lesson topic. */
 export type LessonResearch = (topic: string) => Promise<SourcePack[]>;
 
-/** Injectable research, Generators, and whole-Course Judge; omitted ones are created lazily from the environment. */
+/**
+ * Injectable research, reuse lookup and fit, Generators, and whole-Course Judge; omitted ones are created lazily from
+ * the environment, and the reuse lookup reads the run's database.
+ */
 export type CourseGenerationOptions = {
   research?: LessonResearch;
+  findReuseCandidates?: FindReuseCandidates;
+  reuseFit?: ReuseFit;
   readingGenerator?: ReadingGenerator;
   quizGenerator?: QuizGenerator;
   courseJudge?: CourseJudge;
@@ -237,10 +247,16 @@ function researchUntil(signal: AbortSignal): LessonResearch {
 }
 
 /**
- * Researches every Reading slot at once and stores each slot's Source packs as it finishes, so one slow research call
- * no longer delays every Reading in turn. Then writes each Lesson in Blueprint order, carrying earlier Readings forward:
+ * First decides, for each Reading slot, whether it reuses a published Lesson (spec §5.8): published Readings on the
+ * same subject that share a Topic tag are retrieved, and one fit call per slot with candidates judges them on
+ * objectives. A slot that reuses one gets a copy of that Lesson's Source packs and is never researched.
+ *
+ * Researches every other Reading slot at once and stores each slot's Source packs as it finishes, so one slow research
+ * call no longer delays every Reading in turn. Then writes each Lesson in Blueprint order, carrying earlier Readings forward:
  * a Reading from its stored packs, a Quiz from its checkpointed Readings (spec §5.2.4), saving each as an unpublished
- * checkpoint. Then the whole-Course Code checks and one Judge pass over the outline (spec §6.5), and atomic publish:
+ * checkpoint. A reused Reading is fitted to its slot, verbatim or adapted, and passes the same checks against the packs
+ * it was written from; one that cannot be made to fit is researched there and then and written like any other.
+ * Then the whole-Course Code checks and one Judge pass over the outline (spec §6.5), and atomic publish:
  * the Course snapshot, the `published` status, and the job's success in one transaction.
  *
  * A slot that already has stored research is not researched again, and one that has a checkpoint is not generated
@@ -259,7 +275,7 @@ function researchUntil(signal: AbortSignal): LessonResearch {
  * (spec §5.1, SEN-85): the job ends `needs_new_blueprint`, every unpublished Lesson and stored pack of the failed plan
  * is discarded, the approved snapshot is cleared with the Judge's reasons left on the draft, and the Request goes to
  * `blueprint_preparing` with a queued Blueprint job — so the Learner comes back to a new plan to review, not a dead end.
- * @param options - Injected research, Generators, and Judge; tests pass fixtures
+ * @param options - Injected research, reuse lookup and fit, Generators, and Judge; tests pass fixtures
  */
 export function createCourseGeneration(options: CourseGenerationOptions = {}): CourseGeneration {
   return {
@@ -285,10 +301,17 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       }
       const resolved = resolveTeachingProfile(learner.teachingProfileAnswers);
       const profile = writeTimeProfile(readingPlugin, resolved);
+      const readerProfile = readingProfile(profile)!;
+      const scope = request.focus?.scope ?? null;
       // Every model and research call of this run stops the moment the worker learns it lost the job (SEN-93).
       const transport = createTrackedTransport({ signal: control.signal });
       const research = options.research ?? researchUntil(control.signal);
       const generator = options.readingGenerator ?? createReadingGenerator({ transport });
+      const reuseFit = options.reuseFit ?? createReuseFit({ transport });
+      const findCandidates = options.findReuseCandidates ?? ((subject: string) => findReuseCandidates(db, subject));
+      let pool: Promise<ReuseCandidate[]> | null = null;
+      /** Every published Reading on this subject, looked up once per run and only when a slot needs it. */
+      const reusePool = () => (pool ??= findCandidates(request.subject));
       const priorLessons: PriorLesson[] = [];
       /** Runs one write only while this run still holds the job. */
       const holding = (write: (transaction: Transaction) => Promise<unknown>) => db.transaction(async (transaction) => {
@@ -302,22 +325,70 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
 
       const stored = await db.select().from(lessonResearch).where(eq(lessonResearch.courseRequestId, courseRequestId));
       const packsBySlot = new Map(stored.map((row) => [row.slotId, row.sourcePacks as SourcePack[]]));
+      /** Slots whose stored packs are a copy of the published Lesson they reuse, by that Lesson's id. */
+      const reusedBySlot = new Map(stored.flatMap((row) => row.reusedLessonId ? [[row.slotId, row.reusedLessonId] as const] : []));
       const unresearched = slots.filter((slot) => slot.method === readingPlugin.id && !finishedSlotIds.has(slot.id) && !packsBySlot.has(slot.id));
+
+      /**
+       * Searches one Reading's evidence under its own `research` Pipeline Event.
+       * @param slot - The Reading slot
+       */
+      const researchSlot = (slot: BlueprintSlot) => withPipelineEvent("research", { label: slot.title, detail: { slotId: slot.id } }, async (step) => {
+        const found = await searchForEvidence(research, researchQueries(request.subject, slot, scope));
+        step.setDetail({
+          queries: found.queries, interrupted: found.interrupted,
+          packs: found.packs.map((pack) => ({ adapter: pack.adapter, status: pack.status, sources: pack.sources.length })),
+        });
+        return found;
+      });
+
+      /**
+       * Decides, before any research, which open Reading slots reuse a published Lesson (spec §5.8): candidates on this
+       * subject that share a Topic tag, in this Learner's language and no shorter than their contentScope, go to one fit
+       * call per slot. A pick copies that Lesson's Source packs into the slot's research row, so the slot is never
+       * researched. Slots are decided in Blueprint order and no Lesson is reused twice in one Course. With no candidates,
+       * no call is made.
+       * @param open - Reading slots with no checkpoint and no research yet
+       */
+      async function chooseReuse(open: BlueprintSlot[]): Promise<void> {
+        const candidates = await reusePool();
+        if (candidates.length === 0) return;
+        const taken = new Set(reusedBySlot.values());
+        for (const slot of open) {
+          const retrieved = candidates.filter((candidate) => !taken.has(candidate.lessonId) && retrievable(slot, candidate, readerProfile));
+          if (retrieved.length === 0) continue;
+          const choice = await withPipelineEvent("reuse", { label: slot.title, detail: { slotId: slot.id } }, async (step) => {
+            const chosen = await reuseFit.choose({ learningGoal: request.learningGoal, scope, slot, candidates: retrieved });
+            step.setDetail({
+              slotId: slot.id, candidates: retrieved.map(({ lessonId, title }) => ({ lessonId, title })),
+              chosen: chosen.lessonId, reason: chosen.reason, modelId: chosen.modelId,
+            });
+            return chosen;
+          });
+          const picked = retrieved.find((candidate) => candidate.lessonId === choice.lessonId);
+          if (!picked) continue;
+          const [origin] = await db.select({ sourcePacks: lessonResearch.sourcePacks }).from(lessonResearch)
+            .where(and(eq(lessonResearch.courseRequestId, picked.origin.courseRequestId), eq(lessonResearch.slotId, picked.origin.slotId))).limit(1);
+          if (!origin) continue;
+          await holding((transaction) => transaction.insert(lessonResearch).values({
+            courseRequestId, slotId: slot.id, sourcePacks: origin.sourcePacks, reusedLessonId: picked.lessonId,
+          }));
+          packsBySlot.set(slot.id, origin.sourcePacks as SourcePack[]);
+          reusedBySlot.set(slot.id, picked.lessonId);
+          taken.add(picked.lessonId);
+        }
+      }
+
       /** Slots whose whole query ladder came back with nothing to cite, and whether a vendor simply never answered. */
       const empty = new Map<string, boolean>();
       if (unresearched.length) {
         stage = { kind: "research" };
         await control.progress("research", null);
+        // Reuse is decided on objectives before research, so a slot that reuses a Lesson is never researched (spec §5.8).
+        await chooseReuse(unresearched);
         // Every call runs to the end, even after one fails, so each finished slot is stored and Resume skips it.
-        const outcomes = await Promise.allSettled(unresearched.map(async (slot) => {
-          const search = await withPipelineEvent("research", { label: slot.title, detail: { slotId: slot.id } }, async (step) => {
-            const found = await searchForEvidence(research, researchQueries(request.subject, slot, request.focus?.scope ?? null));
-            step.setDetail({
-              queries: found.queries, interrupted: found.interrupted,
-              packs: found.packs.map((pack) => ({ adapter: pack.adapter, status: pack.status, sources: pack.sources.length })),
-            });
-            return found;
-          });
+        const outcomes = await Promise.allSettled(unresearched.filter((slot) => !packsBySlot.has(slot.id)).map(async (slot) => {
+          const search = await researchSlot(slot);
           // Packs with nothing to cite are not stored, so a Retry searches again instead of resuming from them.
           if (lessonEvidence(search.packs).size === 0) {
             empty.set(slot.id, search.interrupted);
@@ -345,6 +416,68 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         throw new LessonUnresearchableError(unresearchable.id);
       }
 
+      /**
+       * Writes one Reading from its stored packs under its own `reading` Pipeline Event, fitting the published Lesson it
+       * reuses when it has one.
+       * @param slot - The Reading slot
+       * @param position - Its place in the Blueprint
+       * @throws ReuseUnfitError when its reused Lesson cannot be made to fit
+       */
+      async function writeReading(slot: BlueprintSlot, position: number): Promise<CheckedReading> {
+        const packs = packsBySlot.get(slot.id);
+        if (!packs) throw new Error(`[course-generation: lesson] Reading slot has no stored research || slotId=${slot.id}`);
+        const reusedLessonId = reusedBySlot.get(slot.id);
+        return withPipelineEvent("reading", {
+          label: slot.title, detail: { slotId: slot.id, position, ...(reusedLessonId ? { reusedLessonId } : {}) },
+        }, async (step) => {
+          let checked: CheckedReading;
+          try {
+            const reused = reusedLessonId ? (await reusePool()).find((candidate) => candidate.lessonId === reusedLessonId) : undefined;
+            if (reusedLessonId && !reused) throw new ReuseUnfitError(slot.id, "The reused Lesson is no longer a reuse candidate.");
+            checked = await generator.generate({
+              courseTitle: approved.blueprint.courseTitle,
+              learningGoal: request.learningGoal,
+              scope,
+              slot,
+              priorLessons: [...priorLessons],
+              profile,
+              packs,
+              ...(reused ? { reuse: reuseSeed(reused, readerProfile) } : {}),
+            });
+          } catch (error) {
+            // Rejected drafts are saved nowhere else, so the event keeps every draft, edit, and verdict, pass or fail.
+            if (error instanceof ReadingFailedError) step.setDetail({ grounding: error.grounding, rejectedSources: error.rejectedSources, rounds: error.rounds });
+            if (error instanceof ReuseUnfitError) step.setDetail({ reuseUnfit: error.reason, grounding: error.grounding, rounds: error.rounds });
+            throw error;
+          }
+          step.setDetail({
+            repairs: checked.repairs, judgePass: checked.judge.pass, rejectedSources: checked.rejectedSources.length,
+            authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
+            grounding: checked.grounding, rounds: checked.rounds, lineage: checked.lesson.lineage,
+          });
+          return checked;
+        });
+      }
+
+      /**
+       * Researches a Reading whose reused Lesson did not fit, and replaces the copied packs with what it found, so a
+       * Retry after this point writes it rather than trying the same Lesson again. Nothing to cite fails the Course for
+       * it, as for any Reading (spec §5.9).
+       * @param slot - The Reading slot
+       */
+      async function researchAgain(slot: BlueprintSlot): Promise<void> {
+        const search = await researchSlot(slot);
+        if (lessonEvidence(search.packs).size === 0) {
+          if (search.interrupted) throw new Error(`[course-generation: lesson] Research did not finish for this Reading || slotId=${slot.id}`);
+          throw new LessonUnresearchableError(slot.id);
+        }
+        await holding((transaction) => transaction.update(lessonResearch)
+          .set({ sourcePacks: search.packs, reusedLessonId: null, researchedAt: new Date() })
+          .where(and(eq(lessonResearch.courseRequestId, courseRequestId), eq(lessonResearch.slotId, slot.id))).returning({ id: lessonResearch.id }));
+        packsBySlot.set(slot.id, search.packs);
+        reusedBySlot.delete(slot.id);
+      }
+
       // Lessons are written one at a time in Blueprint order. A Quiz reads its Readings from their checkpoints, not
       // this run's memory, so it assesses exactly what was saved; every Reading it assesses precedes it.
       const quizGenerator = options.quizGenerator ?? createQuizGenerator({ transport });
@@ -363,36 +496,14 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         await control.progress("lesson", slot.id);
 
         if (slot.method === readingPlugin.id) {
-          const packs = packsBySlot.get(slot.id);
-          if (!packs) throw new Error(`[course-generation: lesson] Reading slot has no stored research || slotId=${slot.id}`);
-          const { lesson, judge, grounding, rejectedSources, authorModelIds, judgeModelId } = await withPipelineEvent("reading", {
-            label: slot.title, detail: { slotId: slot.id, position },
-          }, async (step) => {
-            let checked: CheckedReading;
-            try {
-              checked = await generator.generate({
-                courseTitle: approved.blueprint.courseTitle,
-                learningGoal: request.learningGoal,
-                scope: request.focus?.scope ?? null,
-                slot,
-                priorLessons: [...priorLessons],
-                profile,
-                packs,
-              });
-            } catch (error) {
-              // Rejected drafts are saved nowhere else, so the event keeps every draft, edit, and verdict, pass or fail.
-              if (error instanceof ReadingFailedError) step.setDetail({ grounding: error.grounding, rejectedSources: error.rejectedSources, rounds: error.rounds });
-              throw error;
-            }
-            step.setDetail({
-              repairs: checked.repairs, judgePass: checked.judge.pass, rejectedSources: checked.rejectedSources.length,
-              authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
-              grounding: checked.grounding, rounds: checked.rounds,
-            });
-            return checked;
+          // A reused Lesson that cannot be made to fit is researched now and written like any other (spec §5.8).
+          const { lesson, judge, rejectedSources, authorModelIds, judgeModelId } = await writeReading(slot, position).catch(async (error: unknown) => {
+            if (!(error instanceof ReuseUnfitError)) throw error;
+            await researchAgain(slot);
+            return writeReading(slot, position);
           });
           await holding((transaction) => transaction.insert(unpublishedLessons).values({
-            ...lesson, courseRequestId, position, rejectedSources, judge, authorModelIds, judgeModelId,
+            ...lesson, courseRequestId, position, rejectedSources, judge, authorModelIds, judgeModelId, writeTimeProfile: profile,
           }));
           priorLessons.push({
             title: lesson.title,
@@ -416,7 +527,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
             checked = await quizGenerator.generate({
               courseTitle: approved.blueprint.courseTitle,
               learningGoal: request.learningGoal,
-              scope: request.focus?.scope ?? null,
+              scope,
               slot,
               slots,
               assessed,
@@ -435,6 +546,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         });
         await holding((transaction) => transaction.insert(unpublishedLessons).values({
           ...lesson, courseRequestId, position, rejectedSources: [], judge, authorModelIds, judgeModelId,
+          writeTimeProfile: writeTimeProfile(quizPlugin, resolved),
         }));
       }
 
@@ -451,7 +563,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       // A checkpoint from before SEN-57 names no author; the primary Generator wrote it.
       const authors = new Set(checkpoints.flatMap((checkpoint) =>
         checkpoint.authorModelIds.length ? checkpoint.authorModelIds : [loadModelConfig().generatorModel]));
-      const outline = courseOutline(approved, checkpoints, request.learningGoal, diagnostic.startingLevel.remainingGapStatement, request.focus?.scope ?? null);
+      const outline = courseOutline(approved, checkpoints, request.learningGoal, diagnostic.startingLevel.remainingGapStatement, scope);
       const verdict = await withPipelineEvent("course_judge", { detail: { authorModelIds: [...authors] } }, async (step) => {
         const judged = await courseJudge.judge(outline, [...authors]);
         step.setDetail({ pass: judged.pass, failedChecks: judged.failedChecks });

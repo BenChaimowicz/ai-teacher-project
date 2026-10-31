@@ -3,7 +3,11 @@ import { test } from "node:test";
 import type { BlueprintSlot } from "@senoy/db/blueprint";
 import type { PackSource, SourcePack } from "@senoy/research";
 import type { Generator, Judge, StructuredRequest, ModelReply } from "./model-ports.ts";
-import { applyRepairEdits, createReadingGenerator, LessonUnresearchableError, READING_JUDGE_CHECKS, ReadingFailedError, UNRELIABLE_SOURCE, type ReadingInput } from "./reading-generation.ts";
+import { ModelError } from "./openrouter.ts";
+import {
+  applyRepairEdits, authoredSections, createReadingGenerator, LessonUnresearchableError, numberCitations, READING_JUDGE_CHECKS, ReadingFailedError,
+  ReuseUnfitError, UNRELIABLE_SOURCE, lessonEvidence, type ReadingInput, type ReuseSeed,
+} from "./reading-generation.ts";
 import { ILLUSTRATION_RULE, READING_STYLE, TEACHING_VOICE } from "./teaching-style.ts";
 
 /** A Source with the given excerpts. */
@@ -534,4 +538,137 @@ test("With a scope, it reaches the author, repair, and Judge inputs and each pro
   }
   calls.forEach((call, index) => assert.ok(call.systemPrompt.startsWith(`${unscoped.calls[index]!.systemPrompt}\n`)));
   assert.ok(judgeCalls[0]!.systemPrompt.startsWith(`${unscopedJudge.calls[0]!.systemPrompt}\n`));
+});
+
+/** A published Reading fitted to SLOT, written for exactly this Learner's write-time values, citing by Source ID. */
+const SEED: ReuseSeed = {
+  originLessonId: "origin-lesson",
+  title: "Yggdrasil",
+  lessonGoal: "Describe the world tree.",
+  objectives: ["Describe Yggdrasil", "Name its roots"],
+  sections: authored().sections,
+  writtenFor: { instructionLanguage: "en", requiredReadingSupports: [], contentScope: "compact", explanationOrder: "topic_appropriate" },
+  verbatimAllowed: true,
+  authorModelIds: ["origin/author"],
+  rejectedSources: [],
+};
+
+/** INPUT with a reused Lesson to fit. */
+function reusing(seed: Partial<ReuseSeed> = {}): ReadingInput {
+  return { ...INPUT, reuse: { ...SEED, ...seed } };
+}
+
+/** What the fit pass returns. */
+function fitReply(decision: "verbatim" | "adapt" | "generate", sections: unknown[] = []) {
+  return { decision, reason: `Chose ${decision}.`, sections };
+}
+
+test("A reused Lesson taken verbatim is its own body, judged against its own packs as any draft is, and records verbatim lineage", async () => {
+  const { generator, calls } = scriptedGenerator(fitReply("verbatim"));
+  const { judge, calls: judgeCalls, vettings, groundings } = scriptedJudge();
+  const checked = await createReadingGenerator({ generator, judge }).generate(reusing());
+
+  assert.deepEqual(calls.map((call) => call.schemaName), ["reading_reuse_fit"], "Nothing is written from scratch.");
+  assert.equal(vettings.length, 0, "Its packs keep the vetting verdicts they were written with.");
+  assert.equal(groundings.length, 1, "Its objectives are still grounded against its Sources.");
+  assert.equal(judgeCalls.length, 1, "Verbatim is not a skip card: the reading Judge still runs.");
+  assert.deepEqual(judgeCalls[0]!.authorModelIds, ["origin/author"], "The model that chose verbatim wrote nothing.");
+  assert.deepEqual(checked.lesson.lineage, { originLessonId: "origin-lesson", mode: "verbatim" });
+  assert.equal(checked.lesson.title, SLOT.title, "The approved slot's title and goal always win.");
+  assert.equal(checked.lesson.lessonGoal, SLOT.lessonGoal);
+  assert.equal(checked.lesson.body.sections[0]!.blocks[0]!.text, "Yggdrasil is the world tree [1]. It has three roots [2][1].");
+  assert.deepEqual(checked.authorModelIds, ["origin/author"]);
+  assert.deepEqual(checked.rounds[0]!.reuse, { decision: "verbatim", reason: "Chose verbatim." });
+
+  const fitInput = calls[0]!.input as { candidate: { writtenFor: unknown; sections: unknown }; slot: { objectives: string[] }; sources: unknown[] };
+  assert.deepEqual(fitInput.candidate.sections, SEED.sections);
+  assert.deepEqual(fitInput.candidate.writtenFor, SEED.writtenFor);
+  assert.deepEqual(fitInput.slot.objectives, SLOT.objectives);
+  assert.equal(fitInput.sources.length, 2);
+});
+
+test("An adapted reused Lesson is the fit pass's sections, and the fitting model becomes one of its authors", async () => {
+  const adapted = authored("Yggdrasil is the world tree [src_aaaaaaaaaa]. Its roots are three [src_bbbbbbbbbb].").sections;
+  const { generator } = scriptedGenerator(fitReply("adapt", adapted));
+  const { judge, calls: judgeCalls } = scriptedJudge();
+  const checked = await createReadingGenerator({ generator, judge }).generate(reusing());
+
+  assert.deepEqual(checked.lesson.lineage, { originLessonId: "origin-lesson", mode: "adapted" });
+  assert.equal(checked.lesson.body.sections[0]!.blocks[0]!.text, "Yggdrasil is the world tree [1]. Its roots are three [2].");
+  assert.deepEqual(judgeCalls[0]!.authorModelIds, ["origin/author", "fixture/author"]);
+  assert.deepEqual(checked.authorModelIds, ["origin/author", "fixture/author"]);
+});
+
+test("Verbatim is not offered for a Lesson written for another profile, and choosing it anyway is invalid output", async () => {
+  const { generator, calls } = scriptedGenerator(fitReply("verbatim"));
+  const { judge } = scriptedJudge();
+  await assert.rejects(createReadingGenerator({ generator, judge }).generate(reusing({ verbatimAllowed: false })), ModelError);
+  assert.equal(calls.length, 1);
+});
+
+test("A reused Lesson the fit pass cannot honestly adapt is unfit, and nothing is judged", async () => {
+  const { generator } = scriptedGenerator(fitReply("generate"));
+  const { judge, calls: judgeCalls } = scriptedJudge();
+  await assert.rejects(createReadingGenerator({ generator, judge }).generate(reusing()), (error: unknown) =>
+    error instanceof ReuseUnfitError && error.slotId === "slot1" && error.reason === "Chose generate." &&
+    error.rounds[0]!.reuse!.decision === "generate");
+  assert.equal(judgeCalls.length, 0);
+});
+
+test("A reused Lesson whose Sources cannot support an objective at all is unfit before the fit pass runs", async () => {
+  const { generator, calls } = scriptedGenerator(fitReply("verbatim"));
+  const { judge, grounded } = scriptedJudge();
+  grounded.set("Name its roots", { verdict: "unsupported", reason: "The excerpts never mention roots." });
+  await assert.rejects(createReadingGenerator({ generator, judge }).generate(reusing()), (error: unknown) =>
+    error instanceof ReuseUnfitError && /Name its roots/.test(error.reason) && error.grounding.length === 2);
+  assert.equal(calls.length, 0, "A capability the reused Lesson cannot teach sends the slot to research.");
+});
+
+test("A reused Lesson is fitted and judged against an objective grounding rewrote, as a written Lesson is", async () => {
+  const { generator, calls } = scriptedGenerator(fitReply("verbatim"));
+  const { judge, grounded, calls: judgeCalls } = scriptedJudge();
+  grounded.set("Name its roots", { verdict: "rewritten", text: "Name a root", reason: "The excerpts name one root." });
+  const checked = await createReadingGenerator({ generator, judge }).generate(reusing());
+  assert.deepEqual((calls[0]!.input as { slot: { objectives: string[] } }).slot.objectives, ["Describe Yggdrasil", "Name a root"]);
+  assert.deepEqual((judgeCalls[0]!.input as { slot: { objectives: string[] } }).slot.objectives, ["Describe Yggdrasil", "Name a root"]);
+  assert.deepEqual(checked.lesson.objectives, ["Describe Yggdrasil", "Name a root"]);
+});
+
+test("A Source vetted out when the reused Lesson was written stays out of its evidence", async () => {
+  const { generator, calls } = scriptedGenerator(fitReply("adapt", authored("Yggdrasil is the world tree [src_aaaaaaaaaa].").sections.slice(0, 1)));
+  const { judge, vettings } = scriptedJudge();
+  const checked = await createReadingGenerator({ generator, judge }).generate(reusing({
+    rejectedSources: [{ sourceId: BRIT.sourceId, url: BRIT.url, reason: "A shop's blog." }],
+  }));
+  assert.equal(vettings.length, 0);
+  assert.deepEqual((calls[0]!.input as { sources: { sourceId: string }[] }).sources.map((entry) => entry.sourceId), [WIKI.sourceId]);
+  assert.deepEqual(checked.rejectedSources, [{ sourceId: BRIT.sourceId, url: BRIT.url, reason: "A shop's blog." }]);
+});
+
+test("A verbatim Lesson a repair touches is adapted", async () => {
+  const { generator, calls } = scriptedGenerator(fitReply("verbatim"), "fixture/author", TOUCH);
+  const { judge } = scriptedJudge(UNSUPPORTED, "fixture/judge", PASS);
+  const checked = await createReadingGenerator({ generator, judge }).generate(reusing());
+  assert.deepEqual(calls.map((call) => call.schemaName), ["reading_reuse_fit", "cited_reading_repair"]);
+  assert.equal(checked.repairs, 1);
+  assert.deepEqual(checked.lesson.lineage, { originLessonId: "origin-lesson", mode: "adapted" });
+  assert.deepEqual(checked.authorModelIds, ["origin/author", "fixture/author"]);
+});
+
+test("A reused Lesson still failing after its repairs is unfit; no fallback author writes it from another slot's Sources", async () => {
+  const { generator } = scriptedGenerator(fitReply("verbatim"), "fixture/author", TOUCH);
+  const { generator: fallbackGenerator, calls: fallbackCalls } = scriptedGenerator(authored(), "fixture/fallback");
+  const { judge } = scriptedJudge(UNSUPPORTED);
+  await assert.rejects(createReadingGenerator({ generator, fallbackGenerator, judge }).generate(reusing()), (error: unknown) =>
+    error instanceof ReuseUnfitError && error.rounds.length === 3);
+  assert.equal(fallbackCalls.length, 0);
+});
+
+test("A finished Lesson's numbered Citations turn back into the Source ID markers they were numbered from", () => {
+  const evidence = lessonEvidence(INPUT.packs);
+  const numbered = numberCitations(authored().sections, evidence);
+  assert.deepEqual(authoredSections(numbered.body, numbered.sources), authored().sections.map((section) => ({
+    ...section, paragraphs: section.paragraphs.map((paragraph) => paragraph.replace("[src_bbbbbbbbbb, src_aaaaaaaaaa]", "[src_bbbbbbbbbb][src_aaaaaaaaaa]")),
+  })));
+  assert.deepEqual(numberCitations(authoredSections(numbered.body, numbered.sources), evidence), numbered);
 });

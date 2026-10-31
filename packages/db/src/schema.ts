@@ -4,6 +4,7 @@ import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprin
 import { COURSE_REQUEST_STATUSES, type GoalFocus, type ValidityClarification, type ValidityResult } from "./course-request.ts";
 import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
+import type { LessonLineage } from "./lesson-reuse.ts";
 import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
@@ -171,6 +172,11 @@ export const lessonResearch = pgTable(
       .references(() => courseRequests.id),
     slotId: text("slot_id").notNull(),
     sourcePacks: jsonb("source_packs").$type<unknown[]>().notNull(),
+    /**
+     * Set when the slot reuses this published Lesson instead of being written: the packs are a copy of that Lesson's
+     * retrieval set, so its checks run against the Sources it was written from (SEN-46).
+     */
+    reusedLessonId: uuid("reused_lesson_id").references((): AnyPgColumn => publishedLessons.id),
     researchedAt: timestamp("researched_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique("lesson_research_request_slot").on(table.courseRequestId, table.slotId)],
@@ -195,7 +201,7 @@ export const unpublishedLessons = pgTable(
     lessonGoal: text("lesson_goal").notNull(),
     objectives: jsonb("objectives").$type<string[]>().notNull(),
     topicTags: jsonb("topic_tags").$type<string[]>().notNull(),
-    lineage: jsonb("lineage"),
+    lineage: jsonb("lineage").$type<LessonLineage>(),
     sources: jsonb("sources").$type<LessonSource[]>().notNull(),
     citations: jsonb("citations").$type<NumberedSource[]>().notNull(),
     body: jsonb("body").$type<ReadingBody | QuizBody>().notNull(),
@@ -206,6 +212,11 @@ export const unpublishedLessons = pgTable(
     authorModelIds: jsonb("author_model_ids").$type<string[]>().notNull().default([]),
     /** The model whose Judge pass let this Lesson checkpoint; null before SEN-57. */
     judgeModelId: text("judge_model_id"),
+    /**
+     * The write-time Teaching Profile values this Lesson was written for (spec §5.5), so reuse can tell whether another
+     * Learner may have it verbatim (SEN-46). Null before SEN-46.
+     */
+    writeTimeProfile: jsonb("write_time_profile").$type<Record<string, unknown>>(),
     finalizedAt: timestamp("finalized_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique("unpublished_lessons_request_slot").on(table.courseRequestId, table.slotId)],
@@ -261,7 +272,7 @@ export const publishedLessons = pgTable(
     objectives: jsonb("objectives").$type<string[]>().notNull().default([]),
     topicTags: jsonb("topic_tags").$type<string[]>().notNull().default([]),
     assessedLessonIds: jsonb("assessed_lesson_ids").$type<string[]>().notNull().default([]),
-    lineage: jsonb("lineage"),
+    lineage: jsonb("lineage").$type<LessonLineage>(),
     sources: jsonb("sources").$type<unknown[]>().notNull().default([]),
     citations: jsonb("citations").$type<unknown[]>().notNull().default([]),
     body: jsonb("body"),

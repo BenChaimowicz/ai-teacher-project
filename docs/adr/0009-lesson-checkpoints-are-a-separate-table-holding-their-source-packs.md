@@ -18,3 +18,7 @@ Research now runs for every Reading at once, before writing starts (ADR 0005), s
 The rule above still holds: a Reading's retrieval set is exactly the packs its Code and Judge checks ran against, kept per slot. It is now stored next to the checkpoint rather than inside it. The checkpoint still keeps `rejectedSources`, because Source vetting is part of writing rather than research. A Quiz has no research row.
 
 Rejected: **keeping a copy of the packs on the checkpoint as well.** Two copies of the same retrieval set could drift apart, and repair (SEN-57) needs one place to regenerate from.
+
+## Update (SEN-46): a reused Lesson's packs are copied
+
+A Reading slot that reuses a published Lesson (spec §5.8) gets a copy of that Lesson's packs in its own `lesson_research` row, with `reused_lesson_id` naming the Lesson. The rule above still holds for it: its retrieval set is the packs its checks ran against, kept per slot of its own Course. The copy cannot drift, because a published Request's research rows never change. See `docs/decisions/2026-10-31-a-reused-slot-copies-its-origins-source-packs.md`.

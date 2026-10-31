@@ -1,4 +1,5 @@
 import type { BlueprintSlot } from "./blueprint.ts";
+import type { LessonLineage } from "./lesson-reuse.ts";
 import { parseQuizBody, QUIZ_MAX_ITEMS, QUIZ_MIN_ITEMS, QUIZ_OPTION_COUNT, type QuizBody } from "./quiz.ts";
 import { QUIZ_METHOD_ID, READING_METHOD_ID, type NumberedSource, type ReadingBody } from "./reading-lesson.ts";
 
@@ -23,7 +24,7 @@ export type LessonSource = {
 /**
  * A finished reading Lesson before publication: the shared envelope plus the reading body.
  * `citations` is the numbered list Study shows; `sources` is the same list with Source IDs and provenance.
- * `lineage` is null for a freshly generated Lesson; reuse fills it later.
+ * `lineage` is null for a Lesson written for this Course, and names the published Lesson a reused one was copied from.
  */
 export type ReadingLessonDraft = {
   slotId: string;
@@ -32,7 +33,7 @@ export type ReadingLessonDraft = {
   lessonGoal: string;
   objectives: string[];
   topicTags: string[];
-  lineage: null;
+  lineage: LessonLineage | null;
   sources: LessonSource[];
   citations: NumberedSource[];
   body: ReadingBody;
