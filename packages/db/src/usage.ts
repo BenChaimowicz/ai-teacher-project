@@ -528,7 +528,7 @@ export type OpsSetupChecklistItem = {
   label: string;
   /** When it was ticked, ISO; null while open. */
   completedAt: string | null;
-  /** Who ticked it; null while open, or when the console that ticked it had no `CONSOLE_OPERATOR`. */
+  /** Who ticked it; null while open, or when the console that ticked it had no git user name. */
   completedBy: string | null;
 };
 
@@ -548,6 +548,6 @@ export type OpsSetupChecklist = {
   sections: OpsSetupChecklistSection[];
   done: number;
   total: number;
-  /** Who this console ticks items as (`CONSOLE_OPERATOR`); null means it can read but not tick. */
+  /** Who this console ticks items as (the checkout's `git config user.name`); null means it can read but not tick. */
   operator: string | null;
 };

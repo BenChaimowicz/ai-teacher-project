@@ -130,7 +130,7 @@ function ChecklistSection({
 
 /**
  * Knibbler Setup: the two founders' shared checklist for the domain, email, vendor access, and authentication email.
- * Progress lives in the shared database, so the other founder sees a tick on their next refresh. It never holds a
+ * Progress lives in a committed file, so the other founder sees a tick once it is pushed and they pull. It never holds a
  * secret.
  */
 export function SetupChecklist() {
@@ -188,13 +188,13 @@ export function SetupChecklist() {
                     ) : checklist.done === 0 ? (
                       <p className="text-xs text-muted-foreground">Nothing ticked yet. Start with the shared password vault.</p>
                     ) : (
-                      <p className="text-xs text-muted-foreground">Shared with your co-founder. Refresh to see their latest ticks.</p>
+                      <p className="text-xs text-muted-foreground">Shared with your co-founder through git. Pull to see their latest ticks.</p>
                     )}
                     <p id={hintId} className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
                       <KeyRound className="size-3" aria-hidden="true" />
                       {readOnly
-                        ? "Read-only here: set CONSOLE_OPERATOR in .env to your name and restart the console to tick items."
-                        : `Ticking as ${checklist.operator}.`}
+                        ? "Read-only here: set your name with git config user.name and restart the console to tick items."
+                        : `Ticking as ${checklist.operator}. Commit and push docs/setup-checklist-progress.json to share your ticks.`}
                     </p>
                   </div>
                 </div>
