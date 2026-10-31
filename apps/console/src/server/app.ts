@@ -83,8 +83,8 @@ const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
 /**
  * Refuses a checklist write that did not come from this machine's console screen, so the only people who can tick
- * items are those running the console against the shared database. Answers 403 for a non-loopback Host or a console
- * with no `CONSOLE_OPERATOR`, and 415 for a body that is not JSON (which a browser cannot send cross-site without a
+ * items are those running the console in their own checkout. Answers 403 for a non-loopback Host or a checkout with no
+ * `git config user.name`, and 415 for a body that is not JSON (which a browser cannot send cross-site without a
  * CORS preflight this API never grants).
  * @param request - The Fastify request
  * @param reply - The Fastify reply
@@ -98,7 +98,7 @@ function refuseChecklistWrite(request: FastifyRequest, reply: FastifyReply, oper
     return reply.code(415).send({ error: "Send the change as JSON." });
   }
   if (!operator) {
-    return reply.code(403).send({ error: "Set CONSOLE_OPERATOR in .env to your name to tick items, then restart the console." });
+    return reply.code(403).send({ error: "Set your name with `git config user.name` to tick items, then restart the console." });
   }
   return null;
 }

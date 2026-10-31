@@ -1,11 +1,13 @@
-import { sql } from "drizzle-orm";
+import { execFile } from "node:child_process";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 import type { OpsSetupChecklist } from "@senoy/db/usage";
-import type { SqlRunner } from "./ops-store.ts";
 
 /**
  * The founders' shared setup checklist: domain, email, vendor access, and authentication email. The sections and items
- * live here and nowhere else; the database holds only who ticked which item and when (`setup_checklist_progress`), so
- * an item can never be duplicated by a reload. Item keys are stable: renaming a label keeps its progress, changing a
+ * live here and nowhere else; the committed file `docs/setup-checklist-progress.json` holds only who ticked which item
+ * and when, so an item can never be duplicated by a reload. Item keys are stable: renaming a label keeps its progress, changing a
  * key starts it fresh. No item ever asks for a secret — those belong in the password manager.
  */
 
@@ -168,7 +170,7 @@ export function isSetupChecklistItem(key: string): boolean {
   return ITEM_KEYS.has(key);
 }
 
-/** One stored progress row. */
+/** One stored tick. */
 export type SetupChecklistProgressRow = { itemKey: string; completedAt: string | null; completedBy: string | null };
 
 /**
@@ -199,69 +201,138 @@ export function buildSetupChecklist(rows: SetupChecklistProgressRow[], operator:
 
 /** Reads and ticks the shared checklist. */
 export type SetupChecklistService = {
-  /** Who this console ticks items as (`CONSOLE_OPERATOR`); null means it can read but not tick. */
+  /** Who this console ticks items as (the repo's `git config user.name`); null means it can read but not tick. */
   operator: string | null;
   /** The whole checklist with its progress. */
   read(): Promise<OpsSetupChecklist>;
   /**
    * Ticks or unticks one item and returns the whole checklist. Ticking an item that is already ticked keeps who ticked
-   * it first, so two founders ticking at once do not overwrite each other; unticking clears both.
+   * it first; unticking removes its entry.
    */
   setDone(itemKey: string, done: boolean): Promise<OpsSetupChecklist>;
 };
 
+/** Where progress lives, relative to the repo root. Committed, so a pull brings in the other founder's ticks. */
+export const SETUP_CHECKLIST_PROGRESS_FILE = "docs/setup-checklist-progress.json";
+
+/** One item's entry in the progress file. */
+type ProgressEntry = { completedAt: string; completedBy: string | null };
+
 /**
- * Builds the checklist service over Postgres.
- * @param run - Runs one SQL statement
- * @param operator - Who this console ticks items as (`CONSOLE_OPERATOR`), or null
+ * Parses the progress file. Entries that are not a tick (no `completedAt`) are skipped.
+ * @param text - The file's contents
+ * @returns The ticks by item key
+ * @throws Error when the file is not a JSON object, e.g. after a merge left conflict markers in it
+ */
+export function parseSetupChecklistProgress(text: string): Map<string, ProgressEntry> {
+  const parsed: unknown = JSON.parse(text);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("[setup-checklist.ts: parseSetupChecklistProgress] The progress file is not a JSON object");
+  }
+  const ticks = new Map<string, ProgressEntry>();
+  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+    const entry = value as Partial<ProgressEntry> | null;
+    if (typeof entry?.completedAt !== "string") continue;
+    ticks.set(key, { completedAt: entry.completedAt, completedBy: typeof entry.completedBy === "string" ? entry.completedBy : null });
+  }
+  return ticks;
+}
+
+/**
+ * Writes the ticks in checklist order, one item per line, so two founders ticking different items merge cleanly in git.
+ * Keys no longer on the checklist are kept at the end rather than silently dropped.
+ * @param ticks - The ticks by item key
+ * @returns The file's contents
+ */
+export function formatSetupChecklistProgress(ticks: Map<string, ProgressEntry>): string {
+  const order = SETUP_CHECKLIST.flatMap((section) => section.items.map(([key]) => key));
+  const keys = [...order.filter((key) => ticks.has(key)), ...[...ticks.keys()].filter((key) => !ITEM_KEYS.has(key)).sort()];
+  if (keys.length === 0) return "{}\n";
+  const lines = keys.map((key) => `  ${JSON.stringify(key)}: ${JSON.stringify(ticks.get(key))}`);
+  return `{\n${lines.join(",\n")}\n}\n`;
+}
+
+/**
+ * Reads the repo's `git config user.name`, which names whoever ticks items from this console.
+ * @param root - The repo root
+ * @returns The name, or null when git is missing or no name is set
+ */
+export async function readGitUserName(root: string): Promise<string | null> {
+  try {
+    const { stdout } = await promisify(execFile)("git", ["config", "user.name"], { cwd: root });
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Builds the checklist service over the committed progress file. Nothing is live: a founder's ticks reach the other
+ * founder when they are committed, pushed, and pulled.
+ * @param options.root - The repo root
+ * @param options.operator - Who this console ticks items as, or null for read-only
+ * @param options.now - The current instant, injected for tests
  * @returns The service
  */
-export function createSetupChecklistService(run: SqlRunner, operator: string | null): SetupChecklistService {
+export function createSetupChecklistService({
+  root,
+  operator,
+  now = () => new Date(),
+}: {
+  root: string;
+  operator: string | null;
+  now?: () => Date;
+}): SetupChecklistService {
+  const path = join(root, SETUP_CHECKLIST_PROGRESS_FILE);
+  // Saves run one at a time, so two quick ticks cannot each read the file before the other writes it.
+  let saving: Promise<unknown> = Promise.resolve();
+
   /**
-   * Reads every stored progress row.
-   * @returns The rows, timestamps as ISO strings
-   * @throws Error when the query fails
+   * Reads the progress file; a missing file means nothing is ticked yet.
+   * @returns The ticks by item key
+   * @throws Error when the file cannot be read or parsed
+   */
+  async function readTicks(): Promise<Map<string, ProgressEntry>> {
+    try {
+      return parseSetupChecklistProgress(await readFile(path, "utf8"));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return new Map();
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`[setup-checklist.ts: readTicks] Failed to read setup checklist progress || file=${SETUP_CHECKLIST_PROGRESS_FILE} || ${message}`);
+    }
+  }
+
+  /**
+   * Reads the checklist with its progress.
+   * @returns The checklist
    */
   async function read(): Promise<OpsSetupChecklist> {
-    try {
-      const rows = await run(sql`select item_key as "itemKey", completed_at as "completedAt", completed_by as "completedBy"
-        from setup_checklist_progress`);
-      return buildSetupChecklist(
-        rows.map((row) => ({
-          itemKey: String(row.itemKey),
-          completedAt: row.completedAt ? new Date(row.completedAt as string | Date).toISOString() : null,
-          completedBy: row.completedBy ? String(row.completedBy) : null,
-        })),
-        operator,
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`[setup-checklist.ts: read] Failed to read setup checklist progress || ${message}`);
-    }
+    const ticks = await readTicks();
+    return buildSetupChecklist([...ticks].map(([itemKey, entry]) => ({ itemKey, ...entry })), operator);
   }
 
   return {
     operator,
     read,
-    async setDone(itemKey, done) {
-      try {
-        await run(
-          done
-            ? sql`insert into setup_checklist_progress (item_key, completed_at, completed_by, updated_at)
-                values (${itemKey}, now(), ${operator}, now())
-                on conflict (item_key) do update set
-                  completed_by = case when setup_checklist_progress.completed_at is null
-                    then excluded.completed_by else setup_checklist_progress.completed_by end,
-                  completed_at = coalesce(setup_checklist_progress.completed_at, excluded.completed_at),
-                  updated_at = now()`
-            : sql`update setup_checklist_progress set completed_at = null, completed_by = null, updated_at = now()
-                where item_key = ${itemKey}`,
-        );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`[setup-checklist.ts: setDone] Failed to save setup checklist progress || itemKey=${itemKey} || done=${done} || ${message}`);
-      }
-      return read();
+    setDone(itemKey, done) {
+      const save = saving.then(async () => {
+        const ticks = await readTicks();
+        if (done && !ticks.has(itemKey)) ticks.set(itemKey, { completedAt: now().toISOString(), completedBy: operator });
+        if (!done) ticks.delete(itemKey);
+        try {
+          // Written beside the file and renamed over it, so a crash never leaves half a file.
+          const temporary = `${path}.${process.pid}.tmp`;
+          await mkdir(dirname(path), { recursive: true });
+          await writeFile(temporary, formatSetupChecklistProgress(ticks));
+          await rename(temporary, path);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          throw new Error(`[setup-checklist.ts: setDone] Failed to save setup checklist progress || itemKey=${itemKey} || done=${done} || ${message}`);
+        }
+        return read();
+      });
+      saving = save.catch(() => undefined);
+      return save;
     },
   };
 }

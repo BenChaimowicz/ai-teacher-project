@@ -204,6 +204,13 @@
       "when": 1793438391108,
       "tag": "0028_20261031091951_setup_checklist",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793445915981,
+      "tag": "0029_20261031112515_drop_setup_checklist_progress",
+      "breakpoints": true
     }
   ]
 }

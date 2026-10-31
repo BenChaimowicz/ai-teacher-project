@@ -218,7 +218,7 @@ describe("Setup checklist", () => {
   const refusals: [string, Record<string, string>, unknown, number, string | null][] = [
     ["a request from another host (DNS rebinding)", { ...json, host: "evil.example:3100" }, { done: true }, 403, "Ben"],
     ["a cross-site form post", { "content-type": "text/plain", host: "127.0.0.1:3100" }, '{"done":true}', 415, "Ben"],
-    ["a console with no CONSOLE_OPERATOR", json, { done: true }, 403, null],
+    ["a checkout with no git user name", json, { done: true }, 403, null],
     ["a body without a boolean", json, { done: "yes" }, 400, "Ben"],
   ];
   for (const [what, headers, payload, status, operator] of refusals) {

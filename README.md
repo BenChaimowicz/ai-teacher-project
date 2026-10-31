@@ -21,7 +21,7 @@ pnpm dash
 
 The Usage Console has no login. Its API listens on this machine only (`127.0.0.1`), so it is not reachable from elsewhere.
 
-**Knibbler Setup** (`/setup` in the Usage Console) is the founders' shared setup checklist: domain, email, vendor access, and authentication email. Progress is stored in the shared database (`setup_checklist_progress`), so a tick on one founder's console shows on the other's after a refresh. Set `CONSOLE_OPERATOR` in `.env` to your name to tick items; without it the checklist is read-only. The items themselves live in `apps/console/src/server/setup-checklist.ts`. It never holds credentials or recovery codes — those go in the shared password manager.
+**Knibbler Setup** (`/setup` in the Usage Console) is the founders' shared setup checklist: domain, email, vendor access, and authentication email. Ticks are saved to `docs/setup-checklist-progress.json` in your checkout, signed with your `git config user.name` (without one the checklist is read-only). They are not live: commit and push the file to share your ticks, and pull to see your co-founder's. The items themselves live in `apps/console/src/server/setup-checklist.ts`. It never holds credentials or recovery codes — those go in the shared password manager.
 
 ## Decisions
 

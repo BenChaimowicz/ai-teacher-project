@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { PgDialect } from "drizzle-orm/pg-core";
-import { SETUP_CHECKLIST, buildSetupChecklist, createSetupChecklistService, isSetupChecklistItem } from "./setup-checklist.ts";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import {
+  SETUP_CHECKLIST,
+  SETUP_CHECKLIST_PROGRESS_FILE,
+  buildSetupChecklist,
+  createSetupChecklistService,
+  formatSetupChecklistProgress,
+  isSetupChecklistItem,
+  parseSetupChecklistProgress,
+} from "./setup-checklist.ts";
 
 const AT = "2026-10-31T09:00:00.000Z";
 
@@ -75,41 +85,65 @@ describe("buildSetupChecklist", () => {
 });
 
 describe("createSetupChecklistService", () => {
-  /**
-   * A runner that records each statement and answers the read with the given rows.
-   * @param rows - Rows the read returns
-   */
-  function fakeRunner(rows: Record<string, unknown>[] = []) {
-    const statements: { text: string; params: unknown[] }[] = [];
-    const dialect = new PgDialect();
-    const run = async (query: Parameters<typeof dialect.sqlToQuery>[0]) => {
-      const { sql: text, params } = dialect.sqlToQuery(query);
-      statements.push({ text, params });
-      return text.trimStart().startsWith("select") ? rows : [];
-    };
-    return { run, statements };
+  /** A fresh checkout with no progress file yet. */
+  async function checkout() {
+    const root = await mkdtemp(join(tmpdir(), "setup-checklist-"));
+    const file = join(root, SETUP_CHECKLIST_PROGRESS_FILE);
+    return { root, readProgress: async () => readFile(file, "utf8"), writeProgress: async (text: string) => {
+      await mkdir(dirname(file), { recursive: true });
+      await writeFile(file, text);
+    } };
   }
 
-  it("ticks as the operator, keeping whoever ticked first", async () => {
-    const { run, statements } = fakeRunner([{ itemKey: "vault.create", completedAt: new Date(AT), completedBy: "Ben" }]);
-    const checklist = await createSetupChecklistService(run, "Ben").setDone("vault.create", true);
-    assert.match(statements[0].text, /on conflict \(item_key\) do update/);
-    assert.match(statements[0].text, /coalesce\(setup_checklist_progress\.completed_at/);
-    assert.deepEqual(statements[0].params, ["vault.create", "Ben"]);
-    assert.equal(checklist.sections[0].items[0].completedAt, AT);
+  it("starts with everything open when there is no progress file", async () => {
+    const { root } = await checkout();
+    const checklist = await createSetupChecklistService({ root, operator: "Ben" }).read();
+    assert.equal(checklist.done, 0);
+    assert.equal(checklist.operator, "Ben");
   });
 
-  it("unticks by clearing who and when, not by deleting", async () => {
-    const { run, statements } = fakeRunner();
-    await createSetupChecklistService(run, "Ben").setDone("vault.create", false);
-    assert.match(statements[0].text, /^update setup_checklist_progress set completed_at = null, completed_by = null/);
-    assert.deepEqual(statements[0].params, ["vault.create"]);
+  it("writes a tick to the file as the operator, keeping whoever ticked first", async () => {
+    const { root, readProgress, writeProgress } = await checkout();
+    await writeProgress(`{\n  "vault.create": {"completedAt":"${AT}","completedBy":"Yarden"}\n}\n`);
+    const service = createSetupChecklistService({ root, operator: "Ben", now: () => new Date("2026-11-01T08:00:00.000Z") });
+    await service.setDone("vault.create", true);
+    const checklist = await service.setDone("domain.lock", true);
+    assert.equal(
+      await readProgress(),
+      `{\n  "vault.create": {"completedAt":"${AT}","completedBy":"Yarden"},\n` +
+        `  "domain.lock": {"completedAt":"2026-11-01T08:00:00.000Z","completedBy":"Ben"}\n}\n`,
+    );
+    assert.equal(checklist.done, 2);
   });
 
-  it("names the item when saving fails", async () => {
-    const run = async () => {
-      throw new Error("connection reset");
-    };
-    await assert.rejects(createSetupChecklistService(run, "Ben").setDone("vault.create", true), /itemKey=vault\.create/);
+  it("unticks by removing the entry", async () => {
+    const { root, readProgress } = await checkout();
+    const service = createSetupChecklistService({ root, operator: "Ben" });
+    await service.setDone("vault.create", true);
+    const checklist = await service.setDone("vault.create", false);
+    assert.equal(await readProgress(), "{}\n");
+    assert.equal(checklist.done, 0);
+  });
+
+  it("loses no tick when two are saved at once", async () => {
+    const { root } = await checkout();
+    const service = createSetupChecklistService({ root, operator: "Ben" });
+    await Promise.all([service.setDone("vault.create", true), service.setDone("vault.2fa", true)]);
+    assert.equal((await service.read()).done, 2);
+  });
+
+  it("names the file when it cannot be parsed, e.g. after a merge conflict", async () => {
+    const { root, writeProgress } = await checkout();
+    await writeProgress("<<<<<<< HEAD\n{}\n=======\n{}\n>>>>>>> main\n");
+    await assert.rejects(createSetupChecklistService({ root, operator: "Ben" }).read(), /file=docs\/setup-checklist-progress\.json/);
+  });
+});
+
+describe("formatSetupChecklistProgress", () => {
+  it("round-trips, in checklist order, keeping keys no longer on the list", () => {
+    const text = '{\n  "retired.item": {"completedAt":"' + AT + '","completedBy":null},\n  "domain.lock": {"completedAt":"' + AT + '","completedBy":"Ben"}\n}\n';
+    const formatted = formatSetupChecklistProgress(parseSetupChecklistProgress(text));
+    assert.ok(formatted.indexOf("domain.lock") < formatted.indexOf("retired.item"));
+    assert.deepEqual(parseSetupChecklistProgress(formatted), parseSetupChecklistProgress(text));
   });
 });
