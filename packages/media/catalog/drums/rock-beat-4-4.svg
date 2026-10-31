@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 300" width="820" height="300" role="img" aria-labelledby="t d">
+  <title id="t">A basic rock beat in 4/4, one bar</title>
+  <desc id="d">A drum staff in 4/4. Eight x-shaped hi-hat notes are beamed in two groups of four above the staff. The snare, in the third space, falls under the third and seventh hi-hat notes, on beats 2 and 4. The bass drum, in the bottom space, falls under the first and fifth, on beats 1 and 3. The counts 1 and 2 and 3 and 4 and are written beneath.</desc>
+  <style>
+    text { font-family: Helvetica, Arial, sans-serif; fill: #222; }
+    .title { font-size: 18px; font-weight: 700; }
+    .count { font-size: 16px; }
+    .beat { font-weight: 700; }
+    .note { font-size: 12px; fill: #555; }
+    .sig { font-size: 30px; font-weight: 700; }
+    .staff { stroke: #333; stroke-width: 1.2; }
+    .stem { stroke: #111; stroke-width: 1.8; }
+    .beam { stroke: #111; stroke-width: 5; }
+    .x { stroke: #111; stroke-width: 2.4; stroke-linecap: round; }
+  </style>
+  <rect width="820" height="300" fill="#fff"/>
+  <text class="title" x="20" y="34">A basic rock beat in 4/4 (one bar)</text>
+
+  <!-- staff lines: y = 100, 115, 130, 145, 160 -->
+  <g class="staff">
+    <line x1="60" y1="100" x2="760" y2="100"/>
+    <line x1="60" y1="115" x2="760" y2="115"/>
+    <line x1="60" y1="130" x2="760" y2="130"/>
+    <line x1="60" y1="145" x2="760" y2="145"/>
+    <line x1="60" y1="160" x2="760" y2="160"/>
+    <line x1="60" y1="100" x2="60" y2="160"/>
+    <line x1="752" y1="100" x2="752" y2="160"/>
+  </g>
+  <rect x="757" y="100" width="4" height="60" fill="#333"/>
+  <!-- percussion clef and time signature -->
+  <rect x="74" y="115" width="5" height="30" fill="#111"/>
+  <rect x="84" y="115" width="5" height="30" fill="#111"/>
+  <text class="sig" x="112" y="128" text-anchor="middle">4</text>
+  <text class="sig" x="112" y="159" text-anchor="middle">4</text>
+
+  <!-- eighth-note positions x = 180 + i*78 : 180 258 336 414 492 570 648 726 -->
+  <!-- hi-hat x noteheads at y 92.5, stems up to the beams at y 52 -->
+  <g class="x">
+    <line x1="174" y1="86.5" x2="186" y2="98.5"/><line x1="174" y1="98.5" x2="186" y2="86.5"/>
+    <line x1="252" y1="86.5" x2="264" y2="98.5"/><line x1="252" y1="98.5" x2="264" y2="86.5"/>
+    <line x1="330" y1="86.5" x2="342" y2="98.5"/><line x1="330" y1="98.5" x2="342" y2="86.5"/>
+    <line x1="408" y1="86.5" x2="420" y2="98.5"/><line x1="408" y1="98.5" x2="420" y2="86.5"/>
+    <line x1="486" y1="86.5" x2="498" y2="98.5"/><line x1="486" y1="98.5" x2="498" y2="86.5"/>
+    <line x1="564" y1="86.5" x2="576" y2="98.5"/><line x1="564" y1="98.5" x2="576" y2="86.5"/>
+    <line x1="642" y1="86.5" x2="654" y2="98.5"/><line x1="642" y1="98.5" x2="654" y2="86.5"/>
+    <line x1="720" y1="86.5" x2="732" y2="98.5"/><line x1="720" y1="98.5" x2="732" y2="86.5"/>
+  </g>
+  <!-- snare on beats 2 and 4 (positions 3 and 7), third space y 122.5 -->
+  <ellipse cx="336" cy="122.5" rx="7" ry="5" transform="rotate(-20 336 122.5)" fill="#111"/>
+  <ellipse cx="648" cy="122.5" rx="7" ry="5" transform="rotate(-20 648 122.5)" fill="#111"/>
+  <!-- bass drum on beats 1 and 3 (positions 1 and 5), bottom space y 152.5 -->
+  <ellipse cx="180" cy="152.5" rx="7" ry="5" transform="rotate(-20 180 152.5)" fill="#111"/>
+  <ellipse cx="492" cy="152.5" rx="7" ry="5" transform="rotate(-20 492 152.5)" fill="#111"/>
+  <!-- stems: each position's stem runs from its lowest note up to the beam -->
+  <g class="stem">
+    <line x1="186.5" y1="151" x2="186.5" y2="52"/>
+    <line x1="264.5" y1="92.5" x2="264.5" y2="52"/>
+    <line x1="342.5" y1="121" x2="342.5" y2="52"/>
+    <line x1="420.5" y1="92.5" x2="420.5" y2="52"/>
+    <line x1="498.5" y1="151" x2="498.5" y2="52"/>
+    <line x1="576.5" y1="92.5" x2="576.5" y2="52"/>
+    <line x1="654.5" y1="121" x2="654.5" y2="52"/>
+    <line x1="732.5" y1="92.5" x2="732.5" y2="52"/>
+  </g>
+  <!-- beams: two groups of four eighth notes -->
+  <line class="beam" x1="186.5" y1="54" x2="420.5" y2="54"/>
+  <line class="beam" x1="498.5" y1="54" x2="732.5" y2="54"/>
+
+  <!-- counts -->
+  <g class="count" text-anchor="middle">
+    <text class="beat" x="180" y="196">1</text><text x="258" y="196">&amp;</text>
+    <text class="beat" x="336" y="196">2</text><text x="414" y="196">&amp;</text>
+    <text class="beat" x="492" y="196">3</text><text x="570" y="196">&amp;</text>
+    <text class="beat" x="648" y="196">4</text><text x="726" y="196">&amp;</text>
+  </g>
+
+  <!-- legend -->
+  <g class="note">
+    <g class="x"><line x1="24" y1="236" x2="34" y2="246"/><line x1="24" y1="246" x2="34" y2="236"/></g>
+    <text x="44" y="245">closed hi-hat, every eighth note</text>
+    <ellipse cx="270" cy="241" rx="7" ry="5" transform="rotate(-20 270 241)" fill="#111"/>
+    <text x="284" y="245">third space: snare on 2 and 4 (the backbeat)</text>
+    <ellipse cx="560" cy="241" rx="7" ry="5" transform="rotate(-20 560 241)" fill="#111"/>
+    <text x="574" y="245">bottom space: bass drum on 1 and 3</text>
+    <text x="20" y="275">Count aloud while playing it slowly; the hands keep the eighth notes steady and the feet fall on the numbers.</text>
+  </g>
+</svg>

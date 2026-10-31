@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 360" width="820" height="360" role="img" aria-labelledby="t d">
+  <title id="t">4/4 and 6/8: how the beats group</title>
+  <desc id="d">Two rhythm lines. The top line, in 4/4, shows four quarter notes counted 1 2 3 4 with 1 and 3 emphasised, grouped two and two. The bottom line, in 6/8, shows six eighth notes beamed three and three, counted 1 2 3 4 5 6 with 1 and 4 emphasised, felt as two pulses.</desc>
+  <style>
+    text { font-family: Helvetica, Arial, sans-serif; fill: #222; }
+    .title { font-size: 18px; font-weight: 700; }
+    .head { font-size: 15px; font-weight: 700; }
+    .count { font-size: 16px; }
+    .beat { font-weight: 700; }
+    .note { font-size: 12px; fill: #555; }
+    .sig { font-size: 26px; font-weight: 700; }
+    .line { stroke: #333; stroke-width: 1.2; }
+    .stem { stroke: #111; stroke-width: 1.8; }
+    .beam { stroke: #111; stroke-width: 5; }
+    .pulse { stroke: #b3261e; stroke-width: 2; fill: none; }
+  </style>
+  <rect width="820" height="360" fill="#fff"/>
+  <text class="title" x="20" y="34">4/4 and 6/8: how the beats group</text>
+
+  <!-- 4/4: single-line rhythm staff at y 110 -->
+  <text class="head" x="20" y="72">4/4 — four quarter-note beats, grouped 2 + 2</text>
+  <line class="line" x1="60" y1="110" x2="760" y2="110"/>
+  <line class="line" x1="60" y1="94" x2="60" y2="126"/>
+  <line class="line" x1="752" y1="94" x2="752" y2="126"/>
+  <rect x="757" y="94" width="4" height="32" fill="#333"/>
+  <text class="sig" x="96" y="107" text-anchor="middle">4</text>
+  <text class="sig" x="96" y="131" text-anchor="middle">4</text>
+  <!-- four quarter notes at x 200 340 480 620 -->
+  <g>
+    <ellipse cx="200" cy="110" rx="7" ry="5" transform="rotate(-20 200 110)" fill="#111"/><line class="stem" x1="206.5" y1="108.5" x2="206.5" y2="70"/>
+    <ellipse cx="340" cy="110" rx="7" ry="5" transform="rotate(-20 340 110)" fill="#111"/><line class="stem" x1="346.5" y1="108.5" x2="346.5" y2="70"/>
+    <ellipse cx="480" cy="110" rx="7" ry="5" transform="rotate(-20 480 110)" fill="#111"/><line class="stem" x1="486.5" y1="108.5" x2="486.5" y2="70"/>
+    <ellipse cx="620" cy="110" rx="7" ry="5" transform="rotate(-20 620 110)" fill="#111"/><line class="stem" x1="626.5" y1="108.5" x2="626.5" y2="70"/>
+  </g>
+  <g class="count" text-anchor="middle">
+    <text class="beat" x="200" y="150">1</text><text x="340" y="150">2</text><text class="beat" x="480" y="150">3</text><text x="620" y="150">4</text>
+  </g>
+  <!-- the two pulses -->
+  <path class="pulse" d="M 190 160 Q 270 180 350 160"/>
+  <path class="pulse" d="M 470 160 Q 550 180 630 160"/>
+  <text class="note" x="270" y="188" text-anchor="middle">strong · weak</text>
+  <text class="note" x="550" y="188" text-anchor="middle">strong · weak</text>
+
+  <!-- 6/8: single-line rhythm staff at y 262 -->
+  <text class="head" x="20" y="208">6/8 — six eighth notes in two groups of three, felt as two pulses</text>
+  <line class="line" x1="60" y1="262" x2="760" y2="262"/>
+  <line class="line" x1="60" y1="246" x2="60" y2="278"/>
+  <line class="line" x1="752" y1="246" x2="752" y2="278"/>
+  <rect x="757" y="246" width="4" height="32" fill="#333"/>
+  <text class="sig" x="96" y="259" text-anchor="middle">6</text>
+  <text class="sig" x="96" y="283" text-anchor="middle">8</text>
+  <!-- six eighth notes: group one at x 200 270 340, group two at 480 550 620, beamed 3 + 3 -->
+  <g>
+    <ellipse cx="200" cy="262" rx="7" ry="5" transform="rotate(-20 200 262)" fill="#111"/><line class="stem" x1="206.5" y1="260.5" x2="206.5" y2="222"/>
+    <ellipse cx="270" cy="262" rx="7" ry="5" transform="rotate(-20 270 262)" fill="#111"/><line class="stem" x1="276.5" y1="260.5" x2="276.5" y2="222"/>
+    <ellipse cx="340" cy="262" rx="7" ry="5" transform="rotate(-20 340 262)" fill="#111"/><line class="stem" x1="346.5" y1="260.5" x2="346.5" y2="222"/>
+    <line class="beam" x1="206.5" y1="224" x2="346.5" y2="224"/>
+    <ellipse cx="480" cy="262" rx="7" ry="5" transform="rotate(-20 480 262)" fill="#111"/><line class="stem" x1="486.5" y1="260.5" x2="486.5" y2="222"/>
+    <ellipse cx="550" cy="262" rx="7" ry="5" transform="rotate(-20 550 262)" fill="#111"/><line class="stem" x1="556.5" y1="260.5" x2="556.5" y2="222"/>
+    <ellipse cx="620" cy="262" rx="7" ry="5" transform="rotate(-20 620 262)" fill="#111"/><line class="stem" x1="626.5" y1="260.5" x2="626.5" y2="222"/>
+    <line class="beam" x1="486.5" y1="224" x2="626.5" y2="224"/>
+  </g>
+  <g class="count" text-anchor="middle">
+    <text class="beat" x="200" y="302">1</text><text x="270" y="302">2</text><text x="340" y="302">3</text>
+    <text class="beat" x="480" y="302">4</text><text x="550" y="302">5</text><text x="620" y="302">6</text>
+  </g>
+  <path class="pulse" d="M 190 312 Q 270 332 350 312"/>
+  <path class="pulse" d="M 470 312 Q 550 332 630 312"/>
+  <text class="note" x="270" y="348" text-anchor="middle">one pulse of three</text>
+  <text class="note" x="550" y="348" text-anchor="middle">one pulse of three</text>
+</svg>
