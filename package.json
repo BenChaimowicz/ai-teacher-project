@@ -17,6 +17,7 @@
     "check:starting-level:live": "pnpm --filter @senoy/api exec tsx src/routes/starting-level.live-check.ts",
     "check:reading:live": "pnpm --filter @senoy/api exec tsx src/lib/reading-generation.live-check.ts",
     "check:quiz:live": "pnpm --filter @senoy/api exec tsx src/lib/quiz-generation.live-check.ts",
+    "check:reuse:live": "pnpm --filter @senoy/api exec tsx src/lib/lesson-reuse.live-check.ts",
     "check:research:live": "pnpm --filter @senoy/research exec tsx src/research.live-check.ts",
     "check:blueprint-order:live": "pnpm --filter @senoy/api exec tsx src/lib/blueprint-order.live-check.ts",
     "check:goal-focus-blueprint:live": "pnpm --filter @senoy/api exec tsx src/lib/goal-focus-blueprint.live-check.ts",

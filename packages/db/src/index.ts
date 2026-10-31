@@ -61,6 +61,7 @@ export * from "./course-request.ts";
 export * from "./starting-level.ts";
 export * from "./blueprint.ts";
 export * from "./lesson-checkpoint.ts";
+export * from "./lesson-reuse.ts";
 export * from "./publication.ts";
 export * from "./generation-job.ts";
 export * from "./usage.ts";

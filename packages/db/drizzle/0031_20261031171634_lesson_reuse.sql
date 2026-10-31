@@ -1,0 +1,3 @@
+ALTER TABLE "lesson_research" ADD COLUMN "reused_lesson_id" uuid;--> statement-breakpoint
+ALTER TABLE "unpublished_lessons" ADD COLUMN "write_time_profile" jsonb;--> statement-breakpoint
+ALTER TABLE "lesson_research" ADD CONSTRAINT "lesson_research_reused_lesson_id_published_lessons_id_fk" FOREIGN KEY ("reused_lesson_id") REFERENCES "public"."published_lessons"("id") ON DELETE no action ON UPDATE no action;

@@ -45,6 +45,7 @@ export const KIND_HELP: Record<PipelineEventKind, string> = {
   fact_check: "Checks facts in the request or a draft. Code: fact_check",
   blueprint: "Designs the course plan: modules, lessons, goals, and quizzes. Code: blueprint",
   course_generation: "The whole writing run after the learner approves the plan. Research, lessons, quizzes, review, and publishing sit under it. Code: course_generation",
+  reuse: "Decides whether one reading lesson can reuse a lesson already published in another course, before any research. A reused lesson is not researched. Code: reuse",
   research: "Finds web sources for one lesson. Code: research",
   reading: "Writes one reading lesson from its sources, then checks it. Code: reading",
   quiz: "Writes one quiz and checks it matches the lessons. Code: quiz",

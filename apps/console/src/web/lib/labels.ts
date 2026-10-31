@@ -47,6 +47,7 @@ export const KIND_LABEL: Record<PipelineEventKind, string> = {
   fact_check: "Fact check",
   blueprint: "Course plan",
   course_generation: "Writing the course",
+  reuse: "Lesson reuse",
   research: "Research",
   reading: "Reading lesson",
   quiz: "Quiz",

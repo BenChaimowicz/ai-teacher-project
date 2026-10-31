@@ -17,17 +17,19 @@ import {
   unpublishedLessons,
   type ApprovedBlueprint,
   type Database,
+  type ReuseCandidate,
 } from "@senoy/db";
 import type { SourcePack } from "@senoy/research";
 import { fakeDb } from "../routes/fake-db.ts";
 import type { CourseJudge, CourseOutline } from "./course-judge.ts";
 import { createCourseGeneration, CourseFailedError, failureReason, lessonResearchTopic, researchQueries, searchForEvidence } from "./course-generation.ts";
 import { LeaseLostError, type GenerationControl, type SettledStatus, type WorkerIdentity } from "./generation-job.ts";
+import type { ReuseFit, ReuseFitInput } from "./lesson-reuse.ts";
 import { QuizFailedError, type AuthoredItem, type QuizGenerator, type QuizInput, type QuizRound } from "./quiz-generation.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { allSupported } from "./objective-grounding.ts";
 import { ModelError } from "./openrouter.ts";
-import { LessonUnresearchableError, ReadingFailedError, type ReadingGenerator, type ReadingInput } from "./reading-generation.ts";
+import { LessonUnresearchableError, ReadingFailedError, ReuseUnfitError, type ReadingGenerator, type ReadingInput } from "./reading-generation.ts";
 import { installUsageTracking, type PipelineEventFinish, type PipelineEventStart, type UsageSink } from "./usage-tracking.ts";
 
 const APPROVED: ApprovedBlueprint = {
@@ -59,13 +61,17 @@ const TABLES = [courseRequests, learners, startingLevelDiagnostics, lessonResear
 const SOURCE = { sourceId: "src_aaaaaaaaaa", url: "https://en.wikipedia.org/wiki/Yggdrasil", excerpts: [{ id: "e1", text: "Yggdrasil is the world tree." }] };
 const PACKS = [{ slot: "primary", sources: [SOURCE] }, { slot: "secondary", sources: [] }] as unknown as SourcePack[];
 
-/** Generator returning a fixed passing reading for whichever slot it is given; `fail` throws a Judge failure. */
-function recordingGenerator(fail = false) {
+/**
+ * Generator returning a fixed passing reading for whichever slot it is given, adapted from its reused Lesson when it
+ * has one; `fail` throws a Judge failure, and `unfit` refuses every reused Lesson.
+ */
+function recordingGenerator(fail = false, unfit = false) {
   const inputs: ReadingInput[] = [];
   const readingGenerator: ReadingGenerator = {
     async generate(input) {
       inputs.push(input);
       if (fail) throw new ReadingFailedError([], { pass: false, failedChecks: ["claim_support"], reasons: ["Unsupported."] });
+      if (input.reuse && unfit) throw new ReuseUnfitError(input.slot.id, "It teaches a different capability.");
       const url = "https://en.wikipedia.org/w/index.php?oldid=1";
       return {
         judge: { pass: true, failedChecks: [], reasons: [] },
@@ -77,7 +83,8 @@ function recordingGenerator(fail = false) {
         rejectedSources: [{ sourceId: "src_bbbbbbbbbb", url: "https://shop.example/blog", reason: "A shop's blog." }],
         lesson: {
           slotId: input.slot.id, teachingMethod: "reading", title: input.slot.title, lessonGoal: input.slot.lessonGoal,
-          objectives: input.slot.objectives, topicTags: input.slot.topicTags, lineage: null,
+          objectives: input.slot.objectives, topicTags: input.slot.topicTags,
+          lineage: input.reuse ? { originLessonId: input.reuse.originLessonId, mode: "adapted" } : null,
           body: { sections: [{ heading: "A tree", blocks: [{ kind: "prose", text: "Yggdrasil [1]." }] }] },
           citations: [{ n: 1, title: "Yggdrasil", url }],
           sources: [{ n: 1, sourceId: "src_aaaaaaaaaa", title: "Yggdrasil", url, publisher: "en.wikipedia.org", retrievedAt: "2026-10-08T17:41:57.034Z", usedAs: "paraphrase" }],
@@ -194,7 +201,59 @@ function eventSink() {
   return { sink, detail: (kind: PipelineEventStart["kind"]) => events.find((event) => event.kind === kind)!.detail };
 }
 
-type Failure = "reading" | "quiz" | "course" | null;
+type Failure = "reading" | "quiz" | "course" | "reuse" | null;
+
+/** The Course Request whose published Reading the reuse tests offer. */
+const ORIGIN_REQUEST = "origin-request";
+
+/** The packs the offered Reading was written from, stored under its own Request. */
+const ORIGIN_PACKS = [
+  { slot: "primary", sources: [{ ...SOURCE, sourceId: "src_cccccccccc", url: "https://en.wikipedia.org/wiki/Norse_cosmology" }] },
+  { slot: "secondary", sources: [] },
+] as unknown as SourcePack[];
+
+/**
+ * A published Reading on this subject that shares a Topic tag with slot1, written for the test Learner's profile.
+ * @param overrides - Fields to change
+ */
+function candidate(overrides: Partial<ReuseCandidate> = {}): ReuseCandidate {
+  return {
+    lessonId: "origin-lesson", title: "Yggdrasil", lessonGoal: "Describe the world tree.", objectives: ["Describe Yggdrasil"],
+    topicTags: ["Yggdrasil", "cosmology"], lineage: null,
+    body: { sections: [{ heading: "The tree", blocks: [{ kind: "prose", text: "Yggdrasil is the world tree [1]." }] }] },
+    sources: [{
+      n: 1, sourceId: "src_cccccccccc", url: "https://en.wikipedia.org/wiki/Norse_cosmology", title: "Norse cosmology",
+      publisher: "en.wikipedia.org", retrievedAt: "2026-10-08T17:41:57.034Z", usedAs: "paraphrase",
+    }],
+    origin: { courseRequestId: ORIGIN_REQUEST, slotId: "origin-slot" },
+    authorModelIds: ["origin/author"], rejectedSources: [],
+    writtenFor: { instructionLanguage: "en", requiredReadingSupports: [], contentScope: "compact", explanationOrder: "topic_appropriate" },
+    ...overrides,
+  };
+}
+
+/** Stores the offered Reading's retrieval set, as its own Course's generation left it. */
+async function originResearch(db: Database) {
+  await db.insert(lessonResearch).values({ courseRequestId: ORIGIN_REQUEST, slotId: "origin-slot", sourcePacks: ORIGIN_PACKS });
+}
+
+/** What the reuse tests offer: the published Readings on this subject, and which one the fit call picks for a slot. */
+type ReuseSetup = { candidates?: ReuseCandidate[]; pick?: (input: ReuseFitInput) => string | null };
+
+/**
+ * Fit call recording what it was asked; it picks nothing unless told to.
+ * @param pick - Which candidate to pick for a slot
+ */
+function recordingReuseFit(pick: ReuseSetup["pick"] = () => null) {
+  const inputs: ReuseFitInput[] = [];
+  const reuseFit: ReuseFit = {
+    async choose(input) {
+      inputs.push(input);
+      return { lessonId: pick(input), reason: "Its objectives match the slot's.", modelId: "fixture/fit" };
+    },
+  };
+  return { reuseFit, inputs };
+}
 
 /**
  * Runs generation for one approved Request on in-memory storage.
@@ -202,6 +261,7 @@ type Failure = "reading" | "quiz" | "course" | null;
  * @param courseJudgeOverride - Replaces the recording whole-Course Judge
  * @param before - Prepares storage before the run, as an earlier run would have left it
  * @param worker - The worker the run executes on
+ * @param reuse - Published Readings on this subject and the fit call's picks; none by default
  */
 async function run(
   fail: Failure = null,
@@ -210,6 +270,7 @@ async function run(
   approved: ApprovedBlueprint = APPROVED,
   research: (topic: string) => Promise<SourcePack[]> = async () => PACKS,
   worker?: WorkerIdentity,
+  reuse: ReuseSetup = {},
 ) {
   const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
@@ -236,7 +297,8 @@ async function run(
   await db.insert(generationJobs).values({ courseRequestId: request!.id, learnerId: learner!.id, kind: "course", status: "running" });
   await before?.(db, request!.id);
   const topics: string[] = [];
-  const { readingGenerator, inputs } = recordingGenerator(fail === "reading");
+  const { readingGenerator, inputs } = recordingGenerator(fail === "reading", fail === "reuse");
+  const { reuseFit, inputs: fitInputs } = recordingReuseFit(reuse.pick);
   const { quizGenerator, inputs: quizInputs } = recordingQuizGenerator(fail === "quiz");
   const { courseJudge, outlines, authors } = recordingCourseJudge(fail === "course");
   /** Published rows when the Quiz was generated: nothing may be playable mid-generation. */
@@ -250,6 +312,7 @@ async function run(
   const generation = createCourseGeneration({
     readingGenerator, quizGenerator: quizGeneratorSpy, courseJudge: courseJudgeOverride?.(rows) ?? courseJudge,
     research: async (topic) => { topics.push(topic); return research(topic); },
+    findReuseCandidates: async () => reuse.candidates ?? [], reuseFit,
   });
   const job = recordingControl();
   const started = generation.start({
@@ -259,6 +322,7 @@ async function run(
   const stored = () => (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
   return {
     started, rows, topics, inputs, quizInputs, outlines, authors, publishedDuringGeneration, stored, job, requestId: request!.id, learnerId: learner!.id,
+    fitInputs,
   };
 }
 
@@ -288,6 +352,10 @@ test("The approved Reading slot is researched, its packs stored, then generated 
   assert.equal(saved[0]!.judge.pass, true);
   assert.deepEqual(saved[0]!.authorModelIds, ["fixture/author"]);
   assert.equal(saved[0]!.judgeModelId, "fixture/judge");
+  assert.deepEqual(saved[0]!.writeTimeProfile, {
+    instructionLanguage: "en", requiredReadingSupports: [], contentScope: "compact", explanationOrder: "topic_appropriate",
+  }, "A checkpoint records the write-time values it was written for, so reuse can compare them later.");
+  assert.deepEqual(saved.find((row) => row.teachingMethod === "quiz")!.writeTimeProfile, { instructionLanguage: "en" });
 });
 
 test("Research with no usable Source fails the Course before writing, and discards that research so Retry searches again", async () => {
@@ -396,7 +464,7 @@ test("A provider error is told as an interruption", async () => {
   const [request] = await db.insert(courseRequests).values({
     learnerId: learner!.id, subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world", status: "generating",
   }).returning();
-  const generation = createCourseGeneration({ research: async () => { throw new Error("vendor down"); } });
+  const generation = createCourseGeneration({ research: async () => { throw new Error("vendor down"); }, findReuseCandidates: async () => [] });
   const { control, settled } = recordingControl();
   await assert.rejects(generation.start({ db, courseRequestId: request!.id, learnerId: learner!.id, approved: APPROVED, control }), /vendor down/);
   const stored = (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
@@ -638,6 +706,7 @@ test("A cancelled run stops at its next stage: the Lesson in flight is not saved
   const { readingGenerator } = recordingGenerator();
   const { quizGenerator, inputs: quizInputs } = recordingQuizGenerator();
   const generation = createCourseGeneration({
+    findReuseCandidates: async () => [],
     // The Learner cancels while the Reading is being written.
     research: async () => { lose(); return PACKS; },
     readingGenerator, quizGenerator, courseJudge: recordingCourseJudge().courseJudge,
@@ -663,6 +732,7 @@ test("A run whose call was cut off because it lost its job ends with the loss, n
   }).returning();
   const { control, settled, abort } = recordingControl();
   const generation = createCourseGeneration({
+    findReuseCandidates: async () => [],
     research: async () => PACKS,
     readingGenerator: {
       // The heartbeat learns of the Cancel while the Reading is written, and the model call it cuts off fails.
@@ -836,4 +906,139 @@ test("An unfocused Request gives the Reading and Quiz generators a null scope", 
   await started;
   assert.equal(inputs[0]!.scope, null);
   assert.equal(quizInputs[0]!.scope, null);
+});
+
+test("With no reuse candidates on the subject, no fit call is made and every Reading is researched as before", async () => {
+  const { started, topics, fitInputs, inputs } = await run();
+  await started;
+  assert.equal(fitInputs.length, 0);
+  assert.equal(topics.length, 1);
+  assert.equal(inputs[0]!.reuse, undefined);
+});
+
+test("Only candidates that share a Topic tag with the slot are offered to the fit call; tags match whatever their case", async () => {
+  const unrelated = candidate({ lessonId: "untagged", topicTags: ["thor"] });
+  const tagged = candidate({ lessonId: "tagged", topicTags: ["YGGDRASIL "] });
+  const { started, fitInputs, topics } = await run(null, undefined, undefined, APPROVED, undefined, undefined, { candidates: [unrelated, tagged] });
+  await started;
+  assert.deepEqual(fitInputs.map((input) => input.candidates.map((offered) => offered.lessonId)), [["tagged"]]);
+  assert.equal(topics.length, 1, "A slot the fit call picks nothing for is researched.");
+});
+
+test("A slot the fit call picks a Lesson for is not researched: it gets a copy of that Lesson's packs and is fitted from them (spec §5.8)", async () => {
+  const { started, rows, topics, inputs, fitInputs, requestId } = await run(null, undefined, originResearch, APPROVED, undefined, undefined, {
+    candidates: [candidate()], pick: (input) => input.candidates[0]!.lessonId,
+  });
+  await started;
+
+  assert.equal(topics.length, 0, "A reused slot is never researched.");
+  assert.equal(fitInputs.length, 1, "Only the Reading slot is offered for reuse; a Quiz never is.");
+  assert.equal(fitInputs[0]!.slot.id, "slot1");
+  assert.equal(fitInputs[0]!.learningGoal, "Explain the Norse picture of the world");
+  const research = (rows.get(lessonResearch)! as (typeof lessonResearch.$inferSelect)[]).filter((row) => row.courseRequestId === requestId);
+  assert.deepEqual(research.map((row) => [row.slotId, row.reusedLessonId, row.sourcePacks]), [["slot1", "origin-lesson", ORIGIN_PACKS]]);
+
+  const reuse = inputs[0]!.reuse!;
+  assert.deepEqual(inputs[0]!.packs, ORIGIN_PACKS, "The reused Lesson is checked against the Sources it was written from.");
+  assert.equal(reuse.originLessonId, "origin-lesson");
+  assert.deepEqual(reuse.sections, [{ heading: "The tree", paragraphs: ["Yggdrasil is the world tree [src_cccccccccc]."] }]);
+  assert.equal(reuse.verbatimAllowed, true, "It was written for exactly this Learner's write-time values.");
+  assert.deepEqual(reuse.authorModelIds, ["origin/author"]);
+
+  const saved = rows.get(unpublishedLessons)! as (typeof unpublishedLessons.$inferSelect)[];
+  assert.deepEqual(saved.find((row) => row.slotId === "slot1")!.lineage, { originLessonId: "origin-lesson", mode: "adapted" });
+  const published = rows.get(publishedLessons)! as (typeof publishedLessons.$inferSelect)[];
+  assert.deepEqual(published.find((row) => row.position === 0)!.lineage, { originLessonId: "origin-lesson", mode: "adapted" });
+  assert.equal(published.find((row) => row.position === 1)!.lineage, null, "A Quiz is always generated.");
+});
+
+test("A reused Lesson written for another profile is offered as adapt at most", async () => {
+  const { started, inputs } = await run(null, undefined, originResearch, APPROVED, undefined, undefined, {
+    candidates: [candidate({ writtenFor: { ...candidate().writtenFor, contentScope: "standard" } })],
+    pick: (input) => input.candidates[0]!.lessonId,
+  });
+  await started;
+  assert.equal(inputs[0]!.reuse!.verbatimAllowed, false);
+});
+
+test("A reused Lesson that cannot be made to fit is researched then and written like any other (spec §5.8)", async () => {
+  const { started, rows, topics, inputs, requestId, stored } = await run("reuse", undefined, originResearch, APPROVED, undefined, undefined, {
+    candidates: [candidate()], pick: (input) => input.candidates[0]!.lessonId,
+  });
+  await started;
+
+  assert.equal(topics.length, 1, "The slot is researched once its reused Lesson did not fit.");
+  assert.deepEqual(inputs.map((input) => [input.slot.id, input.reuse?.originLessonId ?? null]), [["slot1", "origin-lesson"], ["slot1", null]]);
+  assert.deepEqual(inputs[1]!.packs, PACKS);
+  const research = (rows.get(lessonResearch)! as (typeof lessonResearch.$inferSelect)[]).filter((row) => row.courseRequestId === requestId);
+  assert.deepEqual(research.map((row) => [row.slotId, row.reusedLessonId, row.sourcePacks]), [["slot1", null, PACKS]],
+    "The copied packs are replaced, so a Retry writes the slot instead of trying the same Lesson again.");
+  const saved = rows.get(unpublishedLessons)! as (typeof unpublishedLessons.$inferSelect)[];
+  assert.equal(saved.find((row) => row.slotId === "slot1")!.lineage, null);
+  assert.equal(stored().status, "published");
+});
+
+test("A reused Lesson that doesn't fit, on a topic research finds nothing for, fails the Course as any Reading would", async () => {
+  const empty = [{ slot: "primary", sources: [{ ...SOURCE, excerpts: [] }] }, { slot: "secondary", sources: [] }] as unknown as SourcePack[];
+  const { started, rows, stored, requestId } = await run("reuse", undefined, originResearch, APPROVED, async () => empty, undefined, {
+    candidates: [candidate()], pick: (input) => input.candidates[0]!.lessonId,
+  });
+  await assert.rejects(started, (error: unknown) => error instanceof LessonUnresearchableError && error.slotId === "slot1");
+  assert.match(stored().failureReason!, /^We couldn't find reliable Sources for the Lesson “The World Tree”/);
+  const research = (rows.get(lessonResearch)! as (typeof lessonResearch.$inferSelect)[]).filter((row) => row.courseRequestId === requestId);
+  assert.equal(research.length, 0, "Retry decides reuse for the slot again, then searches.");
+});
+
+test("A resumed job fits the Lesson it already chose from its stored copy, without asking the fit call again", async () => {
+  const { started, topics, inputs, fitInputs } = await run(null, undefined, async (db, requestId) => {
+    await originResearch(db);
+    await db.insert(lessonResearch).values({ courseRequestId: requestId, slotId: "slot1", sourcePacks: ORIGIN_PACKS, reusedLessonId: "origin-lesson" });
+  }, APPROVED, undefined, undefined, { candidates: [candidate()], pick: (input) => input.candidates[0]!.lessonId });
+  await started;
+  assert.equal(fitInputs.length, 0);
+  assert.equal(topics.length, 0);
+  assert.equal(inputs[0]!.reuse!.originLessonId, "origin-lesson");
+});
+
+test("No Lesson is reused twice in one Course: slots are decided in Blueprint order, and a later one is researched", async () => {
+  const approved: ApprovedBlueprint = {
+    ...APPROVED,
+    blueprint: {
+      ...APPROVED.blueprint,
+      modules: [{
+        title: "The world tree",
+        slots: [
+          APPROVED.blueprint.modules[0]!.slots[0]!,
+          { ...APPROVED.blueprint.modules[0]!.slots[0]!, id: "slot1b", title: "The roots" },
+          { ...APPROVED.blueprint.modules[0]!.slots[1]!, assessesSlotIds: ["slot1", "slot1b"] },
+        ],
+      }],
+    },
+  };
+  const { started, topics, inputs, fitInputs } = await run(null, undefined, originResearch, approved, undefined, undefined, {
+    candidates: [candidate()], pick: (input) => input.candidates[0]!.lessonId,
+  });
+  await started;
+  assert.deepEqual(fitInputs.map((input) => input.slot.id), ["slot1"], "With its one candidate taken, the second slot makes no fit call.");
+  assert.equal(topics.length, 1);
+  assert.match(topics[0]!, /^The roots/);
+  assert.deepEqual(inputs.map((input) => [input.slot.id, input.reuse?.originLessonId ?? null]), [["slot1", "origin-lesson"], ["slot1b", null]]);
+});
+
+test("The reuse step's Pipeline Event records the candidates offered, the pick, and why", async () => {
+  const { sink, detail } = eventSink();
+  const uninstall = installUsageTracking({ sink, log: { error() {} } });
+  try {
+    const { started } = await run(null, undefined, originResearch, APPROVED, undefined, undefined, {
+      candidates: [candidate()], pick: (input) => input.candidates[0]!.lessonId,
+    });
+    await started;
+  } finally {
+    uninstall();
+  }
+  assert.deepEqual(detail("reuse"), {
+    slotId: "slot1", candidates: [{ lessonId: "origin-lesson", title: "Yggdrasil" }], chosen: "origin-lesson",
+    reason: "Its objectives match the slot's.", modelId: "fixture/fit",
+  });
+  assert.deepEqual(detail("reading")!.lineage, { originLessonId: "origin-lesson", mode: "adapted" });
 });

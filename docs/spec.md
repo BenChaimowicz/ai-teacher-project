@@ -336,7 +336,7 @@ Approved full-Course generation is a durable Postgres-backed job. One active job
 
 1. Research is scoped per Lesson. Instructional Lessons are generated sequentially in Blueprint order, carrying forward summaries, established terminology, and prior commitments. Course coherence is prioritized over parallel generation.
 2. Each Lesson's objectives are grounded in its material before it is written: a Reading's against its vetted Sources' excerpts, a Quiz's against the Lessons it assesses. An objective asserting what the material does not support is softened to what it does, or dropped; what survives is what the Lesson is written and judged against, and what its checkpoint records. The approved Blueprint is not rewritten (ADR 0022).
-3. Lookup-before-generate runs at this time (§5.8). Quizzes are never reuse candidates.
+3. Whether a Reading slot reuses a published Lesson is decided before research, and a reused Lesson is fitted to its slot during sequential generation (§5.8). Quizzes are never reuse candidates.
 4. Each Quiz is generated only after the instructional Lessons it assesses are finalized, using both their content and its grounded Blueprint objectives.
 5. Validation runs during generation and again across the finished Course (§6).
 6. Non-structural defects use targeted repair: regenerate the earliest defective Lesson and affected downstream Lessons or Quizzes, then revalidate.
@@ -440,19 +440,21 @@ Sequential generation carries forward summaries, established terminology, and pr
 
 ### 5.8 Lesson reuse
 
-Lessons are Course-owned copies with lineage, not live shared assets. Lookup runs during sequential generation, in Blueprint order, after prior Lessons in this Course are finalized — not at Blueprint review.
+Lessons are Course-owned copies with lineage, not live shared assets. Reuse is decided in two steps, neither at Blueprint review: whether a Reading slot reuses a Lesson is judged on objectives before research, so a reused slot is never researched; whether the copy is verbatim or adapted is judged during sequential generation, in Blueprint order, after the prior Lessons in this Course are finalized.
 
-1. **Identity.** Each Lesson belongs to one Course. Reuse copies a published Lesson into the new Course and records Lesson lineage (origin Lesson, verbatim or adapted). The original is never mutated. Pool: every Learner’s published Lessons. Unpublished artifacts are not candidates.
-2. **Retrieval.** Same subject + same teaching method + at least one overlapping Topic tag. Tags retrieve; they do not judge fit.
-3. **Fit.** No numeric similarity score. The Generator compares the Blueprint slot’s objectives to each candidate.
-   - **Verbatim** when objectives are equivalent (same capability, same remaining-gap scope) and the body is compatible with this Course’s running terminology.
-   - **Adapt** when method and subject match and objectives overlap, but terminology, examples, depth, or scope need a pass.
+1. **Identity.** Each Lesson belongs to one Course. Reuse copies a published Lesson into the new Course and records Lesson lineage (origin Lesson, verbatim or adapted). The original is never mutated. Pool: every Learner's published Readings whose checkpoint and Source packs are still stored. Unpublished artifacts are not candidates.
+2. **Retrieval.** Same subject (as typed, ignoring case) + same teaching method + at least one overlapping Topic tag. Tags retrieve; they do not judge fit. A candidate written in another instruction language is never retrieved, and neither is one written for a shorter `contentScope` than this Learner's, because adapt never grows a Lesson. A verbatim copy is not retrieved; its origin already is.
+3. **Fit, before research.** One Generator call per Reading slot that has candidates compares the slot's approved objectives with each candidate's grounded objectives (ADR 0022) and picks one candidate or none. No numeric similarity score. A slot that picks one gets a copy of that Lesson's Source packs in its own research row and is not researched; every other Reading is researched as in §5.2. Slots are decided in Blueprint order, and no Lesson is reused twice in one Course. A run with no candidates makes no extra model call.
+4. **Verbatim or adapt, during writing.** The slot's objectives are grounded against the reused Lesson's Sources first. An objective grounding rewrites is taught softened, as in a written Lesson (ADR 0022); one its Sources cannot support at all falls through to generate. Then one Lesson-writer call decides:
+   - **Verbatim** when objectives are equivalent (same capability, same remaining-gap scope), the body is compatible with this Course's running terminology, and the candidate was written for this Learner's write-time fields: `instructionLanguage`, `requiredReadingSupports`, `contentScope`, and `explanationOrder` all match. A Lesson whose fields were never recorded is adapt at most.
+   - **Adapt** when method and subject match and objectives overlap, but terminology, examples, depth, scope, or the Learner's write-time fields need a pass.
    - **Generate** otherwise.
-4. **Adapt** is a coherence-and-scope pass, not a rewrite and not new research. It may change terminology to match this Course, swap examples, trim material outside this remaining gap, lightly fill a missing sub-objective still inside the slot, and align title and Lesson goal to the Blueprint slot. It must not change teaching method or the slot’s objectives, and must not add claims that need new Sources. Remaining Citations stay; dropped claims drop their Citations. If the pass cannot satisfy the slot, fall through to generate.
-5. Equivalent objectives with a term clash is adapt, not verbatim. The Learner-approved Blueprint title and Lesson goal always win. The resulting Lesson joins running commitments for later slots. Reuse never drops, merges, or reorders slots. Verbatim reuse is not a skip card for Publish gates.
-6. **Quizzes are always generated.** Never reuse candidates.
+5. **Adapt** is a coherence-and-scope pass, not a rewrite and not new research. It may change terminology to match this Course, swap examples, reorder each idea's example and principle to this Learner's `explanationOrder`, reword for their `requiredReadingSupports`, trim material outside this remaining gap down to their `contentScope`, lightly fill a missing sub-objective from the Lesson's own excerpts, and align its opening to the Blueprint slot's title and Lesson goal. It must not change teaching method or the slot's objectives, must not lengthen the Lesson, and must not add claims that need new Sources. Remaining Citations stay; dropped claims drop their Citations.
+6. **Checks.** A reused Lesson passes the same reading Code checks and Judge as a written one, against the Source packs it was written from and the vetting verdicts they were written with. Verbatim is not a skip card. Repairs may edit it, which makes it adapted. If it still fails, or the writing step says generate, the slot falls through: it is researched then and written like any other Reading, and an empty search fails the Course as in §5.9.
+7. Equivalent objectives with a term clash is adapt, not verbatim. The Learner-approved Blueprint title and Lesson goal always win. The resulting Lesson joins running commitments for later slots. Reuse never drops, merges, or reorders slots.
+8. **Quizzes are always generated.** Never reuse candidates.
 
-The Learner never picks reuse. No lineage UI.
+The Learner never picks reuse. No lineage UI. A reused Lesson rests on research done for an earlier Course; whether that research has gone stale is not judged yet.
 
 ### 5.9 Generation failure modes
 

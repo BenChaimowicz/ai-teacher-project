@@ -40,6 +40,8 @@ export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGenerati
   const failedOnce = new Set<string>();
   return createCourseGeneration({
     research: async (topic) => fixturePacks(topic),
+    // Browser tests publish many Courses on one subject; reuse would make real model calls between them.
+    findReuseCandidates: async () => [],
     readingGenerator: {
       async generate({ slot, learningGoal }) {
         await sleep(lessonDelayMs);

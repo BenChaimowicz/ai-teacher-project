@@ -61,6 +61,7 @@ export const PIPELINE_EVENT_KINDS = [
   "fact_check",
   "blueprint",
   "course_generation",
+  "reuse",
   "research",
   "reading",
   "quiz",
