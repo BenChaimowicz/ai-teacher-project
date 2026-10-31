@@ -4,6 +4,7 @@ import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprin
 import { COURSE_REQUEST_STATUSES, type GoalFocus, type ValidityClarification, type ValidityResult } from "./course-request.ts";
 import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
+import { MEDIA_KINDS, MEDIA_LICENSES, MEDIA_ORIGINS, type MediaCategory, type MediaSource } from "./media.ts";
 import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
@@ -525,4 +526,50 @@ export const openrouterActivity = pgTable(
     fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique("openrouter_activity_day_key_endpoint").on(table.day, table.keyHash, table.endpointId)],
+);
+
+/** What a library file is: still, silent loop, or audio clip. */
+export const mediaKind = pgEnum("media_kind", MEDIA_KINDS);
+
+/** Whether a file was curated into the library or made by the pipeline. */
+export const mediaOrigin = pgEnum("media_origin", MEDIA_ORIGINS);
+
+/** The licence a file is hosted under. Only hostable families exist; CC BY-NC cannot be stored (spec §5.6). */
+export const mediaLicense = pgEnum("media_license", MEDIA_LICENSES);
+
+/**
+ * One piece of Demonstrative media in the library: the Media catalog (spec §2). The bytes live in the private bucket
+ * under `storageKey`; this row is the catalog, and Storage object metadata is not. Lookup is by `mediaCategory` plus
+ * `topicTags`. There is deliberately no Lesson column: which Lessons use a file is a join added when a Lesson first
+ * does, and a published Lesson copies these fields so a later catalog edit cannot change it.
+ */
+export const mediaDescriptors = pgTable(
+  "media_descriptors",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: mediaKind("kind").notNull(),
+    origin: mediaOrigin("origin").notNull(),
+    license: mediaLicense("license").notNull(),
+    /** The licence deed; required for CC BY and CC BY-SA (TASL). */
+    licenseUrl: text("license_url"),
+    caption: text("caption").notNull(),
+    alt: text("alt").notNull(),
+    /** The page the file came from and its author; null only for product-owned files. */
+    source: jsonb("source").$type<MediaSource>(),
+    storageKey: text("storage_key").notNull(),
+    mimeType: text("mime_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    /** Digest of the stored bytes, so the seed can tell an unchanged object from one that must be re-uploaded. */
+    sha256: text("sha256").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    mediaCategory: text("media_category").$type<MediaCategory>().notNull(),
+    topicTags: jsonb("topic_tags").$type<string[]>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("media_descriptors_storage_key").on(table.storageKey),
+    index("media_descriptors_category").on(table.mediaCategory),
+  ],
 );

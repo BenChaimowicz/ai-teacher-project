@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 330" width="960" height="330" role="img" aria-labelledby="t d">
+  <title id="t">Drum kit notation legend</title>
+  <desc id="d">A five-line staff with a percussion clef and ten labelled notes: bass drum in the bottom space, floor tom in the second space, snare in the third space, mid tom on the fourth line, high tom in the top space, the ride as an x on the top line, closed and open hi-hat as x noteheads above the staff with the open one drawn inside a circle, the hi-hat pedal as an x below the staff with its stem pointing down, and the crash as an x on a ledger line above the staff.</desc>
+  <style>
+    text { font-family: Helvetica, Arial, sans-serif; fill: #222; }
+    .title { font-size: 18px; font-weight: 700; }
+    .label { font-size: 13px; }
+    .note { font-size: 12px; fill: #555; }
+    .staff { stroke: #333; stroke-width: 1.2; }
+    .stem { stroke: #111; stroke-width: 1.8; }
+    .x { stroke: #111; stroke-width: 2.4; stroke-linecap: round; }
+    .open { stroke: #111; stroke-width: 1.6; fill: none; }
+  </style>
+  <rect width="960" height="330" fill="#fff"/>
+  <text class="title" x="20" y="34">Drum kit notation: where each voice sits (common convention)</text>
+
+  <!-- staff lines: y = 100, 115, 130, 145, 160 -->
+  <g class="staff">
+    <line x1="60" y1="100" x2="920" y2="100"/>
+    <line x1="60" y1="115" x2="920" y2="115"/>
+    <line x1="60" y1="130" x2="920" y2="130"/>
+    <line x1="60" y1="145" x2="920" y2="145"/>
+    <line x1="60" y1="160" x2="920" y2="160"/>
+    <line x1="60" y1="100" x2="60" y2="160"/>
+    <line x1="920" y1="100" x2="920" y2="160"/>
+  </g>
+  <!-- percussion clef -->
+  <rect x="74" y="115" width="5" height="30" fill="#111"/>
+  <rect x="84" y="115" width="5" height="30" fill="#111"/>
+
+  <!-- noteheads 80 px apart; stems up from the right edge of the notehead -->
+  <!-- Bass drum: bottom space, y 152.5 -->
+  <ellipse cx="150" cy="152.5" rx="7" ry="5" transform="rotate(-20 150 152.5)" fill="#111"/>
+  <line class="stem" x1="156.5" y1="151" x2="156.5" y2="112"/>
+  <!-- Floor tom: second space, y 137.5 -->
+  <ellipse cx="230" cy="137.5" rx="7" ry="5" transform="rotate(-20 230 137.5)" fill="#111"/>
+  <line class="stem" x1="236.5" y1="136" x2="236.5" y2="97"/>
+  <!-- Snare: third space, y 122.5 -->
+  <ellipse cx="310" cy="122.5" rx="7" ry="5" transform="rotate(-20 310 122.5)" fill="#111"/>
+  <line class="stem" x1="316.5" y1="121" x2="316.5" y2="82"/>
+  <!-- Mid tom: fourth line (second from top), y 115 -->
+  <ellipse cx="390" cy="115" rx="7" ry="5" transform="rotate(-20 390 115)" fill="#111"/>
+  <line class="stem" x1="396.5" y1="113.5" x2="396.5" y2="75"/>
+  <!-- High tom: top space, y 107.5 -->
+  <ellipse cx="470" cy="107.5" rx="7" ry="5" transform="rotate(-20 470 107.5)" fill="#111"/>
+  <line class="stem" x1="476.5" y1="106" x2="476.5" y2="67"/>
+  <!-- Ride: x on the top line, y 100 -->
+  <g class="x"><line x1="544" y1="94" x2="556" y2="106"/><line x1="544" y1="106" x2="556" y2="94"/></g>
+  <line class="stem" x1="556.5" y1="100" x2="556.5" y2="62"/>
+  <!-- Closed hi-hat: x in the space above the staff, y 92.5 -->
+  <g class="x"><line x1="624" y1="86.5" x2="636" y2="98.5"/><line x1="624" y1="98.5" x2="636" y2="86.5"/></g>
+  <line class="stem" x1="636.5" y1="92.5" x2="636.5" y2="55"/>
+  <!-- Open hi-hat: the same x, drawn inside a circle -->
+  <g class="x"><line x1="704" y1="86.5" x2="716" y2="98.5"/><line x1="704" y1="98.5" x2="716" y2="86.5"/></g>
+  <line class="stem" x1="716.5" y1="92.5" x2="716.5" y2="55"/>
+  <circle class="open" cx="710" cy="92.5" r="9"/>
+  <!-- Hi-hat pedal: x in the space below the staff, y 167.5, stem down from the left edge -->
+  <g class="x"><line x1="784" y1="161.5" x2="796" y2="173.5"/><line x1="784" y1="173.5" x2="796" y2="161.5"/></g>
+  <line class="stem" x1="783.5" y1="167.5" x2="783.5" y2="205"/>
+  <!-- Crash: x on the first ledger line above the staff, y 85 -->
+  <line class="staff" x1="858" y1="85" x2="882" y2="85"/>
+  <g class="x"><line x1="864" y1="79" x2="876" y2="91"/><line x1="864" y1="91" x2="876" y2="79"/></g>
+  <line class="stem" x1="876.5" y1="85" x2="876.5" y2="48"/>
+
+  <!-- labels -->
+  <g class="label" text-anchor="middle">
+    <text x="150" y="232">Bass drum</text><text class="note" x="150" y="248">bottom space</text>
+    <text x="230" y="232">Floor tom</text><text class="note" x="230" y="248">second space</text>
+    <text x="310" y="232">Snare</text><text class="note" x="310" y="248">third space</text>
+    <text x="390" y="232">Mid tom</text><text class="note" x="390" y="248">fourth line</text>
+    <text x="470" y="232">High tom</text><text class="note" x="470" y="248">top space</text>
+    <text x="550" y="232">Ride</text><text class="note" x="550" y="248">x, top line</text>
+    <text x="630" y="232">Closed hi-hat</text><text class="note" x="630" y="248">x, above</text>
+    <text x="710" y="232">Open hi-hat</text><text class="note" x="710" y="248">circled x</text>
+    <text x="790" y="232">Hi-hat pedal</text><text class="note" x="790" y="248">x, below</text>
+    <text x="870" y="232">Crash</text><text class="note" x="870" y="248">x, ledger</text>
+  </g>
+
+  <text class="note" x="20" y="292">Drums use round noteheads; cymbals use x noteheads. An x inside a circle is an open hi-hat, a + above the note a closed one; the pedal sits below the staff.</text>
+  <text class="note" x="20" y="312">Publishers differ in the details; always read the legend printed with a chart.</text>
+</svg>

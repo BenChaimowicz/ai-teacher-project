@@ -10,6 +10,7 @@ Needs Node 22+, [pnpm](https://pnpm.io/installation) (`npm install -g pnpm`), an
 pnpm install
 pnpm db:migrate
 pnpm db:seed
+pnpm media:seed
 pnpm run apps
 ```
 
@@ -22,6 +23,12 @@ pnpm dash
 The Usage Console has no login. Its API listens on this machine only (`127.0.0.1`), so it is not reachable from elsewhere.
 
 **Knibbler Setup** (`/setup` in the Usage Console) is the founders' shared setup checklist: domain, email, vendor access, and authentication email. Ticks are saved to `docs/setup-checklist-progress.json` in your checkout, signed with your `git config user.name` (without one the checklist is read-only). They are not live: commit and push the file to share your ticks, and pull to see your co-founder's. The items themselves live in `apps/console/src/server/setup-checklist.ts`. It never holds credentials or recovery codes — those go in the shared password manager.
+
+## Media library
+
+Demonstrative media comes from a seeded catalog (spec §2, §5.6). The files are committed under `packages/media/catalog/`, and `packages/media/src/entries.ts` is the one place that says what each is: kind, caption, alt text, source page and author, licence, Media category, Topic tags. Size, digest, dimensions and MIME type are read from the file, never typed in. Only licences the product can host exist (public domain, CC0, CC BY, CC BY-SA, product-owned); CC BY and CC BY-SA entries carry title, author, source URL and licence URL.
+
+`pnpm media:seed` uploads the bytes to the private bucket (`MEDIA_BUCKET` at `MEDIA_ENDPOINT` / `MEDIA_REGION`, with `ACCESS_KEY_ID` and `SECRET_ACCESS_KEY`) and writes the descriptors to `media_descriptors`. It uploads only files the bucket lacks or holds a different digest for, and rewrites only descriptors that differ, so running it twice changes nothing. To add a file: put it under `packages/media/catalog/`, add its entry, run `pnpm media:seed`. A file with no entry, or an entry that fails the descriptor rules, stops the seed with every problem listed.
 
 ## Decisions
 
