@@ -53,6 +53,8 @@ TypeScript full-stack web app. One seeded Learner; no authentication. Every Lear
 | --- | --- |
 | `DATABASE_URL` | Postgres |
 | `MEDIA_BUCKET` | Private media bucket name |
+| `MEDIA_ENDPOINT` | The bucket's S3 endpoint (`https://<project-ref>.storage.supabase.co/storage/v1/s3`) |
+| `MEDIA_REGION` | The bucket's S3 signing region (the Supabase project's region) |
 | `ACCESS_KEY_ID` | Storage access |
 | `SECRET_ACCESS_KEY` | Storage secret |
 | `OPENROUTER_API_KEY` | Generator, Judge, and image models |

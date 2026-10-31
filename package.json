@@ -10,8 +10,8 @@
     "dash": "pnpm --filter @senoy/console dev",
     "check": "pnpm typecheck && pnpm test",
     "test:e2e": "pnpm --filter @senoy/e2e test",
-    "typecheck": "pnpm --filter @senoy/db --filter @senoy/research --filter @senoy/api --filter @senoy/worker --filter @senoy/web --filter @senoy/e2e exec tsc --noEmit && pnpm --filter @senoy/console typecheck",
-    "test": "pnpm --filter @senoy/db exec tsx --test src/*.test.ts && pnpm --filter @senoy/research exec tsx --test src/*.test.ts && pnpm --filter @senoy/api exec tsx --test src/routes/*.test.ts src/lib/*.test.ts && pnpm --filter @senoy/console exec tsx --test src/server/*.test.ts",
+    "typecheck": "pnpm --filter @senoy/db --filter @senoy/research --filter @senoy/media --filter @senoy/api --filter @senoy/worker --filter @senoy/web --filter @senoy/e2e exec tsc --noEmit && pnpm --filter @senoy/console typecheck",
+    "test": "pnpm --filter @senoy/db exec tsx --test src/*.test.ts && pnpm --filter @senoy/research exec tsx --test src/*.test.ts && pnpm --filter @senoy/media exec tsx --test src/*.test.ts && pnpm --filter @senoy/api exec tsx --test src/routes/*.test.ts src/lib/*.test.ts && pnpm --filter @senoy/console exec tsx --test src/server/*.test.ts",
     "check:course-requests:live": "pnpm --filter @senoy/api exec tsx src/routes/course-requests.live-check.ts",
     "check:blueprint:live": "pnpm --filter @senoy/api exec tsx src/routes/blueprint.live-check.ts",
     "check:starting-level:live": "pnpm --filter @senoy/api exec tsx src/routes/starting-level.live-check.ts",
@@ -26,6 +26,7 @@
     "db:generate": "pnpm --filter @senoy/db generate",
     "db:migrate": "pnpm --filter @senoy/db migrate",
     "db:seed": "pnpm --filter @senoy/db seed",
+    "media:seed": "pnpm --filter @senoy/media seed",
     "parallel:login": "pnpm --filter @senoy/research exec tsx src/parallel-login.ts",
     "openrouter:import": "pnpm --filter @senoy/console exec tsx src/server/import-openrouter-history.ts"
   }

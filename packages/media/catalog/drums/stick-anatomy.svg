@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 290" width="800" height="290" role="img" aria-labelledby="t d">
+  <title id="t">The parts of a drumstick</title>
+  <desc id="d">A drumstick lying horizontally, butt at the left and tip at the right, with labels for butt, shaft, shoulder and tip, and a marker at the balance point about a third of the way from the butt.</desc>
+  <style>
+    text { font-family: Helvetica, Arial, sans-serif; fill: #222; }
+    .label { font-size: 18px; font-weight: 700; }
+    .note { font-size: 14px; fill: #444; }
+    .lead { stroke: #555; stroke-width: 1.5; fill: none; }
+  </style>
+  <rect width="800" height="290" fill="#fff"/>
+
+  <!-- stick body: butt (left, rounded) → shaft → shoulder taper → neck → tip bead (right) -->
+  <path d="M 70 150
+           C 60 150, 60 122, 70 122
+           L 520 122
+           C 600 124, 650 130, 690 133
+           L 716 134
+           C 724 131, 732 128, 736 128
+           C 746 128, 746 144, 736 144
+           C 732 144, 724 141, 716 138
+           L 690 139
+           C 650 142, 600 148, 520 150
+           Z"
+        fill="#d9b382" stroke="#7a5a2e" stroke-width="2" stroke-linejoin="round"/>
+  <!-- wood grain -->
+  <path d="M 90 131 L 500 131 M 90 141 L 500 141 M 530 134 L 690 136" stroke="#c49a66" stroke-width="1" fill="none"/>
+
+  <!-- balance point marker (about a third of the way from the butt) -->
+  <line x1="290" y1="98" x2="290" y2="174" stroke="#b3261e" stroke-width="2" stroke-dasharray="5 4"/>
+  <polygon points="290,114 284,104 296,104" fill="#b3261e"/>
+  <polygon points="290,158 284,168 296,168" fill="#b3261e"/>
+
+  <!-- leader lines and labels -->
+  <path class="lead" d="M 72 136 L 72 200"/>
+  <text class="label" x="72" y="222" text-anchor="middle">Butt</text>
+
+  <path class="lead" d="M 400 150 L 400 200"/>
+  <text class="label" x="400" y="222" text-anchor="middle">Shaft</text>
+
+  <path class="lead" d="M 640 141 L 640 200"/>
+  <text class="label" x="640" y="222" text-anchor="middle">Shoulder</text>
+
+  <path class="lead" d="M 740 136 L 762 136 L 762 200"/>
+  <text class="label" x="762" y="222" text-anchor="middle">Tip</text>
+  <text class="note" x="762" y="240" text-anchor="middle">(bead)</text>
+
+  <text class="label" x="290" y="60" text-anchor="middle" fill="#b3261e">Balance point</text>
+  <text class="note" x="290" y="80" text-anchor="middle">about a third of the way from the butt — the fulcrum sits here</text>
+
+  <!-- length bracket for the third -->
+  <path class="lead" d="M 70 262 L 70 252 L 290 252 L 290 262 M 290 252 L 736 252 L 736 262" stroke="#999"/>
+  <text class="note" x="180" y="247" text-anchor="middle">≈ ⅓</text>
+  <text class="note" x="513" y="247" text-anchor="middle">≈ ⅔</text>
+</svg>

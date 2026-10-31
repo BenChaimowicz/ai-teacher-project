@@ -1,5 +1,5 @@
 {
-  "id": "51cfe342-0a96-40fb-8181-9f1db7aea446",
+  "id": "c61f7826-28ec-4d7d-af61-8c123c7e2d8e",
   "prevId": "6a38363c-95f7-45b7-9282-edecb10f44c8",
   "version": "7",
   "dialect": "postgresql",
@@ -734,12 +734,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "reused_lesson_id": {
-          "name": "reused_lesson_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "researched_at": {
           "name": "researched_at",
           "type": "timestamp with time zone",
@@ -762,19 +756,6 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "lesson_research_reused_lesson_id_published_lessons_id_fk": {
-          "name": "lesson_research_reused_lesson_id_published_lessons_id_fk",
-          "tableFrom": "lesson_research",
-          "tableTo": "published_lessons",
-          "columnsFrom": [
-            "reused_lesson_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -785,6 +766,157 @@
           "columns": [
             "course_request_id",
             "slot_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.media_descriptors": {
+      "name": "media_descriptors",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "kind": {
+          "name": "kind",
+          "type": "media_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origin": {
+          "name": "origin",
+          "type": "media_origin",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "license": {
+          "name": "license",
+          "type": "media_license",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "license_url": {
+          "name": "license_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "caption": {
+          "name": "caption",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "alt": {
+          "name": "alt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "storage_key": {
+          "name": "storage_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mime_type": {
+          "name": "mime_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byte_size": {
+          "name": "byte_size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "width": {
+          "name": "width",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "media_category": {
+          "name": "media_category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "topic_tags": {
+          "name": "topic_tags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "media_descriptors_category": {
+          "name": "media_descriptors_category",
+          "columns": [
+            {
+              "expression": "media_category",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "media_descriptors_storage_key": {
+          "name": "media_descriptors_storage_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "storage_key"
           ]
         }
       },
@@ -2010,12 +2142,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "write_time_profile": {
-          "name": "write_time_profile",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "finalized_at": {
           "name": "finalized_at",
           "type": "timestamp with time zone",
@@ -2441,6 +2567,34 @@
         "research",
         "lesson",
         "publish"
+      ]
+    },
+    "public.media_kind": {
+      "name": "media_kind",
+      "schema": "public",
+      "values": [
+        "image",
+        "animation",
+        "audio"
+      ]
+    },
+    "public.media_license": {
+      "name": "media_license",
+      "schema": "public",
+      "values": [
+        "public_domain",
+        "cc0",
+        "cc_by",
+        "cc_by_sa",
+        "product_owned"
+      ]
+    },
+    "public.media_origin": {
+      "name": "media_origin",
+      "schema": "public",
+      "values": [
+        "library",
+        "generated"
       ]
     }
   },
