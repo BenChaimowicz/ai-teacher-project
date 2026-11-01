@@ -1,8 +1,8 @@
 /** Which research slot a Source pack fills. */
 export type ResearchSlot = "primary" | "secondary";
 
-/** Adapter ids that config may pick for a research slot. */
-export type ResearchAdapterId = "parallel-pro" | "you-research";
+/** Adapter ids that config may pick for a research slot, or the fact-check may use (SEN-120). */
+export type ResearchAdapterId = "parallel-pro" | "parallel-core" | "you-research" | "you-research-lite" | "you-search";
 
 /**
  * Outcome of one research call.

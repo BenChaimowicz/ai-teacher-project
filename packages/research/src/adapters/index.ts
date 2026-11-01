@@ -1,21 +1,24 @@
 import type { ResearchAdapter, ResearchAdapterId } from "../types.ts";
-import { parallelProAdapter } from "./parallel-pro.ts";
-import { youResearchAdapter } from "./you-research.ts";
+import { parallelCoreAdapter, parallelProAdapter } from "./parallel-pro.ts";
+import { youResearchAdapter, youResearchLiteAdapter } from "./you-research.ts";
+import { youSearchAdapter } from "./you-search.ts";
 
 /** Every adapter config may pick. Exa and Linkup are spec options with no adapter yet. */
 const ADAPTERS: Record<ResearchAdapterId, ResearchAdapter> = {
   "parallel-pro": parallelProAdapter,
+  "parallel-core": parallelCoreAdapter,
   "you-research": youResearchAdapter,
+  "you-research-lite": youResearchLiteAdapter,
+  "you-search": youSearchAdapter,
 };
 
 /**
  * Each adapter's list price per call, in USD (SEN-72: neither vendor reports cost). The Usage Console prices calls
  * rebuilt from stored Source packs with it.
  */
-export const RESEARCH_LIST_PRICES_USD: Record<ResearchAdapterId, number> = {
-  "parallel-pro": parallelProAdapter.estimatedCostUsd,
-  "you-research": youResearchAdapter.estimatedCostUsd,
-};
+export const RESEARCH_LIST_PRICES_USD: Record<ResearchAdapterId, number> = Object.fromEntries(
+  Object.values(ADAPTERS).map((adapter) => [adapter.id, adapter.estimatedCostUsd]),
+) as Record<ResearchAdapterId, number>;
 
 /** Used when the slot's env var is unset. */
 const DEFAULTS = { primary: "parallel-pro", secondary: "you-research" } as const;

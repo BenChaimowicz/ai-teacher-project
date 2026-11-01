@@ -8,7 +8,13 @@ export const USAGE_VENDORS = ["openrouter", "parallel", "you"] as const;
 export type UsageVendor = (typeof USAGE_VENDORS)[number];
 
 /** Which vendor bills each research adapter. */
-export const RESEARCH_ADAPTER_VENDORS = { "parallel-pro": "parallel", "you-research": "you" } as const satisfies Record<string, UsageVendor>;
+export const RESEARCH_ADAPTER_VENDORS = {
+  "parallel-pro": "parallel",
+  "parallel-core": "parallel",
+  "you-research": "you",
+  "you-research-lite": "you",
+  "you-search": "you",
+} as const satisfies Record<string, UsageVendor>;
 
 /** Vendors whose account balance the Usage Console reads. */
 export const BALANCE_VENDORS = ["openrouter", "you", "parallel"] as const;
