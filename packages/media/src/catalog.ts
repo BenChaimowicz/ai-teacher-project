@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { imageSize } from "image-size";
 import { mediaDescriptorFailures, type MediaDescriptorFields } from "@senoy/db";
 import { sha256Of } from "./storage.ts";
+import { isUnsafeSvg } from "./svg.ts";
 
 /**
  * One hand-written catalog entry: everything a person decides about a library file. What the bytes themselves say
@@ -38,9 +39,6 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   ".ogg": "audio/ogg",
 };
 
-/** SVG content the product never hosts: scripts, embedded HTML, event handlers and remote references (spec §5.6). */
-const UNSAFE_SVG = /<script|<foreignObject|\son[a-z]+\s*=|href\s*=\s*["']\s*(https?:)?\/\//i;
-
 /**
  * Turns a catalog entry into a full Media descriptor by reading its file: storage key, MIME type, byte size, digest and
  * pixel dimensions come from the bytes.
@@ -54,7 +52,7 @@ export function resolveCatalogEntry(entry: CatalogEntry, bytes: Uint8Array): Res
   if (!mimeType) {
     throw new Error(`[catalog.ts: resolveCatalogEntry] Unsupported file extension || file=${file}`);
   }
-  if (mimeType === "image/svg+xml" && UNSAFE_SVG.test(Buffer.from(bytes).toString("utf8"))) {
+  if (mimeType === "image/svg+xml" && isUnsafeSvg(bytes)) {
     throw new Error(`[catalog.ts: resolveCatalogEntry] SVG contains script, foreignObject, event handlers or remote references || file=${file}`);
   }
 

@@ -1,0 +1,543 @@
+{
+  "startedAt": "2026-11-01T10:17:54.385Z",
+  "latencyMs": 107132,
+  "sourcePacks": "docs/research/sen-115-drum-stroke-source-packs.json",
+  "slot": {
+    "id": "slot2",
+    "method": "reading",
+    "title": "Matched grip and the full stroke",
+    "lessonGoal": "Hold the sticks in matched grip and play a relaxed full stroke that rebounds to its starting height.",
+    "objectives": [
+      "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "Explain why letting the stick rebound keeps the hands relaxed"
+    ],
+    "topicTags": [
+      "matched-grip",
+      "full-stroke",
+      "rebound"
+    ],
+    "assessesSlotIds": [],
+    "requiredMedia": [
+      {
+        "mediaCategory": "drum-grip",
+        "topicTags": [
+          "matched-grip",
+          "fulcrum"
+        ]
+      },
+      {
+        "mediaCategory": "drum-stroke",
+        "topicTags": [
+          "full-stroke",
+          "rebound-stroke"
+        ]
+      }
+    ]
+  },
+  "profile": {
+    "instructionLanguage": "en",
+    "requiredReadingSupports": [],
+    "contentScope": "standard",
+    "explanationOrder": "topic_appropriate"
+  },
+  "status": "checkpoint",
+  "lesson": {
+    "slotId": "slot2",
+    "teachingMethod": "reading",
+    "title": "Matched grip and the full stroke",
+    "lessonGoal": "Hold the sticks in matched grip and play a relaxed full stroke that rebounds to its starting height.",
+    "objectives": [
+      "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "Explain that letting the stick rebound naturally and keeping the hands relaxed are both recommended."
+    ],
+    "topicTags": [
+      "matched-grip",
+      "full-stroke",
+      "rebound"
+    ],
+    "lineage": null,
+    "body": {
+      "sections": [
+        {
+          "heading": "Set up matched grip",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "How can you hold your sticks without fighting their bounce as you work toward playing “Iris” end to end? You will set up matched grip, locate the fulcrum, and practise a relaxed full stroke that returns to its starting height."
+            },
+            {
+              "kind": "prose",
+              "text": "For matched grip, place the stick against the first knuckle of your index finger and put your thumb opposite that point [1]. Keep your thumb parallel to the stick, and curl the remaining fingers loosely around it [1]. Do not squeeze the stick or clench your hand [1]."
+            },
+            {
+              "kind": "prose",
+              "text": "The fulcrum is the support point between your thumb and index finger [2]. Keep that thumb-and-index contact in place while allowing your wrists and fingers to remain relaxed [3]. The instruction is to maintain contact, not to tighten your whole hand around the stick [3][1]."
+            },
+            {
+              "kind": "prose",
+              "text": "Use a mirror to check your grip and watch the path of the stick [3]. Can you identify the fulcrum while keeping the rest of your hand relaxed?"
+            },
+            {
+              "kind": "media",
+              "caption": "Matched grip places the fulcrum between the thumb and index finger.",
+              "alt": "Close-up of matched grip, showing the thumb opposite the index finger at the fulcrum and the remaining fingers curved around the stick.",
+              "descriptor": {
+                "id": "d0a1e047-0000-4000-8000-000000000011",
+                "kind": "image",
+                "origin": "library",
+                "license": "cc_by_sa",
+                "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+                "caption": "German matched grip on a snare drum: palm facing down, the stick held between thumb and index finger with the other fingers wrapped underneath.",
+                "alt": "Top-down photograph of one hand holding a drumstick over a snare drum head, palm down and knuckles up, the stick angled across the head.",
+                "source": {
+                  "url": "https://commons.wikimedia.org/wiki/File:German_grip.jpg",
+                  "title": "File:German grip.jpg",
+                  "author": "DenkePositiv"
+                },
+                "storageKey": "library/drums/german-grip.jpg",
+                "mimeType": "image/jpeg",
+                "byteSize": 238271,
+                "sha256": "86f45ee808e714f9bd19d6e1f56be8f14f6e98ac8256f961bfb858e2a7c21e09",
+                "width": 1280,
+                "height": 1035,
+                "mediaCategory": "drum-grip",
+                "topicTags": [
+                  "matched-grip",
+                  "german-grip",
+                  "fulcrum",
+                  "snare"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "heading": "Find the fulcrum position",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Now check where that contact point sits along the stick by comparing the number of bounces you get at different positions [1]. Begin with about two-thirds of the stick extending in front of your hand [1]."
+            },
+            {
+              "kind": "prose",
+              "text": "Let the stick drop onto the drum and count its bounces [1]. Move your holding point along the stick, then drop it again and count the bounces at this new position [1]. If you get fewer bounces, try moving your holding point in the opposite direction and compare again [1]."
+            },
+            {
+              "kind": "prose",
+              "text": "For this test, the recommended fulcrum position is the one that produces the most bounces [1]. You can mark a ring around the stick at that position so you know where to hold it [1]. Once you have found the position, place your thumb opposite the index finger and wrap the other fingers loosely around the stick [1]."
+            },
+            {
+              "kind": "prose",
+              "text": "What are you comparing during the bounce test, and which result tells you where to hold the stick?"
+            }
+          ]
+        },
+        {
+          "heading": "Let the full stroke return",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "With your grip established, put it into motion: a full stroke starts with the stick raised, strikes the drum, and returns to its original starting height [1]. The return is part of the stroke, not just the downward hit [1]."
+            },
+            {
+              "kind": "prose",
+              "text": "For one concrete attempt, use your wrist to raise the stick about eight inches above the drum [1]. This gives you a starting height to return to after the strike [1]."
+            },
+            {
+              "kind": "prose",
+              "text": "Next, send the stick toward the drum and let it rebound naturally after contact [3]. Rebound means the stick’s bounce back upward after the strike [3]. Allow that upward movement rather than stopping it, and return the stick to its original starting point [3][1]."
+            },
+            {
+              "kind": "prose",
+              "text": "Follow the whole path: high, down to the drum, then back up to the starting height [1]. The movement should remain smooth, without stopping points as the stick travels down and back up [3]."
+            },
+            {
+              "kind": "prose",
+              "text": "If the stick starts high but finishes low, has it completed the full stroke described here?"
+            },
+            {
+              "kind": "media",
+              "caption": "A full stroke travels down to the drum and rebounds to its starting height.",
+              "alt": "A sequence showing a raised drumstick moving down to strike the drumhead, then rebounding upward to the same raised position.",
+              "descriptor": {
+                "id": "d0a1e047-0000-4000-8000-000000000028",
+                "kind": "image",
+                "origin": "library",
+                "license": "product_owned",
+                "licenseUrl": null,
+                "caption": "A full (rebound) stroke in four stills: the stick starts high, falls to strike the drumhead, bounces back up off it, and returns to its starting height.",
+                "alt": "Four side views of a drumstick pivoting at the fulcrum above a drum: raised high, its tip striking the head, bouncing back up with an arrow pointing up, and raised high again level with a dashed starting-height line.",
+                "source": null,
+                "storageKey": "library/drums/rebound-stroke.svg",
+                "mimeType": "image/svg+xml",
+                "byteSize": 5914,
+                "sha256": "fe180163e011a181bf9903e5c799cd0a5a9336bf0e3b93d44813654ab932742f",
+                "width": 960,
+                "height": 400,
+                "mediaCategory": "drum-stroke",
+                "topicTags": [
+                  "rebound-stroke",
+                  "full-stroke",
+                  "rebound",
+                  "stick-height",
+                  "fulcrum",
+                  "stroke"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "heading": "Keep the grip and motion relaxed",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Now check the grip and the returning motion together, keeping your fingers, wrists, and forearms free of tension [3]. Maintain the thumb-and-index contact while keeping the wrists and fingers as relaxed as possible [3]."
+            },
+            {
+              "kind": "prose",
+              "text": "Leave a little space between your palm and the fingers wrapped around the back of the stick [3]. You can also allow some room between your index and middle fingers if that helps your hand relax [3]."
+            },
+            {
+              "kind": "prose",
+              "text": "Imagine watching yourself in a mirror and noticing that you stop the stick halfway back up. Compare that imagined attempt with the recommended motion: the stick should travel down and back up without a stopping point [3]. Check your arms, wrists, hands, and fingers for tension while you watch the movement [3]."
+            },
+            {
+              "kind": "prose",
+              "text": "Take your time and practise slowly, paying attention to the small details of the grip and stroke [1]. Use the mirror to monitor both your grip and the stick’s path, rather than watching only the moment of contact with the drum [3]."
+            },
+            {
+              "kind": "prose",
+              "text": "Can you keep the thumb-and-index contact, relaxed fingers, and an uninterrupted return in the same stroke?"
+            }
+          ]
+        },
+        {
+          "heading": "Check the whole action",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "In matched grip, place the thumb opposite the index finger and wrap the remaining fingers loosely around the stick [1]. A full stroke begins high, strikes the drum, and returns to its starting height [1]. Let the stick rebound naturally, keep its path smooth, and keep your hands and wrists relaxed [3]."
+            }
+          ]
+        }
+      ]
+    },
+    "sources": [
+      {
+        "n": 1,
+        "sourceId": "src_498b43255b",
+        "url": "https://pas.org/wp-content/uploads/2024/04/ECV0803-035.pdf",
+        "title": "Building A Strong Foundation Of The Snare Drum Fulcrum",
+        "publisher": "pas.org",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 2,
+        "sourceId": "src_7eefe0ae9c",
+        "url": "https://www.midwestclinic.org/user_files_1/pdfs/clinicianmaterials/2007/bret_kuhn.pdf",
+        "title": "Microsoft Word - Stroke Fundamentals.doc",
+        "publisher": "midwestclinic.org",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 3,
+        "sourceId": "src_a8e38c4812",
+        "url": "https://ae.vicfirth.com/wp-content/uploads/FA-Drumset-Lessons-1-2.pdf",
+        "title": "FA Drumset 2014 changes2",
+        "publisher": "ae.vicfirth.com",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      }
+    ],
+    "citations": [
+      {
+        "n": 1,
+        "title": "Building A Strong Foundation Of The Snare Drum Fulcrum",
+        "url": "https://pas.org/wp-content/uploads/2024/04/ECV0803-035.pdf"
+      },
+      {
+        "n": 2,
+        "title": "Microsoft Word - Stroke Fundamentals.doc",
+        "url": "https://www.midwestclinic.org/user_files_1/pdfs/clinicianmaterials/2007/bret_kuhn.pdf"
+      },
+      {
+        "n": 3,
+        "title": "FA Drumset 2014 changes2",
+        "url": "https://ae.vicfirth.com/wp-content/uploads/FA-Drumset-Lessons-1-2.pdf"
+      }
+    ]
+  },
+  "media": [
+    {
+      "proposal": {
+        "section": "Set up matched grip",
+        "mediaCategory": "drum-grip",
+        "topicTags": [
+          "matched-grip",
+          "fulcrum"
+        ],
+        "caption": "Matched grip places the fulcrum between the thumb and index finger.",
+        "alt": "Close-up of matched grip, showing the thumb opposite the index finger at the fulcrum and the remaining fingers curved around the stick.",
+        "required": true
+      },
+      "status": "attached",
+      "rejected": [],
+      "checks": [
+        {
+          "descriptorId": "d0a1e047-0000-4000-8000-000000000011",
+          "caption": "Matched grip places the fulcrum between the thumb and index finger.",
+          "alt": "Close-up of matched grip, showing the thumb opposite the index finger at the fulcrum and the remaining fingers curved around the stick.",
+          "judge": {
+            "pass": true,
+            "failedChecks": [],
+            "reasons": []
+          },
+          "judgeModelId": "openai/gpt-6-luna"
+        }
+      ],
+      "descriptorId": "d0a1e047-0000-4000-8000-000000000011"
+    },
+    {
+      "proposal": {
+        "section": "Let the full stroke return",
+        "mediaCategory": "drum-stroke",
+        "topicTags": [
+          "full-stroke",
+          "rebound-stroke"
+        ],
+        "caption": "A full stroke travels down to the drum and rebounds to its starting height.",
+        "alt": "A sequence showing a raised drumstick moving down to strike the drumhead, then rebounding upward to the same raised position.",
+        "required": true
+      },
+      "status": "attached",
+      "rejected": [],
+      "checks": [
+        {
+          "descriptorId": "d0a1e047-0000-4000-8000-000000000028",
+          "caption": "A full stroke travels down to the drum and rebounds to its starting height.",
+          "alt": "A sequence showing a raised drumstick moving down to strike the drumhead, then rebounding upward to the same raised position.",
+          "judge": {
+            "pass": true,
+            "failedChecks": [],
+            "reasons": []
+          },
+          "judgeModelId": "openai/gpt-6-luna"
+        }
+      ],
+      "descriptorId": "d0a1e047-0000-4000-8000-000000000028"
+    }
+  ],
+  "judge": {
+    "pass": true,
+    "failedChecks": [],
+    "reasons": []
+  },
+  "repairs": 0,
+  "grounding": [
+    {
+      "objective": "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "verdict": "supported",
+      "text": "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "reason": ""
+    },
+    {
+      "objective": "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "verdict": "supported",
+      "text": "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "reason": ""
+    },
+    {
+      "objective": "Explain why letting the stick rebound keeps the hands relaxed",
+      "verdict": "rewritten",
+      "text": "Explain that letting the stick rebound naturally and keeping the hands relaxed are both recommended.",
+      "reason": "The material recommends allowing a natural rebound and keeping the hands relaxed, but does not say that rebound causes the hands to relax."
+    }
+  ],
+  "rejectedSources": [
+    {
+      "sourceId": "src_50ed1531b2",
+      "url": "https://hub.yamaha.com/music-educators/instruments/perc/a-guide-to-proper-stick-grips",
+      "reason": "Yamaha is an instrument manufacturer; this is branded company content rather than an independent source."
+    },
+    {
+      "sourceId": "src_aa45b3c3db",
+      "url": "https://pearldrum.com/sites/default/files/2019-10/basic-snare-drum-technique.pdf",
+      "reason": "Hosted by a drum manufacturer, so the technique guidance is not an independent source."
+    },
+    {
+      "sourceId": "src_89a76645aa",
+      "url": "https://hub.yamaha.com/music-educators/instruments/perc/snare-drum-basics-pedagogy/",
+      "reason": "Yamaha company content, not an independent source."
+    },
+    {
+      "sourceId": "src_3578a5990c",
+      "url": "https://www.drumbarossa.com/teaching-guide/basic-strokes",
+      "reason": "Instructional material from a likely commercial drum-teaching site; the excerpt does not establish independent editorial authority."
+    },
+    {
+      "sourceId": "src_73457824aa",
+      "url": "https://rhythmnotes.net/drum-techniques-and-rudiments/",
+      "reason": "Unverified instructional blog; the excerpt provides personal experience but no clear author credentials or editorial oversight."
+    },
+    {
+      "sourceId": "src_2de311406d",
+      "url": "https://drummagazine.com/drum-technique/",
+      "reason": "Commercial magazine article rather than a scholarly, educational, or independent reference source."
+    },
+    {
+      "sourceId": "src_ca07de2348",
+      "url": "https://upbeat.studio/blog/essential-drumming-techniques-for-beginners/",
+      "reason": "Likely promotional content from a commercial music-learning business."
+    },
+    {
+      "sourceId": "src_e26d0d852e",
+      "url": "https://drumbeatsonline.com/blog/how-to-do-a-drum-roll-a-step-by-step-guide-for-beginners",
+      "reason": "Blog content from a commercial drum-instruction business."
+    }
+  ],
+  "authorModelIds": [
+    "openai/gpt-6.1-sol"
+  ],
+  "judgeModelId": "openai/gpt-6-luna",
+  "rounds": [
+    {
+      "modelId": "openai/gpt-6.1-sol",
+      "draft": [
+        {
+          "heading": "Set up matched grip",
+          "paragraphs": [
+            "How can you hold your sticks without fighting their bounce as you work toward playing “Iris” end to end? You will set up matched grip, locate the fulcrum, and practise a relaxed full stroke that returns to its starting height.",
+            "For matched grip, place the stick against the first knuckle of your index finger and put your thumb opposite that point [src_498b43255b]. Keep your thumb parallel to the stick, and curl the remaining fingers loosely around it [src_498b43255b]. Do not squeeze the stick or clench your hand [src_498b43255b].",
+            "The fulcrum is the support point between your thumb and index finger [src_7eefe0ae9c]. Keep that thumb-and-index contact in place while allowing your wrists and fingers to remain relaxed [src_a8e38c4812]. The instruction is to maintain contact, not to tighten your whole hand around the stick [src_a8e38c4812, src_498b43255b].",
+            "Use a mirror to check your grip and watch the path of the stick [src_a8e38c4812]. Can you identify the fulcrum while keeping the rest of your hand relaxed?"
+          ]
+        },
+        {
+          "heading": "Find the fulcrum position",
+          "paragraphs": [
+            "Now check where that contact point sits along the stick by comparing the number of bounces you get at different positions [src_498b43255b]. Begin with about two-thirds of the stick extending in front of your hand [src_498b43255b].",
+            "Let the stick drop onto the drum and count its bounces [src_498b43255b]. Move your holding point along the stick, then drop it again and count the bounces at this new position [src_498b43255b]. If you get fewer bounces, try moving your holding point in the opposite direction and compare again [src_498b43255b].",
+            "For this test, the recommended fulcrum position is the one that produces the most bounces [src_498b43255b]. You can mark a ring around the stick at that position so you know where to hold it [src_498b43255b]. Once you have found the position, place your thumb opposite the index finger and wrap the other fingers loosely around the stick [src_498b43255b].",
+            "What are you comparing during the bounce test, and which result tells you where to hold the stick?"
+          ]
+        },
+        {
+          "heading": "Let the full stroke return",
+          "paragraphs": [
+            "With your grip established, put it into motion: a full stroke starts with the stick raised, strikes the drum, and returns to its original starting height [src_498b43255b]. The return is part of the stroke, not just the downward hit [src_498b43255b].",
+            "For one concrete attempt, use your wrist to raise the stick about eight inches above the drum [src_498b43255b]. This gives you a starting height to return to after the strike [src_498b43255b].",
+            "Next, send the stick toward the drum and let it rebound naturally after contact [src_a8e38c4812]. Rebound means the stick’s bounce back upward after the strike [src_a8e38c4812]. Allow that upward movement rather than stopping it, and return the stick to its original starting point [src_a8e38c4812, src_498b43255b].",
+            "Follow the whole path: high, down to the drum, then back up to the starting height [src_498b43255b]. The movement should remain smooth, without stopping points as the stick travels down and back up [src_a8e38c4812].",
+            "If the stick starts high but finishes low, has it completed the full stroke described here?"
+          ]
+        },
+        {
+          "heading": "Keep the grip and motion relaxed",
+          "paragraphs": [
+            "Now check the grip and the returning motion together, keeping your fingers, wrists, and forearms free of tension [src_a8e38c4812]. Maintain the thumb-and-index contact while keeping the wrists and fingers as relaxed as possible [src_a8e38c4812].",
+            "Leave a little space between your palm and the fingers wrapped around the back of the stick [src_a8e38c4812]. You can also allow some room between your index and middle fingers if that helps your hand relax [src_a8e38c4812].",
+            "Imagine watching yourself in a mirror and noticing that you stop the stick halfway back up. Compare that imagined attempt with the recommended motion: the stick should travel down and back up without a stopping point [src_a8e38c4812]. Check your arms, wrists, hands, and fingers for tension while you watch the movement [src_a8e38c4812].",
+            "Take your time and practise slowly, paying attention to the small details of the grip and stroke [src_498b43255b]. Use the mirror to monitor both your grip and the stick’s path, rather than watching only the moment of contact with the drum [src_a8e38c4812].",
+            "Can you keep the thumb-and-index contact, relaxed fingers, and an uninterrupted return in the same stroke?"
+          ]
+        },
+        {
+          "heading": "Check the whole action",
+          "paragraphs": [
+            "In matched grip, place the thumb opposite the index finger and wrap the remaining fingers loosely around the stick [src_498b43255b]. A full stroke begins high, strikes the drum, and returns to its starting height [src_498b43255b]. Let the stick rebound naturally, keep its path smooth, and keep your hands and wrists relaxed [src_a8e38c4812]."
+          ]
+        }
+      ],
+      "media": [
+        {
+          "section": "Set up matched grip",
+          "mediaCategory": "drum-grip",
+          "topicTags": [
+            "matched-grip",
+            "fulcrum"
+          ],
+          "caption": "Matched grip places the fulcrum between the thumb and index finger.",
+          "alt": "Close-up of matched grip, showing the thumb opposite the index finger at the fulcrum and the remaining fingers curved around the stick.",
+          "required": true
+        },
+        {
+          "section": "Let the full stroke return",
+          "mediaCategory": "drum-stroke",
+          "topicTags": [
+            "full-stroke",
+            "rebound-stroke"
+          ],
+          "caption": "A full stroke travels down to the drum and rebounds to its starting height.",
+          "alt": "A sequence showing a raised drumstick moving down to strike the drumhead, then rebounding upward to the same raised position.",
+          "required": true
+        }
+      ],
+      "problems": [],
+      "attached": [
+        {
+          "proposal": {
+            "section": "Set up matched grip",
+            "mediaCategory": "drum-grip",
+            "topicTags": [
+              "matched-grip",
+              "fulcrum"
+            ],
+            "caption": "Matched grip places the fulcrum between the thumb and index finger.",
+            "alt": "Close-up of matched grip, showing the thumb opposite the index finger at the fulcrum and the remaining fingers curved around the stick.",
+            "required": true
+          },
+          "status": "attached",
+          "rejected": [],
+          "checks": [
+            {
+              "descriptorId": "d0a1e047-0000-4000-8000-000000000011",
+              "caption": "Matched grip places the fulcrum between the thumb and index finger.",
+              "alt": "Close-up of matched grip, showing the thumb opposite the index finger at the fulcrum and the remaining fingers curved around the stick.",
+              "judge": {
+                "pass": true,
+                "failedChecks": [],
+                "reasons": []
+              },
+              "judgeModelId": "openai/gpt-6-luna"
+            }
+          ],
+          "descriptorId": "d0a1e047-0000-4000-8000-000000000011"
+        },
+        {
+          "proposal": {
+            "section": "Let the full stroke return",
+            "mediaCategory": "drum-stroke",
+            "topicTags": [
+              "full-stroke",
+              "rebound-stroke"
+            ],
+            "caption": "A full stroke travels down to the drum and rebounds to its starting height.",
+            "alt": "A sequence showing a raised drumstick moving down to strike the drumhead, then rebounding upward to the same raised position.",
+            "required": true
+          },
+          "status": "attached",
+          "rejected": [],
+          "checks": [
+            {
+              "descriptorId": "d0a1e047-0000-4000-8000-000000000028",
+              "caption": "A full stroke travels down to the drum and rebounds to its starting height.",
+              "alt": "A sequence showing a raised drumstick moving down to strike the drumhead, then rebounding upward to the same raised position.",
+              "judge": {
+                "pass": true,
+                "failedChecks": [],
+                "reasons": []
+              },
+              "judgeModelId": "openai/gpt-6-luna"
+            }
+          ],
+          "descriptorId": "d0a1e047-0000-4000-8000-000000000028"
+        }
+      ]
+    }
+  ]
+}

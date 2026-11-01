@@ -3,10 +3,12 @@ import { test } from "node:test";
 import { Readable } from "node:stream";
 import Fastify from "fastify";
 import type { MediaStorage } from "@senoy/media";
-import { mediaRoutes } from "./media.ts";
+import { mediaRoutes, SVG_CONTENT_SECURITY_POLICY } from "./media.ts";
 
 const KEY = "library/micro/gram-positive-cocci-phil-2296.jpg";
 const BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+const SVG_KEY = "library/drums/rebound-stroke.svg";
+const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>');
 
 /** A bucket holding one JPEG, recording every key read. */
 function bucket(): MediaStorage & { reads: string[] } {
@@ -17,6 +19,7 @@ function bucket(): MediaStorage & { reads: string[] } {
     async head() { return null; },
     async get(key) {
       reads.push(key);
+      if (key === SVG_KEY) return { body: Readable.from([SVG]), contentType: "image/svg+xml", byteSize: SVG.length };
       return key === KEY ? { body: Readable.from([BYTES]), contentType: "image/jpeg", byteSize: BYTES.length } : null;
     },
   };
@@ -43,6 +46,20 @@ test("A file a published Lesson shows streams from its storage key with its type
     assert.equal(response.headers["x-content-type-options"], "nosniff");
     assert.deepEqual(response.rawPayload, BYTES);
     assert.deepEqual(storage.reads, [KEY]);
+    assert.equal(response.headers["content-security-policy"], undefined);
+  } finally {
+    await server.close();
+  }
+});
+
+test("An SVG diagram is served as SVG under a policy that lets it draw itself and nothing else", async () => {
+  const server = await app([SVG_KEY], bucket());
+  try {
+    const response = await server.inject({ method: "GET", url: `/media/${SVG_KEY}` });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.headers["content-type"], "image/svg+xml");
+    assert.equal(response.headers["content-security-policy"], SVG_CONTENT_SECURITY_POLICY);
+    assert.deepEqual(response.rawPayload, SVG);
   } finally {
     await server.close();
   }

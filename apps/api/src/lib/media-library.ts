@@ -1,4 +1,3 @@
-import { and, eq, inArray } from "drizzle-orm";
 import { ATTACHABLE_MIME_TYPES, mediaDescriptors, type Database, type MediaCategory, type MediaDescriptorFields } from "@senoy/db";
 import { createMediaStorage, mediaStorageConfigFromEnv, sha256Of, type MediaStorage } from "@senoy/media";
 import type { Readable } from "node:stream";
@@ -17,6 +16,30 @@ export interface MediaLibrary {
    * @throws Error when the bucket has no such file, holds different bytes, or cannot be read
    */
   bytes(descriptor: MediaDescriptorFields): Promise<Uint8Array>;
+}
+
+/**
+ * Whether a Reading may attach a file: a library still in a type a vision model can be shown. Generated files are not
+ * library files and are never looked up.
+ * @param descriptor - The file's descriptor
+ */
+export function isAttachable(descriptor: Pick<MediaDescriptorFields, "origin" | "kind" | "mimeType">): boolean {
+  return descriptor.origin === "library" && descriptor.kind === "image" && (ATTACHABLE_MIME_TYPES as readonly string[]).includes(descriptor.mimeType);
+}
+
+/**
+ * The Media categories of a set of attachable files, each with every Topic tag its files carry, sorted so the same
+ * catalog always reads the same.
+ * @param rows - Attachable files
+ */
+export function vocabularyOf(rows: readonly Pick<MediaDescriptorFields, "mediaCategory" | "topicTags">[]): MediaVocabulary {
+  const byCategory = new Map<MediaCategory, Set<string>>();
+  for (const row of rows) {
+    const tags = byCategory.get(row.mediaCategory) ?? new Set<string>();
+    for (const tag of row.topicTags) tags.add(tag);
+    byCategory.set(row.mediaCategory, tags);
+  }
+  return [...byCategory].sort(([a], [b]) => a.localeCompare(b)).map(([mediaCategory, tags]) => ({ mediaCategory, topicTags: [...tags].sort() }));
 }
 
 /**
@@ -54,11 +77,10 @@ export function createMediaLibrary(db: Database, storage?: MediaStorage): MediaL
   let catalog: Promise<MediaDescriptorFields[]> | null = null;
   let bucket: MediaStorage | null = storage ?? null;
 
-  /** Every library still a Reading may attach. Generated files are not library files and are never looked up. */
+  /** Every file a Reading may attach. The catalog is a few dozen rows, so it is read whole and filtered here. */
   function attachable(): Promise<MediaDescriptorFields[]> {
     catalog ??= db.select().from(mediaDescriptors)
-      .where(and(eq(mediaDescriptors.origin, "library"), eq(mediaDescriptors.kind, "image"), inArray(mediaDescriptors.mimeType, [...ATTACHABLE_MIME_TYPES])))
-      .then((rows) => rows.map(({ createdAt: _created, updatedAt: _updated, ...fields }) => fields))
+      .then((rows) => rows.map(({ createdAt: _created, updatedAt: _updated, ...fields }) => fields).filter(isAttachable))
       .catch((error: unknown) => {
         catalog = null;
         const message = error instanceof Error ? error.message : String(error);
@@ -69,13 +91,7 @@ export function createMediaLibrary(db: Database, storage?: MediaStorage): MediaL
 
   return {
     async vocabulary() {
-      const byCategory = new Map<MediaCategory, Set<string>>();
-      for (const row of await attachable()) {
-        const tags = byCategory.get(row.mediaCategory) ?? new Set<string>();
-        for (const tag of row.topicTags) tags.add(tag);
-        byCategory.set(row.mediaCategory, tags);
-      }
-      return [...byCategory].sort(([a], [b]) => a.localeCompare(b)).map(([mediaCategory, tags]) => ({ mediaCategory, topicTags: [...tags].sort() }));
+      return vocabularyOf(await attachable());
     },
 
     async candidates(mediaCategory, topicTags) {

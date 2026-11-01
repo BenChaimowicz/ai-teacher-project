@@ -1,3 +1,4 @@
+import { MEDIA_CATEGORIES, type MediaRequest } from "./media.ts";
 import { QUIZ_METHOD_ID, READING_METHOD_ID } from "./reading-lesson.ts";
 import type { SequenceMode } from "./sequence-mode.ts";
 import type { QuizCadence } from "./teaching-profile.ts";
@@ -11,6 +12,15 @@ export type BlueprintMethod = (typeof REGISTERED_METHODS)[number];
 /** Topic tags per slot (spec §4.4). */
 export const MIN_TOPIC_TAGS = 2;
 export const MAX_TOPIC_TAGS = 5;
+
+/**
+ * Images a Reading slot may require, so a drum Lesson can require both grip and stroke
+ * (docs/decisions/2026-11-01-a-reading-holds-at-most-two-required-and-two-optional-images.md).
+ */
+export const MAX_REQUIRED_MEDIA = 2;
+
+/** Topic tags one required image may name. */
+export const MAX_REQUIRED_MEDIA_TAGS = 5;
 
 /** Objectives a Quiz slot may list (spec §6.2); more is structural. */
 export const MAX_QUIZ_OBJECTIVES = 10;
@@ -28,6 +38,9 @@ export const CADENCE_READINGS: Record<QuizCadence, { min: number; max: number } 
 
 /**
  * One Lesson-to-be. `assessesSlotIds` is empty except on a Quiz, where it names the Reading slots it assesses.
+ * `requiredMedia` is set only on a Reading that cannot teach without the Learner seeing something: the images, by Media
+ * category and Topic tags, its Lesson is not checkpointed without (SEN-115). The Blueprint author sets it, from what the
+ * media catalog holds; the Learner never sees it. Absent on Blueprints written before it existed.
  */
 export type BlueprintSlot = {
   id: string;
@@ -37,6 +50,7 @@ export type BlueprintSlot = {
   objectives: string[];
   topicTags: string[];
   assessesSlotIds: string[];
+  requiredMedia?: MediaRequest[];
 };
 
 /** A named grouping of slots. */
@@ -196,6 +210,16 @@ export function blueprintCodeFailures(blueprint: CourseBlueprint, cadence: QuizC
       }
     } else if (slot.assessesSlotIds.length > 0) {
       failures.push(`${label} is not a Quiz and must not assess other slots.`);
+    }
+
+    const required = slot.requiredMedia ?? [];
+    if (required.length && slot.method !== READING_METHOD_ID) failures.push(`${label} is not a Reading and must not require media.`);
+    if (required.length > MAX_REQUIRED_MEDIA) failures.push(`${label} requires ${required.length} images; a Reading requires at most ${MAX_REQUIRED_MEDIA}.`);
+    for (const request of required) {
+      if (!(MEDIA_CATEGORIES as readonly string[]).includes(request.mediaCategory)) failures.push(`${label} requires media in an unknown Media category, "${request.mediaCategory}".`);
+      if (request.topicTags.length === 0 || request.topicTags.length > MAX_REQUIRED_MEDIA_TAGS || request.topicTags.some((tag) => !TOPIC_TAG.test(tag))) {
+        failures.push(`${label} requires media with 1–${MAX_REQUIRED_MEDIA_TAGS} Topic tags as lowercase slugs.`);
+      }
     }
   });
 

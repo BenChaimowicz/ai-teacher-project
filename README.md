@@ -120,6 +120,16 @@ pnpm check:reading-media:live
 
 This opt-in check makes billable model calls: it writes the SEN-36 Norse Reading with the image library offered, looks up the file it asks for, and sends that file to the vision Judge. It writes the run to `docs/research/sen-55-norse-reading-media-run.json` and fails unless one image was attached.
 
+`pnpm check:reading-media:live drum-stroke` writes a drum Reading whose slot requires two images (SEN-115): a matched-grip photo and the rebound-stroke strip, an SVG the vision Judge sees drawn as a PNG. It reads its Source packs from `docs/research/sen-115-drum-stroke-source-packs.json`, and researches and saves them first (about $0.15) when that file is missing. It writes the run to `docs/research/sen-115-drum-stroke-reading-media-run.json` and fails unless every required image was attached.
+
+To see which images the test Courses' Blueprints require (spec §7.1, §7.2) and which catalog files fill them:
+
+```bash
+pnpm check:test-course-blueprints:live [drums|microbiology]
+```
+
+This opt-in check makes billable model calls: it designs a live Blueprint for the drum kit and microbiology Courses, for a brand-new Learner, offered the committed seed catalog. It writes the run to `docs/research/sen-115-test-course-blueprints.json` and fails unless each Blueprint passes its Judge and requires at least one image the catalog can fill. A gap shows up as a Reading that should require an image and does not, so read the output against spec §7.
+
 Generator and Judge share one native-fetch OpenRouter transport. Defaults live in `apps/api/src/lib/model-config.ts`; optional server-only overrides are listed in `.env.example`. Judge calls require a different author model ID. Research vendors remain direct; validity makes no research calls. A reply that is invalid or cut off is retried once on the same model, then once on the configured fallback, and each reply names the model that wrote it so the Judge never judges its own author's work (ADR 0015). Provider schemas are also checked in application code, including stage-specific clarification invariants.
 
 Deploy notes: [`docs/deploy.md`](docs/deploy.md).

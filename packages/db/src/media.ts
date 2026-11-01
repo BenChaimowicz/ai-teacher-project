@@ -39,6 +39,7 @@ export const MEDIA_CATEGORIES = [
   "culture-technique",
   "microscopy",
   "drum-grip",
+  "drum-stroke",
   "drum-kit-anatomy",
   "drum-stick-anatomy",
   "drum-notation",
@@ -47,6 +48,21 @@ export const MEDIA_CATEGORIES = [
 
 /** One of {@link MEDIA_CATEGORIES}. */
 export type MediaCategory = (typeof MEDIA_CATEGORIES)[number];
+
+/**
+ * Demonstrative media asked for by what library lookup filters on: a Media category, and Topic tags from that category
+ * naming what the file must show. A Reading slot's required media is a list of these (SEN-115).
+ */
+export type MediaRequest = { mediaCategory: MediaCategory; topicTags: string[] };
+
+/**
+ * Whether a file fills a request the way lookup finds it: the same Media category and at least one shared Topic tag.
+ * @param descriptor - The file's category and tags
+ * @param request - What was asked for
+ */
+export function fillsRequest(descriptor: Pick<MediaDescriptorFields, "mediaCategory" | "topicTags">, request: MediaRequest): boolean {
+  return descriptor.mediaCategory === request.mediaCategory && descriptor.topicTags.some((tag) => request.topicTags.includes(tag));
+}
 
 /** The web page a library file was taken from and who made it. Null only on product-owned files. */
 export type MediaSource = {
@@ -79,10 +95,10 @@ export type MediaDescriptorFields = {
 };
 
 /**
- * The MIME types a Reading may attach today: raster stills a vision model can look at. SVG waits for rasterizing and
- * its no-script check (SEN-115), so the product-owned SVG diagrams are never picked yet.
+ * The MIME types a Reading may attach: stills a vision model can look at. An SVG diagram is checked again for unsafe
+ * content and drawn as a PNG for the vision call (SEN-115); the Learner's browser is served the SVG itself.
  */
-export const ATTACHABLE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+export const ATTACHABLE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"] as const;
 
 /** Storage keys are lowercase ASCII path segments, so `/media/<key>` needs no escaping and no key is ambiguous. */
 export const STORAGE_KEY_PATTERN = /^[a-z0-9][a-z0-9_.-]*(\/[a-z0-9][a-z0-9_.-]*)*$/;

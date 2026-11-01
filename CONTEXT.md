@@ -302,6 +302,10 @@ _Avoid_: Module, Lesson, Content block (when meaning the whole stretch), page
 A product-hosted image, animation, or audio clip inside a reading Lesson that illustrates a technique. Prefer the best existing original, licensed, or Commons file; if none is good enough, generate a simple SVG diagram or pictorial still. Photomicrographs and named-work copies are never generated. Not from Search, not from an off-app video as the teaching clip, and not a separate teaching method.
 _Avoid_: AV lesson, video course, teaching method (when meaning the embed), YouTube embed (when meaning the teaching clip)
 
+**Required media**:
+Demonstrative media a Reading cannot teach without, set by the Blueprint author on the Reading slot as a Media category and Topic tags the catalog holds (at most two per slot). The Reading's writer places each one and writes its caption and alt text. A required image the library cannot supply, or that still fails its vision check after its repair, is a Lesson defect, not a dropped figure. The Learner never sees or edits it. Any other image a writer asks for is optional and is dropped on a miss.
+_Avoid_: mandatory media, essential image, required slot (when meaning the image)
+
 **Media category**:
 A coarse technique-family or subject-slice label on a library Media descriptor, used with Topic tags to retrieve library files. It is not a Topic tag and not a Lesson.
 _Avoid_: Topic tag, folder, album
