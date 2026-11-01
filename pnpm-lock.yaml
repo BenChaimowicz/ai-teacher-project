@@ -177,6 +177,9 @@ importers:
       '@senoy/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@senoy/media':
+        specifier: workspace:*
+        version: link:../../packages/media
       '@senoy/research':
         specifier: workspace:*
         version: link:../../packages/research
@@ -367,6 +370,9 @@ importers:
       '@senoy/db':
         specifier: workspace:*
         version: link:../packages/db
+      '@senoy/media':
+        specifier: workspace:*
+        version: link:../packages/media
       drizzle-orm:
         specifier: ^0.44.5
         version: 0.44.7(postgres@3.4.9)

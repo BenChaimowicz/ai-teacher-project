@@ -331,3 +331,39 @@ test("Lessons are written by the Lesson pair, and the Generator's preferred host
   assert.deepEqual(other.models, ["fixture/author", "fixture/fallback"]);
   assert.deepEqual(other.hosts, [["alibaba"], undefined]);
 });
+
+test("A vision call sends its images after the JSON as high-detail data URLs, and the observer sees only their size", async () => {
+  let sent: { messages: { role: string; content: unknown }[] } | null = null;
+  let observed: unknown = null;
+  const transport = createOpenRouterTransport({
+    apiKey: "secret-test-key",
+    /** Keeps the request body so the test can read the user message. */
+    fetch: async (_url, init) => {
+      sent = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify(completion(JSON.stringify({ score: 1 }))), { status: 200 });
+    },
+    observe: (call) => { observed = call.request; },
+  });
+  const bytes = new Uint8Array([0xff, 0xd8, 0xff]);
+  assert.equal(await transport.complete("fixture/model", { ...REQUEST, images: [{ mimeType: "image/jpeg", bytes }] }), 1);
+  const user = sent!.messages.find((message) => message.role === "user")!;
+  assert.deepEqual(user.content, [
+    { type: "text", text: JSON.stringify(REQUEST.input) },
+    { type: "image_url", image_url: { url: "data:image/jpeg;base64,/9j/", detail: "high" } },
+  ]);
+  assert.deepEqual((observed as { images?: unknown }).images, [{ mimeType: "image/jpeg", byteSize: 3 }]);
+});
+
+test("A text-only call keeps its user message a plain JSON string", async () => {
+  let content: unknown = null;
+  const transport = createOpenRouterTransport({
+    apiKey: "secret-test-key",
+    /** Keeps the user message content. */
+    fetch: async (_url, init) => {
+      content = (JSON.parse(String(init?.body)) as { messages: { role: string; content: unknown }[] }).messages[1]!.content;
+      return new Response(JSON.stringify(completion(JSON.stringify({ score: 1 }))), { status: 200 });
+    },
+  });
+  await transport.complete("fixture/model", REQUEST);
+  assert.equal(content, JSON.stringify(REQUEST.input));
+});

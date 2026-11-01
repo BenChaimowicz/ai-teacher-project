@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { BlueprintSlot } from "@senoy/db/blueprint";
+import type { MediaDescriptorFields, MediaLicense } from "@senoy/db";
+import type { MediaBlock, ProseBlock } from "@senoy/db/reading-lesson";
 import type { PackSource, SourcePack } from "@senoy/research";
 import type { Generator, Judge, StructuredRequest, ModelReply } from "./model-ports.ts";
+import { rankCandidates, type MediaLibrary } from "./media-library.ts";
 import { ModelError } from "./openrouter.ts";
 import {
   applyRepairEdits, authoredSections, createReadingGenerator, LessonUnresearchableError, numberCitations, READING_JUDGE_CHECKS, ReadingFailedError,
-  ReuseUnfitError, UNRELIABLE_SOURCE, lessonEvidence, type ReadingInput, type ReuseSeed,
+  ReuseUnfitError, UNRELIABLE_SOURCE, lessonEvidence, mediaProposalOf, MEDIA_VISION_CHECKS, type ReadingInput, type ReuseSeed,
 } from "./reading-generation.ts";
 import { ILLUSTRATION_RULE, READING_STYLE, TEACHING_VOICE } from "./teaching-style.ts";
 
@@ -129,8 +132,8 @@ test("A cited reading becomes numbered Citations in order of first use, with the
   assert.equal(lesson.title, SLOT.title);
   assert.deepEqual(lesson.objectives, SLOT.objectives);
   assert.equal(lesson.lineage, null);
-  assert.equal(lesson.body.sections[0]!.blocks[0]!.text, "Yggdrasil is the world tree [1]. It has three roots [2][1].");
-  assert.equal(lesson.body.sections[1]!.blocks[0]!.text, "Roots again [2].");
+  assert.equal((lesson.body.sections[0]!.blocks[0]! as ProseBlock).text, "Yggdrasil is the world tree [1]. It has three roots [2][1].");
+  assert.equal((lesson.body.sections[1]!.blocks[0]! as ProseBlock).text, "Roots again [2].");
   assert.deepEqual(lesson.citations, [
     { n: 1, title: WIKI.title, url: WIKI.url },
     { n: 2, title: BRIT.title, url: BRIT.url },
@@ -171,8 +174,8 @@ test("A Judge failure is repaired by edits: the repair sees its draft, the numbe
   assert.equal(repairs, 1);
   assert.equal(judgeCalls.length, 2);
   assert.deepEqual(calls.map((call) => call.schemaName), ["cited_reading", "cited_reading_repair"], "A repair returns edits, never a new Lesson.");
-  assert.equal(lesson.body.sections[0]!.blocks[0]!.text, "Yggdrasil is the world tree [1].");
-  assert.equal(lesson.body.sections[1]!.blocks[0]!.text, "Roots again [2].", "The passage no problem named is kept verbatim.");
+  assert.equal((lesson.body.sections[0]!.blocks[0]! as ProseBlock).text, "Yggdrasil is the world tree [1].");
+  assert.equal((lesson.body.sections[1]!.blocks[0]! as ProseBlock).text, "Roots again [2].", "The passage no problem named is kept verbatim.");
   assert.equal((calls[0]!.input as { previousDraft?: unknown }).previousDraft, undefined);
   const revision = calls[1]!.input as { previousDraft: unknown; numberedSources: unknown; problems: string[]; sources: unknown[] };
   assert.deepEqual(revision.previousDraft, authored().sections);
@@ -482,7 +485,7 @@ test("A section the Judge fails as off_goal is cut by the repair, its Source dro
   assert.deepEqual(rounds[0]!.problems, OFF_GOAL.reasons);
 
   assert.deepEqual(lesson.body.sections.map((section) => section.heading), ["The largest ocean", "The deepest point"], "The emptied section is gone, heading and all.");
-  assert.equal(lesson.body.sections[1]!.blocks[0]!.text, "The Mariana Trench is the deepest known point in the ocean [2].");
+  assert.equal((lesson.body.sections[1]!.blocks[0]! as ProseBlock).text, "The Mariana Trench is the deepest known point in the ocean [2].");
   assert.deepEqual(lesson.sources.map(({ n, sourceId }) => ({ n, sourceId })), [{ n: 1, sourceId: OCEAN.sourceId }, { n: 2, sourceId: TRENCH.sourceId }],
     "Citations are renumbered and the Source only the cut section cited is no longer listed.");
   assert.deepEqual(lesson.citations.map(({ n, url }) => [n, url]), [[1, OCEAN.url], [2, TRENCH.url]]);
@@ -548,6 +551,7 @@ const SEED: ReuseSeed = {
   objectives: ["Describe Yggdrasil", "Name its roots"],
   sections: authored().sections,
   writtenFor: { instructionLanguage: "en", requiredReadingSupports: [], contentScope: "compact", explanationOrder: "topic_appropriate" },
+  media: null,
   verbatimAllowed: true,
   authorModelIds: ["origin/author"],
   rejectedSources: [],
@@ -576,7 +580,7 @@ test("A reused Lesson taken verbatim is its own body, judged against its own pac
   assert.deepEqual(checked.lesson.lineage, { originLessonId: "origin-lesson", mode: "verbatim" });
   assert.equal(checked.lesson.title, SLOT.title, "The approved slot's title and goal always win.");
   assert.equal(checked.lesson.lessonGoal, SLOT.lessonGoal);
-  assert.equal(checked.lesson.body.sections[0]!.blocks[0]!.text, "Yggdrasil is the world tree [1]. It has three roots [2][1].");
+  assert.equal((checked.lesson.body.sections[0]!.blocks[0]! as ProseBlock).text, "Yggdrasil is the world tree [1]. It has three roots [2][1].");
   assert.deepEqual(checked.authorModelIds, ["origin/author"]);
   assert.deepEqual(checked.rounds[0]!.reuse, { decision: "verbatim", reason: "Chose verbatim." });
 
@@ -594,7 +598,7 @@ test("An adapted reused Lesson is the fit pass's sections, and the fitting model
   const checked = await createReadingGenerator({ generator, judge }).generate(reusing());
 
   assert.deepEqual(checked.lesson.lineage, { originLessonId: "origin-lesson", mode: "adapted" });
-  assert.equal(checked.lesson.body.sections[0]!.blocks[0]!.text, "Yggdrasil is the world tree [1]. Its roots are three [2].");
+  assert.equal((checked.lesson.body.sections[0]!.blocks[0]! as ProseBlock).text, "Yggdrasil is the world tree [1]. Its roots are three [2].");
   assert.deepEqual(judgeCalls[0]!.authorModelIds, ["origin/author", "fixture/author"]);
   assert.deepEqual(checked.authorModelIds, ["origin/author", "fixture/author"]);
 });
@@ -671,4 +675,224 @@ test("A finished Lesson's numbered Citations turn back into the Source ID marker
     ...section, paragraphs: section.paragraphs.map((paragraph) => paragraph.replace("[src_bbbbbbbbbb, src_aaaaaaaaaa]", "[src_bbbbbbbbbb][src_aaaaaaaaaa]")),
   })));
   assert.deepEqual(numberCitations(authoredSections(numbered.body, numbered.sources), evidence), numbered);
+});
+
+/** A public-domain Norse plate in the library, as the catalog holds it. */
+function plate(overrides: Partial<MediaDescriptorFields> = {}): MediaDescriptorFields {
+  return {
+    id: "d0a1e001-0000-4000-8000-000000000001",
+    kind: "image",
+    origin: "library",
+    license: "public_domain",
+    licenseUrl: null,
+    caption: "Yggdrasil, after Friedrich Wilhelm Heine (1886).",
+    alt: "An engraving of a great ash tree.",
+    source: { title: "File:Yggdrasil.jpg", author: "Friedrich Wilhelm Heine", url: "https://commons.wikimedia.org/wiki/File:Yggdrasil.jpg" },
+    storageKey: "library/norse/yggdrasil-heine.jpg",
+    mimeType: "image/jpeg",
+    byteSize: 4,
+    sha256: "a".repeat(64),
+    width: 800,
+    height: 1000,
+    mediaCategory: "norse-mythic-depiction",
+    topicTags: ["yggdrasil", "world-tree"],
+    ...overrides,
+  };
+}
+
+const PLATE_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+
+/**
+ * An in-memory library over `rows`; files are readable when their key is in `files`.
+ * @param rows - The catalog
+ * @param files - Storage key → bytes
+ */
+function library(rows: MediaDescriptorFields[], files: Record<string, Uint8Array> = { [plate().storageKey]: PLATE_BYTES }): MediaLibrary {
+  return {
+    async vocabulary() {
+      const categories = [...new Set(rows.map((row) => row.mediaCategory))];
+      return categories.map((mediaCategory) => ({ mediaCategory, topicTags: [...new Set(rows.filter((row) => row.mediaCategory === mediaCategory).flatMap((row) => row.topicTags))] }));
+    },
+    async candidates(mediaCategory, topicTags) {
+      return rankCandidates(rows.filter((row) => row.mediaCategory === mediaCategory), topicTags);
+    },
+    async bytes(descriptor) {
+      const bytes = files[descriptor.storageKey];
+      if (!bytes) throw new Error(`No file at ${descriptor.storageKey}`);
+      return bytes;
+    },
+  };
+}
+
+/** What the writer asks for: the plate, after the first section. */
+const ASK = { section: "The tree", mediaCategory: "norse-mythic-depiction", topicTags: ["Yggdrasil"], caption: "One artist's depiction of Yggdrasil.", alt: "An engraving of an ash tree with roots and branches spreading wide." };
+
+/** A first draft that asks for `media`. */
+function asking(media: unknown = ASK) {
+  return { ...authored(), media };
+}
+
+/**
+ * The scripted Judge, with the vision call answered apart: each `media_fitness` call gets the next verdict, or throws
+ * when the verdict is an Error. Records every vision request.
+ * @param verdicts - One per vision call, repeating the last
+ */
+function visionJudge(...verdicts: (unknown | Error)[]) {
+  const scripted = scriptedJudge();
+  const vision: (StructuredRequest<unknown> & { authorModelIds: readonly string[] })[] = [];
+  const judge: Judge = {
+    modelId: scripted.judge.modelId,
+    async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
+      if (request.schemaName !== "media_fitness") return scripted.judge.judge(request);
+      vision.push(request as StructuredRequest<unknown> & { authorModelIds: readonly string[] });
+      const verdict = verdicts[Math.min(vision.length, verdicts.length) - 1] ?? PASS;
+      if (verdict instanceof Error) throw verdict;
+      return { value: request.parse(verdict), modelId: "fixture/vision" };
+    },
+  };
+  return { ...scripted, judge, vision };
+}
+
+/** Every media block in a Lesson body. */
+function mediaBlocks(body: { sections: { blocks: { kind: string }[] }[] }): MediaBlock[] {
+  return body.sections.flatMap((section) => section.blocks).filter((block): block is MediaBlock => block.kind === "media");
+}
+
+test("A Reading's one image is looked up by category and tags, vision-judged by a non-author, and placed after its section", async () => {
+  const { generator, calls } = scriptedGenerator(asking());
+  const { judge, vision } = visionJudge(PASS);
+  const other = plate({ id: "d0a1e001-0000-4000-8000-000000000002", storageKey: "library/norse/valhalla.jpg", topicTags: ["valhalla"] });
+  const checked = await createReadingGenerator({ generator, judge, media: library([other, plate()]) }).generate(INPUT);
+
+  const author = calls[0]!;
+  assert.match(author.systemPrompt, /"mediaCatalog" lists each Media category/);
+  assert.deepEqual((author.input as { mediaCatalog: unknown }).mediaCatalog, [{ mediaCategory: "norse-mythic-depiction", topicTags: ["valhalla", "yggdrasil", "world-tree"] }]);
+
+  assert.equal(vision.length, 1);
+  assert.deepEqual(vision[0]!.input, { caption: ASK.caption, alt: ASK.alt });
+  assert.deepEqual(vision[0]!.images, [{ mimeType: "image/jpeg", bytes: PLATE_BYTES }]);
+  assert.deepEqual(vision[0]!.authorModelIds, ["fixture/author"], "The vision Judge is never a model that wrote the Lesson.");
+  assert.deepEqual((vision[0]!.schema as { properties: { failedChecks: { items: { enum: unknown } } } }).properties.failedChecks.items.enum, MEDIA_VISION_CHECKS);
+
+  const [block, ...extra] = mediaBlocks(checked.lesson.body);
+  assert.equal(extra.length, 0);
+  assert.equal(checked.lesson.body.sections[0]!.blocks.at(-1), block, "The image follows the section it names.");
+  assert.equal(block!.caption, ASK.caption);
+  assert.equal(block!.alt, ASK.alt);
+  assert.deepEqual(block!.descriptor, plate(), "The Lesson keeps every descriptor field.");
+  assert.equal(checked.media.status, "attached");
+  assert.deepEqual(checked.rounds[0]!.media, { ...ASK, topicTags: ["yggdrasil"] }, "Tags are read as lowercase.");
+});
+
+test("A Lesson's descriptor is a copy: editing the catalog afterwards cannot change it", async () => {
+  const row = plate();
+  const { generator } = scriptedGenerator(asking());
+  const { judge } = visionJudge(PASS);
+  const checked = await createReadingGenerator({ generator, judge, media: library([row]) }).generate(INPUT);
+  row.caption = "Edited later.";
+  row.topicTags.push("edited");
+  row.source!.author = "Someone else";
+  assert.deepEqual(mediaBlocks(checked.lesson.body)[0]!.descriptor, plate());
+});
+
+test("A catalog miss drops the image and the Lesson goes on without it, with no vision call", async () => {
+  const { generator } = scriptedGenerator(asking({ ...ASK, topicTags: ["bifrost"] }));
+  const { judge, vision } = visionJudge(PASS);
+  const checked = await createReadingGenerator({ generator, judge, media: library([plate()]) }).generate(INPUT);
+  assert.equal(vision.length, 0);
+  assert.deepEqual(mediaBlocks(checked.lesson.body), []);
+  assert.equal(checked.media.status, "miss");
+  assert.equal(checked.judge.pass, true);
+});
+
+test("Deterministic checks skip an unhostable or unreadable file for the next match, and drop the image when none is left", async () => {
+  const nonCommercial = plate({ id: "d0a1e001-0000-4000-8000-00000000000a", storageKey: "library/norse/a-nc.jpg", license: "cc_by_nc" as MediaLicense, topicTags: ["yggdrasil", "world-tree", "ash"] });
+  const unreadable = plate({ id: "d0a1e001-0000-4000-8000-00000000000b", storageKey: "library/norse/b-gone.jpg" });
+  const { generator } = scriptedGenerator(asking({ ...ASK, topicTags: ["yggdrasil", "ash"] }));
+  const { judge, vision } = visionJudge(PASS);
+  const checked = await createReadingGenerator({ generator, judge, media: library([nonCommercial, unreadable, plate()]) }).generate(INPUT);
+  assert.equal(vision.length, 1);
+  assert.equal(mediaBlocks(checked.lesson.body)[0]!.descriptor.id, plate().id);
+  assert.ok(checked.media.status === "attached");
+  assert.deepEqual(checked.media.rejected.map(({ storageKey }) => storageKey), [nonCommercial.storageKey, unreadable.storageKey]);
+  assert.match(checked.media.rejected[0]!.failures.join(" "), /not one the product can host/);
+  assert.match(checked.media.rejected[1]!.failures.join(" "), /No file at/);
+
+  const { generator: again } = scriptedGenerator(asking());
+  const none = visionJudge(PASS);
+  const dropped = await createReadingGenerator({ generator: again, judge: none.judge, media: library([nonCommercial]) }).generate(INPUT);
+  assert.equal(none.vision.length, 0, "No file passed the checks, so nothing is shown to the vision Judge.");
+  assert.equal(dropped.media.status, "invalid");
+  assert.deepEqual(mediaBlocks(dropped.lesson.body), []);
+});
+
+test("A vision failure or a failed vision call drops the image and keeps the Lesson as it passed", async () => {
+  const { generator } = scriptedGenerator(asking());
+  const failing = visionJudge({ pass: false, failedChecks: ["caption_fit"], reasons: ["The image is a painting, not a photograph."] });
+  const failed = await createReadingGenerator({ generator, judge: failing.judge, media: library([plate()]) }).generate(INPUT);
+  assert.equal(failed.media.status, "vision_failed");
+  assert.deepEqual(mediaBlocks(failed.lesson.body), []);
+  assert.equal(failed.repairs, 0, "The image spends no Lesson repair.");
+
+  const { generator: again } = scriptedGenerator(asking());
+  const erroring = visionJudge(new ModelError("timeout"));
+  const errored = await createReadingGenerator({ generator: again, judge: erroring.judge, media: library([plate()]) }).generate(INPUT);
+  assert.equal(errored.media.status, "vision_error");
+  assert.deepEqual(mediaBlocks(errored.lesson.body), []);
+
+  const { generator: third } = scriptedGenerator(asking());
+  const broken = visionJudge(new Error("lease lost"));
+  await assert.rejects(createReadingGenerator({ generator: third, judge: broken.judge, media: library([plate()]) }).generate(INPUT), /lease lost/);
+});
+
+test("Repairs keep the image the first draft asked for; a section the repairs cut takes it with it", async () => {
+  const fail = { pass: false, failedChecks: ["claim_support"], reasons: ["Roots are unsupported."] };
+  const { generator } = scriptedGenerator(asking(), "fixture/author", TOUCH);
+  const scripted = visionJudge(PASS);
+  const base = scripted.judge;
+  let lessonVerdicts = 0;
+  const judge: Judge = {
+    modelId: base.modelId,
+    async judge(request) {
+      if (request.schemaName === "reading_lesson_review") return { value: request.parse(lessonVerdicts++ === 0 ? fail : PASS), modelId: "fixture/judge" };
+      return base.judge(request);
+    },
+  };
+  const repaired = await createReadingGenerator({ generator, judge, media: library([plate()]) }).generate(INPUT);
+  assert.equal(repaired.repairs, 1);
+  assert.equal(repaired.media.status, "attached");
+
+  const { generator: misnamed } = scriptedGenerator(asking({ ...ASK, section: "A heading no draft has" }));
+  const unplaced = visionJudge(PASS);
+  const checked = await createReadingGenerator({ generator: misnamed, judge: unplaced.judge, media: library([plate()]) }).generate(INPUT);
+  assert.equal(checked.media.status, "unplaced");
+  assert.equal(unplaced.vision.length, 0);
+});
+
+test("A request outside the offered catalog is dropped, not a failed draft; with no library, no image is offered", async () => {
+  const { generator } = scriptedGenerator(asking({ ...ASK, mediaCategory: "drum-grip" }));
+  const { judge } = visionJudge(PASS);
+  const checked = await createReadingGenerator({ generator, judge, media: library([plate()]) }).generate(INPUT);
+  assert.equal(checked.media.status, "none");
+
+  const { generator: plain, calls } = scriptedGenerator(authored());
+  const without = await createReadingGenerator({ generator: plain, judge: scriptedJudge().judge }).generate(INPUT);
+  assert.equal(without.media.status, "none");
+  assert.doesNotMatch(calls[0]!.systemPrompt, /mediaCatalog/);
+  assert.ok(!("mediaCatalog" in (calls[0]!.input as object)));
+});
+
+test("A reused Lesson asks this Course's catalog again for the image it had", async () => {
+  const origin = await createReadingGenerator({ generator: scriptedGenerator(asking()).generator, judge: visionJudge(PASS).judge, media: library([plate()]) }).generate(INPUT);
+  const proposal = mediaProposalOf(origin.lesson.body);
+  assert.deepEqual(proposal, { section: "The tree", mediaCategory: "norse-mythic-depiction", topicTags: ["yggdrasil", "world-tree"], caption: ASK.caption, alt: ASK.alt });
+  assert.deepEqual(authoredSections(origin.lesson.body, origin.lesson.sources), authoredSections(numberCitations(authored().sections, lessonEvidence(INPUT.packs)).body, origin.lesson.sources), "Media blocks are not prose to fit.");
+
+  const { generator, calls } = scriptedGenerator(fitReply("verbatim"));
+  const { judge, vision } = visionJudge(PASS);
+  const reused = await createReadingGenerator({ generator, judge, media: library([plate()]) }).generate(reusing({ media: proposal }));
+  assert.ok(!("mediaCatalog" in (calls[0]!.input as object)), "The fit pass is not offered a new image.");
+  assert.equal(vision.length, 1);
+  assert.equal(reused.media.status, "attached");
+  assert.equal(mediaBlocks(reused.lesson.body)[0]!.descriptor.id, plate().id);
 });

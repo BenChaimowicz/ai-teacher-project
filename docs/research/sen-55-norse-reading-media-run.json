@@ -1,0 +1,383 @@
+{
+  "startedAt": "2026-10-31T18:06:21.003Z",
+  "latencyMs": 104211,
+  "sourcePacks": "docs/research/sen-36-norse-source-packs.json",
+  "slot": {
+    "id": "slot1",
+    "method": "reading",
+    "title": "Yggdrasil and the Nine Worlds",
+    "lessonGoal": "Describe how Norse sources picture Yggdrasil connecting the Nine Worlds.",
+    "objectives": [
+      "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "Explain why accounts of Yggdrasil's roots differ between Norse sources"
+    ],
+    "topicTags": [
+      "yggdrasil",
+      "nine-worlds",
+      "norse-cosmology"
+    ],
+    "assessesSlotIds": []
+  },
+  "profile": {
+    "instructionLanguage": "en",
+    "requiredReadingSupports": [],
+    "contentScope": "standard",
+    "explanationOrder": "topic_appropriate"
+  },
+  "status": "checkpoint",
+  "lesson": {
+    "slotId": "slot1",
+    "teachingMethod": "reading",
+    "title": "Yggdrasil and the Nine Worlds",
+    "lessonGoal": "Describe how Norse sources picture Yggdrasil connecting the Nine Worlds.",
+    "objectives": [
+      "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "Explain how accounts of Yggdrasil's roots differ between Norse sources"
+    ],
+    "topicTags": [
+      "yggdrasil",
+      "nine-worlds",
+      "norse-cosmology"
+    ],
+    "lineage": null,
+    "body": {
+      "sections": [
+        {
+          "heading": "Yggdrasil holds the world picture together",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "How can you picture the worlds of gods, humans, and the dead as parts of one universe? You will use Yggdrasil, key realm names, and two accounts of its roots to build a picture that keeps the sources’ differences in view."
+            },
+            {
+              "kind": "prose",
+              "text": "Begin with an enormous ash tree. In Gylfaginning, Yggdrasil’s branches stretch across the world and rise above heaven, while three broad roots support it [1]. Yggdrasil is the world tree at the centre of Norse cosmology, with the Nine Worlds arranged around it [2]."
+            },
+            {
+              "kind": "prose",
+              "text": "The main written sources for this picture are the Poetic Edda, a collection of poems, and the Prose Edda, attributed to Snorri Sturluson; both were compiled in the thirteenth century from earlier oral material [3]. Together, they present the Nine Worlds in relation to Yggdrasil [3]."
+            },
+            {
+              "kind": "prose",
+              "text": "Imagine drawing a large tree in the middle of a blank page, leaving room for names around its branches and roots. Treat that drawing as a learning aid, not an exact map: descriptions place the realms spreading out from the tree or at different levels around it [2]."
+            },
+            {
+              "kind": "prose",
+              "text": "Can you explain why the tree belongs at the centre of your picture, without assigning every world an exact position?"
+            },
+            {
+              "kind": "media",
+              "caption": "An artistic depiction of the world tree Yggdrasil.",
+              "alt": "A large tree with spreading branches above its trunk and roots extending below.",
+              "descriptor": {
+                "id": "d0a1e047-0000-4000-8000-000000000023",
+                "kind": "image",
+                "origin": "library",
+                "license": "public_domain",
+                "licenseUrl": null,
+                "caption": "The world tree Yggdrasil with a well at its foot, as drawn by Lorenz Frølich for an 1895 edition of the Poetic Edda. One artist's depiction.",
+                "alt": "Pen-and-ink drawing of an enormous broad-crowned tree standing over open ground, with a stream and exposed roots at its base, framed by ornamental flourishes in the corners.",
+                "source": {
+                  "url": "https://commons.wikimedia.org/wiki/File:Om_Yggdrasil_by_Fr%C3%B8lich.jpg",
+                  "title": "File:Om Yggdrasil by Frølich.jpg",
+                  "author": "Lorenz Frølich"
+                },
+                "storageKey": "library/norse/yggdrasil-frolich.jpg",
+                "mimeType": "image/jpeg",
+                "byteSize": 467140,
+                "sha256": "beb3274a6b0471a4c7f6d0b44702aea3ef1de1e8686c4cdbf9495e1723d55048",
+                "width": 844,
+                "height": 763,
+                "mediaCategory": "norse-mythic-depiction",
+                "topicTags": [
+                  "yggdrasil",
+                  "world-tree",
+                  "urdarbrunnr",
+                  "cosmology",
+                  "frolich"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "heading": "The worlds of gods, humans, and the dead",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Now add names to that picture, starting with the realms most useful for distinguishing gods, humans, and the dead. Asgard is the realm of the Aesir gods, while Vanaheim is the realm of the Vanir [2][1]. Keep both realm names in your notes rather than using Asgard as the only name to remember."
+            },
+            {
+              "kind": "prose",
+              "text": "For humans, use Midgard: it is the human realm [2]. In Snorri’s account, Asgard lies in the heavens and connects to Midgard through Bifrost, the rainbow bridge [2]. This gives you one concrete connection to remember: the bridge joins Asgard and Midgard [2]."
+            },
+            {
+              "kind": "prose",
+              "text": "For the dead, begin with Hel. One account describes it first as the destination of people who died from illness or old age, and later as the destination of most people [2]. But do not turn that description into a rule without exceptions: the same account notes that the god Baldr goes to Hel and stresses that deciding who goes there is difficult [2]."
+            },
+            {
+              "kind": "prose",
+              "text": "The name Niflheim also appears in descriptions of the dead: Bellows’s note on Völuspá identifies it as their world, while Snorri places Hel’s realm within Niflheim [4][2]. Keep the source attached to the name instead of assuming that every account uses the same labels."
+            },
+            {
+              "kind": "prose",
+              "text": "You also need room for uncertainty. Earlier Norse poetry often assumes knowledge of the worlds rather than describing their locations fully, and Bellows’s note on Völuspá marks the ninth world as uncertain [2][4]."
+            },
+            {
+              "kind": "prose",
+              "text": "Which names would you use for the human realm, the divine realms discussed here, and a realm of the dead?"
+            }
+          ]
+        },
+        {
+          "heading": "Three roots, two different accounts",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Those differences in realm names matter when you turn to Yggdrasil’s roots: Grímnismál and Gylfaginning both describe three roots, but place them differently [5][1]. Work through the accounts separately before comparing them."
+            },
+            {
+              "kind": "prose",
+              "text": "First, imagine making a sketch from Grímnismál alone. Draw three roots, then put Hel beneath one, the frost-giants beneath another, and the lands of humans beneath the remaining root [5]. You now have the three relationships that this account gives you; leave other labels out of this sketch."
+            },
+            {
+              "kind": "prose",
+              "text": "Next, start a fresh sketch from Gylfaginning. Place one root among the Aesir, another among the giants, and the third over Niflheim [1]. Beneath the Niflheim root, this account places Hvergelmir and describes Nidhogg gnawing the root from below [1]."
+            },
+            {
+              "kind": "prose",
+              "text": "Now compare what you drew. Both accounts give the tree three roots, and both include giants in the root description [5][1]. Grímnismál names Hel and human lands beneath roots, whereas Gylfaginning names the Aesir and Niflheim among the roots’ locations [5][1]."
+            },
+            {
+              "kind": "prose",
+              "text": "Be especially careful with Hel and Niflheim. Snorri’s placement of Hel’s realm in Niflheim connects those names in his account [2]. Still, preserve each description’s wording in your notes rather than silently replacing one name with the other."
+            },
+            {
+              "kind": "prose",
+              "text": "To explain the difference, begin with what agrees—the three roots—then name the surroundings each account supplies [5][1]. Can you describe both versions without combining them into a single set of root labels?"
+            }
+          ]
+        },
+        {
+          "heading": "A connected picture, not one fixed map",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Bring the sketches back to the central idea: Yggdrasil is the world tree around which the Nine Worlds are pictured [2][3]. Asgard and Vanaheim are associated with the Aesir and Vanir, Midgard is the human realm, and Hel is a realm of the dead [2]."
+            },
+            {
+              "kind": "prose",
+              "text": "Keep the source differences visible. Grímnismál places Hel, frost-giants, and human lands beneath the roots; Gylfaginning places roots among the Aesir and giants and over Niflheim [5][1]. Your explanation can hold onto the shared tree while allowing its surrounding geography to differ."
+            }
+          ]
+        }
+      ]
+    },
+    "sources": [
+      {
+        "n": 1,
+        "sourceId": "src_238610fc85",
+        "url": "https://www.sacred-texts.com/neu/pre/pre04.htm",
+        "title": "Gylfaginning | Internet Sacred Text Archive",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 2,
+        "sourceId": "src_2b9c51c172",
+        "url": "https://www.worldhistory.org/article/1305/nine-realms-of-norse-cosmology",
+        "title": "Nine Realms of Norse Cosmology",
+        "publisher": "worldhistory.org",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 3,
+        "sourceId": "src_8c1061af65",
+        "url": "https://en.wikipedia.org/w/index.php?title=Norse_cosmology&oldid=1357244099",
+        "title": "Norse cosmology",
+        "publisher": "en.wikipedia.org",
+        "retrievedAt": "2026-10-08T17:41:28.581Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 4,
+        "sourceId": "src_b6cf1c25b8",
+        "url": "https://sacred-texts.com/neu/poe/poe03.htm",
+        "title": "Völuspá (Voluspo) – Poetic Edda, Vol. I | Bellows Translation",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 5,
+        "sourceId": "src_7d9e9ae17d",
+        "url": "https://sacred-texts.com/neu/poe/poe06.htm",
+        "title": "Grimnismol – The Poetic Edda | Internet Sacred Text Archive",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      }
+    ],
+    "citations": [
+      {
+        "n": 1,
+        "title": "Gylfaginning | Internet Sacred Text Archive",
+        "url": "https://www.sacred-texts.com/neu/pre/pre04.htm"
+      },
+      {
+        "n": 2,
+        "title": "Nine Realms of Norse Cosmology",
+        "url": "https://www.worldhistory.org/article/1305/nine-realms-of-norse-cosmology"
+      },
+      {
+        "n": 3,
+        "title": "Norse cosmology",
+        "url": "https://en.wikipedia.org/w/index.php?title=Norse_cosmology&oldid=1357244099"
+      },
+      {
+        "n": 4,
+        "title": "Völuspá (Voluspo) – Poetic Edda, Vol. I | Bellows Translation",
+        "url": "https://sacred-texts.com/neu/poe/poe03.htm"
+      },
+      {
+        "n": 5,
+        "title": "Grimnismol – The Poetic Edda | Internet Sacred Text Archive",
+        "url": "https://sacred-texts.com/neu/poe/poe06.htm"
+      }
+    ]
+  },
+  "media": {
+    "status": "attached",
+    "proposal": {
+      "section": "Yggdrasil holds the world picture together",
+      "mediaCategory": "norse-mythic-depiction",
+      "topicTags": [
+        "world-tree",
+        "yggdrasil"
+      ],
+      "caption": "An artistic depiction of the world tree Yggdrasil.",
+      "alt": "A large tree with spreading branches above its trunk and roots extending below."
+    },
+    "rejected": [],
+    "descriptorId": "d0a1e047-0000-4000-8000-000000000023",
+    "judge": {
+      "pass": true,
+      "failedChecks": [],
+      "reasons": []
+    },
+    "judgeModelId": "openai/gpt-6-luna"
+  },
+  "judge": {
+    "pass": true,
+    "failedChecks": [],
+    "reasons": []
+  },
+  "repairs": 0,
+  "grounding": [
+    {
+      "objective": "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "verdict": "supported",
+      "text": "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "reason": ""
+    },
+    {
+      "objective": "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "verdict": "supported",
+      "text": "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "reason": ""
+    },
+    {
+      "objective": "Explain why accounts of Yggdrasil's roots differ between Norse sources",
+      "verdict": "rewritten",
+      "text": "Explain how accounts of Yggdrasil's roots differ between Norse sources",
+      "reason": "The sources give different locations for the roots but do not explain why the accounts differ."
+    }
+  ],
+  "rejectedSources": [
+    {
+      "sourceId": "src_f41bf8c22d",
+      "url": "https://wevikings.com/library/poetry/voluspa/olive-bray/",
+      "reason": "The transcription is hosted on an unverified Viking-themed site, not an established textual archive or educational publisher."
+    },
+    {
+      "sourceId": "src_39d3dea075",
+      "url": "https://www.glanzundgravur.de/en/blog-yggdrasil.html",
+      "reason": "This is a commercial engraving/jewelry site’s blog, not an appropriate evidence source."
+    },
+    {
+      "sourceId": "src_afdad0e405",
+      "url": "https://www.mythic-harmonies.com/norse-mythology/yggdrasil-world-tree-nine-realms/",
+      "reason": "This appears to be a popular SEO-style mythology article rather than a scholarly or established educational reference."
+    },
+    {
+      "sourceId": "src_6feffb6846",
+      "url": "https://norse-mythology.org/cosmology/yggdrasil-and-the-well-of-urd/",
+      "reason": "This is an independent popular mythology site, not an established scholarly or educational reference suitable as evidence."
+    }
+  ],
+  "authorModelIds": [
+    "openai/gpt-6.1-sol"
+  ],
+  "judgeModelId": "openai/gpt-6-luna",
+  "rounds": [
+    {
+      "modelId": "openai/gpt-6.1-sol",
+      "draft": [
+        {
+          "heading": "Yggdrasil holds the world picture together",
+          "paragraphs": [
+            "How can you picture the worlds of gods, humans, and the dead as parts of one universe? You will use Yggdrasil, key realm names, and two accounts of its roots to build a picture that keeps the sources’ differences in view.",
+            "Begin with an enormous ash tree. In Gylfaginning, Yggdrasil’s branches stretch across the world and rise above heaven, while three broad roots support it [src_238610fc85]. Yggdrasil is the world tree at the centre of Norse cosmology, with the Nine Worlds arranged around it [src_2b9c51c172].",
+            "The main written sources for this picture are the Poetic Edda, a collection of poems, and the Prose Edda, attributed to Snorri Sturluson; both were compiled in the thirteenth century from earlier oral material [src_8c1061af65]. Together, they present the Nine Worlds in relation to Yggdrasil [src_8c1061af65].",
+            "Imagine drawing a large tree in the middle of a blank page, leaving room for names around its branches and roots. Treat that drawing as a learning aid, not an exact map: descriptions place the realms spreading out from the tree or at different levels around it [src_2b9c51c172].",
+            "Can you explain why the tree belongs at the centre of your picture, without assigning every world an exact position?"
+          ]
+        },
+        {
+          "heading": "The worlds of gods, humans, and the dead",
+          "paragraphs": [
+            "Now add names to that picture, starting with the realms most useful for distinguishing gods, humans, and the dead. Asgard is the realm of the Aesir gods, while Vanaheim is the realm of the Vanir [src_2b9c51c172, src_238610fc85]. Keep both realm names in your notes rather than using Asgard as the only name to remember.",
+            "For humans, use Midgard: it is the human realm [src_2b9c51c172]. In Snorri’s account, Asgard lies in the heavens and connects to Midgard through Bifrost, the rainbow bridge [src_2b9c51c172]. This gives you one concrete connection to remember: the bridge joins Asgard and Midgard [src_2b9c51c172].",
+            "For the dead, begin with Hel. One account describes it first as the destination of people who died from illness or old age, and later as the destination of most people [src_2b9c51c172]. But do not turn that description into a rule without exceptions: the same account notes that the god Baldr goes to Hel and stresses that deciding who goes there is difficult [src_2b9c51c172].",
+            "The name Niflheim also appears in descriptions of the dead: Bellows’s note on Völuspá identifies it as their world, while Snorri places Hel’s realm within Niflheim [src_b6cf1c25b8, src_2b9c51c172]. Keep the source attached to the name instead of assuming that every account uses the same labels.",
+            "You also need room for uncertainty. Earlier Norse poetry often assumes knowledge of the worlds rather than describing their locations fully, and Bellows’s note on Völuspá marks the ninth world as uncertain [src_2b9c51c172, src_b6cf1c25b8].",
+            "Which names would you use for the human realm, the divine realms discussed here, and a realm of the dead?"
+          ]
+        },
+        {
+          "heading": "Three roots, two different accounts",
+          "paragraphs": [
+            "Those differences in realm names matter when you turn to Yggdrasil’s roots: Grímnismál and Gylfaginning both describe three roots, but place them differently [src_7d9e9ae17d, src_238610fc85]. Work through the accounts separately before comparing them.",
+            "First, imagine making a sketch from Grímnismál alone. Draw three roots, then put Hel beneath one, the frost-giants beneath another, and the lands of humans beneath the remaining root [src_7d9e9ae17d]. You now have the three relationships that this account gives you; leave other labels out of this sketch.",
+            "Next, start a fresh sketch from Gylfaginning. Place one root among the Aesir, another among the giants, and the third over Niflheim [src_238610fc85]. Beneath the Niflheim root, this account places Hvergelmir and describes Nidhogg gnawing the root from below [src_238610fc85].",
+            "Now compare what you drew. Both accounts give the tree three roots, and both include giants in the root description [src_7d9e9ae17d, src_238610fc85]. Grímnismál names Hel and human lands beneath roots, whereas Gylfaginning names the Aesir and Niflheim among the roots’ locations [src_7d9e9ae17d, src_238610fc85].",
+            "Be especially careful with Hel and Niflheim. Snorri’s placement of Hel’s realm in Niflheim connects those names in his account [src_2b9c51c172]. Still, preserve each description’s wording in your notes rather than silently replacing one name with the other.",
+            "To explain the difference, begin with what agrees—the three roots—then name the surroundings each account supplies [src_7d9e9ae17d, src_238610fc85]. Can you describe both versions without combining them into a single set of root labels?"
+          ]
+        },
+        {
+          "heading": "A connected picture, not one fixed map",
+          "paragraphs": [
+            "Bring the sketches back to the central idea: Yggdrasil is the world tree around which the Nine Worlds are pictured [src_2b9c51c172, src_8c1061af65]. Asgard and Vanaheim are associated with the Aesir and Vanir, Midgard is the human realm, and Hel is a realm of the dead [src_2b9c51c172].",
+            "Keep the source differences visible. Grímnismál places Hel, frost-giants, and human lands beneath the roots; Gylfaginning places roots among the Aesir and giants and over Niflheim [src_7d9e9ae17d, src_238610fc85]. Your explanation can hold onto the shared tree while allowing its surrounding geography to differ."
+          ]
+        }
+      ],
+      "media": {
+        "section": "Yggdrasil holds the world picture together",
+        "mediaCategory": "norse-mythic-depiction",
+        "topicTags": [
+          "world-tree",
+          "yggdrasil"
+        ],
+        "caption": "An artistic depiction of the world tree Yggdrasil.",
+        "alt": "A large tree with spreading branches above its trunk and roots extending below."
+      },
+      "problems": []
+    }
+  ]
+}

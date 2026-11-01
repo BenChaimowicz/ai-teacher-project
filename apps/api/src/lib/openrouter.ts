@@ -11,7 +11,12 @@ export type StructuredRequest<T> = {
   reasoningMaxTokens?: number;
   /** Reasoning effort for this call; overrides any token cap. Omitted with no cap means the model default. */
   reasoningEffort?: ReasoningEffort;
+  /** Images sent after the user JSON, for a vision call (spec §5.6 step 4). Omitted means a text-only call. */
+  images?: readonly ModelImage[];
 };
+
+/** One image a vision call looks at, sent inline as a data URL because the media bucket is private. */
+export type ModelImage = { mimeType: string; bytes: Uint8Array };
 
 /** OpenRouter reasoning effort levels. */
 export type ReasoningEffort = "none" | "low" | "medium" | "high";
@@ -45,6 +50,8 @@ export type ModelCallRequest = {
   schemaName: string;
   providerOrder?: string[];
   reasoning?: unknown;
+  /** Each attached image's type and size; the bytes themselves are not recorded. */
+  images?: { mimeType: string; byteSize: number }[];
   timeoutMs: number;
 };
 
@@ -208,6 +215,22 @@ function responseContent(raw: unknown, reply: Pick<ModelErrorDetails, "provider"
   return message.content;
 }
 
+/**
+ * The user message: the input JSON alone, or for a vision call the JSON followed by each image at high detail.
+ * @param request - The structured request
+ */
+function userContent(request: StructuredRequest<unknown>) {
+  const text = JSON.stringify(request.input);
+  if (!request.images?.length) return text;
+  return [
+    { type: "text", text },
+    ...request.images.map(({ mimeType, bytes }) => ({
+      type: "image_url",
+      image_url: { url: `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`, detail: "high" },
+    })),
+  ];
+}
+
 /** What one call has seen so far, for its observer. */
 type CallState = { response: unknown; httpStatus: number | null; provider: string | null; responseId: string | null };
 
@@ -246,7 +269,7 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
           model: modelId,
           messages: [
             { role: "system", content: request.systemPrompt },
-            { role: "user", content: JSON.stringify(request.input) },
+            { role: "user", content: userContent(request) },
           ],
           response_format: {
             type: "json_schema",
@@ -315,6 +338,7 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
               schemaName: request.schemaName,
               ...(providerOrder?.length ? { providerOrder } : {}),
               ...(reasoning ? { reasoning } : {}),
+              ...(request.images?.length ? { images: request.images.map(({ mimeType, bytes }) => ({ mimeType, byteSize: bytes.byteLength })) } : {}),
               timeoutMs,
             },
             response: state.response,

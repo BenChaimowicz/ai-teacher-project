@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import type { NumberedSource, ReadingBody } from "@senoy/db/reading-lesson";
+import type { MediaLicense } from "@senoy/db";
+import { proseBlocks, type MediaBlock, type NumberedSource, type ReadingBody } from "@senoy/db/reading-lesson";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
 import { useShell } from "@/components/shell/app-shell.tsx";
@@ -31,7 +32,59 @@ function splitKey(text: string): [string, string] {
  * @param body - Reading body
  */
 function wordCount(body: ReadingBody) {
-  return body.sections.reduce((sum, section) => sum + section.blocks.reduce((n, block) => n + block.text.split(/\s+/).length, 0), 0);
+  return body.sections.reduce((sum, section) => sum + proseBlocks(section).reduce((n, block) => n + block.text.split(/\s+/).length, 0), 0);
+}
+
+/** How a figure's credit line names each licence. */
+const LICENSE_LABELS: Record<MediaLicense, string> = {
+  public_domain: "Public domain",
+  cc0: "CC0",
+  cc_by: "CC BY",
+  cc_by_sa: "CC BY-SA",
+  product_owned: "Original illustration",
+};
+
+/**
+ * One piece of Demonstrative media: the file from `/media/…`, the caption the Lesson wrote, and a credit line with the
+ * file's title, author, and licence, linked to its source page and licence deed where it has them.
+ */
+function MediaFigure({ block }: { block: MediaBlock }) {
+  const { descriptor } = block;
+  const license = LICENSE_LABELS[descriptor.license];
+  return (
+    <figure className="l-figure fb">
+      <img
+        src={`/media/${descriptor.storageKey}`}
+        alt={block.alt}
+        width={descriptor.width ?? undefined}
+        height={descriptor.height ?? undefined}
+        loading="lazy"
+        decoding="async"
+      />
+      <figcaption>
+        <span className="l-figure-caption">{block.caption}</span>
+        <span className="l-figure-credit">
+          {descriptor.source ? (
+            <>
+              <a href={descriptor.source.url} target="_blank" rel="noreferrer">
+                {descriptor.source.title}
+              </a>
+              {" · "}
+              {descriptor.source.author}
+              {" · "}
+            </>
+          ) : null}
+          {descriptor.licenseUrl ? (
+            <a href={descriptor.licenseUrl} target="_blank" rel="noreferrer">
+              {license}
+            </a>
+          ) : (
+            license
+          )}
+        </span>
+      </figcaption>
+    </figure>
+  );
 }
 
 type ProseProps = { text: string; sources: Map<number, NumberedSource>; onCite: (event: MouseEvent<HTMLAnchorElement>, n: number) => void };
@@ -381,7 +434,7 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
       <div className="l-prose">
         {shownSections.map((section, index) => {
           const open = !fold || unfolded.has(index);
-          const hasMore = section.blocks.some((block) => splitKey(block.text)[1].trim().length > 0);
+          const hasMore = section.blocks.some((block) => block.kind === "media" || splitKey(block.text)[1].trim().length > 0);
           return (
             <section key={`${section.heading}-${index}`} aria-labelledby={`sec-${lessonId}-${index}`}>
               <h2 id={`sec-${lessonId}-${index}`} data-sec-end={index > 0 ? index - 1 : undefined}>
@@ -391,6 +444,8 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
                 {section.heading}
               </h2>
               {section.blocks.map((block, blockIndex) => {
+                // In Skim a figure waits with the rest of its section until the section is expanded.
+                if (block.kind === "media") return open ? <MediaFigure key={blockIndex} block={block} /> : null;
                 if (!fold) {
                   return (
                     <p key={blockIndex} className="fb">

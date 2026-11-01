@@ -30,6 +30,8 @@ Demonstrative media comes from a seeded catalog (spec §2, §5.6). The files are
 
 `pnpm media:seed` uploads the bytes to the private bucket (`MEDIA_BUCKET` at `MEDIA_ENDPOINT` / `MEDIA_REGION`, with `ACCESS_KEY_ID` and `SECRET_ACCESS_KEY`) and writes the descriptors to `media_descriptors`. It uploads only files the bucket lacks or holds a different digest for, and rewrites only descriptors that differ, so running it twice changes nothing. To add a file: put it under `packages/media/catalog/`, add its entry, run `pnpm media:seed`. A file with no entry, or an entry that fails the descriptor rules, stops the seed with every problem listed.
 
+A Reading's writer may ask for one image: a Media category and Topic tags from what the library holds, the section it follows, and the caption and alt text the Learner will read. Once the Reading passes its Judge, the best-matching raster file that passes the descriptor rules is sent to a separate vision Judge call against that caption and alt. On a pass the Lesson body gains a media block holding a copy of the descriptor; on a miss or a failure the image is dropped and the Lesson goes on without it. Study shows the file at `/media/<storage key>`, which the API streams from the bucket only when a published Lesson's body holds that key. SVG files are not attached yet (SEN-115).
+
 ## Decisions
 
 Every mid-sized or bigger decision the team makes about a ticket is one Markdown file in [`docs/decisions/`](docs/decisions/README.md): what we decided, why, and when. The Usage Console reads that folder off disk and shows it under **Decisions**, so an entry written now appears on the next refresh — there is no database and nothing to migrate. Architectural choices still get a full ADR in [`docs/adr/`](docs/adr).
@@ -109,6 +111,14 @@ pnpm check:reuse:live [subject]
 ```
 
 This opt-in check makes billable model calls: the fit call on a slot asking for what the subject's oldest reusable Reading teaches, and on one asking for something unrelated, then the verbatim-or-adapt pass and the reading checks on that Reading. It writes nothing. The subject defaults to "Norse mythology".
+
+To exercise one Reading's Demonstrative media (spec §5.6) against OpenRouter, the seeded Media catalog, and the private bucket:
+
+```bash
+pnpm check:reading-media:live
+```
+
+This opt-in check makes billable model calls: it writes the SEN-36 Norse Reading with the image library offered, looks up the file it asks for, and sends that file to the vision Judge. It writes the run to `docs/research/sen-55-norse-reading-media-run.json` and fails unless one image was attached.
 
 Generator and Judge share one native-fetch OpenRouter transport. Defaults live in `apps/api/src/lib/model-config.ts`; optional server-only overrides are listed in `.env.example`. Judge calls require a different author model ID. Research vendors remain direct; validity makes no research calls. A reply that is invalid or cut off is retried once on the same model, then once on the configured fallback, and each reply names the model that wrote it so the Judge never judges its own author's work (ADR 0015). Provider schemas are also checked in application code, including stage-specific clarification invariants.
 

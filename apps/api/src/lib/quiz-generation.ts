@@ -3,7 +3,7 @@ import type { BlueprintSlot, JudgeResult } from "@senoy/db/blueprint";
 import type { GoalScope } from "@senoy/db/course-request";
 import { quizCodeFailures, type QuizLessonDraft } from "@senoy/db/lesson-checkpoint";
 import { QUIZ_MAX_ITEMS, QUIZ_MIN_ITEMS, QUIZ_OPTION_COUNT, type QuizItem } from "@senoy/db/quiz";
-import { QUIZ_METHOD_ID, type ReadingBody } from "@senoy/db/reading-lesson";
+import { proseBlocks, QUIZ_METHOD_ID, type ReadingBody } from "@senoy/db/reading-lesson";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
 import { groundObjectives, taughtObjectives, type GroundedObjective } from "./objective-grounding.ts";
 import { createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
@@ -287,7 +287,7 @@ function lessonsForPrompt(assessed: AssessedLesson[]) {
     lessonGoal: lesson.lessonGoal,
     sections: lesson.body.sections.map((section) => ({
       heading: section.heading,
-      paragraphs: section.blocks.map((block) => block.text.replace(CITATION_MARKER, "")),
+      paragraphs: proseBlocks(section).map((block) => block.text.replace(CITATION_MARKER, "")),
     })),
   }));
 }
