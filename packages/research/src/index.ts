@@ -3,7 +3,9 @@ export { RESEARCH_LIST_PRICES_USD, researchAdaptersFromEnv } from "./adapters/in
 export { applyHostPolicy, DENYLIST, PREFERENCE_LIST } from "./host-policy.ts";
 export { redact, runResearch, type ResearchCallObservation, type ResearchOptions } from "./research.ts";
 export { canonicalPageKey, sourceIdFor } from "./source-id.ts";
-export { youResearchAdapter } from "./adapters/you-research.ts";
+export { parallelCoreAdapter, parallelProAdapter } from "./adapters/parallel-pro.ts";
+export { youResearchAdapter, youResearchLiteAdapter } from "./adapters/you-research.ts";
+export { createYouSearchAdapter, youSearchAdapter, type YouSearchOptions } from "./adapters/you-search.ts";
 export {
   BALANCE_TIMEOUT_MS,
   parallelFundsUsd,

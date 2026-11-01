@@ -17,8 +17,12 @@ const AUTHOR_TIMEOUT_MS = 5 * 60 * 1000;
 /** The Judge reads every assessed Lesson and reasons over each item. */
 const JUDGE_TIMEOUT_MS = 5 * 60 * 1000;
 
-/** Both roles reason at high effort, as for the reading (ADR 0010). */
-const REASONING_EFFORT = "high" as const;
+/**
+ * The author reasons at medium effort: at high, about $0.04 of each $0.07 Quiz was hidden reasoning and 14 of 15 Quizzes
+ * passed their first draft anyway (SEN-119; decision 2026-11-01). The Judge keeps high effort (ADR 0010).
+ */
+const AUTHOR_REASONING_EFFORT = "medium" as const;
+const JUDGE_REASONING_EFFORT = "high" as const;
 
 /** Regenerations after a failed Code check or Judge, each told what failed: the full budget of spec §6.1. */
 const MAX_REPAIRS = 2;
@@ -372,7 +376,7 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
             },
             schemaName: "quiz_items",
             timeoutMs: AUTHOR_TIMEOUT_MS,
-            reasoningEffort: REASONING_EFFORT,
+            reasoningEffort: AUTHOR_REASONING_EFFORT,
             schema: authorSchema(objectives),
             parse: parseAuthoredItems,
           });
@@ -422,7 +426,7 @@ export function createQuizGenerator(options: QuizGeneratorOptions = {}): QuizGen
             },
             schemaName: "quiz_review",
             timeoutMs: JUDGE_TIMEOUT_MS,
-            reasoningEffort: REASONING_EFFORT,
+            reasoningEffort: JUDGE_REASONING_EFFORT,
             schema: judgeSchema(QUIZ_JUDGE_CHECKS),
             parse: judgeParser(QUIZ_JUDGE_CHECKS),
             authorModelIds: [...authors],
