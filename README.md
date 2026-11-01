@@ -144,10 +144,10 @@ The first runs the real Starting Level fact-check over the keyed answers in `doc
 To re-run the Norse and Gram test Courses through the product and see what each stage cost:
 
 ```bash
-pnpm run:test-courses:live [norse|gram|all] [output path]
+pnpm run:test-courses:live [norse|gram|all] [output path] [--resume <request id>]
 ```
 
-This is a billable run, about $1.30 a Course, not a check: with `pnpm apps` running against the shared database, it signs in as `TEST_LEARNER_EMAIL` / `TEST_LEARNER_PASSWORD` (a confirmed account; a missing Teaching Profile is saved with default answers), drives each Course from Request to published the way the 2026-11-01 runs were done by hand (validity, focus, Starting Level answered "I don't know" throughout, Blueprint, approve, generation), then prints the per-stage spend from `usage_records` and writes the run to `docs/research/sen-120-test-course-runs-<date>.json`. The Courses land in that Learner's Library.
+This is a billable run, about $1.30 a Course, not a check: with `pnpm apps` running against the shared database, it signs in as `TEST_LEARNER_EMAIL` / `TEST_LEARNER_PASSWORD` (a confirmed account; a missing Teaching Profile is saved with default answers), drives each Course from Request to published the way the 2026-11-01 runs were done by hand (validity, focus, Starting Level answered "I don't know" throughout, Blueprint, approve, generation), then prints the per-stage spend from `usage_records` and writes the run to `docs/research/sen-120-test-course-runs-<date>.json`. Every step acts on the Request's current status, so `--resume <request id>` with one Course name continues a Request wherever it stands instead of starting another. The Courses land in that Learner's Library.
 
 Generator and Judge share one native-fetch OpenRouter transport. Defaults live in `apps/api/src/lib/model-config.ts`; optional server-only overrides are listed in `.env.example`. Judge calls require a different author model ID. Research vendors remain direct; validity makes no research calls. A reply that is invalid or cut off is retried once on the same model, then once on the configured fallback, and each reply names the model that wrote it so the Judge never judges its own author's work (ADR 0015). A call OpenRouter rate-limits is retried once on the same model after the wait its reply asks for, capped at thirty seconds; other HTTP errors are not retried. Provider schemas are also checked in application code, including stage-specific clarification invariants.
 

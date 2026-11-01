@@ -288,7 +288,7 @@ async function runTestCourses() {
   const args = process.argv.slice(2);
   const resumeAt = args.indexOf("--resume");
   const resumeId = resumeAt >= 0 ? args[resumeAt + 1] : undefined;
-  const positional = args.filter((arg, index) => index !== resumeAt && index !== resumeAt + 1);
+  const positional = resumeAt >= 0 ? args.filter((_, index) => index !== resumeAt && index !== resumeAt + 1) : args;
   const which = positional[0] ?? "all";
   const outPath = resolve(root, positional[1] ?? `docs/research/sen-120-test-course-runs-${new Date().toISOString().slice(0, 10)}.json`);
   const { TEST_LEARNER_EMAIL, TEST_LEARNER_PASSWORD, DATABASE_URL } = process.env;
