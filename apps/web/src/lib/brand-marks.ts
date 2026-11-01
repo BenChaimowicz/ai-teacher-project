@@ -1,7 +1,6 @@
 /*
- * SVG markup for the Knibbler mark, the old capped companion still used by the loader, and the course icons.
- * The mark is ported from docs/uis/redesign/10-papercraft-jongi.html (`logo()`). Strings (not JSX) because
- * the favicon (public/jongi-logo.svg) is the same markup.
+ * SVG markup for the Knibbler mark (Jongi's head) and the course icons. Strings (not JSX) because the
+ * favicon set in public/ is generated from the same markup (`pnpm brand:icons`, apps/web/scripts/brand-icons.mjs).
  */
 
 /** The companion's name lives here only. */
@@ -10,23 +9,49 @@ export const COMPANION_NAME = "Jongi";
 /** Product name (silent k). */
 export const PRODUCT_NAME = "Knibbler";
 
+/** The ink-navy tile the mark sits on at 32px and up (`--panel`). */
+export const MARK_TILE_COLOUR = "#141a2e";
+
 /**
- * The mark: Jongi's folded paper head (ears, face, cream muzzle, nose) in a tilted scholar cap with a
- * gold tassel. Flat facets, no filters, so it stays crisp at 16px. Fixed paper colours (one palette).
+ * Jongi's head on a 32×32 grid, without the `<svg>` wrapper: the raccoon's ears, grey fur with cheek tufts,
+ * cream brows, the dark mask, cream muzzle, pink cheeks and nose, in the tilted scholar cap with a gold tassel.
+ * Flat facets, no filters, so it stays crisp at 16px. Fixed paper colours sampled from the rendered frames.
+ * The eyes are `.le` (the loader moves them as he reads) and the tassel is `.tassel` (it swings on hover).
+ * The Loader draws the same head on its own artboard.
+ */
+export const MARK_HEAD = `<polygon points="3.8,13.5 5.6,3.4 11.8,9.2" fill="#8c8da3"/><polygon points="5.6,3.4 9.6,7.4 6.4,10.6" fill="#3a3d52"/>
+<polygon points="28.2,13.5 26.4,3.4 20.2,9.2" fill="#6f7187"/><polygon points="26.4,3.4 22.4,7.4 25.6,10.6" fill="#2c2f42"/>
+<polygon points="16,7 24.6,9 27.8,14.6 31,18.6 27,20.4 25.6,25.2 16,29 6.4,25.2 5,20.4 1,18.6 4.2,14.6 7.4,9" fill="#8c8da3"/>
+<polygon points="16,7 24.6,9 27.8,14.6 31,18.6 27,20.4 25.6,25.2 16,29" fill="#777990"/>
+<polygon points="8.6,13 13,11.8 13.6,13.4 9.4,14.4" fill="#eadcc1"/><polygon points="23.4,13 19,11.8 18.4,13.4 22.6,14.4" fill="#d9c9aa"/>
+<polygon points="3.6,17.6 8.4,14.8 13.4,15.4 16,17.4 18.6,15.4 23.6,14.8 28.4,17.6 25.4,20.6 19.6,20.2 16,19 12.4,20.2 6.6,20.6" fill="#292b3a"/>
+<polygon points="16,18.8 20.8,20 24,23 21.4,26.8 16,28.8 10.6,26.8 8,23 11.2,20" fill="#eadcc1"/>
+<polygon points="16,18.8 20.8,20 24,23 21.4,26.8 16,28.8" fill="#d9c9aa"/>
+<g class="le"><circle cx="10.6" cy="17.4" r="1.6" fill="#0f1019"/><circle cx="21.4" cy="17.4" r="1.6" fill="#0f1019"/>
+<circle cx="10.1" cy="16.8" r=".7" fill="#fff4e2"/><circle cx="20.9" cy="16.8" r=".7" fill="#fff4e2"/></g>
+<ellipse cx="9.2" cy="23.2" rx="1.6" ry="1" fill="#db6f64"/><ellipse cx="22.8" cy="23.2" rx="1.6" ry="1" fill="#c9645b"/>
+<polygon points="14.6,20.4 17.4,20.4 16,22" fill="#141726"/>
+<g transform="rotate(6 16 7)"><polygon points="8.5,6.6 16.4,3 24,5.8 16,9.6" fill="#2f3964"/><polygon points="16.4,3 24,5.8 16,9.6" fill="#222949"/>
+<polyline points="8.5,6.6 16.4,3 24,5.8" fill="none" stroke="#6372b3" stroke-width=".7" stroke-linejoin="round"/>
+<path d="M16.2,6.3 L23.6,6" fill="none" stroke="#e7b250" stroke-width="1" stroke-linecap="round"/>
+<g class="tassel"><path d="M23.6,6 L23.6,9.8" fill="none" stroke="#e7b250" stroke-width="1" stroke-linecap="round"/><polygon points="22.9,9.4 24.3,9.4 24.7,11.8 22.5,11.8" fill="#e7b250"/></g></g>`;
+
+/**
+ * The mark: {@link MARK_HEAD} in a 32×32 SVG.
  * @param options.tile - Sit on the rounded ink-navy tile (use at 32px and up, and for the favicon)
  */
 export function logoMarkup({ tile = false }: { tile?: boolean } = {}) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true">${tile ? '<rect width="32" height="32" rx="7" fill="#141a2e"/>' : ""}
-<polygon points="3.5,14 5.2,3.2 10.5,10.8" fill="#e8b07a"/><polygon points="5.2,3.2 13.5,8.6 10.5,10.8" fill="#c27f48"/>
-<polygon points="28.5,14 26.8,3.2 21.5,10.8" fill="#b06f3c"/><polygon points="26.8,3.2 18.5,8.6 21.5,10.8" fill="#d08b55"/>
-<polygon points="16,6.5 24.6,8.9 28.6,16.6 25.6,25 16,28.8 6.4,25 3.4,16.6 7.4,8.9" fill="#d8955c"/>
-<polygon points="16,6.5 24.6,8.9 28.6,16.6 25.6,25 16,28.8" fill="#c4824c"/>
-<polygon points="16,18 22.8,21 21,26 16,28.8 11,26 9.2,21" fill="#f0e0c2"/><polygon points="16,18 22.8,21 21,26 16,28.8" fill="#d9c39d"/>
-<circle cx="11.4" cy="15.4" r="1.75" fill="#141726"/><circle cx="20.6" cy="15.4" r="1.75" fill="#141726"/>
-<polygon points="14.8,19.6 17.2,19.6 16,21.1" fill="#c25f72"/>
-<g transform="rotate(6 16 7)"><polygon points="8.5,6.6 16.4,3 24,5.8 16,9.6" fill="#2f3964"/><polygon points="16.4,3 24,5.8 16,9.6" fill="#222949"/>
-<polyline points="8.5,6.6 16.4,3 24,5.8" fill="none" stroke="#6372b3" stroke-width=".7" stroke-linejoin="round"/>
-<path d="M16.2,6.3 L23.6,6 L23.6,10.4" fill="none" stroke="#e7b250" stroke-width="1" stroke-linecap="round"/></g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true">${tile ? `<rect width="32" height="32" rx="7" fill="${MARK_TILE_COLOUR}"/>` : ""}
+${MARK_HEAD}</svg>`;
+}
+
+/**
+ * The home-screen icon (apple-touch-icon, manifest icons): a square full-bleed tile, because the platform
+ * rounds or masks the corners itself, with the mark shrunk into the maskable safe zone (the centre 80%).
+ */
+export function appIconMarkup() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="${MARK_TILE_COLOUR}"/>
+<g transform="translate(5.6 5.6) scale(.65)">${MARK_HEAD}</g></svg>`;
 }
 
 /**

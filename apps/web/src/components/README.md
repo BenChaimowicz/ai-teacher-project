@@ -81,7 +81,7 @@ Lines are one or two short sentences: kind, low-key, never childish or chatty. U
 | `Textarea` | `input.tsx` | `textarea` props + `invalid?`, `fieldClassName?` | |
 | `Loader` | `loader.tsx` | `{ size? = 96, label?, className? }` | Being replaced by the page-flip loader (SEN-97 phase 1). Under 48px renders inline (no dots/label): use 18–24 in buttons and rows, 72–96 for a panel. |
 | `PageLoader` | `loader.tsx` | `{ label? = "Loading…" }` | Centred, for a whole screen. Invisible for its first 300 ms, so fast loads don't flash it. |
-| `Logo` | `logo.tsx` | `{ size? = 28, tile?, className? }` | Jongi's folded paper head in a scholar cap (fixed paper colours). `tile` puts it on the ink-navy rounded tile (32px and up). Same markup as the favicon `public/jongi-logo.svg`. |
+| `Logo` | `logo.tsx` | `{ size? = 28, tile?, className? }` | Jongi's raccoon head in a scholar cap (fixed paper colours). `tile` puts it on the ink-navy rounded tile (32px and up). The favicon set in `public/` is generated from the same markup. |
 | `BrandLink` | `logo.tsx` | `{ size? }` | Logo + wordmark linking Home. Used by `AppShell`. |
 | `SegmentedProgress` | `progress.tsx` | `{ segments: SegmentState[], label, className? }` | `SegmentState = "todo" \| "done" \| "now" \| "writing" \| "miss"`. |
 | `ProgressBar` | `progress.tsx` | `{ value: 0..1, label, className? }` | |
@@ -97,7 +97,7 @@ Lines are one or two short sentences: kind, low-key, never childish or chatty. U
 | --- | --- | --- |
 | `COMPANION_NAME`, `PRODUCT_NAME` | `brand-marks.ts` | `"Jongi"`, `"Knibbler"`. Always use the constants. |
 | `COURSE_ICON_PATHS`, `CourseIconName`, `pickCourseIcon(subject)` | `brand-marks.ts` | Names: `norse`, `knot`, `greek`, `music`, `yggdrasil`, `sourdough`, `investing`, `microscope`, `drum`, `generic`. `pickCourseIcon` is a keyword heuristic until the plan step stores an icon per Course. |
-| `logoMarkup({ tile? })` | `brand-marks.ts` | The mark's SVG string, behind `Logo` and `public/jongi-logo.svg`. |
+| `logoMarkup({ tile? })`, `MARK_HEAD`, `appIconMarkup()` | `brand-marks.ts` | The mark's SVG: `logoMarkup` is behind `Logo` and the tab icon, `MARK_HEAD` is the bare head (the Loader draws it too), `appIconMarkup` is the full-bleed home-screen icon. After changing them, run `pnpm brand:icons` to rewrite the favicon set in `public/`; `pnpm test` fails until you do. |
 | `cheer(el, text?)`, `confetti(x, y, opts?)`, `confettiAt(el, opts?)`, `prefersReducedMotion()` | `cheer.ts` | Rewards: a small burst plus a floating "✓ text" chip. Keep it to real moments (lesson read, right answer, course done). |
 | `CourseListItem`, `CourseListStatus`, `LibraryItem`, `toCourseListItem(item)`, `sidebarCourses(items)`, `notifyLibraryChanged()` | `course-list.ts` | Maps `/api/library` rows to plain words: `learning`, `making`, `needs`, `done`, `stopped`. Glossary statuses stay in code. The sidebar list reloads on navigation, on window focus, every 5 s while a course is being made or a Course Request is open, and when a screen calls `notifyLibraryChanged()` after an action that changes a status. |
 | `DAILY_GOAL_MINUTES`, `addStudyMinutes(n)`, `readActivity()`, `ActivitySummary` | `study-activity.ts` | Local streak and minutes for the companion card. |
