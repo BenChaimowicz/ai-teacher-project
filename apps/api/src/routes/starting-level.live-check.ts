@@ -15,6 +15,7 @@ import {
 } from "@senoy/db";
 import { redact } from "@senoy/research";
 import { startingLevelRoutes } from "./starting-level.ts";
+import { withLiveCheckTracking } from "../lib/live-check-tracking.ts";
 
 /**
  * Runs one real Starting Level diagnostic (OpenRouter author + Judge, You.com fact-check) through the HTTP
@@ -104,4 +105,4 @@ async function checkStartingLevel() {
   }
 }
 
-await checkStartingLevel();
+await withLiveCheckTracking("check:starting-level:live", checkStartingLevel);

@@ -6,6 +6,7 @@ import { readingPlugin } from "../teaching-methods/reading.ts";
 import { writeTimeProfile } from "./course-generation.ts";
 import { createReuseFit, findReuseCandidates, reuseSeed } from "./lesson-reuse.ts";
 import { createReadingGenerator, ReuseUnfitError } from "./reading-generation.ts";
+import { withLiveCheckTracking } from "./live-check-tracking.ts";
 
 /**
  * Exercises Lesson reuse (spec §5.8) on a real published Reading with the real models, writing nothing: looks up the
@@ -76,4 +77,4 @@ async function checkLessonReuse() {
   }
 }
 
-await checkLessonReuse();
+await withLiveCheckTracking("check:reuse:live", checkLessonReuse);

@@ -387,3 +387,71 @@ test("The fixture builder designs a Blueprint from an empty capability list", as
   assert.deepEqual(blueprint.modules[0]!.slots.map((slot) => slot.method), ["reading", "reading", "quiz"]);
   assert.deepEqual(blueprintCodeFailures(blueprint, "every_2_to_3_readings"), []);
 });
+
+/** What the media library holds, as the Blueprint author is shown it. */
+const CATALOG = [
+  { mediaCategory: "drum-grip" as const, topicTags: ["fulcrum", "matched-grip", "traditional-grip"] },
+  { mediaCategory: "drum-notation" as const, topicTags: ["4-4", "6-8", "rock-beat"] },
+];
+
+/** The default draft with Reading 1 requiring `requiredMedia` and every other slot requiring none. */
+function requiring(requiredMedia: unknown[]) {
+  const draft = authored();
+  return { ...draft, lessons: draft.lessons.map((lesson, index) => ({ ...lesson, requiredMedia: index === 0 ? requiredMedia : [] })) };
+}
+
+/** An author that replies with each output in turn and records the schema it was given. */
+function schemaRecordingGenerator(...outputs: unknown[]) {
+  const queued = queuedGenerator(...outputs);
+  const schemas: unknown[] = [];
+  const generator: Generator = {
+    modelId: queued.generator.modelId,
+    async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
+      schemas.push(request.schema);
+      return queued.generator.generateStructured(request);
+    },
+  };
+  return { generator, calls: queued.calls, schemas };
+}
+
+test("With a media catalog, a Reading slot requires images only from it: each category with only its own tags", async () => {
+  const { generator, calls, schemas } = schemaRecordingGenerator(requiring([{ mediaCategory: "drum-notation", topicTags: ["6-8", "Rock Beat"] }]));
+  const { blueprint } = await createBlueprintBuilder({ generator, judge: queuedJudge(PASS).judge }).build({ ...INPUT, mediaCatalog: CATALOG });
+
+  assert.match(calls[0]!.systemPrompt, /"mediaCatalog" lists the images the media library holds/);
+  assert.deepEqual(calls[0]!.input.mediaCatalog, CATALOG);
+  const slot = (schemas[0] as { properties: { lessons: { items: { required: string[]; properties: { requiredMedia: { maxItems: number; items: { anyOf: unknown[] } } } } } } })
+    .properties.lessons.items;
+  assert.ok(slot.required.includes("requiredMedia"));
+  assert.equal(slot.properties.requiredMedia.maxItems, 2);
+  assert.deepEqual(slot.properties.requiredMedia.items.anyOf.map((option) => {
+    const { properties } = option as { properties: { mediaCategory: { enum: string[] }; topicTags: { items: { enum: string[] } } } };
+    return [properties.mediaCategory.enum, properties.topicTags.items.enum];
+  }), [[["drum-grip"], CATALOG[0]!.topicTags], [["drum-notation"], CATALOG[1]!.topicTags]], "A tag from another category cannot be asked for.");
+
+  const [reading, quiz] = blueprint.modules[0]!.slots;
+  assert.deepEqual(reading!.requiredMedia, [{ mediaCategory: "drum-notation", topicTags: ["6-8", "rock-beat"] }]);
+  assert.ok(!("requiredMedia" in quiz!), "A slot that requires nothing carries no list.");
+});
+
+test("A required image the catalog cannot fill fails the Code checks, and the revision sees each slot's required images", async () => {
+  const unfillable = requiring([{ mediaCategory: "drum-grip", topicTags: ["rock-beat"] }]);
+  const { generator, calls } = queuedGenerator(unfillable, requiring([{ mediaCategory: "drum-grip", topicTags: ["matched-grip"] }]));
+  const verdicts = queuedJudge(PASS);
+  const checked = await createBlueprintBuilder({ generator, judge: verdicts.judge }).build({ ...INPUT, mediaCatalog: CATALOG });
+  assert.equal(verdicts.calls(), 1, "The unfillable design never reached the Judge.");
+  assert.deepEqual(calls[1]!.input.problems, ["Slot 1 requires a drum-grip image (rock-beat) that no file in mediaCatalog fills."]);
+  const previous = calls[1]!.input.previousBlueprint as ReturnType<typeof requiring>;
+  assert.deepEqual(previous.lessons.map((lesson) => lesson.requiredMedia), [[{ mediaCategory: "drum-grip", topicTags: ["rock-beat"] }], [], [], []]);
+  assert.deepEqual(checked.blueprint.modules[0]!.slots[0]!.requiredMedia, [{ mediaCategory: "drum-grip", topicTags: ["matched-grip"] }]);
+});
+
+test("Without a media catalog, no slot is offered required images and the author is prompted as before", async () => {
+  const { generator, calls, schemas } = schemaRecordingGenerator(authored());
+  const { blueprint } = await createBlueprintBuilder({ generator, judge: queuedJudge(PASS).judge }).build({ ...INPUT, mediaCatalog: [] });
+  assert.doesNotMatch(calls[0]!.systemPrompt, /mediaCatalog|requiredMedia/);
+  assert.ok(!("mediaCatalog" in calls[0]!.input));
+  const slot = (schemas[0] as { properties: { lessons: { items: { properties: Record<string, unknown> } } } }).properties.lessons.items;
+  assert.ok(!("requiredMedia" in slot.properties));
+  assert.ok(blueprint.modules[0]!.slots.every((candidate) => !("requiredMedia" in candidate)));
+});

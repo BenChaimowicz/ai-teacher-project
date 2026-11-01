@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import Fastify from "fastify";
 import { createDb, learners, loadRootEnv, parseTeachingProfileAnswers, TEACHING_PROFILE_VERSION, type Database, type CourseRequestRecord } from "@senoy/db";
 import { courseRequestRoutes } from "./course-requests.ts";
+import { withLiveCheckTracking } from "../lib/live-check-tracking.ts";
 
 /** Exercises real OpenRouter and hosted Postgres without leaving Learner or Request records behind. */
 async function checkValidity() {
@@ -68,4 +69,4 @@ async function checkValidity() {
   } finally { await db.$client.end(); }
 }
 
-await checkValidity();
+await withLiveCheckTracking("check:validity:live", checkValidity);

@@ -51,6 +51,7 @@ export const KIND_HELP: Record<PipelineEventKind, string> = {
   quiz: "Writes one quiz and checks it matches the lessons. Code: quiz",
   course_judge: "A last review of the whole course for consistency, by a model that wrote none of it. Code: course_judge",
   publish: "Final checks and publishing the finished course. Code: publish",
+  live_check: "A developer's live check (a pnpm check:*:live script) calling the real models and research vendors. Its label is the script; no Learner caused it. Code: live_check",
 };
 
 /** What each Learner action means. */

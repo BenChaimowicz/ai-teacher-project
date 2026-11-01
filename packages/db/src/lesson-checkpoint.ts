@@ -1,4 +1,4 @@
-import type { BlueprintSlot } from "./blueprint.ts";
+import { MAX_REQUIRED_MEDIA, type BlueprintSlot } from "./blueprint.ts";
 import type { LessonLineage } from "./lesson-reuse.ts";
 import { parseQuizBody, QUIZ_MAX_ITEMS, QUIZ_MIN_ITEMS, QUIZ_OPTION_COUNT, type QuizBody } from "./quiz.ts";
 import {
@@ -47,8 +47,11 @@ const CITATION_MARKER = /\[(\d+)\]/g;
 /** A Source ID marker the Generator wrote that was not resolved to a number. */
 const SOURCE_ID_MARKER = /\[[^\]]*\bsrc_[^\]]*\]/;
 
-/** Media blocks one Reading may carry: a single optional figure until required media lands (SEN-115). */
-export const MAX_MEDIA_BLOCKS = 1;
+/** Optional images a Reading's writer may add of its own, beside the ones its slot requires (SEN-115). */
+export const MAX_OPTIONAL_MEDIA = 2;
+
+/** Media blocks one Reading may carry: its slot's required images and its writer's optional ones. */
+export const MAX_MEDIA_BLOCKS = MAX_REQUIRED_MEDIA + MAX_OPTIONAL_MEDIA;
 
 /**
  * Code checks for a reading Lesson before checkpoint (spec §6.3): envelope, reading-method shape, Citations that
@@ -73,7 +76,8 @@ export function readingCodeFailures(lesson: ReadingLessonDraft, retrievalUrls: R
   const prose = sections.flatMap(proseBlocks).map((block) => block.text);
   if (sections.some((section) => proseBlocks(section).length === 0)) failures.push("Every reading section needs prose, not only media.");
   const media = sections.flatMap((section) => section.blocks).filter((block): block is MediaBlock => block.kind === "media");
-  if (media.length > MAX_MEDIA_BLOCKS) failures.push(`A Reading carries at most ${MAX_MEDIA_BLOCKS} media block.`);
+  if (media.length > MAX_MEDIA_BLOCKS) failures.push(`A Reading carries at most ${MAX_MEDIA_BLOCKS} media blocks.`);
+  if (new Set(media.map((block) => block.descriptor.id)).size !== media.length) failures.push("A Reading shows each media file once.");
   for (const block of media) failures.push(...mediaBlockFailures(block));
   if (prose.some((text) => !text.trim())) failures.push("Every content block needs text.");
   if (prose.some((text) => SOURCE_ID_MARKER.test(text))) failures.push("A Citation points at a Source ID outside this Lesson's Source packs.");

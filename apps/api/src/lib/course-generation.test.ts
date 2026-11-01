@@ -75,7 +75,7 @@ function recordingGenerator(fail = false, unfit = false) {
       const url = "https://en.wikipedia.org/w/index.php?oldid=1";
       return {
         judge: { pass: true, failedChecks: [], reasons: [] },
-        media: { status: "none" },
+        media: [],
         repairs: 0,
         grounding: allSupported(input.slot.objectives),
         authorModelIds: ["fixture/author"],
@@ -517,6 +517,23 @@ test("The failure counts the Lessons Retry keeps, and promises none when none ar
   const unresearchable = new LessonUnresearchableError("slot1");
   assert.match(failureReason(lesson, unresearchable, 0), /Retry searches for it again\.$/);
   assert.match(failureReason(lesson, unresearchable, 2), /Retry searches for it again, keeping the 2 Lessons already written\.$/);
+});
+
+test("A Lesson that fails for a required image names the Lesson and the image, and Retry is offered as for any failed check (SEN-115)", () => {
+  const lesson = { kind: "lesson", title: "Holding the sticks" } as const;
+  const proposal = { section: "Matched grip", mediaCategory: "drum-grip" as const, topicTags: ["matched-grip"], caption: "Matched grip.", alt: "Two hands.", required: true };
+  const pass = { pass: true, failedChecks: [], reasons: [] };
+  const missing = new ReadingFailedError([], pass, null, [], [], [], [{ proposal, status: "miss", rejected: [], checks: [] }]);
+  assert.equal(missing.requiredMediaMissing, true);
+  assert.match(missing.message, /failed required media checks \|\| The required drum-grip image \(matched-grip\) after "Matched grip" has no library file left to try\./);
+  assert.equal(
+    failureReason(lesson, missing, 0),
+    "We couldn't find an image that fits the Lesson “Holding the sticks”, and it can't teach without one. Retry tries that Lesson again.",
+  );
+  assert.match(failureReason(lesson, missing, 2), /Retry tries again from there, keeping the 2 Lessons already written\.$/);
+
+  const dropped = new ReadingFailedError([], pass, null, [], [], [], [{ proposal: { ...proposal, required: false }, status: "miss", rejected: [], checks: [] }]);
+  assert.equal(dropped.requiredMediaMissing, false, "A missing optional image is never a defect.");
 });
 
 test("A Quiz's Pipeline Event keeps every round it took, pass or fail, as a Reading's does (SEN-91)", async () => {

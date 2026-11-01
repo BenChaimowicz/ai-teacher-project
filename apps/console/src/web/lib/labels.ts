@@ -53,6 +53,7 @@ export const KIND_LABEL: Record<PipelineEventKind, string> = {
   quiz: "Quiz",
   course_judge: "Final review",
   publish: "Publishing",
+  live_check: "Live check",
 };
 
 /** Who made a call. */

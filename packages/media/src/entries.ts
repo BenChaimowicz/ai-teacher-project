@@ -8,7 +8,7 @@ import type { CatalogEntry } from "./catalog.ts";
  * drawn for this catalog and are generic; none is a chart of any named song.
  *
  * Coverage follows the Test courses in spec §7: Gram results, the Gram procedure, cell envelopes, microscopy and
- * culture technique for §7.1; grip, kit anatomy, stick anatomy and notation for §7.2; historic plates for §7.3.
+ * culture technique for §7.1; grip, the rebound stroke, kit anatomy, stick anatomy and notation for §7.2; historic plates for §7.3.
  */
 
 const CC_BY_SA_4 = "https://creativecommons.org/licenses/by-sa/4.0";
@@ -272,6 +272,21 @@ export const CATALOG: CatalogEntry[] = [
     source: null,
     mediaCategory: "drum-notation",
     topicTags: ["time-signature", "4-4", "6-8", "compound-meter", "simple-meter", "beat-grouping"],
+  },
+  // Drawn for SEN-115 in place of the rebound-stroke loop of spec §7.2: a strip of stills, with no hands, so it
+  // is never a photorealistic stand-in for the technique (docs/decisions/2026-11-01-the-rebound-stroke-is-a-product-owned-strip-of-svg-stills.md).
+  {
+    id: id(28),
+    file: "drums/rebound-stroke.svg",
+    kind: "image",
+    origin: "library",
+    license: "product_owned",
+    licenseUrl: null,
+    caption: "A full (rebound) stroke in four stills: the stick starts high, falls to strike the drumhead, bounces back up off it, and returns to its starting height.",
+    alt: "Four side views of a drumstick pivoting at the fulcrum above a drum: raised high, its tip striking the head, bouncing back up with an arrow pointing up, and raised high again level with a dashed starting-height line.",
+    source: null,
+    mediaCategory: "drum-stroke",
+    topicTags: ["rebound-stroke", "full-stroke", "rebound", "stick-height", "fulcrum", "stroke"],
   },
 
   // ── §7.3 Norse mythology ────────────────────────────────────────────────────────────────────────────────────────

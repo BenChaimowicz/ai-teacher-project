@@ -7,6 +7,7 @@ import { readingPlugin } from "../teaching-methods/reading.ts";
 import { writeTimeProfile } from "./course-generation.ts";
 import { createModelPorts } from "./model-ports.ts";
 import { createReadingGenerator, ReadingFailedError } from "./reading-generation.ts";
+import { withLiveCheckTracking } from "./live-check-tracking.ts";
 
 /** The approved Reading slot SEN-36's Norse Source packs were researched for. */
 const NORSE_READING_SLOT: BlueprintSlot = {
@@ -97,4 +98,4 @@ async function checkReadingGeneration() {
   }
 }
 
-await checkReadingGeneration();
+await withLiveCheckTracking("check:reading:live", checkReadingGeneration);
