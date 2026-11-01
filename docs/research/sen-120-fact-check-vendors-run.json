@@ -1,0 +1,574 @@
+{
+  "checkedAt": "2026-11-01T16:34:03.471Z",
+  "judgeModelId": "openai/gpt-6-luna",
+  "claims": [
+    {
+      "itemId": "940ab23a-item1",
+      "course": "Gram staining",
+      "question": "During a supervised laboratory class, bacterial broth spills onto a work surface. What is the appropriate first response?",
+      "answer": "Pause work, alert people nearby, and ask the instructor for help.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts direct students to stop work, notify the instructor, and alert or keep others away from the spill.",
+        "sources": 3
+      }
+    },
+    {
+      "itemId": "940ab23a-item2",
+      "course": "Gram staining",
+      "question": "Why should a sterile culture container be open for as little time as practical during a transfer?",
+      "answer": "To reduce contact with microbes from the surroundings.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpt says to keep containers open to the air for the minimum time to reduce the chances of contamination from microorganisms in the environment.",
+        "sources": 2
+      }
+    },
+    {
+      "itemId": "940ab23a-item3",
+      "course": "Gram staining",
+      "question": "How does streaking carry a bacterial sample across an agar plate to produce isolated colonies?",
+      "answer": "Each new area receives fewer cells carried over from the previous area.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpt says later streaked regions receive fewer and fewer cells, allowing individual cells to form isolated colonies.",
+        "sources": 1
+      }
+    },
+    {
+      "itemId": "940ab23a-item4",
+      "course": "Gram staining",
+      "question": "What optical benefit does immersion oil provide when used with an oil-rated microscope objective?",
+      "answer": "It reduces light refraction, helping the lens resolve small details.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts say immersion oil minimizes refraction and increases numerical aperture and resolution, helping the objective resolve fine details.",
+        "sources": 2
+      }
+    },
+    {
+      "itemId": "940ab23a-item5",
+      "course": "Gram staining",
+      "question": "In a standard Gram stain using safranin, in what order are the four main reagents applied?",
+      "answer": "Crystal violet, iodine, decolorizer, safranin.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpt identifies crystal violet, Gram’s iodine, a decolorization step, and safranin in that order, supporting the answer.",
+        "sources": 1
+      }
+    },
+    {
+      "itemId": "940ab23a-item6",
+      "course": "Gram staining",
+      "question": "Which structural feature chiefly explains why Gram-positive cells retain the crystal violet–iodine complex during proper decolorization?",
+      "answer": "A thick peptidoglycan layer that holds the complex within the wall.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts explain that Gram-positive cells have thick, peptidoglycan-rich walls that retain the crystal violet–iodine complex during decolorization.",
+        "sources": 2
+      }
+    },
+    {
+      "itemId": "940ab23a-item7",
+      "course": "Gram staining",
+      "question": "A stained field contains elongated, cylindrical cells joined end to end in rows. Which description matches their shape and arrangement?",
+      "answer": "Bacilli in chains.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts identify bacilli as rod-shaped cells and streptobacilli as chains of bacilli, matching elongated cylindrical cells joined end to end in rows.",
+        "sources": 2
+      }
+    },
+    {
+      "itemId": "940ab23a-item8",
+      "course": "Gram staining",
+      "question": "A properly prepared Gram stain from a pure culture shows pink, elongated bacterial cells. Which identification is supported by this observation alone?",
+      "answer": "A Gram-negative rod is present, but its species is uncertain.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts state that pink/red staining indicates Gram-negative bacteria and that elongated rod-shaped cells are bacilli, supporting a Gram-negative rod without identifying its species.",
+        "sources": 3
+      }
+    },
+    {
+      "itemId": "97c4f738-item1",
+      "course": "Norse mythology",
+      "question": "Which historical setting shaped the preservation of the Poetic Edda and Snorri's Edda?",
+      "answer": "Medieval Iceland, after the adoption of Christianity.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts place the Eddas’ composition and surviving manuscripts in medieval Iceland and describe Snorri as a Christian scholar, supporting a post-Christian Icelandic setting.",
+        "sources": 3
+      }
+    },
+    {
+      "itemId": "97c4f738-item2",
+      "course": "Norse mythology",
+      "question": "Which pairing correctly identifies Midgard and Asgard in Norse mythology?",
+      "answer": "Midgard is the human realm; Asgard is a realm of the gods.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpt identifies Midgard as the realm of human beings and Asgard as the gods’ enclosure, supporting the pairing.",
+        "sources": 1
+      }
+    },
+    {
+      "itemId": "97c4f738-item3",
+      "course": "Norse mythology",
+      "question": "What role does Yggdrasil play in Norse descriptions of the cosmos?",
+      "answer": "It forms a living structure linking different regions of existence.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpt describes Yggdrasill as a giant world tree that supports the universe and connects the nine worlds, supporting the answer that it links different regions of existence.",
+        "sources": 1
+      }
+    },
+    {
+      "itemId": "97c4f738-item4",
+      "course": "Norse mythology",
+      "question": "What is the main role of the Norns in Norse mythology?",
+      "answer": "They shape lives and destinies beyond an individual's control.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts describe the Norns as responsible for shaping human destinies and associate them with fate that is preordained and unchangeable.",
+        "sources": 2
+      }
+    },
+    {
+      "itemId": "97c4f738-item5",
+      "course": "Norse mythology",
+      "question": "Why does Odin gather slain warriors in Valhalla?",
+      "answer": "To support the gods in the final battle at Ragnarök.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts say Odin gathers slain warriors into an army that will fight alongside him at Ragnarök.",
+        "sources": 3
+      }
+    },
+    {
+      "itemId": "97c4f738-item6",
+      "course": "Norse mythology",
+      "question": "In Snorri's account, why can mistletoe harm Baldr when other things have promised to spare him?",
+      "answer": "It has been left out of the oaths obtained for his protection.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts state that Frigg obtained oaths from everything except mistletoe, which she overlooked or considered too young, leaving it able to harm Baldr.",
+        "sources": 2
+      }
+    }
+  ],
+  "runs": [
+    {
+      "label": "you-search, highlights",
+      "adapterId": "you-search",
+      "estimatedCostUsd": 0.21,
+      "durationMs": 36931,
+      "confirmed": 14,
+      "unconfirmed": 0,
+      "searchFailed": 0,
+      "noPages": 0,
+      "judgeFailed": 0,
+      "agreesWithStored": 14,
+      "results": [
+        {
+          "itemId": "940ab23a-item1",
+          "confirmed": true,
+          "reason": "The excerpts advise alerting people nearby and telling the instructor about a laboratory spill, supporting the answer’s key first-response steps.",
+          "sourceUrls": [
+            "https://www.gauthmath.com/solution/1987336900288516/If-you-spill-a-large-amount-of-chemical-on-the-floor-a-Ignore-it-and-keep-workin",
+            "https://brainly.com/question/61288160",
+            "https://wp.stolaf.edu/chemical-hygiene/emergencies-injuries-and-spills/",
+            "https://brainly.com/question/61324526",
+            "https://bio.libretexts.org/Learning_Objects/Laboratory_Experiments/Microbiology_Labs/Microbiology_for_Allied_Health_Students:_Lab_Manual/4:_Microbiology_Laboratory_Safety_Contract"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item2",
+          "confirmed": true,
+          "reason": "The excerpts say to minimize how long cultures are open to the environment to reduce contamination by surrounding microbes.",
+          "sourceUrls": [
+            "https://gmpplastic.com/blogs/useful-articles-on-lab-supplies-faq-section/why-is-an-aseptic-technique-important-in-microbiology",
+            "https://bio.libretexts.org/Bookshelves/Microbiology/Microbiology_Laboratory_Manual_(Hartline)/01:_Labs/1.07:_Aseptic_Technique",
+            "https://microbenotes.com/general-aseptic-techniques-in-microbiology-laboratory/",
+            "https://www.atcc.org/resources/culture-guides/introduction-to-microbiology",
+            "https://microbeonline.com/aseptic-technique-in-microbiology/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item3",
+          "confirmed": true,
+          "reason": "The excerpts explain that successive streaks transfer progressively fewer cells into each new area, allowing isolated colonies to form.",
+          "sourceUrls": [
+            "https://www.vedantu.com/neet/streak-plate-technique",
+            "https://en.wikipedia.org/wiki/Streaking_(microbiology)",
+            "https://bio.libretexts.org/Courses/Irvine_Valley_College/IVC_Biol_15%3A_Microbiology_Lab_Manual/09%3A_ISOLATION_BY_STREAK_PLATE",
+            "https://www.zubairkhalid.com/knowledge/diagnostics/microbiology/streak-plate-isolation-protocol",
+            "https://eaglepubs.erau.edu/cellandmoleclab/chapter/bacteria-isolation-and-the-dilution-technique/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item4",
+          "confirmed": true,
+          "reason": "The excerpts say immersion oil minimizes light refraction, improves resolution, and makes small details clearer with an oil-immersion objective.",
+          "sourceUrls": [
+            "https://www.carson.com/optics-university/microscopes-hub/what-is-immersion-oil-and-why-is-it-used",
+            "https://intrinsicallysafestore.com/blog/why-use-immersion-oil-benefits-and-applications",
+            "https://intrinsicallysafestore.com/blog/why-is-immersion-oil-used",
+            "https://biologynotesonline.com/oil-immersion-technique-procedure/",
+            "https://intrinsicallysafestore.com/blog/what-does-immersion-oil-do"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item5",
+          "confirmed": true,
+          "reason": "The excerpts explicitly give the standard sequence as crystal violet, iodine, decolorizer, then safranin.",
+          "sourceUrls": [
+            "https://microbeonline.com/preparation-gram-stain-reagents/",
+            "https://brainly.com/question/37468186",
+            "https://brainly.com/question/33561671",
+            "https://brainly.in/question/6209786",
+            "https://www.atlas.org/solution/a9769dd0-0365-4d85-93fc-72231bd85d3c/what-is-the-correct-sequence-of-reagents-used-when-performing-a-gram-stain"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item6",
+          "confirmed": true,
+          "reason": "The excerpts explain that Gram-positive cells’ thick peptidoglycan layer traps the crystal violet–iodine complex during decolorization.",
+          "sourceUrls": [
+            "https://serc.carleton.edu/microbelife/research_methods/microscopy/gramstain.html",
+            "https://microbiologyinfo.com/gram-staining-principle-procedure-interpretation-examples-and-animation/",
+            "https://www.technologynetworks.com/immunology/articles/gram-positive-vs-gram-negative-323007",
+            "https://nprep.in/question-answer/gram-positive-bacteria-retain-the-crystal-violet-purple-stain-while-gram-negative-wLnO2SbzyizY9flIDmtqO",
+            "https://www.pearson.com/channels/microbiology/learn/jason/ch-7-prokaryotic-cell-structures-functions/gram-positive-cell-walls"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item7",
+          "confirmed": true,
+          "reason": "The excerpt identifies bacilli as rod-shaped and says they can occur in chains, matching elongated cylindrical cells joined end to end.",
+          "sourceUrls": [
+            "https://www.pearson.com/channels/microbiology/asset/fa5b5e71/state-the-shape-and-arrangement-of-the-pictured-bacterial-samples-and-ltimage-an"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 1
+        },
+        {
+          "itemId": "940ab23a-item8",
+          "confirmed": true,
+          "reason": "The excerpts support that pink staining indicates Gram-negative bacteria and that Gram staining also reveals morphology; elongated cells are rods, while the stain alone does not establish species.",
+          "sourceUrls": [
+            "https://emedicine.medscape.com/article/2093371-overview",
+            "https://bio.libretexts.org/Bookshelves/Microbiology/Microbiology_Laboratory_Manual_(Hartline)/01%3A_Labs/1.10%3A_Gram_Stain",
+            "https://www.medicalnewstoday.com/articles/gram-positive-vs-gram-negative",
+            "https://casrai.org/guides/gram-stain-procedure-reagents-results",
+            "https://www.ncbi.nlm.nih.gov/sites/books/NBK562156/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item1",
+          "confirmed": true,
+          "reason": "The excerpts describe both Eddas as preserved in medieval Iceland, after Iceland’s conversion to Christianity.",
+          "sourceUrls": [
+            "https://notesfromiceland.substack.com/p/medieval-iceland-d16",
+            "https://mythologis.com/mythologies/europe/norse/texts/prose-edda-poetic-edda-primary-sources-norse-myth",
+            "https://mythologis.com/mythologies/europe/asatru/texts/poetic-prose-edda-heathenry-sources",
+            "https://www.wyrdandflame.com/wyrd-wisdom/the-prose-edda-preserving-the-myths-and-poetry-of-medieval-iceland",
+            "https://godsandmonsters.info/welcome-to-gods-and-monsters/icelandic-mythology/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item2",
+          "confirmed": true,
+          "reason": "The excerpts consistently identify Midgard as the human realm and Asgard as the realm or home of the gods.",
+          "sourceUrls": [
+            "https://study.com/academy/lesson/midgard-norse-mythology-overview-history.html",
+            "https://www.ancient-origins.net/myths-legends-europe/midgard-norse-mythology-0017324",
+            "https://www.historyandmyths.com/2026/09/nine-worlds-norse-mythology.html",
+            "https://www.worldhistory.org/article/1305/nine-realms-of-norse-cosmology/",
+            "https://www.vikingtimes.co.uk/norse-mythology/the-nine-worlds-in-norse-mythology/midgard-the-realm-of-human/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item3",
+          "confirmed": true,
+          "reason": "The excerpts describe Yggdrasil as a living cosmic tree or structure that connects the realms and regions of existence.",
+          "sourceUrls": [
+            "https://vikingr.org/norse-cosmology/yggdrasil",
+            "https://northrune.co.uk/blogs/viking-history/what-is-yggdrasil-the-world-tree-in-norse-mythology",
+            "https://mythlok.com/plants/yggdrasil/",
+            "https://lufolk.com/blogs/vikings-and-norse-mythology/yggdrasil-faq",
+            "https://vikingsonsofodin.com/yggdrasil-meaning-and-the-nine-worlds/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item4",
+          "confirmed": true,
+          "reason": "The excerpts describe the Norns as shaping human destinies and determining or allotting lives, including through forces beyond individual control.",
+          "sourceUrls": [
+            "https://en.wikipedia.org/wiki/Norns",
+            "https://norseimports.com/blogs/news/norns",
+            "https://www.worldhistory.org/Norns/",
+            "https://www.norsegarde.com/blogs/lore-and-mythology/the-norns-and-the-threads-of-fate-in-norse-mythology",
+            "https://studyguides.com/study-methods/study-guide/cml26zcvy67l90192xy3nqyvt"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item5",
+          "confirmed": true,
+          "reason": "The excerpts state that Odin gathers the slain warriors as an army, training them to fight alongside him and the gods at Ragnarök.",
+          "sourceUrls": [
+            "https://mythologis.com/mythologies/europe/norse/places/valhalla-odins-hall-of-the-slain-warriors",
+            "https://spokenpast.com/articles/einherjar-odins-dead-warriors-ragnarok/",
+            "https://www.historyandmyths.com/2026/09/valhalla-norse-mythology.html",
+            "https://www.fireofroots.co.uk/item/valhalla-the-hall-of-the-slain/",
+            "https://vikingr.org/norse-cosmology/valhalla"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item6",
+          "confirmed": true,
+          "reason": "The excerpts say Frigg did not obtain an oath from mistletoe, so it was not covered by Baldr’s protection.",
+          "sourceUrls": [
+            "https://norse-mythology.org/tales/the-death-of-baldur/",
+            "https://likemyth.com/norse-mythology/balder-death-myth",
+            "https://www.mythic-harmonies.com/norse-mythology/baldur-norse-god/",
+            "https://norsemyths.net/objects/mistletoe",
+            "https://web.mit.edu/norvin/www/somethingelse/baldr.html"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        }
+      ]
+    },
+    {
+      "label": "you-research-lite",
+      "adapterId": "you-research-lite",
+      "estimatedCostUsd": 0.168,
+      "durationMs": 53524,
+      "confirmed": 14,
+      "unconfirmed": 0,
+      "searchFailed": 0,
+      "noPages": 0,
+      "judgeFailed": 0,
+      "agreesWithStored": 14,
+      "results": [
+        {
+          "itemId": "940ab23a-item1",
+          "confirmed": true,
+          "reason": "The excerpts direct students to notify the instructor immediately after a culture spill and also support alerting nearby lab personnel, so the answer is supported as an appropriate first response.",
+          "sourceUrls": [
+            "https://bio.libretexts.org/Learning_Objects/Laboratory_Experiments/Microbiology_Labs/Microbiology_for_Allied_Health_Students:_Lab_Manual/4:_Microbiology_Laboratory_Safety_Contract",
+            "https://researchsafety.gwu.edu/biological-spillrelease",
+            "https://www.vumc.org/safety/bio/responding-to-bio-exposures-and-spills",
+            "https://tbksp.who.int/en/node/1133",
+            "https://www.ehs.iastate.edu/research/biological/microbial/spill-cleanup/spill-cleanup-protocol"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item2",
+          "confirmed": true,
+          "reason": "The excerpts state that vessels should be open for the minimum time possible to reduce contamination risk from microbes in the environment.",
+          "sourceUrls": [
+            "https://www.coloradoculturesllc.com/post/sterile-technique-principles",
+            "https://gmpplastic.com/blogs/useful-articles-on-lab-supplies-faq-section/why-is-an-aseptic-technique-important-in-microbiology",
+            "https://practicalbiology.org/standard-techniques/aseptic-techniques",
+            "https://theory.labster.com/sterile-technique/",
+            "https://microbenotes.com/general-aseptic-techniques-in-microbiology-laboratory/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item3",
+          "confirmed": true,
+          "reason": "The excerpts explain that successive streaks transfer fewer cells to each new area, progressively diluting the inoculum and allowing isolated colonies to form.",
+          "sourceUrls": [
+            "https://www.zubairkhalid.com/knowledge/diagnostics/microbiology/streak-plate-method-isolation-principle-procedure-common-mistakes",
+            "https://microbenotes.com/streak-plate-method-principle-methods-significance-limitations/",
+            "https://www.zubairkhalid.com/knowledge/diagnostics/microbiology/streak-plate-isolation-protocol",
+            "https://openoregon.pressbooks.pub/microbiologylaboratorymanual/chapter/background-theory-3/",
+            "https://www.vedantu.com/neet/streak-plate-technique"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item4",
+          "confirmed": true,
+          "reason": "The excerpts explain that immersion oil minimizes refraction and improves resolution, helping the objective resolve finer details.",
+          "sourceUrls": [
+            "https://microscopemarketplace.com/blogs/news/why-do-some-microscope-applications-require-immersion-oil",
+            "https://intrinsicallysafestore.com/blog/what-is-immersion-oil-and-why-is-it-used",
+            "https://intrinsicallysafestore.com/blog/what-does-immersion-oil-do",
+            "https://brainly.com/question/62907525"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 4
+        },
+        {
+          "itemId": "940ab23a-item5",
+          "confirmed": true,
+          "reason": "The excerpts support the sequence crystal violet, iodine, decolorizer, then safranin.",
+          "sourceUrls": [
+            "https://brainly.com/question/30875001",
+            "https://www.vaia.com/en-us/textbooks/biology/microbiology-principles-and-explorations-7-edition/chapter-3/problem-16-the-order-of-reagents-used-in-the-gram-stain-are-/",
+            "https://microbeonline.com/preparation-gram-stain-reagents/",
+            "https://www.vaia.com/en-us/textbooks/biology/microbiology-principles-and-explorations-8-edition/chapter-3/problem-13-the-order-of-reagents-used-in-the-gram-stain-are-/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 4
+        },
+        {
+          "itemId": "940ab23a-item6",
+          "confirmed": true,
+          "reason": "The excerpts state that Gram-positive cells’ thick peptidoglycan layer traps the crystal violet–iodine complex during decolorization.",
+          "sourceUrls": [
+            "https://brainly.com/question/14949432",
+            "https://casrai.org/guides/gram-stain-procedure-reagents-results",
+            "https://microbeonline.com/gram-staining-principle-procedure-results/",
+            "https://microbiosci.creative-biogene.com/gram-staining-protocol.html",
+            "https://academicpath.org/gram-positive-bacterial-cell-wall-structure"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item7",
+          "confirmed": true,
+          "reason": "The excerpts identify elongated, cylindrical cells as bacilli and describe rods linked end to end in chains as streptobacilli, supporting “bacilli in chains.”",
+          "sourceUrls": [
+            "https://biologyreader.com/bacterial-shape-and-arrangement.html",
+            "https://microbenotes.com/bacterial-sizes-shapes-arrangement/",
+            "https://www.scribd.com/document/663979825/Bacterial-shapes-and-arrangements-ppt",
+            "https://www.pearson.com/channels/microbiology/flashcards/topics/bacterial-morphology/bacterial-cell-morphology-and-arrangements-definitions",
+            "https://microbiologyinfo.com/different-size-shape-and-arrangement-of-bacterial-cells/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "940ab23a-item8",
+          "confirmed": true,
+          "reason": "The excerpts identify pink staining as Gram-negative and describe morphology as observable, while noting that a Gram stain narrows the organism to a category rather than confirming its species.",
+          "sourceUrls": [
+            "https://casrai.org/guides/gram-stain-procedure-reagents-results",
+            "https://scienceinsights.org/what-do-gram-negative-rods-in-urine-mean/",
+            "https://www.ableweb.org/biologylabs/wp-content/uploads/volumes/vol-42/davidson/example_exercise.pdf"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 3
+        },
+        {
+          "itemId": "97c4f738-item1",
+          "confirmed": true,
+          "reason": "The excerpts say the Eddas were preserved in medieval Iceland by Christian Icelanders, long after Iceland’s conversion to Christianity.",
+          "sourceUrls": [
+            "https://mythologis.com/mythologies/europe/asatru/texts/poetic-prose-edda-heathenry-sources",
+            "https://godsandmonsters.info/welcome-to-gods-and-monsters/icelandic-mythology/",
+            "https://notesfromiceland.substack.com/p/religious-practice-in-the-pre-christian",
+            "https://thepagantemple.com/conversion-scandinavia-what-lost-survived/",
+            "https://notesfromiceland.substack.com/p/the-myth-of-a-pagan-iceland"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item2",
+          "confirmed": true,
+          "reason": "The excerpts identify Midgard as the realm of humans and Asgard as the home or realm of the gods.",
+          "sourceUrls": [
+            "https://study.com/academy/lesson/midgard-norse-mythology-overview-history.html",
+            "https://vikingsbrand.co/blogs/norse-news/midgard",
+            "https://mythopedia.com/topics/asgard/",
+            "https://othravar.com/encyclopedia/midgard",
+            "https://norse-mythology.org/cosmology/the-nine-worlds/asgard/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item3",
+          "confirmed": true,
+          "reason": "The excerpts describe Yggdrasil as a living World Tree whose roots and branches connect different realms and bind the cosmos together.",
+          "sourceUrls": [
+            "https://mythlok.com/plants/yggdrasil/",
+            "https://northrune.co.uk/blogs/viking-history/what-is-yggdrasil-the-world-tree-in-norse-mythology",
+            "https://paganheim.com/blogs/mythology/yggdrasil",
+            "https://thewarriorlodge.com/blogs/news/yggdrasil-and-the-nine-realms-a-map-of-norse-mythology",
+            "https://mythoholics.com/yggdrasil-nine-worlds-norse-cosmic-tree/"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item4",
+          "confirmed": true,
+          "reason": "The excerpts consistently describe the Norns as determining or shaping the destinies of gods and mortals, supporting the answer that they shape lives and destinies beyond an individual’s control.",
+          "sourceUrls": [
+            "https://surflegacy.net/the-norns/",
+            "https://oldworldgods.com/norse/norns-mythology/",
+            "https://www.norsetraditionschurch.org/post/the-norns-weavers-of-fate-in-norse-mythology",
+            "https://ancientmythology.net/norse-mythology/the-norns-fates-and-weavers-of-destiny-in-norse-mythology/",
+            "https://ransackviking.com/norns-norse-mythology"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item5",
+          "confirmed": true,
+          "reason": "The excerpts consistently say Odin gathers slain warriors in Valhalla to form an army that will fight alongside the gods at Ragnarök.",
+          "sourceUrls": [
+            "https://mythologis.com/mythologies/europe/norse/places/valhalla-odins-hall-of-the-slain-warriors",
+            "https://www.fireofroots.co.uk/item/valhalla-the-hall-of-the-slain/",
+            "https://www.mythic-harmonies.com/norse-mythology/valhalla-meaning-norse-mythology/",
+            "https://talesofvalhalla.com/blogs/tales-of-valhalla-norse-mythology/valhalla-norse-mythology",
+            "https://mythologis.com/mythologies/europe/norse/places/valhalla-hall-of-the-slain"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        },
+        {
+          "itemId": "97c4f738-item6",
+          "confirmed": true,
+          "reason": "The excerpts say Frigg obtained oaths from nearly everything but overlooked mistletoe, which had not sworn to spare Baldr.",
+          "sourceUrls": [
+            "https://mythologyvault.com/mythologies-by-culture/norse-mythology/death-of-baldr-by-mistletoe/",
+            "https://www.encyclopedia.com/philosophy-and-religion/ancient-religions/ancient-religion/balder",
+            "https://norse-mythology.org/gods-and-creatures/the-aesir-gods-and-goddesses/baldur/",
+            "https://www.mythologyblog.com/norse/baldur-s-death-and-the-mistletoe/",
+            "https://www.alehorn.com/blogs/alehorn-viking-blog/the-death-of-baldr"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "sources": 5
+        }
+      ]
+    }
+  ]
+}
