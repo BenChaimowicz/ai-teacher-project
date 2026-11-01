@@ -367,3 +367,58 @@ test("A text-only call keeps its user message a plain JSON string", async () => 
   await transport.complete("fixture/model", REQUEST);
   assert.equal(content, JSON.stringify(REQUEST.input));
 });
+
+test("A rate-limited call is retried once on the same model after the wait its reply gave; a second 429 is not", async () => {
+  const limited = (retryAfterMs?: number) => new ModelError("http", { status: 429, ...(retryAfterMs !== undefined ? { retryAfterMs } : {}) });
+  for (const [outcomes, waits] of [
+    [[limited(1200), 0.5], [1200]],
+    [[limited(), 0.5], [5000]],
+    [[limited(90_000), 0.5], [30_000]],
+  ] as const) {
+    const { transport, models } = scriptedTransport(...outcomes);
+    const slept: number[] = [];
+    const warnings: string[] = [];
+    const { generator } = createModelPorts({
+      config: PORTS_CONFIG, transport, log: { warn: (message) => warnings.push(message) }, sleep: async (ms) => { slept.push(ms); },
+    });
+    assert.deepEqual(await generator.generateStructured(REQUEST), { value: 0.5, modelId: "fixture/author" });
+    assert.deepEqual(models, ["fixture/author", "fixture/author"]);
+    assert.deepEqual(slept, waits);
+    assert.equal(warnings.length, 1);
+  }
+
+  const twice = scriptedTransport(limited(1), limited(1));
+  const { generator } = createModelPorts({ config: PORTS_CONFIG, transport: twice.transport, log: quiet, sleep: async () => {} });
+  await assert.rejects(generator.generateStructured(REQUEST), (error: unknown) => error instanceof ModelError && error.code === "http" && error.status === 429);
+  assert.equal(twice.models.length, 2, "A second 429 is neither retried nor sent to the fallback.");
+});
+
+test("A 429 reply carries the wait the vendor asked for, from its header or OpenRouter's reset time", async () => {
+  const withHeader = createOpenRouterTransport({
+    apiKey: "fixture-key",
+    /** A bare 429 with a Retry-After in seconds. */
+    fetch: async () => new Response("slow down", { status: 429, headers: { "Retry-After": "2" } }),
+  });
+  await assert.rejects(withHeader.complete("fixture/model", REQUEST), (error: unknown) => {
+    assert.ok(error instanceof ModelError);
+    assert.equal(error.code, "http");
+    assert.equal(error.status, 429);
+    assert.equal(error.retryAfterMs, 2000);
+    assert.doesNotMatch(error.message, /slow down/);
+    return true;
+  });
+
+  const resetAt = Date.now() + 1500;
+  const withReset = createOpenRouterTransport({
+    apiKey: "fixture-key",
+    fetch: providerFetch({ error: { code: 429, message: "Rate limit exceeded", metadata: { headers: { "X-RateLimit-Reset": String(resetAt) } } } }, 429),
+  });
+  await assert.rejects(withReset.complete("fixture/model", REQUEST), (error: unknown) => {
+    assert.ok(error instanceof ModelError);
+    assert.ok(error.retryAfterMs !== undefined && error.retryAfterMs > 0 && error.retryAfterMs <= 1500, `retryAfterMs=${error.retryAfterMs}`);
+    return true;
+  });
+
+  const bare = createOpenRouterTransport({ apiKey: "fixture-key", fetch: async () => new Response("", { status: 429 }) });
+  await assert.rejects(bare.complete("fixture/model", REQUEST), (error: unknown) => error instanceof ModelError && error.retryAfterMs === undefined);
+});

@@ -1,4 +1,4 @@
-import { redact, youResearchAdapter, type ResearchAdapter } from "@senoy/research";
+import { redact, youSearchAdapter, type ResearchAdapter } from "@senoy/research";
 import type { FactChecker, FactCheckClaim, FactCheckResult } from "./diagnostic.ts";
 import type { Judge } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
@@ -29,12 +29,13 @@ export type FactCheckerOptions = {
 };
 
 /**
- * Bounded fact-check: one research call per flagged key, then a key-aware Judge reading of the excerpts.
+ * Bounded fact-check: one search per flagged key, then a key-aware Judge reading of the excerpts.
  * Not Lesson Source retrieval: no Host policy, no Citations, nothing stored on Lessons.
- * @param options - Judge, author model for independence, and the research adapter (You.com by default)
+ * @param options - Judge, author model for independence, and the search adapter: You.com Web Search by default, which
+ * confirmed the same keys as the Research API at a tenth of the price (decision 2026-11-01, SEN-120)
  */
 export function createFactChecker(options: FactCheckerOptions): FactChecker {
-  const adapter = options.adapter ?? youResearchAdapter;
+  const adapter = options.adapter ?? youSearchAdapter;
   return {
     vendor: adapter.id,
     async check(claims: FactCheckClaim[]): Promise<FactCheckResult[]> {

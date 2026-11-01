@@ -132,6 +132,23 @@ pnpm check:test-course-blueprints:live [drums|microbiology]
 
 This opt-in check makes billable model calls: it designs a live Blueprint for the drum kit and microbiology Courses, for a brand-new Learner, offered the committed seed catalog. It writes the run to `docs/research/sen-115-test-course-blueprints.json` and fails unless each Blueprint passes its Judge and requires at least one image the catalog can fill. A gap shows up as a Reading that should require an image and does not, so read the output against spec §7.
 
-Generator and Judge share one native-fetch OpenRouter transport. Defaults live in `apps/api/src/lib/model-config.ts`; optional server-only overrides are listed in `.env.example`. Judge calls require a different author model ID. Research vendors remain direct; validity makes no research calls. A reply that is invalid or cut off is retried once on the same model, then once on the configured fallback, and each reply names the model that wrote it so the Judge never judges its own author's work (ADR 0015). Provider schemas are also checked in application code, including stage-specific clarification invariants.
+Two comparisons from the cost work (SEN-120) can be re-run when a vendor or a price changes:
+
+```bash
+pnpm check:fact-check-vendors:live [claims path] [output path] [snippets,highlights,lite,standard]
+pnpm check:research-processors:live [output path]
+```
+
+The first runs the real Starting Level fact-check over the keyed answers in `docs/research/sen-120-fact-check-claims.json` with each candidate search (You.com Web Search with snippets or highlights, Research lite, Research standard), the same Judge reading each one's excerpts, two claims at a time, and writes every verdict to `docs/research/sen-120-fact-check-vendors-run.json`; all four variants cost about $1. The second researches the two test Courses' Reading topics on Parallel's `core` and `pro` processors at once and writes both packs per topic, about $0.25.
+
+To re-run the Norse and Gram test Courses through the product and see what each stage cost:
+
+```bash
+pnpm run:test-courses:live [norse|gram|all] [output path]
+```
+
+This is a billable run, about $1.30 a Course, not a check: with `pnpm apps` running against the shared database, it signs in as `TEST_LEARNER_EMAIL` / `TEST_LEARNER_PASSWORD` (a confirmed account; a missing Teaching Profile is saved with default answers), drives each Course from Request to published the way the 2026-11-01 runs were done by hand (validity, focus, Starting Level answered "I don't know" throughout, Blueprint, approve, generation), then prints the per-stage spend from `usage_records` and writes the run to `docs/research/sen-120-test-course-runs-<date>.json`. The Courses land in that Learner's Library.
+
+Generator and Judge share one native-fetch OpenRouter transport. Defaults live in `apps/api/src/lib/model-config.ts`; optional server-only overrides are listed in `.env.example`. Judge calls require a different author model ID. Research vendors remain direct; validity makes no research calls. A reply that is invalid or cut off is retried once on the same model, then once on the configured fallback, and each reply names the model that wrote it so the Judge never judges its own author's work (ADR 0015). A call OpenRouter rate-limits is retried once on the same model after the wait its reply asks for, capped at thirty seconds; other HTTP errors are not retried. Provider schemas are also checked in application code, including stage-specific clarification invariants.
 
 Deploy notes: [`docs/deploy.md`](docs/deploy.md).

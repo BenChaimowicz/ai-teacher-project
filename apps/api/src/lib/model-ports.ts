@@ -31,6 +31,8 @@ export type ModelPortsOptions = {
   log?: ModelPortsLog;
   /** Which models write: the Generator pair, or the Lesson pair for Readings and Quizzes (ADR 0018). */
   authors?: "generator" | "lesson";
+  /** Waits before a rate-limited call is retried; tests pass a fake. */
+  sleep?: (ms: number) => Promise<void>;
 };
 
 /** Every Judge call reasons at high effort unless the request sets its own (ADR 0010). */
@@ -39,6 +41,15 @@ const JUDGE_REASONING_EFFORT = "high" as const;
 /** Failures one more call can fix: a malformed or cut-off reply. Timeouts and refusals are not retried (ADR 0015). */
 const RETRIED: readonly ModelErrorCode[] = ["invalid_output", "incomplete"];
 
+/**
+ * A 429 is retried once on the same model after the wait the reply asked for, capped, with a default when it gave none
+ * (decision 2026-11-01: OpenRouter caps new accounts at 20 requests a minute per model).
+ */
+const RATE_LIMIT_WAIT_MS = { fallback: 5_000, max: 30_000 } as const;
+
+/** Real waiting, for production. */
+const defaultSleep = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
+
 /** One model call the ports may make. */
 type Attempt = { modelId: string };
 
@@ -46,24 +57,42 @@ type Attempt = { modelId: string };
 const PORT_NAMES: Record<ModelCallFrame["role"], string> = { generator: "generator", fallback_generator: "fallback generator", judge: "judge" };
 
 /**
- * Makes the first attempt, then the rest only after a retryable failure, logging each one retried. Each call runs with
- * its role and 1-based attempt number visible to usage tracking.
- * @param role - Which port, for the log and the Usage Record
- * @param attempts - The primary call, its one retry, and the fallback call
- * @param call - Sends one attempt
- * @param log - Where retries are reported
+ * Builds the attempt loop around one way of waiting.
+ * @param sleep - Waits before a rate-limited call is retried
  */
-async function attempt<T>(role: ModelCallFrame["role"], attempts: Attempt[], call: (attempt: Attempt) => Promise<T>, log: ModelPortsLog): Promise<ModelReply<T>> {
-  for (const [index, next] of attempts.entries()) {
-    try {
-      return { value: await withModelCall({ role, attempt: index + 1 }, () => call(next)), modelId: next.modelId };
-    } catch (error) {
-      const following = attempts[index + 1];
-      if (!following || !(error instanceof ModelError) || !RETRIED.includes(error.code)) throw error;
-      log.warn(`[model-ports: ${PORT_NAMES[role]}] Retrying after a bad reply || model=${next.modelId} || next=${following.modelId} || ${error.message}`);
+function attemptWith(sleep: (ms: number) => Promise<void>) {
+  /**
+   * Makes the first attempt, then the rest only after a retryable failure, logging each one retried. A rate-limited
+   * call is first retried once on the same model, after the wait its reply asked for. Each call runs with its role and
+   * 1-based attempt number visible to usage tracking; the rate-limit retry keeps the refused call's number.
+   * @param role - Which port, for the log and the Usage Record
+   * @param attempts - The primary call, its one retry, and the fallback call
+   * @param call - Sends one attempt
+   * @param log - Where retries are reported
+   */
+  return async function attempt<T>(role: ModelCallFrame["role"], attempts: Attempt[], call: (attempt: Attempt) => Promise<T>, log: ModelPortsLog): Promise<ModelReply<T>> {
+    for (const [index, next] of attempts.entries()) {
+      let rateLimited = false;
+      for (;;) {
+        try {
+          return { value: await withModelCall({ role, attempt: index + 1 }, () => call(next)), modelId: next.modelId };
+        } catch (error) {
+          if (error instanceof ModelError && error.code === "http" && error.status === 429 && !rateLimited) {
+            rateLimited = true;
+            const waitMs = Math.min(error.retryAfterMs ?? RATE_LIMIT_WAIT_MS.fallback, RATE_LIMIT_WAIT_MS.max);
+            log.warn(`[model-ports: ${PORT_NAMES[role]}] Rate limited; retrying in ${waitMs} ms || model=${next.modelId} || ${error.message}`);
+            await sleep(waitMs);
+            continue;
+          }
+          const following = attempts[index + 1];
+          if (!following || !(error instanceof ModelError) || !RETRIED.includes(error.code)) throw error;
+          log.warn(`[model-ports: ${PORT_NAMES[role]}] Retrying after a bad reply || model=${next.modelId} || next=${following.modelId} || ${error.message}`);
+          break;
+        }
+      }
     }
-  }
-  throw new Error(`[model-ports: ${PORT_NAMES[role]}] No model may make this call`);
+    throw new Error(`[model-ports: ${PORT_NAMES[role]}] No model may make this call`);
+  };
 }
 
 /**
@@ -88,6 +117,7 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
   const config = options.config ?? loadModelConfig();
   const transport = options.transport ?? createTrackedTransport();
   const log = options.log ?? console;
+  const attempt = attemptWith(options.sleep ?? defaultSleep);
   const [primaryModel, fallbackModel] = options.authors === "lesson"
     ? [config.lessonGeneratorModel, config.lessonGeneratorFallbackModel]
     : [config.generatorModel, config.generatorFallbackModel];

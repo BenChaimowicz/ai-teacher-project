@@ -1,0 +1,159 @@
+{
+  "takenFrom": "starting_level_diagnostics of the Gram and Norse test Courses, 2026-11-01 (SEN-119); the keyed answers the Judge flagged as external factual claims",
+  "claims": [
+    {
+      "itemId": "940ab23a-item1",
+      "course": "Gram staining",
+      "question": "During a supervised laboratory class, bacterial broth spills onto a work surface. What is the appropriate first response?",
+      "answer": "Pause work, alert people nearby, and ask the instructor for help.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts direct students to stop work, notify the instructor, and alert or keep others away from the spill.",
+        "sources": 3
+      }
+    },
+    {
+      "itemId": "940ab23a-item2",
+      "course": "Gram staining",
+      "question": "Why should a sterile culture container be open for as little time as practical during a transfer?",
+      "answer": "To reduce contact with microbes from the surroundings.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpt says to keep containers open to the air for the minimum time to reduce the chances of contamination from microorganisms in the environment.",
+        "sources": 2
+      }
+    },
+    {
+      "itemId": "940ab23a-item3",
+      "course": "Gram staining",
+      "question": "How does streaking carry a bacterial sample across an agar plate to produce isolated colonies?",
+      "answer": "Each new area receives fewer cells carried over from the previous area.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpt says later streaked regions receive fewer and fewer cells, allowing individual cells to form isolated colonies.",
+        "sources": 1
+      }
+    },
+    {
+      "itemId": "940ab23a-item4",
+      "course": "Gram staining",
+      "question": "What optical benefit does immersion oil provide when used with an oil-rated microscope objective?",
+      "answer": "It reduces light refraction, helping the lens resolve small details.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts say immersion oil minimizes refraction and increases numerical aperture and resolution, helping the objective resolve fine details.",
+        "sources": 2
+      }
+    },
+    {
+      "itemId": "940ab23a-item5",
+      "course": "Gram staining",
+      "question": "In a standard Gram stain using safranin, in what order are the four main reagents applied?",
+      "answer": "Crystal violet, iodine, decolorizer, safranin.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpt identifies crystal violet, Gram’s iodine, a decolorization step, and safranin in that order, supporting the answer.",
+        "sources": 1
+      }
+    },
+    {
+      "itemId": "940ab23a-item6",
+      "course": "Gram staining",
+      "question": "Which structural feature chiefly explains why Gram-positive cells retain the crystal violet–iodine complex during proper decolorization?",
+      "answer": "A thick peptidoglycan layer that holds the complex within the wall.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts explain that Gram-positive cells have thick, peptidoglycan-rich walls that retain the crystal violet–iodine complex during decolorization.",
+        "sources": 2
+      }
+    },
+    {
+      "itemId": "940ab23a-item7",
+      "course": "Gram staining",
+      "question": "A stained field contains elongated, cylindrical cells joined end to end in rows. Which description matches their shape and arrangement?",
+      "answer": "Bacilli in chains.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts identify bacilli as rod-shaped cells and streptobacilli as chains of bacilli, matching elongated cylindrical cells joined end to end in rows.",
+        "sources": 2
+      }
+    },
+    {
+      "itemId": "940ab23a-item8",
+      "course": "Gram staining",
+      "question": "A properly prepared Gram stain from a pure culture shows pink, elongated bacterial cells. Which identification is supported by this observation alone?",
+      "answer": "A Gram-negative rod is present, but its species is uncertain.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts state that pink/red staining indicates Gram-negative bacteria and that elongated rod-shaped cells are bacilli, supporting a Gram-negative rod without identifying its species.",
+        "sources": 3
+      }
+    },
+    {
+      "itemId": "97c4f738-item1",
+      "course": "Norse mythology",
+      "question": "Which historical setting shaped the preservation of the Poetic Edda and Snorri's Edda?",
+      "answer": "Medieval Iceland, after the adoption of Christianity.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts place the Eddas’ composition and surviving manuscripts in medieval Iceland and describe Snorri as a Christian scholar, supporting a post-Christian Icelandic setting.",
+        "sources": 3
+      }
+    },
+    {
+      "itemId": "97c4f738-item2",
+      "course": "Norse mythology",
+      "question": "Which pairing correctly identifies Midgard and Asgard in Norse mythology?",
+      "answer": "Midgard is the human realm; Asgard is a realm of the gods.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpt identifies Midgard as the realm of human beings and Asgard as the gods’ enclosure, supporting the pairing.",
+        "sources": 1
+      }
+    },
+    {
+      "itemId": "97c4f738-item3",
+      "course": "Norse mythology",
+      "question": "What role does Yggdrasil play in Norse descriptions of the cosmos?",
+      "answer": "It forms a living structure linking different regions of existence.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpt describes Yggdrasill as a giant world tree that supports the universe and connects the nine worlds, supporting the answer that it links different regions of existence.",
+        "sources": 1
+      }
+    },
+    {
+      "itemId": "97c4f738-item4",
+      "course": "Norse mythology",
+      "question": "What is the main role of the Norns in Norse mythology?",
+      "answer": "They shape lives and destinies beyond an individual's control.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts describe the Norns as responsible for shaping human destinies and associate them with fate that is preordained and unchangeable.",
+        "sources": 2
+      }
+    },
+    {
+      "itemId": "97c4f738-item5",
+      "course": "Norse mythology",
+      "question": "Why does Odin gather slain warriors in Valhalla?",
+      "answer": "To support the gods in the final battle at Ragnarök.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts say Odin gathers slain warriors into an army that will fight alongside him at Ragnarök.",
+        "sources": 3
+      }
+    },
+    {
+      "itemId": "97c4f738-item6",
+      "course": "Norse mythology",
+      "question": "In Snorri's account, why can mistletoe harm Baldr when other things have promised to spare him?",
+      "answer": "It has been left out of the oaths obtained for his protection.",
+      "storedFactCheck": {
+        "confirmed": true,
+        "reason": "The excerpts state that Frigg obtained oaths from everything except mistletoe, which she overlooked or considered too young, leaving it able to harm Baldr.",
+        "sources": 2
+      }
+    }
+  ]
+}
