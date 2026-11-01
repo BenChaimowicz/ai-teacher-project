@@ -47,13 +47,13 @@ export const SETUP_CHECKLIST: SectionDefinition[] = [
   {
     key: "workspace",
     title: "Set up founder email",
-    intro: "Google Workspace on knibbler.app, with one mailbox and one admin per founder.",
+    intro: "Zoho Mail (Forever Free plan) on knibbler.app, with one mailbox and one admin per founder.",
     items: [
-      ["workspace.create", "Create Google Workspace for knibbler.app."],
+      ["workspace.create", "Create a Zoho Mail organization for knibbler.app on the Forever Free plan."],
       ["workspace.mailboxes", "Create one individual mailbox for each founder."],
       ["workspace.account-security", "Give each account its own password, two-factor authentication, and recovery methods."],
-      ["workspace.admins", "Ensure both founders can administer Google Workspace."],
-      ["workspace.verify", "Verify domain ownership using the DNS record supplied by Google."],
+      ["workspace.admins", "Ensure both founders can administer Zoho Mail."],
+      ["workspace.verify", "Verify domain ownership using the DNS record supplied by Zoho."],
     ],
   },
   {
@@ -73,11 +73,11 @@ export const SETUP_CHECKLIST: SectionDefinition[] = [
   {
     key: "dns",
     title: "Configure and test DNS email records",
-    intro: "Add only what Google asks for, in Porkbun. DNS changes can take a while to show up; that is normal.",
+    intro: "Add only what Zoho asks for, in Porkbun. DNS changes can take a while to show up; that is normal.",
     items: [
-      ["dns.follow-google", "Follow Google Workspace’s current setup instructions."],
+      ["dns.follow-google", "Follow Zoho Mail’s current setup instructions."],
       ["dns.records", "Add the supplied MX, SPF, DKIM, and DMARC records in Porkbun."],
-      ["dns.conflicting-mx", "Remove conflicting MX records only when Google’s instructions require it."],
+      ["dns.conflicting-mx", "Remove conflicting MX records only when Zoho’s instructions require it."],
       ["dns.one-spf", "Maintain one valid SPF record rather than multiple independent SPF records."],
       ["dns.dmarc-none", "Start DMARC in monitoring mode with p=none."],
       ["dns.leave-others", "Do not change unrelated DNS records or migrate nameservers."],
@@ -94,7 +94,7 @@ export const SETUP_CHECKLIST: SectionDefinition[] = [
       ["email-test.send-reply", "Send and reply from each founder’s individual address."],
       ["email-test.gmail-outlook", "Test delivery to both Gmail and Outlook recipients."],
       ["email-test.spam", "Confirm messages are not landing in spam."],
-      ["email-test.admin-recovery", "Confirm both founders can administer Workspace and recover their accounts."],
+      ["email-test.admin-recovery", "Confirm both founders can administer Zoho Mail and recover their accounts."],
     ],
   },
   {
@@ -118,7 +118,7 @@ export const SETUP_CHECKLIST: SectionDefinition[] = [
     intro: "Automated app email goes through its own provider and subdomain, separate from human email.",
     items: [
       ["app-email.provider", "Choose one transactional email provider, such as Resend or Postmark."],
-      ["app-email.not-workspace", "Do not use Google Workspace or a personal inbox for automated app email."],
+      ["app-email.not-workspace", "Do not use Zoho Mail or a personal inbox for automated app email."],
       ["app-email.subdomain", "Configure the sending subdomain auth.knibbler.app."],
       ["app-email.sender", "Configure the sender as: Knibbler <no-reply@auth.knibbler.app>"],
       ["app-email.dns", "Add the provider’s supplied DNS records exactly as instructed."],
@@ -149,7 +149,7 @@ export const SETUP_CHECKLIST: SectionDefinition[] = [
     items: [
       ["drill.porkbun", "Access Porkbun."],
       ["drill.vault", "Access the shared password vault."],
-      ["drill.workspace", "Administer Google Workspace."],
+      ["drill.workspace", "Administer Zoho Mail."],
       ["drill.accounts-email", "Receive accounts@knibbler.app email."],
       ["drill.vendors", "Access every critical vendor."],
       ["drill.recovery-codes", "Find recovery codes."],
