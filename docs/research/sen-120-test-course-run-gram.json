@@ -1,0 +1,173 @@
+{
+  "ranAt": "2026-11-01T17:50:54.221Z",
+  "apiUrl": "http://127.0.0.1:3000",
+  "runs": [
+    {
+      "name": "gram",
+      "subject": "Microbiology lab fundamentals",
+      "learningGoal": "Understand Gram staining and the lab basics around it: why Gram-positive and Gram-negative cell walls stain differently, the four reagent steps, reading a stained slide under the microscope, and the aseptic technique and culture methods that come before it.",
+      "requestId": "67630eac-6d85-4401-810f-f56f49dcf636",
+      "resumed": true,
+      "startedAt": "2026-11-01T17:36:20.832Z",
+      "finishedAt": "2026-11-01T17:50:54.221Z",
+      "minutes": 14.6,
+      "finalStatus": "published",
+      "failureReason": null,
+      "timeline": [
+        {
+          "at": "2026-11-01T17:36:21.087Z",
+          "status": "blueprint_preparing",
+          "note": "resumed 67630eac-6d85-4401-810f-f56f49dcf636"
+        },
+        {
+          "at": "2026-11-01T17:37:33.868Z",
+          "status": "blueprint_review"
+        },
+        {
+          "at": "2026-11-01T17:37:34.944Z",
+          "status": "generating"
+        },
+        {
+          "at": "2026-11-01T17:37:55.387Z",
+          "status": "generating",
+          "note": "research 0/6"
+        },
+        {
+          "at": "2026-11-01T17:41:40.756Z",
+          "status": "generating",
+          "note": "lesson 0/6 · Keep Cultures Clean and Separate Colonies"
+        },
+        {
+          "at": "2026-11-01T17:43:02.571Z",
+          "status": "generating",
+          "note": "lesson 1/6 · How Cell Walls Determine Gram Staining"
+        },
+        {
+          "at": "2026-11-01T17:45:05.449Z",
+          "status": "generating",
+          "note": "lesson 2/6 · From Clean Culture to Differential Stain"
+        },
+        {
+          "at": "2026-11-01T17:46:06.831Z",
+          "status": "generating",
+          "note": "lesson 3/6 · Bring a Stained Slide into Focus"
+        },
+        {
+          "at": "2026-11-01T17:48:09.548Z",
+          "status": "generating",
+          "note": "lesson 4/6 · Read and Report a Gram-Stained Slide"
+        },
+        {
+          "at": "2026-11-01T17:49:52.230Z",
+          "status": "generating",
+          "note": "lesson 5/6 · From Microscope View to Reliable Report"
+        },
+        {
+          "at": "2026-11-01T17:50:33.130Z",
+          "status": "generating",
+          "note": "publish 6/6"
+        },
+        {
+          "at": "2026-11-01T17:50:53.586Z",
+          "status": "published"
+        }
+      ],
+      "cost": {
+        "stages": [
+          {
+            "kind": "blueprint",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0252
+          },
+          {
+            "kind": "blueprint",
+            "who": "judge",
+            "calls": 1,
+            "usd": 0.0005
+          },
+          {
+            "kind": "course_judge",
+            "who": "judge",
+            "calls": 1,
+            "usd": 0.0007
+          },
+          {
+            "kind": "diagnostic",
+            "who": "author",
+            "calls": 3,
+            "usd": 0.0377
+          },
+          {
+            "kind": "diagnostic",
+            "who": "judge",
+            "calls": 2,
+            "usd": 0.0017
+          },
+          {
+            "kind": "fact_check",
+            "who": "judge",
+            "calls": 8,
+            "usd": 0.0017
+          },
+          {
+            "kind": "fact_check",
+            "who": "you",
+            "calls": 8,
+            "usd": 0.04
+          },
+          {
+            "kind": "goal_focus",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0016
+          },
+          {
+            "kind": "quiz",
+            "who": "author",
+            "calls": 2,
+            "usd": 0.1091
+          },
+          {
+            "kind": "quiz",
+            "who": "judge",
+            "calls": 4,
+            "usd": 0.0034
+          },
+          {
+            "kind": "reading",
+            "who": "author",
+            "calls": 7,
+            "usd": 0.4049
+          },
+          {
+            "kind": "reading",
+            "who": "judge",
+            "calls": 22,
+            "usd": 0.0309
+          },
+          {
+            "kind": "research",
+            "who": "parallel",
+            "calls": 4,
+            "usd": 0.4
+          },
+          {
+            "kind": "research",
+            "who": "you",
+            "calls": 4,
+            "usd": 0.2
+          },
+          {
+            "kind": "validity",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0023
+          }
+        ],
+        "totalUsd": 1.2597,
+        "calls": 69
+      }
+    }
+  ]
+}
