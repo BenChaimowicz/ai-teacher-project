@@ -248,7 +248,7 @@ test("A billed reply that fails validation is recorded with its actual cost, the
     assert.equal(bad!.httpStatus, 200);
     assert.ok(bad!.pipelineEventId);
     assert.deepEqual(bad!.request, {
-      systemPrompt: REQUEST.systemPrompt, input: REQUEST.input, schemaName: "score", providerOrder: CONFIG.generatorProviderOrder, timeoutMs: 60_000,
+      systemPrompt: REQUEST.systemPrompt, input: REQUEST.input, schemaName: "score", timeoutMs: 60_000,
     });
     assert.ok(!JSON.stringify(usage).includes("secret-key"));
     assert.equal(good!.outcome, "ok");

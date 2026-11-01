@@ -90,7 +90,7 @@ export const METRIC_HELP = {
   estimated: "Estimated from the price list: research services don't tell us what they charge.",
   unknown: "Unknown: we were (or may have been) charged, but nothing told us how much, e.g. a call we stopped for taking too long.",
   vendorVsProvider:
-    "Vendor is who we pay: OpenRouter for model calls, Parallel or You.com for research. Provider is who actually answered: OpenRouter routes each model call to a host (Alibaba, OpenAI, Google…). The same model can be cheaper or faster on one host; by our measurements DeepSeek on Alibaba is both.",
+    "Vendor is who we pay: OpenRouter for model calls, Parallel or You.com for research. Provider is who actually answered: OpenRouter routes each model call to a host (OpenAI, Google, Alibaba…). The same model can be cheaper or faster on one host.",
 } as const;
 
 /** Tooltips for the billing check and measured research cost. */

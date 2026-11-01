@@ -40,7 +40,7 @@ const JUDGE_REASONING_EFFORT = "high" as const;
 const RETRIED: readonly ModelErrorCode[] = ["invalid_output", "incomplete"];
 
 /** One model call the ports may make. */
-type Attempt = { modelId: string; providerOrder?: string[] };
+type Attempt = { modelId: string };
 
 /** Port names in logs, by Usage Record role. */
 const PORT_NAMES: Record<ModelCallFrame["role"], string> = { generator: "generator", fallback_generator: "fallback generator", judge: "judge" };
@@ -68,8 +68,8 @@ async function attempt<T>(role: ModelCallFrame["role"], attempts: Attempt[], cal
 
 /**
  * The primary model twice, then the fallback once, skipping any model the caller rules out.
- * @param primary - The configured model, with its preferred hosts
- * @param fallback - The configured fallback, with its preferred hosts, if any
+ * @param primary - The configured model
+ * @param fallback - The configured fallback, if any
  * @param excluded - Models that may not make this call
  */
 function attempts(primary: Attempt, fallback: Attempt | null, excluded: readonly string[] = []): Attempt[] {
@@ -91,25 +91,22 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
   const [primaryModel, fallbackModel] = options.authors === "lesson"
     ? [config.lessonGeneratorModel, config.lessonGeneratorFallbackModel]
     : [config.generatorModel, config.generatorFallbackModel];
-  // The preferred hosts were measured for the Generator model, so they go with that model in whichever role it writes.
-  const author = (modelId: string): Attempt => ({
-    modelId, ...(modelId.trim() === config.generatorModel.trim() ? { providerOrder: config.generatorProviderOrder } : {}),
-  });
+  // No host is pinned since ADR 0028: every author gets OpenRouter's default routing.
   return {
     generator: {
       modelId: primaryModel,
       /** Sends structured authoring work through the shared transport. */
       generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
-        return attempt("generator", attempts(author(primaryModel), author(fallbackModel)),
-          (next) => transport.complete(next.modelId, request, next.providerOrder), log);
+        return attempt("generator", attempts({ modelId: primaryModel }, { modelId: fallbackModel }),
+          (next) => transport.complete(next.modelId, request), log);
       },
     },
     fallbackGenerator: {
       modelId: fallbackModel,
       /** Makes the call twice at most on its own model: a second author is already the fallback. */
       generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
-        return attempt("fallback_generator", attempts(author(fallbackModel), null),
-          (next) => transport.complete(next.modelId, request, next.providerOrder), log);
+        return attempt("fallback_generator", attempts({ modelId: fallbackModel }, null),
+          (next) => transport.complete(next.modelId, request), log);
       },
     },
     judge: {
