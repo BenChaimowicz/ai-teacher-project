@@ -95,6 +95,8 @@ export type InvalidOutputCause = "unparseable" | "schema" | "check";
 /** What a ModelError may record besides its code. Never provider bodies, prompts, or credentials. */
 export type ModelErrorDetails = {
   status?: number;
+  /** Set on a 429 when the reply said how long to wait before retrying, in ms. */
+  retryAfterMs?: number;
   /** Set only on `invalid_output`. */
   invalidCause?: InvalidOutputCause;
   /** The OpenRouter host that answered, when a response arrived. */
@@ -106,6 +108,7 @@ export type ModelErrorDetails = {
 /** A provider failure is not a Validity decision and may be retried by the caller. */
 export class ModelError extends Error {
   public readonly status?: number;
+  public readonly retryAfterMs?: number;
   public readonly invalidCause?: InvalidOutputCause;
   public readonly provider?: string;
   public readonly responseId?: string;
@@ -121,11 +124,12 @@ export class ModelError extends Error {
       incomplete: "Model provider returned an incomplete response",
       invalid_output: "Model provider returned an invalid structured response",
     };
-    const fields = [`code=${code}`, ...(["status", "invalidCause", "provider", "responseId"] as const)
+    const fields = [`code=${code}`, ...(["status", "retryAfterMs", "invalidCause", "provider", "responseId"] as const)
       .filter((key) => details[key] !== undefined).map((key) => `${key}=${details[key]}`)];
     super(`[openrouter: complete] ${descriptions[code]} || ${fields.join(" || ")}`);
     this.name = "ModelError";
     this.status = details.status;
+    this.retryAfterMs = details.retryAfterMs;
     this.invalidCause = details.invalidCause;
     this.provider = details.provider;
     this.responseId = details.responseId;
@@ -175,6 +179,25 @@ export function modelUsageOf(raw: unknown): ModelUsage | null {
     cachedTokens: numberOrNull(objectField(usage, "prompt_tokens_details")?.cached_tokens),
     costUsd: numberOrNull(usage.cost),
   };
+}
+
+/**
+ * How long a 429 reply asked us to wait, in ms: its `Retry-After` header (seconds or an HTTP date), else the
+ * `X-RateLimit-Reset` epoch OpenRouter puts in the error body's metadata. Undefined when the reply gave neither.
+ * @param response - The 429 response
+ * @param body - Its parsed body, if any
+ */
+function retryAfterOf(response: Response, body: unknown): number | undefined {
+  const header = response.headers.get("retry-after")?.trim();
+  if (header) {
+    if (/^\d+$/.test(header)) return Number(header) * 1000;
+    const at = Date.parse(header);
+    if (Number.isFinite(at)) return Math.max(0, at - Date.now());
+  }
+  const headers = objectField(objectField(objectField(body, "error"), "metadata"), "headers");
+  const reset = headers?.["X-RateLimit-Reset"] ?? headers?.["x-ratelimit-reset"];
+  const resetAt = typeof reset === "string" || typeof reset === "number" ? Number(reset) : NaN;
+  return Number.isFinite(resetAt) && resetAt > 0 ? Math.max(0, resetAt - Date.now()) : undefined;
 }
 
 /** True when the call's time limit aborted it, while connecting or while reading the body. */
@@ -287,9 +310,11 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
     }
     state.httpStatus = response.status;
     if (!response.ok) {
-      // The error body is kept only for the observer; it never reaches the thrown error.
-      if (options.observe) state.response = await errorBody(response);
-      throw new ModelError("http", { status: response.status });
+      // The error body is kept only for the observer and, on a 429, the wait it asks for; it never reaches the thrown error.
+      const body = await errorBody(response);
+      if (options.observe) state.response = body;
+      const retryAfterMs = response.status === 429 ? retryAfterOf(response, body) : undefined;
+      throw new ModelError("http", { status: response.status, ...(retryAfterMs !== undefined ? { retryAfterMs } : {}) });
     }
     let raw: unknown;
     try {
