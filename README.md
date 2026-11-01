@@ -22,7 +22,7 @@ pnpm dash
 
 The Usage Console has no login. Its API listens on this machine only (`127.0.0.1`), so it is not reachable from elsewhere.
 
-**Knibbler Setup** (`/setup` in the Usage Console) is the founders' shared setup checklist: domain, email, vendor access, and authentication email. Ticks are saved to `docs/setup-checklist-progress.json` in your checkout, signed with your `git config user.name` (without one the checklist is read-only). They are not live: commit and push the file to share your ticks, and pull to see your co-founder's. The items themselves live in `apps/console/src/server/setup-checklist.ts`. It never holds credentials or recovery codes — those go in the shared password manager.
+**Knibbler Setup** (`/setup` in the Usage Console) is the founders' shared setup checklist: domain, email, vendor access, and authentication email. Ticks are saved to `docs/setup-checklist-progress.json` in your checkout, signed with your `git config user.name` (without one the checklist is read-only). They are not live: commit and push the file to share your ticks, and pull to see your co-founder's. The items themselves live in `apps/console/src/server/setup-checklist.ts`. It never holds credentials or recovery codes — those go in the shared password manager. Where the domain, DNS and email are configured once setup is done: [`docs/deploy.md` → Domain, DNS and email](docs/deploy.md#domain-dns-and-email).
 
 ## Media library
 

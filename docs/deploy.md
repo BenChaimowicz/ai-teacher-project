@@ -12,6 +12,23 @@ The web service is the Fastify API. It serves the built Vite SPA, JSON under `/a
 
 Neither service assumes it is the only one of its kind. Workers claim generation jobs with `for update skip locked` (ADR 0012), and an API preparing a Starting Level check leases its Course Request, so a second API leaves a check in flight alone (ADR 0023). Two people running `pnpm apps` against the same hosted database is the everyday case of this.
 
+## Domain, DNS and email
+
+Where each piece of `knibbler.app` is configured. Logins and recovery codes are in the shared password vault, never here.
+
+| What | Where | Notes |
+|---|---|---|
+| Domain `knibbler.app` | **Porkbun** | Both founders have access. WHOIS privacy, auto-renew and domain lock are on. |
+| DNS | **Porkbun**, the only nameservers | Every record below lives here. Do not move nameservers. |
+| Founder email (`yarden@`, `ben@`) | **Zoho Mail**, Forever Free, US region | MX `mx.zoho.com` / `mx2` / `mx3`, root SPF `v=spf1 include:zohomail.com ~all`, DKIM selector `zmail`. |
+| Role addresses (`accounts@`, `founders@`, `support@`, `privacy@`, `security@`) | **Zoho Mail Groups** | Each delivers to both founders and accepts mail from outside. Vendor sign-ups use `accounts@`. |
+| DMARC | Porkbun, `_dmarc` | `p=none` (monitoring), reports to `accounts@`. It covers subdomains too. |
+| App email (Supabase Auth) | **Resend**, EU region, on `auth.knibbler.app` | Sender `Knibbler <no-reply@auth.knibbler.app>`. DNS on `send.auth` (CNAME) and `resend._domainkey.auth`. Click and open tracking are off. |
+| Supabase Auth SMTP | Supabase project `lhtzbqrovumcjwrlektf` → Authentication → SMTP | `smtp.resend.com:465`, user `resend`, password = a send-only Resend key. The Site URL and redirect URLs are set there too. |
+| App and API hostnames | Not set yet | Waits for the hosting choice (SEN-106). |
+
+Founder email and app email never share a sender: app mail goes through Resend from the `auth` subdomain, and human mail goes through Zoho from the root domain. Keep one SPF record on the root domain.
+
 ## Local
 
 ```bash
