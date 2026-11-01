@@ -16,7 +16,7 @@ import {
 const AT = "2026-10-31T09:00:00.000Z";
 
 describe("Setup checklist content", () => {
-  it("has the ten sections in order", () => {
+  it("has the nine sections in order", () => {
     assert.deepEqual(
       SETUP_CHECKLIST.map((section) => section.title),
       [
@@ -29,13 +29,12 @@ describe("Setup checklist content", () => {
         "Set up vendor access",
         "Configure application email",
         "Connect Supabase Auth",
-        "Run a recovery drill",
       ],
     );
   });
 
   it("has every item from the founders' list", () => {
-    assert.deepEqual(SETUP_CHECKLIST.map((section) => section.items.length), [5, 9, 5, 5, 7, 6, 8, 6, 10, 8]);
+    assert.deepEqual(SETUP_CHECKLIST.map((section) => section.items.length), [5, 9, 5, 5, 7, 6, 8, 6, 10]);
   });
 
   it("keys every item uniquely, under its section's key", () => {
@@ -56,7 +55,7 @@ describe("buildSetupChecklist", () => {
   it("starts with everything open", () => {
     const checklist = buildSetupChecklist([], null);
     assert.equal(checklist.done, 0);
-    assert.equal(checklist.total, 69);
+    assert.equal(checklist.total, 61);
     assert.ok(checklist.sections.every((section) => section.done === 0 && section.total === section.items.length));
   });
 
