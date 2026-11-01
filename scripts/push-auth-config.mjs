@@ -29,12 +29,13 @@ const SAMPLE = {
 };
 
 /**
- * Reads a file under `auth/`.
+ * Reads a file under `auth/`, with LF line endings: a Windows checkout has CRLF, and what Supabase holds must not
+ * depend on who pushed it.
  * @param path - Path relative to `auth/`
  */
 function readAuthFile(path) {
   try {
-    return readFileSync(resolve(AUTH_DIR, path), "utf8");
+    return readFileSync(resolve(AUTH_DIR, path), "utf8").replace(/\r\n/g, "\n");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`[push-auth-config.mjs: readAuthFile] Failed to read an auth file || path=${path} || ${message}`);
