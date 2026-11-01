@@ -142,21 +142,6 @@ export const SETUP_CHECKLIST: SectionDefinition[] = [
       ["supabase-auth.secret-store", "Store SMTP credentials only in the appropriate secret/configuration store, never in this checklist or source control."],
     ],
   },
-  {
-    key: "drill",
-    title: "Run a recovery drill",
-    intro: "Pretend one founder is unavailable and confirm the other can do each of these alone.",
-    items: [
-      ["drill.porkbun", "Access Porkbun."],
-      ["drill.vault", "Access the shared password vault."],
-      ["drill.workspace", "Administer Zoho Mail."],
-      ["drill.accounts-email", "Receive accounts@knibbler.app email."],
-      ["drill.vendors", "Access every critical vendor."],
-      ["drill.recovery-codes", "Find recovery codes."],
-      ["drill.payment", "Change the payment method."],
-      ["drill.api-key", "Disable or rotate a compromised API key."],
-    ],
-  },
 ];
 
 /** Every item key, for checking a request names a real item. */
