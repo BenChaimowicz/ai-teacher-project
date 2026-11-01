@@ -13,9 +13,13 @@ import type { SequenceMode } from "./sequence-mode.ts";
 import type { FeedbackTiming, TeachingProfileAnswers } from "./teaching-profile.ts";
 import type { BalanceVendor, CostBasis, UsageOrigin, PipelineEventKind, PipelineEventStatus, ProductEventKind, UsageOutcome, UsageRole, UsageVendor } from "./usage.ts";
 
-/** One person taking Courses. The prototype seeds a single row. Teaching Profile lives here. */
+/** One person taking Courses, and their account. Teaching Profile lives here. */
 export const learners = pgTable("learners", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** The Supabase Auth user signed in as this Learner; null only on a seeded Learner nobody has claimed (ADR 0026). */
+  authUserId: uuid("auth_user_id").unique(),
+  /** Shown in the app; starts as a random name such as `Curious_Owl`. Not unique. */
+  displayName: text("display_name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   teachingProfileVersion: integer("teaching_profile_version"),
   teachingProfileAnswers: jsonb("teaching_profile_answers").$type<TeachingProfileAnswers>(),

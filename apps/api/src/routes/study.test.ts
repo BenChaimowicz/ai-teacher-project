@@ -49,7 +49,7 @@ function memoryStore(quizBody: QuizBody): StudyStore {
     async insertCompletion(_learnerId, lessonId) {
       completions.add(lessonId);
     },
-    async setSequenceMode(_courseId, mode) {
+    async setSequenceMode(_learnerId, _courseId, mode) {
       sequenceMode = mode;
     },
     async courseCompletedAt() {
@@ -75,7 +75,7 @@ function memoryStore(quizBody: QuizBody): StudyStore {
       attempts.push(row);
       return { ...row };
     },
-    async updateQuizAttempt(id, patch) {
+    async updateQuizAttempt(_learnerId, id, patch) {
       const row = attempts.find((attempt) => attempt.id === id);
       if (!row) throw new Error("No attempt");
       const { submittedAt: _submittedAt, ...rest } = patch;
@@ -89,6 +89,8 @@ function learnerWith(answers: Record<string, unknown> = {}): typeof learners.$in
   return {
     id: SEEDED_LEARNER_ID,
     createdAt: new Date(),
+    authUserId: randomUUID(),
+    displayName: "Curious_Owl",
     teachingProfileVersion: TEACHING_PROFILE_VERSION,
     teachingProfileAnswers: parseTeachingProfileAnswers(answers),
     teachingProfileAssessedAt: new Date(),
@@ -413,6 +415,33 @@ test("Completing the last Lesson stores Course completion once; the summary show
     assert.deepEqual(summary.body.quizzes, [
       { lessonId: SEEDED_QUIZ_LESSON_ID, title: SEEDED_LESSONS[1]!.title, best: { correct: 5, total: 5 } },
     ]);
+  } finally {
+    await t.app.close();
+  }
+});
+
+test("Another Learner gets 404 for the Course, its Progress, its summary, and its Quiz attempts, and changes nothing", async () => {
+  const t = await testApp();
+  try {
+    const item = t.quizBody.items[0]!;
+    assert.equal((await t.answer(item.id, item.correctOptionId)).status, 200);
+    assert.equal((await t.complete(SEEDED_READING_LESSON_ID)).status, 200);
+    const owner = t.state.learner;
+    const before = (await t.study()).body;
+
+    t.state.learner = { ...owner, id: randomUUID(), authUserId: randomUUID() };
+    const calls = [
+      t.study(), t.summary(), t.complete(SEEDED_READING_LESSON_ID), t.sequenceMode("free_jump"),
+      t.quiz(), t.answer(item.id, item.correctOptionId), t.check(item.id), t.submit(), t.retake(),
+    ];
+    for (const response of await Promise.all(calls)) {
+      assert.equal(response.status, 404, JSON.stringify(response.body));
+      assert.deepEqual(response.body, { error: "Published Course not found." });
+    }
+
+    t.state.learner = owner;
+    assert.deepEqual((await t.study()).body, before, "The owner's Course, Progress, and Sequence mode are unchanged.");
+    assert.equal((await t.quiz()).status, 200);
   } finally {
     await t.app.close();
   }

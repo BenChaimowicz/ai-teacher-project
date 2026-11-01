@@ -14,6 +14,7 @@ import { ErrorState } from "@/components/ui/states.tsx";
 import { cheer, confettiAt } from "@/lib/cheer.ts";
 import type { CourseSummary } from "@/lib/study-types.ts";
 import "@/components/learn/learn.css";
+import { apiFetch } from "@/lib/api.ts";
 
 const LINES = ["You finished a whole course.", "That's real progress.", "Going deeper is a good next step."];
 
@@ -70,7 +71,7 @@ export function CourseCompletePage() {
     setSummary(null);
     setNotComplete(false);
     setError(null);
-    fetch(`/api/courses/${courseId}/summary`)
+    apiFetch(`/api/courses/${courseId}/summary`)
       .then(async (response) => {
         if (response.status === 409) {
           if (!cancelled) setNotComplete(true);

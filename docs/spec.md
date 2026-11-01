@@ -19,7 +19,7 @@ Terms are defined in `CONTEXT.md`. This spec uses them; it does not redefine the
 ### Out of scope
 
 - AV, podcast, presentations, practice, and charts/graphs as **shipped teaching methods**. The plugin architecture is specified; those methods are not built.
-- Auth and multi-user accounts. The schema stays multi-user-ready.
+- Google or other social sign-in, account deletion, and changing an account's email. Learners sign up with email and password (§2).
 - Mid-Course re-estimation of Starting Level. Quizzes do not rewrite the remaining path. A misplaced Learner starts a new Course Request.
 - Non-English instructional languages, and a labelled machine-translation path.
 - Calibrated IRT, CAT, or knowledge-space placement for open-ended Learning Goals.
@@ -35,7 +35,7 @@ Provenance: [Wayfinder map: AI learning course platform](https://linear.app/seno
 
 ## 2. Stack, data, and hosting
 
-TypeScript full-stack web app. One seeded Learner; no authentication. Every Learner-owned record carries a `learnerId` so accounts can be added later without migration. The Learner may own many concurrent Courses, each with its own Progress.
+TypeScript full-stack web app. Each Learner is an account in Supabase Auth: they sign up with email and password and must verify their email from the welcome email before first use. They sign in with their password or a 6-digit code emailed to them. A password needs at least 8 characters, with a letter and a digit. Every `/api/*` call carries the Learner's access token, and the API serves a Learner only their own records (ADR 0026). Every Learner-owned record carries a `learnerId`. A Learner may own many concurrent Courses, each with its own Progress.
 
 **Storage.** Hosted Postgres via Supabase, accessed through Drizzle. No local database. No Redis. No second job system. Drizzle migrations run against that Postgres.
 

@@ -12,18 +12,19 @@ import {
 import { seedLearner, seedPublishedCourse } from "@senoy/db/seed-fixture";
 import { parseTeachingProfileAnswers } from "@senoy/db/teaching-profile";
 import type { Page } from "@playwright/test";
+import { testAccounts } from "../accounts.ts";
 
 const db = createDb(process.env.DATABASE_URL!, { max: 1 });
 
 /**
- * Wipes the throwaway database and seeds a fresh fixture Course plus a saved Teaching Profile.
+ * Wipes the throwaway database and seeds a fresh fixture Course plus a saved Teaching Profile, owned by test account `a`.
  * @param answers - Teaching Profile answers; unset items are skipped
  */
 export async function resetFixture(answers: Record<string, unknown> = {}) {
   await db.execute(
     sql`truncate generation_jobs, unpublished_lessons, course_blueprints, starting_level_diagnostics, quiz_attempts, lesson_completions, course_completions, published_lessons, published_modules, published_courses, course_requests, learners cascade`,
   );
-  const learner = await seedLearner(db);
+  const learner = await seedLearner(db, testAccounts().a.id);
   await seedPublishedCourse(db);
   await db
     .update(learners)

@@ -1,4 +1,4 @@
-/** Stable seed id for the prototype's single Learner. Runtime still loads "the only row". */
+/** Stable seed id for the fixture Learner. It signs in only once `pnpm db:claim-learner` links it to an account. */
 export const SEEDED_LEARNER_ID = "8f0c2e1a-4b3d-4a7c-9e12-6d5f8a90b1c3";
 
 /** Stable id for the seeded published Course. */

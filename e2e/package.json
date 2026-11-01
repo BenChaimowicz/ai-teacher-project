@@ -8,6 +8,7 @@
   "dependencies": {
     "@senoy/db": "workspace:*",
     "@senoy/media": "workspace:*",
+    "@supabase/supabase-js": "^2.118.0",
     "drizzle-orm": "^0.44.5"
   },
   "devDependencies": {

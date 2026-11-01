@@ -34,6 +34,8 @@ function savedLearner(): typeof learners.$inferSelect {
   return {
     id: randomUUID(),
     createdAt: new Date(),
+    authUserId: randomUUID(),
+    displayName: "Curious_Owl",
     teachingProfileVersion: TEACHING_PROFILE_VERSION,
     teachingProfileAnswers: parseTeachingProfileAnswers({}),
     teachingProfileAssessedAt: new Date(),

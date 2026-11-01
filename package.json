@@ -6,6 +6,7 @@
   "scripts": {
     "apps": "node scripts/apps.mjs",
     "jongi:pack": "node scripts/pack-jongi-frames.mjs",
+    "auth:push": "node scripts/push-auth-config.mjs",
     "apps:plain": "pnpm --parallel --filter @senoy/web --filter @senoy/api --filter @senoy/worker --filter @senoy/console dev",
     "dash": "pnpm --filter @senoy/console dev",
     "check": "pnpm typecheck && pnpm test",
@@ -28,6 +29,7 @@
     "db:generate": "pnpm --filter @senoy/db generate",
     "db:migrate": "pnpm --filter @senoy/db migrate",
     "db:seed": "pnpm --filter @senoy/db seed",
+    "db:claim-learner": "pnpm --filter @senoy/db claim-learner",
     "media:seed": "pnpm --filter @senoy/media seed",
     "parallel:login": "pnpm --filter @senoy/research exec tsx src/parallel-login.ts",
     "openrouter:import": "pnpm --filter @senoy/console exec tsx src/server/import-openrouter-history.ts"

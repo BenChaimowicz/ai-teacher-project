@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { CompanionCard } from "@/components/companion/companion-card.tsx";
 import { CourseRequestControl } from "@/components/course-request-control.tsx";
+import { AccountMenu } from "@/components/shell/account-menu.tsx";
 import { SidebarCourses } from "@/components/shell/sidebar-courses.tsx";
 import { BrandLink } from "@/components/ui/logo.tsx";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,7 @@ function defaultTitle(pathname: string) {
   if (pathname === "/teaching-profile") return "How you like to learn";
   if (pathname === "/new-course-request") return "New course";
   if (pathname.startsWith("/course-requests/")) return "New course";
+  if (pathname === "/profile") return "Profile";
   if (pathname.startsWith("/dev/")) return "Components";
   return "";
 }
@@ -68,6 +70,9 @@ function defaultTitle(pathname: string) {
  * - `study`: sidebar shows the Course outline (fill it with `<ShellOutline>`); the header always has
  *   the sidebar toggle, Home, the title (`<ShellTitle>`), reading progress, and actions such as Aa
  *   (`<ShellActions>`).
+ *
+ * Both variants end the sidebar with "How you like to learn", and end the top bar with the Learner's initials, which
+ * open the account menu (after the actions slot, so screens' actions still sit to its left).
  *
  * On narrow screens the sidebar is an overlay drawer; Esc and the backdrop close it.
  */
@@ -195,6 +200,7 @@ export function AppShell({ variant }: { variant: ShellVariant }) {
               <span className="slot" ref={setTitleEl} />
             </div>
             <div className="actions" ref={setActionsEl} />
+            <AccountMenu />
             {readingProgress !== null ? (
               <div className="read-prog" style={{ width: `${Math.round(readingProgress * 100)}%` }} aria-hidden="true" />
             ) : null}

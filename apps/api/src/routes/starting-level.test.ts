@@ -28,6 +28,8 @@ function savedLearner(): typeof learners.$inferSelect {
   return {
     id: randomUUID(),
     createdAt: new Date(),
+    authUserId: randomUUID(),
+    displayName: "Curious_Owl",
     teachingProfileVersion: TEACHING_PROFILE_VERSION,
     teachingProfileAnswers: parseTeachingProfileAnswers({}),
     teachingProfileAssessedAt: new Date(),
@@ -465,6 +467,36 @@ test("Brand new to this that lost a race saves no attempt", async () => {
     assert.equal((await app.inject({ method: "POST", url: `${url}/new-to-subject` })).statusCode, 409);
     assert.equal(requestRow.status, "assessment_preparing");
     assert.equal(rows.get(startingLevelDiagnostics)!.length, 0);
+  } finally {
+    await app.close();
+  }
+});
+
+test("Another Learner gets 404 from every Starting Level action on a Request, and changes nothing", async () => {
+  const { app, rows, url, counts } = await testApp();
+  let asStranger = false;
+  const stranger = savedLearner();
+  app.addHook("onRequest", async (request) => { if (asStranger) request.currentLearner = stranger; });
+  try {
+    assert.equal((await app.inject({ method: "POST", url })).statusCode, 200);
+    const before = JSON.stringify([...rows.values()]);
+    asStranger = true;
+    const calls: { method: "GET" | "POST"; url: string; payload?: object }[] = [
+      { method: "GET", url },
+      { method: "POST", url },
+      { method: "POST", url: `${url}/new-to-subject` },
+      { method: "POST", url: `${url}/answers`, payload: { answers: answers(1, 2) } },
+      { method: "POST", url: `${url}/too-easy` },
+      { method: "POST", url: `${url}/confirm`, payload: { choice: "looks_right" } },
+      { method: "POST", url: `${url}/change-goal` },
+    ];
+    for (const call of calls) {
+      const response = await app.inject(call);
+      assert.equal(response.statusCode, 404, `${call.method} ${call.url}`);
+      assert.deepEqual(response.json(), { error: "Course Request not found." });
+    }
+    assert.equal(JSON.stringify([...rows.values()]), before);
+    assert.equal(counts.builds, 1, "No check was prepared for the stranger.");
   } finally {
     await app.close();
   }

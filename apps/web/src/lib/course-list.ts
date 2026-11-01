@@ -1,4 +1,5 @@
 import { pickCourseIcon, type CourseIconName } from "@/lib/brand-marks.ts";
+import { apiFetch } from "@/lib/api.ts";
 
 /** Window event that makes the sidebar course list reload; fire it with `notifyLibraryChanged()`. */
 export const LIBRARY_CHANGED_EVENT = "knibbler:library-changed";
@@ -14,7 +15,7 @@ export function notifyLibraryChanged() {
  * @param course - The row's kind and id
  */
 export async function hideCourse(course: Pick<CourseListItem, "kind" | "id">) {
-  const response = await fetch("/api/library/hide", {
+  const response = await apiFetch("/api/library/hide", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ kind: course.kind, id: course.id }),
@@ -46,7 +47,7 @@ export type LibraryItem = {
  * @param course - The course's kind and id
  */
 export function markOpened(course: Pick<LibraryItem, "kind" | "id">) {
-  fetch("/api/library/opened", {
+  apiFetch("/api/library/opened", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ kind: course.kind, id: course.id }),

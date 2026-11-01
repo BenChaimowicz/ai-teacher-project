@@ -33,10 +33,11 @@ async function checkCourseRequests() {
         await transaction.insert(learners).values([
           {
             id: learnerId,
+            displayName: "Curious_Owl",
             teachingProfileVersion: TEACHING_PROFILE_VERSION,
             teachingProfileAnswers: parseTeachingProfileAnswers({}),
           },
-          { id: otherLearnerId },
+          { id: otherLearnerId, displayName: "Creative_Avocado" },
         ]);
         let currentLearnerId = learnerId;
         const app = Fastify();

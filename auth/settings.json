@@ -1,0 +1,17 @@
+{
+  "site_url": "http://127.0.0.1:5173",
+  "uri_allow_list": "http://localhost:5173/**,http://127.0.0.1:5173/**,http://127.0.0.1:4190/**",
+  "disable_signup": false,
+  "external_email_enabled": true,
+  "mailer_autoconfirm": false,
+  "password_min_length": 8,
+  "password_required_characters": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789",
+  "mailer_otp_length": 6,
+  "mailer_otp_exp": 3600,
+  "security_update_password_require_reauthentication": false,
+  "external_google_enabled": false,
+  "rate_limit_otp": 1000,
+  "rate_limit_verify": 1000,
+  "rate_limit_token_refresh": 3000,
+  "rate_limit_email_sent": 100
+}

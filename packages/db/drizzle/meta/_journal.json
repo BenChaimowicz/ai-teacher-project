@@ -225,6 +225,13 @@
       "when": 1793466994326,
       "tag": "0031_20261031171634_lesson_reuse",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793528393810,
+      "tag": "0032_20261101101953_learner_accounts",
+      "breakpoints": true
     }
   ]
 }

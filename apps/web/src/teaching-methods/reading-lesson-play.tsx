@@ -2,6 +2,7 @@ import { parseReadingBody } from "@senoy/db/reading-lesson";
 import { ReadingView } from "@/components/learn/reading-view.tsx";
 import type { StudyPayload } from "@/lib/study-types.ts";
 import type { LessonPlayProps } from "@/teaching-methods/register.ts";
+import { apiFetch } from "@/lib/api.ts";
 
 /**
  * Reads a Study payload from complete JSON.
@@ -27,7 +28,7 @@ export function ReadingLessonPlay({ courseId, lesson, sectionAdvance, onPayload,
    */
   async function markComplete() {
     if (lesson.completed) return;
-    const response = await fetch(`/api/courses/${courseId}/lessons/${lesson.id}/complete`, { method: "POST" });
+    const response = await apiFetch(`/api/courses/${courseId}/lessons/${lesson.id}/complete`, { method: "POST" });
     const json: unknown = await response.json().catch(() => null);
     if (!response.ok) {
       const message =
