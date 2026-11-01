@@ -89,7 +89,7 @@ Provenance: [Users & data](https://linear.app/senoy/issue/SEN-8/users-and-data),
 
 Four screens. Always dark, with five switchable accent palettes. The visual and interaction reference is the SEN-52 redesign in [`docs/uis/redesign/`](uis/redesign/README.md); its decisions list is [`09-implementation-notes.md`](uis/redesign/09-implementation-notes.md). Glossary words stay in code and docs; Learner-facing copy uses plain words ("New course", "Your plan", "How you like to learn", "a few quick questions").
 
-**Product name.** **Knibbler** (silent **k** — spelled *Knibbler*, pronounced like "Nibbler"). Sidebar lockup, browser tab title, greeting, empty states. The logo is the companion's silhouette in a graduation cap; the favicon follows the current palette.
+**Product name.** **Knibbler** (silent **k** — spelled *Knibbler*, pronounced like "Nibbler"). Sidebar lockup, browser tab title, greeting, empty states. The logo is the companion's raccoon head in a scholar cap; the favicon is the same mark on its ink-navy tile.
 
 **Companion.** **Nibbles**, a cut-paper raccoon, voices the Course Guide and the scripted turns of every screen (the name lives in one constant; it may change). Low-key, kind, brief; never childish. It presents policy and system state; it cannot override policy or invent decisions. The flow is chat-*like*: Nibbles' line, then tap-to-choose options directly under it. The only free text is where the Learner names what to learn (Compose, Revise request, and **Something else** while focusing the goal). There is no open chat.
 

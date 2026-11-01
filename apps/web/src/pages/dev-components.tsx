@@ -191,7 +191,7 @@ export function ComponentsPage() {
         Every kit component in its states. Contract: <code className="k-mono">src/components/README.md</code>.
       </p>
 
-      <Section title="brand" note="The mark is Jongi's folded head in a cap, at 64 / 32 / 16. The favicon is the 64 on its tile.">
+      <Section title="brand" note="The mark is Jongi's raccoon head in a cap, at 64 / 32 / 16. The favicon is the mark on its tile.">
         <div className="flex flex-wrap items-end gap-8">
           <Cell label="Logo 16">
             <Logo size={16} />
