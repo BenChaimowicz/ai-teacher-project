@@ -62,7 +62,7 @@ The console snapshots the You.com balance every 15 minutes while it runs. Each s
 | 11-01 11:24 → 11:31 | 8.40 → 8.25 | 3 (Gram research) | 0.15 |
 | 11-01 11:39 → 11:47 | 8.25 → 8.10 | 3 (Norse research) | 0.15 |
 
-Two things the snapshots also show. At 09:26 UTC on 2026-11-01 the key started answering as a **different You.com account** (`data.id` changed) with a $10.00 balance, where the old one held $86.25. The console's billing check reads that as $78.15 billed on 2026-11-01. And between 10:12 and 10:19 UTC the new account lost $0.05 with no Usage Record anywhere: one call made outside the app, probably a test of the new key.
+Two things the snapshots also show. At 09:26 UTC on 2026-11-01 the key started answering as a **different You.com account** (`data.id` changed) with a $10.00 balance, where the old one held $86.25: the founders moved Knibbler to a You.com business account that morning (Yarden, 2026-11-01). The console's billing check reads the switch as $78.15 billed on 2026-11-01. And between 10:12 and 10:19 UTC the new account lost $0.05 with no Usage Record anywhere: one call made outside the app, probably a test of the new key.
 
 ### Parallel: $0.10 per `pro` run, on the one day we could read it
 
@@ -137,7 +137,7 @@ Per 3-Reading, 3-Quiz Course against the 2026-11-01 baseline of $1.80 to $1.83. 
 5. **Reading prompt size and caching.** A draft carries ~15k prompt tokens; a repair ~13k and costs 70% of a draft. Stable prompt prefixes for caching and trimming carried-forward Readings might save $0.02 to $0.05, more on 6-Reading Courses. Low priority until Courses grow.
 6. **Not worth chasing:** Judges ($0.03 a Course), Blueprint ($0.02), validity and focus ($0.01), media checks (under $0.01).
 
-Housekeeping that is not a saving but blocks measuring one: keep the Parallel login fresh (`pnpm parallel:login`, console running) so Parallel is readable during the SEN-120 before-and-after runs; and tell the console the You.com account changed (its starting balance is still hard-coded as $100).
+Housekeeping that is not a saving but blocks measuring one: keep the Parallel login fresh (`pnpm parallel:login`, console running) so Parallel is readable during the SEN-120 before-and-after runs; and tell the console about the You.com business account (its starting balance is still hard-coded as $100 for the old account, and the new one started at $10.00).
 
 ## 7. What the Usage Console is missing
 
@@ -148,7 +148,7 @@ Everything above needed SQL. What the console would need to answer the same ques
 - **Cost per Lesson slot.** Research, reuse, Reading and Quiz steps carry `slotId`; group them so a Course shows cost per Reading and per Quiz, and the Course list shows cost per published Lesson.
 - **Cost by call type.** Steps and models are there, but not `schemaName`: that quiz reasoning is $0.04 a Quiz, or that a Reading repair costs 70% of a draft, needs the request payload.
 - **Window reconciliation instead of per-call measurement.** Show balance steps against recorded list prices per Pipeline Event or per day, and retire `measured_cost_usd` for research calls.
-- **Account changes and starting balances.** Detect a changed account id in the You.com reading and start a new series instead of booking a $76 charge; make starting balances an Operator setting, not `OPERATOR_STARTING_BALANCES` in code.
+- **Account changes and starting balances.** Detect a changed account id in the You.com reading and start a new series instead of booking a $76 charge, as the move to the business account did; make starting balances an Operator setting, not `OPERATOR_STARTING_BALANCES` in code.
 - **Compare two Courses.** SEN-120 wants before-and-after per stage; a side-by-side of two Course Requests would make section 1 of this note a screen.
 
 ## Appendix: the queries
