@@ -54,6 +54,7 @@ export function SignUpPage() {
     <AuthScreen
       title="Make an account"
       lede="Your courses and progress stay with you, on any device."
+      mood={busy ? "think" : "idle"}
       footer={
         <p>
           Have an account?{" "}

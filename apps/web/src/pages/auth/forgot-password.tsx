@@ -46,6 +46,7 @@ export function ForgotPasswordPage() {
     <AuthScreen
       title="Forgot your password?"
       lede="It happens. We'll email you a link to set a new one."
+      mood={busy ? "think" : "idle"}
       footer={
         <p>
           Remembered it?{" "}

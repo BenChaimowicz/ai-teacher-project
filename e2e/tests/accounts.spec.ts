@@ -39,7 +39,13 @@ test("account a sees its own Course and its display name", async ({ page }) => {
   await resetFixture();
   await page.goto("/");
   await expect(page.getByText(SEEDED_COURSE.title).first()).toBeVisible();
+  // The name lives in the account menu behind the initials at the top right, and on the profile.
+  await page.getByRole("button", { name: /^Account menu/ }).click();
   await expect(page.getByText("Curious_Owl").first()).toBeVisible();
+  await page.getByRole("menuitem", { name: "Profile & settings" }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Curious_Owl" })).toBeVisible();
+  await expect(page.getByText("Courses finished")).toBeVisible();
 });
 
 test("signing in with a password opens the Workspace", async ({ browser }) => {

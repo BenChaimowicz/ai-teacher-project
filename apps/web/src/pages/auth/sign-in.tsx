@@ -6,6 +6,7 @@ import type { FromState } from "@/components/auth/auth-provider.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { authErrorMessage, hidesAccountExistence } from "@/lib/auth-copy.ts";
+import { PRODUCT_NAME } from "@/lib/brand-marks.ts";
 import { linkError, supabase } from "@/lib/supabase.ts";
 
 /** Location state the signed-out screens hand each other: where to go after, and the email typed so far. */
@@ -29,6 +30,8 @@ export function SignInPage() {
   const [error, setError] = useState<string | null>(linkError);
   const [note, setNote] = useState<string | null>(null);
   const [unconfirmed, setUnconfirmed] = useState(false);
+  // Signed in: Jongi cheers while the route guard sends the person on.
+  const [done, setDone] = useState(false);
 
   /**
    * Switches between password and email code, clearing messages from the other mode.
@@ -55,7 +58,9 @@ export function SignInPage() {
       if (failed) {
         if (isAuthError(failed) && failed.code === "email_not_confirmed") setUnconfirmed(true);
         setError(authErrorMessage(failed, "Couldn't sign you in. Try again."));
+        return;
       }
+      setDone(true);
     } catch (caught) {
       setError(authErrorMessage(caught, "Couldn't sign you in. Try again."));
     } finally {
@@ -114,7 +119,11 @@ export function SignInPage() {
     setError(null);
     try {
       const { error: failed } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
-      if (failed) setError(authErrorMessage(failed, "That code didn't work. Check it, or ask for a new one."));
+      if (failed) {
+        setError(authErrorMessage(failed, "That code didn't work. Check it, or ask for a new one."));
+        return;
+      }
+      setDone(true);
     } catch (caught) {
       setError(authErrorMessage(caught, "That code didn't work. Check it, or ask for a new one."));
     } finally {
@@ -128,9 +137,10 @@ export function SignInPage() {
     <AuthScreen
       title="Welcome back"
       lede="Sign in to pick up where you left off."
+      mood={done ? "cheer" : busy ? "think" : "idle"}
       footer={
         <p>
-          New here?{" "}
+          New to {PRODUCT_NAME}?{" "}
           <Link to="/sign-up" state={passOn}>
             Make an account
           </Link>
@@ -161,14 +171,18 @@ export function SignInPage() {
               <Input id={id} type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoFocus />
             )}
           </AuthField>
-          <AuthField label="Password">
+          <AuthField
+            label="Password"
+            aside={
+              <Link className="k-auth-aside" to="/forgot-password" state={passOn}>
+                Forgot it?
+              </Link>
+            }
+          >
             {({ id, describedBy }) => (
               <PasswordInput id={id} describedBy={describedBy} value={password} onChange={setPassword} autoComplete="current-password" />
             )}
           </AuthField>
-          <Link className="k-auth-aside" to="/forgot-password" state={passOn}>
-            Forgot password?
-          </Link>
           <Button type="submit" size="lg" className="w-full" disabled={busy || !email.trim() || !password}>
             {busy ? "Signing in…" : "Sign in"}
           </Button>

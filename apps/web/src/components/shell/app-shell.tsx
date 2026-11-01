@@ -1,12 +1,11 @@
-import { Home, Menu, PanelLeftClose, Plus, Settings, SlidersHorizontal } from "lucide-react";
+import { Home, Menu, PanelLeftClose, Plus, SlidersHorizontal } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { CompanionCard } from "@/components/companion/companion-card.tsx";
 import { CourseRequestControl } from "@/components/course-request-control.tsx";
-import { useAuth } from "@/components/auth/auth-provider.tsx";
+import { AccountMenu } from "@/components/shell/account-menu.tsx";
 import { SidebarCourses } from "@/components/shell/sidebar-courses.tsx";
-import { Avatar } from "@/components/ui/avatar.tsx";
 import { BrandLink } from "@/components/ui/logo.tsx";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +58,7 @@ function defaultTitle(pathname: string) {
   if (pathname === "/teaching-profile") return "How you like to learn";
   if (pathname === "/new-course-request") return "New course";
   if (pathname.startsWith("/course-requests/")) return "New course";
-  if (pathname === "/settings") return "Settings";
+  if (pathname === "/profile") return "Profile";
   if (pathname.startsWith("/dev/")) return "Components";
   return "";
 }
@@ -72,7 +71,8 @@ function defaultTitle(pathname: string) {
  *   the sidebar toggle, Home, the title (`<ShellTitle>`), reading progress, and actions such as Aa
  *   (`<ShellActions>`).
  *
- * Both variants end with the Learner's initials and name (to Settings) and "How you like to learn".
+ * Both variants end the sidebar with "How you like to learn", and end the top bar with the Learner's initials, which
+ * open the account menu (after the actions slot, so screens' actions still sit to its left).
  *
  * On narrow screens the sidebar is an overlay drawer; Esc and the backdrop close it.
  */
@@ -163,7 +163,6 @@ export function AppShell({ variant }: { variant: ShellVariant }) {
               </>
             )}
             <div className="foot">
-              <AccountLink />
               <NavLink to="/teaching-profile" className={({ isActive }) => cn("k-foot-link", isActive && "active")}>
                 <SlidersHorizontal aria-hidden="true" />
                 How you like to learn
@@ -201,6 +200,7 @@ export function AppShell({ variant }: { variant: ShellVariant }) {
               <span className="slot" ref={setTitleEl} />
             </div>
             <div className="actions" ref={setActionsEl} />
+            <AccountMenu />
             {readingProgress !== null ? (
               <div className="read-prog" style={{ width: `${Math.round(readingProgress * 100)}%` }} aria-hidden="true" />
             ) : null}
@@ -213,24 +213,6 @@ export function AppShell({ variant }: { variant: ShellVariant }) {
         </div>
       </div>
     </ShellContext.Provider>
-  );
-}
-
-/**
- * The signed-in Learner at the foot of the sidebar: initials circle and display name, linking to Settings.
- */
-function AccountLink() {
-  const { me } = useAuth();
-  return (
-    <NavLink
-      to="/settings"
-      className={({ isActive }) => cn("k-account", isActive && "active")}
-      aria-label={me ? `Settings for ${me.displayName}` : "Settings"}
-    >
-      <Avatar name={me?.displayName ?? null} />
-      <span className="name">{me?.displayName ?? ""}</span>
-      <Settings aria-hidden="true" className="gear" />
-    </NavLink>
   );
 }
 

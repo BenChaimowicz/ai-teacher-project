@@ -35,16 +35,6 @@
 .k-side .k-empty-line { font-size: 0.82rem; color: var(--text-muted); padding: 4px 7px; line-height: 1.5; }
 .k-side .k-outline { flex: 1; min-height: 0; overflow: hidden auto; scrollbar-width: thin; }
 .k-side .foot { margin-top: auto; flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
-/* the signed-in Learner (SEN-110): initials circle and name, a quiet line above the plum sheet */
-.k-side .foot .k-account {
-  display: flex; align-items: center; gap: 10px; padding: 5px 9px 5px 6px; border-radius: 12px; min-width: 0;
-  color: var(--text); text-decoration: none; font-weight: 600; font-size: 0.84rem; transition: background var(--dur-fast);
-}
-.k-side .foot .k-account .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.k-side .foot .k-account .gear { width: 15px; height: 15px; color: var(--faint); flex: none; transition: color var(--dur-fast); }
-.k-side .foot .k-account:hover { background: rgba(255, 255, 255, 0.04); }
-.k-side .foot .k-account:hover .gear, .k-side .foot .k-account.active .gear { color: var(--a); }
-.k-side .foot .k-account.active { background: var(--panel); box-shadow: inset 0 0 0 1px var(--a-line); }
 .k-side .foot .k-foot-link {
   /* a plum sheet pinned to the bottom of the sidebar */
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 10px 11px; border-radius: 12px; color: var(--text); text-decoration: none; font-weight: 600; font-size: 0.84rem;
@@ -69,6 +59,31 @@
 .k-top .title { flex: 1; min-width: 0; font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .k-top .title:has(.slot:not(:empty)) .default-title { display: none; }
 .k-top .actions { display: flex; align-items: center; gap: 8px; flex: none; }
+/* the signed-in Learner (SEN-110): initials at the far right of the top bar, opening a small paper sheet */
+.k-acct { position: relative; flex: none; display: flex; }
+.k-acct-btn { display: grid; place-items: center; padding: 3px; border-radius: 999px; border: 0; background: none; cursor: pointer; transition: transform 0.12s; }
+.k-acct-btn:hover .k-avatar, .k-acct-btn[aria-expanded="true"] .k-avatar { box-shadow: inset 1px 1px 0 rgba(255, 240, 215, 0.45), 0 2px 0 var(--a-deep), 0 0 0 3px var(--a-soft); }
+.k-acct-btn:active { transform: translateY(1px); }
+.k-acct-menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; width: 260px; padding: 6px; border-radius: 14px;
+  background: var(--panel); box-shadow: var(--stack); animation: k-pop 0.2s var(--ease-pop); transform-origin: top right;
+}
+.k-acct-menu .who { display: flex; align-items: center; gap: 12px; padding: 10px 10px 12px; margin-bottom: 4px; box-shadow: inset 0 -1px 0 var(--line-2); }
+.k-acct-menu .name { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 1.12rem; line-height: 1.15; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k-acct-menu .email { font-size: 0.78rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.k-acct-menu [role="menuitem"] {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: 9px; border: 0; background: none;
+  color: var(--text); font: inherit; font-weight: 600; font-size: 0.86rem; text-align: left; text-decoration: none; cursor: pointer; outline: none;
+}
+.k-acct-menu [role="menuitem"] svg { width: 16px; height: 16px; color: var(--text-muted); flex: none; }
+.k-acct-menu [role="menuitem"]:hover, .k-acct-menu [role="menuitem"]:focus-visible { background: var(--panel-2); }
+.k-acct-menu [role="menuitem"]:focus-visible { box-shadow: inset 0 0 0 1px var(--a-line); }
+.k-acct-menu [role="menuitem"]:hover svg, .k-acct-menu [role="menuitem"]:focus-visible svg { color: var(--a); }
+.k-acct-menu [role="menuitem"][aria-disabled="true"] { opacity: 0.6; cursor: default; }
+/* initials circle sizes past the base 30px (account.css): the menu's, and the profile header's */
+.k-avatar.md { width: 40px; height: 40px; font-size: 0.95rem; }
+.k-avatar.xl { width: 104px; height: 104px; font-size: 2.4rem; box-shadow: inset 2px 2px 0 rgba(255, 240, 215, 0.45), 0 4px 0 var(--a-deep), 0 18px 28px -12px rgba(0, 0, 0, 0.8); }
+
 .k-top .read-prog { position: absolute; left: 0; bottom: 0; height: 2px; z-index: 1; background: var(--a); transition: width 0.2s linear; }
 .k-content { flex: 1; min-height: 0; overflow-y: auto; outline: none; }
 .k-content > .k-page { padding: 32px 28px 64px; }

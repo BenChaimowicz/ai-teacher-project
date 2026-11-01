@@ -5,7 +5,16 @@ import { requestJson } from "@/lib/api.ts";
 import { supabase } from "@/lib/supabase.ts";
 
 /** The signed-in Learner, as `GET /api/me` returns it. The Learner is the account. */
-export type Me = { id: string; displayName: string; email: string | null };
+export type Me = {
+  id: string;
+  displayName: string;
+  email: string | null;
+  /** When the Learner was created, as an ISO timestamp. */
+  memberSince: string;
+  /** Courses and Lessons the Learner finished, for the profile. */
+  coursesFinished: number;
+  lessonsFinished: number;
+};
 
 /** `loading` until Supabase has read the saved session; nothing account-shaped renders before then. */
 export type AuthStatus = "loading" | "signed-out" | "signed-in";
@@ -15,7 +24,7 @@ type AuthState = {
   session: Session | null;
   /** The Learner from `/api/me`; null while it loads or if it failed. */
   me: Me | null;
-  /** Replaces the Learner after a change saved elsewhere, e.g. a new display name in Settings. */
+  /** Replaces the Learner after a change saved elsewhere, e.g. a new display name on the profile. */
   setMe: (me: Me) => void;
   /**
    * Signs out. `local` ends this browser's session; `global` also revokes every other session

@@ -14,13 +14,14 @@ import { CourseCompletePage } from "@/pages/course-complete.tsx";
 import { HomePage } from "@/pages/home.tsx";
 import { CourseRequestPage } from "@/pages/course-request.tsx";
 import { NewCourseRequestPage } from "@/pages/new-course-request.tsx";
-import { SettingsPage } from "@/pages/settings.tsx";
+import { ProfilePage } from "@/pages/profile.tsx";
 import { StudyIndexPage, StudyPage } from "@/pages/study.tsx";
 import { TeachingProfilePage } from "@/pages/teaching-profile.tsx";
 
 /**
  * Signed-out screens stand alone. Everything else needs a signed-in Learner and sits in the app shell; Study uses
  * the study variant (outline in the sidebar). /reset-password is open to both: the reset link signs you in.
+ * /settings, where the account lived first, now leads to /profile.
  */
 export function App() {
   return (
@@ -51,7 +52,8 @@ export function App() {
               <Route path="/new-course-request" element={<NewCourseRequestPage />} />
               <Route path="/course-requests/:requestId" element={<CourseRequestPage />} />
               <Route path="/study/:courseId/complete" element={<CourseCompletePage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/settings" element={<Navigate to="/profile" replace />} />
               <Route path="/dev/components" element={<ComponentsPage />} />
             </Route>
             <Route element={<AppShell variant="study" />}>

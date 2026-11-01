@@ -1,0 +1,53 @@
+/*
+ * The Learner's profile (SEN-110): a header sheet with a big initials circle, the name edited in place, when they
+ * joined, and two count tiles; account settings sit below it as flat sheets. Jongi peeks from the header's corner.
+ */
+
+.k-profile { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+/* the header: one stacked sheet, warmed by a faint apricot wash in the corner Jongi sits in */
+.k-profile-head {
+  position: relative; padding: 28px 28px 24px; border-radius: 18px; margin-bottom: 10px;
+  background: radial-gradient(120% 90% at 100% 0%, rgba(var(--a-rgb), 0.1), transparent 55%), var(--panel);
+  box-shadow: var(--stack);
+}
+.k-profile-head .jongi { position: absolute; top: 16px; right: 18px; }
+.k-profile-head .id { display: flex; align-items: center; gap: 22px; padding-right: 96px; }
+.k-profile-head .name-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.k-profile-head h1 {
+  min-width: 0; font-family: var(--font-display); font-weight: var(--weight-display); font-size: 2.3rem; line-height: 1.05;
+  letter-spacing: 0.005em; overflow-wrap: anywhere;
+}
+.k-profile-head .email { color: var(--text-muted); font-size: 0.9rem; margin-top: 2px; overflow-wrap: anywhere; }
+.k-profile-head .since {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 10px 4px 8px; border-radius: 999px;
+  font-family: var(--font-label); font-size: 0.74rem; color: var(--text-muted); background: var(--well); box-shadow: var(--recess);
+}
+.k-profile-head .since svg { width: 13px; height: 13px; color: var(--a); }
+
+/* the name, edited in place */
+.k-profile-head .name-edit { display: flex; flex-direction: column; gap: 8px; max-width: 340px; }
+.k-profile-head .name-actions { display: flex; gap: 8px; }
+
+/* count tiles: wells cut into the sheet, the numbers in gold (wins) */
+.k-profile-head .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.k-stat { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 14px 16px 13px; border-radius: 14px; background: var(--well); box-shadow: var(--recess); }
+.k-stat .n { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 2.3rem; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; }
+.k-stat .l { font-family: var(--font-label); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+.k-stat .ic { position: absolute; top: 12px; right: 12px; color: var(--faint); }
+.k-stat .ic svg { width: 18px; height: 18px; }
+
+/* account settings under the header */
+.k-profile-card { display: flex; flex-direction: column; gap: 12px; }
+.k-profile-card h2 { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 1.35rem; line-height: 1.1; }
+.k-profile-card .sub { color: var(--text-muted); font-size: 0.86rem; line-height: 1.5; margin-top: -6px; }
+.k-profile-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+@media (max-width: 599px) {
+  .k-profile-head { padding: 22px 18px 18px; }
+  .k-profile-head .jongi { display: none; }
+  .k-profile-head .id { flex-direction: column; align-items: flex-start; gap: 14px; padding-right: 0; }
+  .k-profile-head h1 { font-size: 1.9rem; }
+  .k-profile-head .stats { gap: 10px; }
+  .k-stat .n { font-size: 1.9rem; }
+}

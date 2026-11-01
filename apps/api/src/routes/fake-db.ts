@@ -6,11 +6,14 @@ import type { Database } from "@senoy/db";
 /** Stored rows of one table, keyed by Drizzle field name. */
 type Row = Record<string, unknown>;
 
+/** What `db.$count(table, where)` stands for here: counted when a select or returning projects it as a field. */
+type CountField = { countOf: PgTable; where?: SQL };
+
 /**
  * In-memory stand-in for the Drizzle calls routes make: insert of one row or many (awaited, with returning, as an
  * `onConflictDoUpdate` upsert, or as an `onConflictDoNothing` insert with returning),
- * select/where/orderBy (newest first only)/limit, conditional update/returning, conditional delete, and a transaction that restores every
- * table if its callback throws. Evaluates equality, `is null`, and timestamp `<`/`>` predicates, and treats every
+ * select/where/orderBy (newest first only)/limit, conditional update/returning, conditional delete, a transaction that restores every
+ * table if its callback throws, and `$count(table, where)` as a select or returning field. Evaluates equality, `is null`, and timestamp `<`/`>` predicates, and treats every
  * condition in a `where` as a conjunction: `or(...)` is not supported.
  * @param tables - Tables the routes under test touch
  */
@@ -24,11 +27,17 @@ export function fakeDb(tables: PgTable[]) {
   ]));
   const inserts: { table: PgTable; values: Row }[] = [];
 
-  /** Projects the selected columns, as Postgres does. */
-  function project(table: PgTable, row: Row, fields?: Record<string, PgColumn>) {
+  /** Projects the selected columns, as Postgres does; a `$count` field counts its table's matching rows. */
+  function project(table: PgTable, row: Row, fields?: Record<string, PgColumn | CountField>) {
     if (!fields) return { ...row };
     const keys = fieldsByTable.get(getTableName(table))!;
-    return Object.fromEntries(Object.entries(fields).map(([alias, column]) => [alias, row[keys.get(column.name)!]]));
+    return Object.fromEntries(Object.entries(fields).map(([alias, field]) => {
+      if ("countOf" in field) {
+        const counted = rows.get(field.countOf)!;
+        return [alias, field.where ? counted.filter((other) => matches(field.countOf, other, field.where!)).length : counted.length];
+      }
+      return [alias, row[keys.get(field.name)!]];
+    }));
   }
 
   /** Milliseconds for a timestamp held as a Date, or as the string Drizzle sends one as. */
@@ -116,7 +125,8 @@ export function fakeDb(tables: PgTable[]) {
         };
       },
     }),
-    select: (fields?: Record<string, PgColumn>) => ({
+    $count: (table: PgTable, where?: SQL): CountField => ({ countOf: table, where }),
+    select: (fields?: Record<string, PgColumn | CountField>) => ({
       from: (table: PgTable) => ({
         where: (condition: SQL) => {
           let result = (rows.get(table) ?? []).filter((row) => matches(table, row, condition));
@@ -135,7 +145,7 @@ export function fakeDb(tables: PgTable[]) {
     update: (table: PgTable) => ({
       set: (changes: Row) => ({
         where: (condition: SQL) => ({
-          returning: async (fields?: Record<string, PgColumn>) =>
+          returning: async (fields?: Record<string, PgColumn | CountField>) =>
             rows.get(table)!.filter((row) => matches(table, row, condition)).map((row) => {
               Object.assign(row, changes);
               return project(table, row, fields);

@@ -4,7 +4,7 @@ import { test } from "node:test";
 import Fastify from "fastify";
 import fp from "fastify-plugin";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
-import { learners } from "@senoy/db";
+import { courseCompletions, learners, lessonCompletions } from "@senoy/db";
 import { NAME_THINGS, NAME_TRAITS } from "@senoy/db/learner-name";
 import currentLearnerPlugin, {
   SIGN_IN_ERROR,
@@ -24,9 +24,9 @@ const standInVerifier: TokenVerifier = async (token) => {
   return { sub: match[1]!, ...(match[2] ? { email: match[2] } : {}) };
 };
 
-/** The real plugin and /api/me over an in-memory `learners` table, with the stand-in token check. */
+/** The real plugin and /api/me over in-memory `learners` and completion tables, with the stand-in token check. */
 async function testApp() {
-  const store = fakeDb([learners]);
+  const store = fakeDb([learners, courseCompletions, lessonCompletions]);
   const app = Fastify();
   await app.register(fp(async (instance) => { instance.decorate("db", store.db); }, { name: "db" }));
   await app.register(currentLearnerPlugin, { verifyToken: standInVerifier });
@@ -35,7 +35,7 @@ async function testApp() {
   /** Calls the API with a bearer token, or none. */
   const call = (method: "GET" | "PATCH", url: string, token?: string, payload?: object) =>
     app.inject({ method, url, payload, headers: token ? { authorization: `Bearer ${token}` } : {} });
-  return { app, call, learnerRows: () => store.rows.get(learners)! as (typeof learners.$inferSelect)[] };
+  return { app, call, store, learnerRows: () => store.rows.get(learners)! as (typeof learners.$inferSelect)[] };
 }
 
 test("A request without a token, or with a refused one, is 401 and makes no Learner; /api/health stays open", async () => {
@@ -109,7 +109,10 @@ test("PATCH /api/me cleans and saves a display name; an empty or too-long name i
 
     const saved = await call("PATCH", "/api/me", token, { displayName: "  Ada   Lovelace " });
     assert.equal(saved.statusCode, 200);
-    assert.deepEqual(saved.json(), { id, displayName: "Ada Lovelace", email: "ada@example.com" });
+    const { memberSince } = saved.json() as { memberSince: string };
+    assert.deepEqual(saved.json(), {
+      id, displayName: "Ada Lovelace", email: "ada@example.com", memberSince, coursesFinished: 0, lessonsFinished: 0,
+    });
     assert.equal((await call("GET", "/api/me", token)).json().displayName, "Ada Lovelace");
 
     for (const payload of [{ displayName: "   " }, { displayName: "x".repeat(41) }, { displayName: 7 }, {}]) {
@@ -119,6 +122,33 @@ test("PATCH /api/me cleans and saves a display name; an empty or too-long name i
     }
     assert.equal(learnerRows()[0]!.displayName, "Ada Lovelace");
     assert.notEqual(displayName, "Ada Lovelace");
+  } finally {
+    await app.close();
+  }
+});
+
+test("/api/me says when the Learner joined and counts only their own finished Courses and Lessons, on GET and PATCH", async () => {
+  const { app, call, store, learnerRows } = await testApp();
+  try {
+    const token = `token-${randomUUID()}`;
+    const fresh = (await call("GET", "/api/me", token)).json() as { id: string; memberSince: string; coursesFinished: number; lessonsFinished: number };
+    assert.equal(fresh.coursesFinished, 0);
+    assert.equal(fresh.lessonsFinished, 0);
+    assert.equal(fresh.memberSince, learnerRows()[0]!.createdAt.toISOString());
+
+    const other = (await call("GET", "/api/me", `token-${randomUUID()}`)).json() as { id: string };
+    store.rows.get(courseCompletions)!.push(
+      { learnerId: fresh.id, publishedCourseId: randomUUID(), completedAt: new Date() },
+      { learnerId: other.id, publishedCourseId: randomUUID(), completedAt: new Date() },
+    );
+    for (const learnerId of [fresh.id, fresh.id, fresh.id, other.id]) {
+      store.rows.get(lessonCompletions)!.push({ learnerId, lessonId: randomUUID(), completedAt: new Date() });
+    }
+
+    const counted = (await call("GET", "/api/me", token)).json();
+    assert.deepEqual([counted.coursesFinished, counted.lessonsFinished, counted.memberSince], [1, 3, fresh.memberSince]);
+    const renamed = (await call("PATCH", "/api/me", token, { displayName: "Ada" })).json();
+    assert.deepEqual([renamed.coursesFinished, renamed.lessonsFinished, renamed.memberSince], [1, 3, fresh.memberSince]);
   } finally {
     await app.close();
   }

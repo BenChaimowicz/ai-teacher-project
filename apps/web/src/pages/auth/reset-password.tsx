@@ -19,6 +19,8 @@ export function ResetPasswordPage() {
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Saved: Jongi cheers as the screen hands over to Home.
+  const [done, setDone] = useState(false);
 
   const problem = passwordProblem(password);
 
@@ -35,6 +37,7 @@ export function ResetPasswordPage() {
         setError(authErrorMessage(failed, "Couldn't save your new password. Try again."));
         return;
       }
+      setDone(true);
       toast({ title: "Password changed", body: "You're signed in." });
       navigate("/", { replace: true });
     } catch (caught) {
@@ -57,7 +60,7 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <AuthScreen title="Pick a new password" lede="Then you're back in.">
+    <AuthScreen title="Pick a new password" lede="Then you're back in." mood={done ? "cheer" : busy ? "think" : "idle"}>
       {error ? <AuthNotice tone="error">{error}</AuthNotice> : null}
       <form className="k-auth-form" onSubmit={(event) => void submit(event)} noValidate>
         <AuthField label="New password" hint={PASSWORD_RULE} error={tried ? problem : null}>

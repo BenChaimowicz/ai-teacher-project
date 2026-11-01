@@ -43,6 +43,7 @@ export function CheckEmailPage() {
   return (
     <AuthScreen
       title="Check your email"
+      mood={busy ? "think" : "idle"}
       lede={
         email ? (
           <>
