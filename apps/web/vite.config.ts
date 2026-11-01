@@ -16,9 +16,11 @@ export default defineConfig({
   server: {
     host: "127.0.0.1",
     port: 5173,
+    // Keep the browser's Host: the API builds sign-in email links from it (ADR 0027). The string shorthand would turn
+    // on changeOrigin and rewrite Host to the API's own port, so links would point at the API instead of this server.
     proxy: {
-      "/api": apiUrl,
-      "/media": apiUrl,
+      "/api": { target: apiUrl, changeOrigin: false },
+      "/media": { target: apiUrl, changeOrigin: false },
     },
   },
 });
