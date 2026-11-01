@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { authHeaders } from "../accounts.ts";
 import { resetFixture } from "./fixture.ts";
 
 /** The fixture gate's clarification (apps/api/src/lib/validity-fixture.ts). */
@@ -9,7 +10,7 @@ const KNOW = "How much do you know about this already?";
 
 /** Library rows the Learner sees on Home. */
 async function library(page: Page) {
-  const response = await page.request.get("/api/library");
+  const response = await page.request.get("/api/library", { headers: authHeaders() });
   return (await response.json() as { items: { id: string; kind: string; title: string }[] }).items;
 }
 
@@ -86,7 +87,7 @@ test("A check that can't finish says so and offers Try again", async ({ page }) 
 
 test("Without How you like to learn, New course offers to set it up first", async ({ page }) => {
   await resetFixture();
-  await page.request.delete("/api/teaching-profile");
+  await page.request.delete("/api/teaching-profile", { headers: authHeaders() });
   await page.goto("/new-course-request");
   await expect(page.getByRole("button", { name: /^Set it up/ })).toBeVisible();
   await expect(page.getByLabel("What would you like to learn?")).toHaveCount(0);

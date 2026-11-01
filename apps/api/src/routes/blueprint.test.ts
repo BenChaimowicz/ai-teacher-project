@@ -27,6 +27,8 @@ function savedLearner(): typeof learners.$inferSelect {
   return {
     id: randomUUID(),
     createdAt: new Date(),
+    authUserId: randomUUID(),
+    displayName: "Curious_Owl",
     teachingProfileVersion: TEACHING_PROFILE_VERSION,
     teachingProfileAnswers: parseTeachingProfileAnswers({ quizCadence: { status: "selected", value: "every_reading" } }),
     teachingProfileAssessedAt: new Date(),
@@ -508,5 +510,37 @@ test("A redesign that fails returns to review with the plan as it was and says s
     assert.equal((await app.inject({ method: "POST", url: `${url}/approve`, payload: { sequenceMode: "linear" } })).statusCode, 200, "Make it as it is.");
   } finally {
     await app.close();
+  }
+});
+
+test("Another Learner gets 404 from every Blueprint and generation action on a Request, and changes nothing", async () => {
+  const context = await testApp();
+  const stranger = savedLearner();
+  let asStranger = false;
+  context.app.addHook("onRequest", async (request) => { if (asStranger) request.currentLearner = stranger; });
+  try {
+    await context.designBlueprint();
+    const generationUrl = context.url.replace(/blueprint$/, "generation");
+    const before = JSON.stringify([...context.rows.values()]);
+    asStranger = true;
+    const calls: { method: "GET" | "POST" | "PUT"; url: string; payload?: object }[] = [
+      { method: "GET", url: context.url },
+      { method: "POST", url: context.url },
+      { method: "PUT", url: `${context.url}/sequence-mode`, payload: { sequenceMode: "free_jump" } },
+      { method: "POST", url: `${context.url}/revise`, payload: { irrelevantSlotIds: [] } },
+      { method: "POST", url: `${context.url}/approve`, payload: { sequenceMode: "linear" } },
+      { method: "POST", url: `${generationUrl}/cancel` },
+      { method: "POST", url: `${generationUrl}/resume` },
+      { method: "POST", url: `${generationUrl}/retry` },
+      { method: "POST", url: `/api/course-requests/${context.requestId}/revise` },
+    ];
+    for (const call of calls) {
+      const response = await context.app.inject(call);
+      assert.equal(response.statusCode, 404, `${call.method} ${call.url}`);
+      assert.deepEqual(response.json(), { error: "Course Request not found." });
+    }
+    assert.equal(JSON.stringify([...context.rows.values()]), before);
+  } finally {
+    await context.app.close();
   }
 });

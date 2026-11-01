@@ -20,6 +20,7 @@ import { Tape } from "@/components/ui/tape.tsx";
 import { cn } from "@/lib/utils";
 import type { StudyPayload } from "@/lib/study-types.ts";
 import "@/components/learn/learn.css";
+import { apiFetch } from "@/lib/api.ts";
 
 const HOME_LINES = ["Small steps add up.", "One short lesson keeps the streak going.", "Curious about something? We can make a course of it.", "No rush. Go at your pace."];
 const FIRST_RUN_LINES = ["New here? Let's pick something.", "Any topic works. One line is enough.", "After the topic, it's all taps. No typing."];
@@ -411,7 +412,7 @@ export function HomePage() {
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    fetch("/api/library")
+    apiFetch("/api/library")
       .then((response) => {
         if (!response.ok) throw new Error("Your courses didn't load. Check your connection and try again.");
         return response.json() as Promise<{ items: LibraryItem[] }>;
@@ -440,7 +441,7 @@ export function HomePage() {
   useEffect(() => {
     if (!resumeId) return;
     let cancelled = false;
-    fetch(`/api/courses/${resumeId}`)
+    apiFetch(`/api/courses/${resumeId}`)
       .then((response) => (response.ok ? (response.json() as Promise<StudyPayload>) : null))
       .then((body) => {
         if (!cancelled) setStudy(body);

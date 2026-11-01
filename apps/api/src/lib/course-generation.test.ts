@@ -275,7 +275,7 @@ async function run(
 ) {
   const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
-    id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION,
+    id: randomUUID(), displayName: "Curious_Owl", teachingProfileVersion: TEACHING_PROFILE_VERSION,
     teachingProfileAnswers: parseTeachingProfileAnswers({ contentScope: { status: "selected", value: "compact" } }),
   }).returning();
   const [request] = await db.insert(courseRequests).values({
@@ -460,7 +460,7 @@ test("A Lesson that fails its checks is not saved, no Quiz is generated without 
 test("A provider error is told as an interruption", async () => {
   const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
-    id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
+    id: randomUUID(), displayName: "Curious_Owl", teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
   }).returning();
   const [request] = await db.insert(courseRequests).values({
     learnerId: learner!.id, subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world", status: "generating",
@@ -698,7 +698,7 @@ test("A resumed job continues from the next unfinished Lesson: a checkpointed Re
 test("A cancelled run stops at its next stage: the Lesson in flight is not saved and nothing is recorded", async () => {
   const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
-    id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
+    id: randomUUID(), displayName: "Curious_Owl", teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
   }).returning();
   const [request] = await db.insert(courseRequests).values({
     learnerId: learner!.id, subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world", status: "generation_cancelled",
@@ -726,7 +726,7 @@ test("A cancelled run stops at its next stage: the Lesson in flight is not saved
 test("A run whose call was cut off because it lost its job ends with the loss, not the call's error, and records nothing (SEN-93)", async () => {
   const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
-    id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
+    id: randomUUID(), displayName: "Curious_Owl", teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
   }).returning();
   const [request] = await db.insert(courseRequests).values({
     learnerId: learner!.id, subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world", status: "generation_cancelled",

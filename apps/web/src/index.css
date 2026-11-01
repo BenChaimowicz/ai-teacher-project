@@ -13,6 +13,7 @@
 @import "tailwindcss";
 @import "./styles/kit.css" layer(components);
 @import "./styles/shell.css" layer(components);
+@import "./styles/account.css" layer(components);
 
 @custom-variant dark (&:is(.dark *));
 

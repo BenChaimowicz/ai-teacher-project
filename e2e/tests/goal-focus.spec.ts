@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { authHeaders } from "../accounts.ts";
 import { resetFixture } from "./fixture.ts";
 
 /** The fixture focuser's questions (apps/api/src/lib/goal-focus-fixture.ts): a subject with "[broad]" gets one round. */
@@ -26,7 +27,7 @@ function levelQuestion(page: Page) {
 
 /** The saved Request behind the page. */
 async function savedRequest(page: Page) {
-  const response = await page.request.get(`/api/course-requests/${page.url().split("/").at(-1)}`);
+  const response = await page.request.get(`/api/course-requests/${page.url().split("/").at(-1)}`, { headers: authHeaders() });
   return (await response.json() as { courseRequest: { learningGoal: string; focus: { scope: { inScope: string[]; outOfScope: string[] } | null } } }).courseRequest;
 }
 

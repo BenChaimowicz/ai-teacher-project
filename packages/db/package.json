@@ -15,6 +15,7 @@
     "./blueprint": "./src/blueprint.ts",
     "./lesson-checkpoint": "./src/lesson-checkpoint.ts",
     "./lesson-reuse": "./src/lesson-reuse.ts",
+    "./learner-name": "./src/learner-name.ts",
     "./publication": "./src/publication.ts",
     "./generation-job": "./src/generation-job.ts",
     "./usage": "./src/usage.ts"
@@ -22,7 +23,8 @@
   "scripts": {
     "generate": "tsx scripts/generate.ts",
     "migrate": "drizzle-kit migrate",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "claim-learner": "tsx src/claim-learner.ts"
   },
   "dependencies": {
     "dotenv": "^16.6.1",

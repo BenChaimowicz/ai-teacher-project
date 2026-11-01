@@ -220,7 +220,7 @@ export function answerQuizItem(
     const answers = parseQuizAnswers(quiz.draft.answers, quiz.body);
     if (answers[item.id]?.checked) return { ok: false, status: 409, error: "This answer is locked." };
     answers[item.id] = { optionId, checked: false };
-    await store.updateQuizAttempt(quiz.draft.id, { answers });
+    await store.updateQuizAttempt(request.learnerId, quiz.draft.id, { answers });
     return reload(store, request);
   });
 }
@@ -242,7 +242,7 @@ export function checkQuizItem(store: StudyStore, request: QuizRequest, itemId: u
     if (!answer) return { ok: false, status: 400, error: "Answer the question before checking it." };
     if (!answer.checked) {
       answer.checked = true;
-      await store.updateQuizAttempt(quiz.draft.id, { answers });
+      await store.updateQuizAttempt(request.learnerId, quiz.draft.id, { answers });
     }
     return reload(store, request);
   });
@@ -262,7 +262,7 @@ export function submitQuiz(store: StudyStore, request: QuizRequest): Promise<Qui
       return { ok: false, status: 400, error: `${missing} before submitting.` };
     }
     const score = scoreQuiz(quiz.body, answers);
-    await store.updateQuizAttempt(quiz.draft.id, {
+    await store.updateQuizAttempt(request.learnerId, quiz.draft.id, {
       status: "submitted",
       answers,
       correct: score.correct,

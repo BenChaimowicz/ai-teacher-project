@@ -44,7 +44,7 @@ async function checkBlueprint() {
     try {
       await db.transaction(async (transaction) => {
         const [learner] = await transaction.insert(learners).values({
-          id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
+          id: randomUUID(), displayName: "Curious_Owl", teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}),
         }).returning();
         assert.ok(learner);
         const learningGoal = "Perform and interpret a Gram stain and explain why each reagent step matters.";

@@ -24,7 +24,7 @@ Where each piece of `knibbler.app` is configured. Logins and recovery codes are 
 | Role addresses (`accounts@`, `founders@`, `support@`, `privacy@`, `security@`) | **Zoho Mail Groups** | Each delivers to both founders and accepts mail from outside. Vendor sign-ups use `accounts@`. |
 | DMARC | Porkbun, `_dmarc` | `p=none` (monitoring), reports to `accounts@`. It covers subdomains too. |
 | App email (Supabase Auth) | **Resend**, EU region, on `auth.knibbler.app` | Sender `Knibbler <no-reply@auth.knibbler.app>`. DNS on `send.auth` (CNAME) and `resend._domainkey.auth`. Click and open tracking are off. |
-| Supabase Auth SMTP | Supabase project `lhtzbqrovumcjwrlektf` → Authentication → SMTP | `smtp.resend.com:465`, user `resend`, password = a send-only Resend key. The Site URL and redirect URLs are set there too. |
+| Supabase Auth SMTP | Supabase project `lhtzbqrovumcjwrlektf` → Authentication → SMTP | `smtp.resend.com:465`, user `resend`, password = a send-only Resend key. Every other Auth setting (password rule, email codes, Site URL, redirect URLs) and the email templates live in `auth/` and are sent with `pnpm auth:push` (decision 2026-11-01). Never edit them in the dashboard. |
 | App and API hostnames | Not set yet | Waits for the hosting choice (SEN-106). |
 
 Founder email and app email never share a sender: app mail goes through Resend from the `auth` subdomain, and human mail goes through Zoho from the root domain. Keep one SPF record on the root domain.

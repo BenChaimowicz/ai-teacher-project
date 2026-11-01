@@ -60,7 +60,8 @@ export type StudyStore = {
   completedLessonIds(learnerId: string, courseId: string): Promise<Set<string>>;
   /** Idempotent: Progress never drops and never double-counts. */
   insertCompletion(learnerId: string, lessonId: string): Promise<void>;
-  setSequenceMode(courseId: string, mode: SequenceMode): Promise<void>;
+  /** Writes only a Course this Learner owns. */
+  setSequenceMode(learnerId: string, courseId: string, mode: SequenceMode): Promise<void>;
   /** When this Learner completed the Course, or null. */
   courseCompletedAt(learnerId: string, courseId: string): Promise<Date | null>;
   /** Idempotent: the first completion time is kept. */
@@ -73,7 +74,8 @@ export type StudyStore = {
     feedbackTiming: FeedbackTiming,
     answers: QuizAnswers,
   ): Promise<QuizAttemptRow>;
-  updateQuizAttempt(id: string, patch: QuizAttemptPatch): Promise<void>;
+  /** Writes only an attempt this Learner owns. */
+  updateQuizAttempt(learnerId: string, id: string, patch: QuizAttemptPatch): Promise<void>;
 };
 
 const attemptColumns = {
@@ -144,8 +146,9 @@ export function drizzleStudyStore(db: Database): StudyStore {
       await db.insert(lessonCompletions).values({ learnerId, lessonId }).onConflictDoNothing();
     },
 
-    async setSequenceMode(courseId, mode) {
-      await db.update(publishedCourses).set({ sequenceMode: mode }).where(eq(publishedCourses.id, courseId));
+    async setSequenceMode(learnerId, courseId, mode) {
+      await db.update(publishedCourses).set({ sequenceMode: mode })
+        .where(and(eq(publishedCourses.id, courseId), eq(publishedCourses.learnerId, learnerId)));
     },
 
     async courseCompletedAt(learnerId, courseId) {
@@ -178,8 +181,8 @@ export function drizzleStudyStore(db: Database): StudyStore {
       return row;
     },
 
-    async updateQuizAttempt(id, patch) {
-      await db.update(quizAttempts).set(patch).where(eq(quizAttempts.id, id));
+    async updateQuizAttempt(learnerId, id, patch) {
+      await db.update(quizAttempts).set(patch).where(and(eq(quizAttempts.id, id), eq(quizAttempts.learnerId, learnerId)));
     },
   };
 }

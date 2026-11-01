@@ -17,8 +17,12 @@ The product name. Spelled **Knibbler**; the initial **k** is silent (pronounced 
 _Avoid_: Professor Pim, Workspace (when meaning the product brand string)
 
 **Learner**:
-The person taking a Course. The prototype has exactly one (a single seeded row, no auth); every learner-owned record carries their id so accounts can be added later without migration.
+The person taking a Course, and their account: a Learner signs up and signs in with Supabase Auth (ADR 0026). There is no separate User or Account. Every learner-owned record carries their id, and a Learner sees only their own.
 _Avoid_: User, account (when meaning the person learning)
+
+**Display name**:
+What the app calls a Learner, shown beside a circle with up to two initials (`Curious_Owl` → `CO`). A new Learner gets a random learning-themed name and can change it in Settings. Not unique, so it never identifies anyone.
+_Avoid_: username, handle
 
 **Workspace**:
 The Learner-facing chrome with the sidebar: Home, Teaching Profile, New Course Request, and Open items. Study hides it.

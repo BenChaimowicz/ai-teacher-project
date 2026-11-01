@@ -2,7 +2,7 @@
 date: 2026-10-31
 tickets: SEN-110
 people: Yarden
-status: active
+status: superseded
 ---
 
 # The seeded Learner and everything it owns are deleted when accounts arrive, not handed to the first real account

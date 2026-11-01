@@ -14,12 +14,16 @@ if (!process.env.DATABASE_URL?.includes("127.0.0.1")) {
 /** One worker: every test resets the same throwaway database. */
 export default defineConfig({
   testDir: "./tests",
+  // Test accounts live on the shared Supabase project; tests start signed in as account `a` (decision 2026-10-31).
+  globalSetup: "./global-setup.ts",
+  globalTeardown: "./global-teardown.ts",
   fullyParallel: false,
   workers: 1,
   reporter: [["list"]],
   use: {
     baseURL: `http://127.0.0.1:${WEB_PORT}`,
     trace: "retain-on-failure",
+    storageState: ".auth/a.json",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useLocation, useNavigate } from "react-router-dom";
 import type { TeachingProfileAnswers } from "@senoy/db/teaching-profile";
 import { parseTeachingProfileAnswers, resolveTeachingProfile, type ResolvedTeachingProfile } from "@senoy/db/teaching-profile";
+import { apiFetch } from "@/lib/api.ts";
 
 const HOME_REACHABLE_KEY = "senoy.teaching-profile.home-reachable";
 
@@ -66,7 +67,7 @@ function readRecord(body: unknown): TeachingProfileRecord {
  */
 async function fetchProfile(): Promise<TeachingProfileRecord> {
   try {
-    const response = await fetch("/api/teaching-profile");
+    const response = await apiFetch("/api/teaching-profile");
     if (!response.ok) throw new Error("Could not load Teaching Profile");
     return readRecord(await response.json());
   } catch (error) {
@@ -147,7 +148,7 @@ export function TeachingProfileProvider({ children }: ProviderProps) {
 
   const save = useCallback(async (answers: TeachingProfileAnswers, action: "save" | "reassess") => {
     try {
-      const response = await fetch("/api/teaching-profile", {
+      const response = await apiFetch("/api/teaching-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers, action }),
@@ -165,7 +166,7 @@ export function TeachingProfileProvider({ children }: ProviderProps) {
 
   const reset = useCallback(async () => {
     try {
-      const response = await fetch("/api/teaching-profile", { method: "DELETE" });
+      const response = await apiFetch("/api/teaching-profile", { method: "DELETE" });
       if (!response.ok) throw new Error("Could not reset Teaching Profile");
       setRecord(emptyRecord());
       setError(null);

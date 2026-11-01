@@ -25,6 +25,8 @@ function savedLearner(): typeof learners.$inferSelect {
   return {
     id: randomUUID(),
     createdAt: new Date(),
+    authUserId: randomUUID(),
+    displayName: "Curious_Owl",
     teachingProfileVersion: TEACHING_PROFILE_VERSION,
     teachingProfileAnswers: parseTeachingProfileAnswers({}),
     teachingProfileAssessedAt: new Date(),
@@ -492,4 +494,22 @@ test("An older concurrent review cannot overwrite a newer persisted decision", a
     assert.equal((await oldResponse).statusCode, 409);
     assert.deepEqual((await app.inject({ method: "GET", url })).json(), newer.json());
   } finally { await app.close(); }
+});
+test("Another Learner cannot hide a Course Request or a Course from the Library: same 404 as a missing one", async () => {
+  const { app, learner, rows } = await testApp();
+  try {
+    const { courseRequest } = (await app.inject({ method: "POST", url: "/api/course-requests", payload: { subject: "Norse mythology", learningGoal: "Explain the mythic corpus." } })).json();
+    const owner = learner.id;
+    learner.id = randomUUID();
+    for (const payload of [{ kind: "course_request", id: courseRequest.id }, { kind: "course_request", id: randomUUID() }, { kind: "course", id: randomUUID() }]) {
+      const response = await app.inject({ method: "POST", url: "/api/library/hide", payload });
+      assert.equal(response.statusCode, 404);
+      assert.deepEqual(response.json(), { error: "That course wasn't found." });
+    }
+    assert.equal(rows[0]!.hiddenAt, null);
+    learner.id = owner;
+    assert.equal((await app.inject({ method: "GET", url: "/api/library" })).json().items.length, 1);
+  } finally {
+    await app.close();
+  }
 });

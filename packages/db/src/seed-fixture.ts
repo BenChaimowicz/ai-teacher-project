@@ -5,14 +5,16 @@ import { learners, publishedCourses, publishedLessons, publishedModules } from "
 import { SEEDED_LEARNER_ID } from "./seed-ids.ts";
 
 /**
- * Inserts the prototype's single Learner if that row is missing.
+ * Inserts the fixture Learner if that row is missing. It has no account until `pnpm db:claim-learner` gives it one,
+ * unless `authUserId` links it to one now, as browser tests do.
  * @param db - Drizzle client
+ * @param authUserId - The Supabase user to sign in as this Learner
  */
-export async function seedLearner(db: Database) {
+export async function seedLearner(db: Database, authUserId?: string) {
   try {
     await db
       .insert(learners)
-      .values({ id: SEEDED_LEARNER_ID })
+      .values({ id: SEEDED_LEARNER_ID, displayName: "Curious_Owl", authUserId })
       .onConflictDoNothing({ target: learners.id });
 
     const [row] = await db.select().from(learners).where(eq(learners.id, SEEDED_LEARNER_ID)).limit(1);

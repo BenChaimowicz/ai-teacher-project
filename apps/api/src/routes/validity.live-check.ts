@@ -13,7 +13,7 @@ async function checkValidity() {
   try {
     try {
       await db.transaction(async (transaction) => {
-        const [learner] = await transaction.insert(learners).values({ id: randomUUID(), teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}) }).returning();
+        const [learner] = await transaction.insert(learners).values({ id: randomUUID(), displayName: "Curious_Owl", teachingProfileVersion: TEACHING_PROFILE_VERSION, teachingProfileAnswers: parseTeachingProfileAnswers({}) }).returning();
         assert.ok(learner);
         const app = Fastify({ logger: { level: "error" } });
         app.decorate("db", transaction as unknown as Database);

@@ -7,8 +7,8 @@ import type { Database } from "@senoy/db";
 type Row = Record<string, unknown>;
 
 /**
- * In-memory stand-in for the Drizzle calls routes make: insert of one row or many (awaited, with returning, or as an
- * `onConflictDoUpdate` upsert),
+ * In-memory stand-in for the Drizzle calls routes make: insert of one row or many (awaited, with returning, as an
+ * `onConflictDoUpdate` upsert, or as an `onConflictDoNothing` insert with returning),
  * select/where/orderBy (newest first only)/limit, conditional update/returning, conditional delete, and a transaction that restores every
  * table if its callback throws. Evaluates equality, `is null`, and timestamp `<`/`>` predicates, and treats every
  * condition in a `where` as a conjunction: `or(...)` is not supported.
@@ -94,9 +94,24 @@ export function fakeDb(tables: PgTable[]) {
             }
           }
         }
+        /** Inserts the rows whose `target` columns match no stored row, as a unique key would, and skips the rest. */
+        function insertNew({ target }: { target: PgColumn | PgColumn[] }) {
+          const keys = fieldsByTable.get(getTableName(table))!;
+          const targetKeys = (Array.isArray(target) ? target : [target]).map((column) => keys.get(column.name)!);
+          return (Array.isArray(values) ? values : [values]).flatMap((value) => {
+            if (rows.get(table)!.some((row) => targetKeys.every((key) => row[key] === value[key]))) return [];
+            const row = withDefaults(table, value);
+            rows.get(table)!.push(row);
+            inserts.push({ table, values: value });
+            return [row];
+          });
+        }
         return {
           returning: async (fields?: Record<string, PgColumn>) => insert().map((row) => project(table, row, fields)),
           onConflictDoUpdate: async (config: { target: PgColumn[]; set: Row }) => upsert(config),
+          onConflictDoNothing: (config: { target: PgColumn | PgColumn[] }) => ({
+            returning: async (fields?: Record<string, PgColumn>) => insertNew(config).map((row) => project(table, row, fields)),
+          }),
           then: (resolve: (value: unknown) => unknown) => resolve((insert(), undefined)),
         };
       },

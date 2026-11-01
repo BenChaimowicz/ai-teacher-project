@@ -14,7 +14,7 @@ import { ConfirmDialog } from "@/components/ui/dialog.tsx";
 import { PageLoader } from "@/components/ui/loader.tsx";
 import { ErrorState } from "@/components/ui/states.tsx";
 import { useTeachingProfile } from "@/components/teaching-profile-provider.tsx";
-import { requestJson } from "@/lib/api.ts";
+import { apiFetch, requestJson } from "@/lib/api.ts";
 import { markOpened } from "@/lib/course-list.ts";
 import type { StudyLesson, StudyModule, StudyPayload } from "@/lib/study-types.ts";
 import { renderForTeachingMethod } from "@/teaching-methods/register.ts";
@@ -168,7 +168,7 @@ function StudyScreen() {
     let cancelled = false;
     setPayload(null);
     setError(null);
-    fetch(`/api/courses/${courseId}`)
+    apiFetch(`/api/courses/${courseId}`)
       .then((response) => {
         if (response.status === 404) throw new Error("Published Course not found.");
         if (!response.ok) throw new Error("Could not load Study");
@@ -315,7 +315,7 @@ export function StudyIndexPage() {
   useEffect(() => {
     if (!courseId) return;
     let cancelled = false;
-    fetch(`/api/courses/${courseId}`)
+    apiFetch(`/api/courses/${courseId}`)
       .then((response) => {
         if (response.status === 404) throw new Error("Published Course not found.");
         if (!response.ok) throw new Error("Could not load Study");

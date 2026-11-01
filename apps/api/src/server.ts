@@ -4,7 +4,7 @@ import { balanceProbeFromEnv, createResearchMeter } from "./lib/research-measure
 import { installUsageTracking } from "./lib/usage-tracking.ts";
 import apiRequestsPlugin from "./plugins/api-requests.ts";
 import corsPlugin from "./plugins/cors.ts";
-import currentLearnerPlugin from "./plugins/current-learner.ts";
+import currentLearnerPlugin, { supabaseTokenVerifier } from "./plugins/current-learner.ts";
 import dbPlugin from "./plugins/db.ts";
 import spaPlugin from "./plugins/spa.ts";
 import { healthRoutes } from "./routes/health.ts";
@@ -16,6 +16,7 @@ import { createFixtureValidityGate } from "./lib/validity-fixture.ts";
 import { createFixtureGoalFocuser } from "./lib/goal-focus-fixture.ts";
 import { blueprintRoutes } from "./routes/blueprint.ts";
 import { libraryRoutes } from "./routes/library.ts";
+import { meRoutes } from "./routes/me.ts";
 import { mediaRoutes } from "./routes/media.ts";
 import { studyRoutes } from "./routes/study.ts";
 import { teachingProfileRoutes } from "./routes/teaching-profile.ts";
@@ -36,9 +37,11 @@ async function start() {
       meter: createResearchMeter({ probe: balanceProbeFromEnv({ env: process.env, repoRoot: root }) }),
     });
     await app.register(apiRequestsPlugin);
-    await app.register(currentLearnerPlugin);
+    // Fails fast without SUPABASE_URL: every Learner-owned route needs a checked sign-in token (ADR 0026).
+    await app.register(currentLearnerPlugin, { verifyToken: supabaseTokenVerifier(process.env.SUPABASE_URL) });
     await app.register(corsPlugin);
     await app.register(healthRoutes);
+    await app.register(meRoutes);
     await app.register(libraryRoutes);
     // Browser tests run without provider calls; never set DIAGNOSTIC_FIXTURE in a deployed service.
     const fixtures = process.env.DIAGNOSTIC_FIXTURE === "1";

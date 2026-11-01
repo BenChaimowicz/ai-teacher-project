@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { CourseRow } from "@/components/ui/course-row.tsx";
 import { RemovableCourse } from "@/components/ui/remove-course.tsx";
 import { LIBRARY_CHANGED_EVENT, currentCourse, sidebarCourses, type CourseListItem, type LibraryItem } from "@/lib/course-list.ts";
+import { apiFetch } from "@/lib/api.ts";
 
 /** Other courses listed under the current one; the rest are on Home. */
 const MAX_OTHERS = 3;
@@ -30,7 +31,7 @@ export function SidebarCourses() {
   useEffect(() => {
     let cancelled = false;
     const load = () => {
-      fetch("/api/library")
+      apiFetch("/api/library")
         .then((response) => {
           if (!response.ok) throw new Error("Could not load courses");
           return response.json() as Promise<{ items: LibraryItem[] }>;

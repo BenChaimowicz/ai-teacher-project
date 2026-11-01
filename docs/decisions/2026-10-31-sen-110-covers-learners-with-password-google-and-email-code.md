@@ -2,7 +2,7 @@
 date: 2026-10-31
 tickets: SEN-110, SEN-76
 people: Yarden
-status: active
+status: superseded
 ---
 
 # SEN-110 builds accounts for Learners only, signing in with email and password, Google, or a 6-digit code sent by email
