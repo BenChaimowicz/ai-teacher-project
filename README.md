@@ -57,6 +57,8 @@ pnpm test:e2e
 
 They start a throwaway Postgres container, migrate it, reset the fixture Course before each test, and remove the container afterwards. Your `.env` database is never touched.
 
+Every `pnpm check:*:live` script records its paid calls in the Usage Console like the app does. The check's own reads and writes use `DATABASE_URL` (normally a local Docker Postgres); its Usage Records go to the shared database in `USAGE_DATABASE_URL`, which every live check requires and which may not be a localhost URL. Each run is one Pipeline Event of kind `live_check`, labelled with the script name, holding the Usage Records of every model and research call it made, with no Course Request or Learner attached (those exist only in the local database). Research costs are stored at list price; they are not measured against the vendor balance.
+
 To verify Course Request persistence against the configured Supabase database:
 
 ```bash
@@ -110,7 +112,7 @@ To exercise Lesson reuse (spec §5.8) on a real published Reading, against OpenR
 pnpm check:reuse:live [subject]
 ```
 
-This opt-in check makes billable model calls: the fit call on a slot asking for what the subject's oldest reusable Reading teaches, and on one asking for something unrelated, then the verbatim-or-adapt pass and the reading checks on that Reading. It writes nothing. The subject defaults to "Norse mythology".
+This opt-in check makes billable model calls: the fit call on a slot asking for what the subject's oldest reusable Reading teaches, and on one asking for something unrelated, then the verbatim-or-adapt pass and the reading checks on that Reading. It writes nothing beyond its Usage Records. The subject defaults to "Norse mythology".
 
 To exercise one Reading's Demonstrative media (spec §5.6) against OpenRouter, the seeded Media catalog, and the private bucket:
 

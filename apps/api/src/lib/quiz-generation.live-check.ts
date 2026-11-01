@@ -7,6 +7,7 @@ import { quizPlugin } from "../teaching-methods/quiz.ts";
 import { writeTimeProfile } from "./course-generation.ts";
 import { createModelPorts } from "./model-ports.ts";
 import { createQuizGenerator, QuizFailedError } from "./quiz-generation.ts";
+import { withLiveCheckTracking } from "./live-check-tracking.ts";
 
 /** The Quiz slot that assesses SEN-43's Norse Reading, with that Reading's objectives. */
 function norseQuizSlot(reading: BlueprintSlot): BlueprintSlot {
@@ -94,4 +95,4 @@ async function checkQuizGeneration() {
   }
 }
 
-await checkQuizGeneration();
+await withLiveCheckTracking("check:quiz:live", checkQuizGeneration);

@@ -13,6 +13,7 @@ import {
 import { blueprintSlots } from "@senoy/db/blueprint";
 import { createBlueprintBuilder } from "./blueprint.ts";
 import { createGoalFocuser } from "./goal-focus.ts";
+import { withLiveCheckTracking } from "./live-check-tracking.ts";
 
 const SUBJECT = "Norse mythology";
 const BROAD_GOAL = "explain the main stories and figures in the Norse mythic corpus";
@@ -89,4 +90,4 @@ async function checkFocusedBlueprints() {
   process.stdout.write("Focused Blueprint live check passed.\n");
 }
 
-await checkFocusedBlueprints();
+await withLiveCheckTracking("check:goal-focus-blueprint:live", checkFocusedBlueprints);

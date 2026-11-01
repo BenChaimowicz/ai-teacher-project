@@ -23,8 +23,9 @@ import type { MeasuredCall, MeasuredVendor, Measurement, ResearchMeter } from ".
 
 /**
  * Usage tracking (ADR 0008): Pipeline Events, Usage Records, Product Events, and API Requests, written to the
- * platform's own Postgres. One process-wide sink is installed at startup; until then every call here is a no-op, so
- * unit tests and live checks write nothing. A tracking write never throws into, or fails, the step it records.
+ * platform's own Postgres. One process-wide sink is installed at startup (the API, the worker, and every live check
+ * through `withLiveCheckTracking`); until then every call here is a no-op, so unit tests write nothing. A tracking write
+ * never throws into, or fails, the step it records.
  */
 
 /** Where tracking reports its own failures; Fastify's and pino's loggers fit. */

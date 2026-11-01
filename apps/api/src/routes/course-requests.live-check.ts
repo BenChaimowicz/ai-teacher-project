@@ -13,6 +13,7 @@ import {
 import { courseRequestRoutes } from "./course-requests.ts";
 import { libraryRoutes } from "./library.ts";
 import { teachingProfileRoutes } from "./teaching-profile.ts";
+import { withLiveCheckTracking } from "../lib/live-check-tracking.ts";
 
 /**
  * Checks the real HTTP/database boundary using only temporary Learners.
@@ -115,4 +116,4 @@ async function checkCourseRequests() {
   }
 }
 
-await checkCourseRequests();
+await withLiveCheckTracking("check:course-requests:live", checkCourseRequests);
