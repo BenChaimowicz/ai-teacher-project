@@ -9,6 +9,7 @@ import { writeTimeProfile } from "./course-generation.ts";
 import { createMediaLibrary } from "./media-library.ts";
 import { createModelPorts } from "./model-ports.ts";
 import { createReadingGenerator, ReadingFailedError } from "./reading-generation.ts";
+import { withLiveCheckTracking } from "./live-check-tracking.ts";
 
 /**
  * The Norse Reading slot of the SEN-43 live check, with an objective a picture serves: the seed catalog (SEN-47) holds a
@@ -88,4 +89,4 @@ async function checkReadingMedia() {
   }
 }
 
-await checkReadingMedia();
+await withLiveCheckTracking("check:reading-media:live", checkReadingMedia);

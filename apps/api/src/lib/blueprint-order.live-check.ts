@@ -3,6 +3,7 @@ import { loadRootEnv, type ProbedCapability, type StartingLevel } from "@senoy/d
 import { blueprintSlots } from "@senoy/db/blueprint";
 import { BlueprintFailedError, createBlueprintBuilder } from "./blueprint.ts";
 import { createModelPorts, type Judge } from "./model-ports.ts";
+import { withLiveCheckTracking } from "./live-check-tracking.ts";
 
 /**
  * One probed capability of the SEN-49 Starting Level, as stored.
@@ -100,4 +101,4 @@ async function checkNaturalOrder() {
   process.stdout.write("\nBlueprint order live check passed.\n");
 }
 
-await checkNaturalOrder();
+await withLiveCheckTracking("check:blueprint-order:live", checkNaturalOrder);

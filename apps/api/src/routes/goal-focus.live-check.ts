@@ -14,6 +14,7 @@ import {
   type FocusQuestion,
 } from "@senoy/db";
 import { goalFocusRoutes } from "./goal-focus.ts";
+import { withLiveCheckTracking } from "../lib/live-check-tracking.ts";
 
 /** Picks, per question, the option whose words best match `leaning`; an own-words answer when none do. */
 function answerToward(questions: FocusQuestion[], leaning: RegExp, ownWords: string): FocusAnswer[] {
@@ -107,4 +108,4 @@ async function checkGoalFocus() {
   } finally { await db.$client.end(); }
 }
 
-await checkGoalFocus();
+await withLiveCheckTracking("check:goal-focus:live", checkGoalFocus);

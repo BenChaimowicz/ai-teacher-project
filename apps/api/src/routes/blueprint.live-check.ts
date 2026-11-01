@@ -16,6 +16,7 @@ import {
 } from "@senoy/db";
 import { redact } from "@senoy/research";
 import { blueprintRoutes } from "./blueprint.ts";
+import { withLiveCheckTracking } from "../lib/live-check-tracking.ts";
 
 /** A mixed Gram-stain Starting Level: the first three capabilities evidenced. */
 const CAPABILITIES = [
@@ -107,4 +108,4 @@ async function checkBlueprint() {
   }
 }
 
-await checkBlueprint();
+await withLiveCheckTracking("check:blueprint:live", checkBlueprint);
