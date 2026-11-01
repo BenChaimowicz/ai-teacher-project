@@ -25,6 +25,7 @@
     "check:research:live": "pnpm --filter @senoy/api exec tsx src/lib/research.live-check.ts",
     "check:research-processors:live": "pnpm --filter @senoy/api exec tsx src/lib/research-processors.live-check.ts",
     "check:fact-check-vendors:live": "pnpm --filter @senoy/api exec tsx src/lib/fact-check-vendors.live-check.ts",
+    "run:test-courses:live": "pnpm --filter @senoy/api exec tsx src/lib/test-courses.live-run.ts",
     "check:blueprint-order:live": "pnpm --filter @senoy/api exec tsx src/lib/blueprint-order.live-check.ts",
     "check:goal-focus-blueprint:live": "pnpm --filter @senoy/api exec tsx src/lib/goal-focus-blueprint.live-check.ts",
     "check:validity:live": "pnpm --filter @senoy/api exec tsx src/routes/validity.live-check.ts",
