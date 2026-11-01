@@ -62,11 +62,11 @@ The console snapshots the You.com balance every 15 minutes while it runs. Each s
 | 11-01 11:24 → 11:31 | 8.40 → 8.25 | 3 (Gram research) | 0.15 |
 | 11-01 11:39 → 11:47 | 8.25 → 8.10 | 3 (Norse research) | 0.15 |
 
-Two things the snapshots also show. At 09:26 UTC on 2026-11-01 the key started answering as a **different You.com account** (`data.id` changed) with a $10.00 balance, where the old one held $86.25: the founders moved Knibbler to a You.com business account that morning (Yarden, 2026-11-01). The console's billing check reads the switch as $78.15 billed on 2026-11-01. And between 10:12 and 10:19 UTC the new account lost $0.05 with no Usage Record anywhere: one call made outside the app, probably a test of the new key.
+Two things the snapshots also show. At 09:26 UTC on 2026-11-01 the key started answering as a **different You.com account** (`data.id` changed) with a $10.00 balance, where the old one held $86.25: the founders moved Knibbler to a You.com business account that morning (Yarden, 2026-11-01). The console's billing check reads the switch as $78.15 billed on 2026-11-01. And between 10:12 and 10:19 UTC the new account lost $0.05 with no Usage Record anywhere: one call from the same unrecorded stack, or a test of the new key.
 
 ### Parallel: $0.10 per `pro` run, on the one day we could read it
 
-The Parallel Account API login expired on 2026-10-26 and was renewed only briefly on 2026-10-31 (`pnpm parallel:login`); 724 of 1,116 Parallel readings are errors. On 2026-10-26, the one full readable day, funds dropped $0.60 for 6 recorded runs: 5 that answered and 1 that returned no sources, all billed. On 2026-10-31, readable for 34 snapshots, funds dropped $0.60 with **no Usage Record for any Parallel run**: six `pro` runs made by a stack whose usage went elsewhere (a local database, or a live check before PR #60 made live checks record their usage).
+The Parallel Account API login expired on 2026-10-26 and was renewed only briefly on 2026-10-31 (`pnpm parallel:login`); 724 of 1,116 Parallel readings are errors. On 2026-10-26, the one full readable day, funds dropped $0.60 for 6 recorded runs: 5 that answered and 1 that returned no sources, all billed. On 2026-10-31, readable for 34 snapshots, funds dropped $0.60 with **no Usage Record for any Parallel run**: six `pro` runs from Ben's stack, which was not recording to the shared database that day (confirmed by Yarden, 2026-11-01). Spend from a stack pointed at a local database is invisible to the console.
 
 ### The per-call measurement does not work
 
