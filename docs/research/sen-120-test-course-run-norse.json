@@ -1,0 +1,192 @@
+{
+  "ranAt": "2026-11-01T17:36:58.732Z",
+  "apiUrl": "http://127.0.0.1:3000",
+  "runs": [
+    {
+      "name": "norse",
+      "subject": "Norse mythology",
+      "learningGoal": "Explain how the Norse sources picture the cosmos and its fate: Yggdrasil and the Nine Worlds, the Norns, Odin and the halls of the gods, the death of Baldr, and Ragnarök.",
+      "requestId": "c0ae789d-01d0-420e-bf38-689e73321b7c",
+      "resumed": true,
+      "startedAt": "2026-11-01T17:18:33.379Z",
+      "finishedAt": "2026-11-01T17:36:58.732Z",
+      "minutes": 18.4,
+      "finalStatus": "published",
+      "failureReason": null,
+      "timeline": [
+        {
+          "at": "2026-11-01T17:18:33.641Z",
+          "status": "goal_focused",
+          "note": "resumed c0ae789d-01d0-420e-bf38-689e73321b7c"
+        },
+        {
+          "at": "2026-11-01T17:19:58.394Z",
+          "status": "assessment_ready",
+          "note": "8 items"
+        },
+        {
+          "at": "2026-11-01T17:20:02.065Z",
+          "status": "awaiting_gap_confirmation",
+          "note": "answered I don't know throughout"
+        },
+        {
+          "at": "2026-11-01T17:20:02.716Z",
+          "status": "starting_level_confirmed"
+        },
+        {
+          "at": "2026-11-01T17:20:03.528Z",
+          "status": "blueprint_preparing"
+        },
+        {
+          "at": "2026-11-01T17:20:55.461Z",
+          "status": "blueprint_review"
+        },
+        {
+          "at": "2026-11-01T17:20:56.523Z",
+          "status": "generating"
+        },
+        {
+          "at": "2026-11-01T17:21:16.967Z",
+          "status": "generating",
+          "note": "research 0/6"
+        },
+        {
+          "at": "2026-11-01T17:26:23.858Z",
+          "status": "generating",
+          "note": "lesson 0/6 · Sources, First Beings, and the World's Beginnings"
+        },
+        {
+          "at": "2026-11-01T17:28:06.190Z",
+          "status": "generating",
+          "note": "lesson 1/6 · The World Tree, Fate, and the Gods' Halls"
+        },
+        {
+          "at": "2026-11-01T17:30:49.825Z",
+          "status": "generating",
+          "note": "lesson 2/6 · Explain the Norse World and Its Sources"
+        },
+        {
+          "at": "2026-11-01T17:31:51.169Z",
+          "status": "generating",
+          "note": "lesson 3/6 · Why Baldr Dies"
+        },
+        {
+          "at": "2026-11-01T17:33:33.529Z",
+          "status": "generating",
+          "note": "lesson 4/6 · Ragnarök: Destruction and a World Renewed"
+        },
+        {
+          "at": "2026-11-01T17:35:36.296Z",
+          "status": "generating",
+          "note": "lesson 5/6 · Explain the Cosmos and Its Fate"
+        },
+        {
+          "at": "2026-11-01T17:36:58.108Z",
+          "status": "published"
+        }
+      ],
+      "cost": {
+        "stages": [
+          {
+            "kind": "blueprint",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.029
+          },
+          {
+            "kind": "blueprint",
+            "who": "judge",
+            "calls": 1,
+            "usd": 0.0005
+          },
+          {
+            "kind": "course_judge",
+            "who": "judge",
+            "calls": 1,
+            "usd": 0.0004
+          },
+          {
+            "kind": "diagnostic",
+            "who": "author",
+            "calls": 5,
+            "usd": 0.0683
+          },
+          {
+            "kind": "diagnostic",
+            "who": "judge",
+            "calls": 4,
+            "usd": 0.0042
+          },
+          {
+            "kind": "fact_check",
+            "who": "judge",
+            "calls": 6,
+            "usd": 0.0014
+          },
+          {
+            "kind": "fact_check",
+            "who": "you",
+            "calls": 6,
+            "usd": 0.03
+          },
+          {
+            "kind": "goal_focus",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0041
+          },
+          {
+            "kind": "quiz",
+            "who": "author",
+            "calls": 2,
+            "usd": 0.1279
+          },
+          {
+            "kind": "quiz",
+            "who": "judge",
+            "calls": 4,
+            "usd": 0.0048
+          },
+          {
+            "kind": "reading",
+            "who": "author",
+            "calls": 5,
+            "usd": 0.3905
+          },
+          {
+            "kind": "reading",
+            "who": "judge",
+            "calls": 14,
+            "usd": 0.0313
+          },
+          {
+            "kind": "research",
+            "who": "parallel",
+            "calls": 4,
+            "usd": 0.2
+          },
+          {
+            "kind": "research",
+            "who": "you",
+            "calls": 4,
+            "usd": 0.2
+          },
+          {
+            "kind": "reuse",
+            "who": "author",
+            "calls": 3,
+            "usd": 0.0073
+          },
+          {
+            "kind": "validity",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0045
+          }
+        ],
+        "totalUsd": 1.1042,
+        "calls": 62
+      }
+    }
+  ]
+}

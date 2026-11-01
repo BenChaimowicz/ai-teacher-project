@@ -151,6 +151,40 @@ Everything above needed SQL. What the console would need to answer the same ques
 - **Account changes and starting balances.** Detect a changed account id in the You.com reading and start a new series instead of booking a $76 charge, as the move to the business account did; make starting balances an Operator setting, not `OPERATOR_STARTING_BALANCES` in code.
 - **Compare two Courses.** SEN-120 wants before-and-after per stage; a side-by-side of two Course Requests would make section 1 of this note a screen.
 
+## 8. After SEN-122 and SEN-120: the re-run of 2026-11-01
+
+Both test Courses were run again through the product between 17:06 and 17:51 UTC with `pnpm run:test-courses:live`, as the test Learner, on main `9fcdb76`: Sol writes every stage with Terra behind it (ADR 0028), the fact-check searches with You.com Web Search, the Quiz author reasons at medium, and a rate-limited call is retried once. Both published and passed every Judge. Their Blueprints came out as **4 Readings and 2 Quizzes** for this Learner's Teaching Profile, against 3 and 3 in the morning, so the per-unit lines below are the fair comparison, not the totals.
+
+| Stage | Gram, morning (3R+3Q) | Gram, re-run (4R+2Q) | Norse, morning (3R+3Q) | Norse, re-run (4R+2Q) |
+| -- | -- | -- | -- | -- |
+| Request checks | 0.009 | 0.004 | 0.008 | 0.008 |
+| Starting Level items: author + Judge | 0.072 (two sets) | 0.040 (one set) | 0.071 (two sets) | 0.072 (one set, plus 0.041 on two sets lost to a missing key in `.env`) |
+| Fact-check searches (count) | 0.75 (15) | 0.040 (8) | 0.65 (13) | 0.030 (6) |
+| Fact-check Judge | 0.002 | 0.002 | 0.002 | 0.001 |
+| Blueprint: author + Judge | 0.034 | 0.026 | 0.024 | 0.030 |
+| Reuse fit | — | — | 0.014 | 0.007 |
+| Research | 0.45 | 0.60 | 0.45 | 0.40 recorded; two Parallel runs lost at our end (SEN-126), about 0.60 billed |
+| Readings: author + Judge | 0.295 | 0.436 | 0.373 | 0.422 |
+| Quizzes: author + Judge | 0.214 | 0.112 | 0.208 | 0.133 |
+| Whole-Course Judge | 0.001 | 0.001 | 0.001 | 0.000 |
+| **Total** | **1.83** | **1.26** | **1.80** | **1.10** (about 1.26 with the lost runs billed, 1.22 of it product cost) |
+| Calls | 85 | 69 | 78 | 62 |
+| Starting Level check prepared in | 4.6 min | 1.7 min | 4.8 min | 1.4 min |
+| Blueprint designed in | 2.0 min | 0.7 min | 1.4 min | 0.7 min |
+| Generation, approve to publish | 12.8 min | 13.1 min | 14.0 min | 15.8 min, with two 5-min Parallel stalls |
+
+Per unit on the re-run: research $0.15 a Reading at list; a Reading's writing and judging $0.106 (Norse) and $0.109 (Gram), with drafts at about 23k prompt tokens and $0.08 to $0.10 each, one Gram Reading taking three rounds; a Quiz $0.067 (Norse) and $0.056 (Gram); the Starting Level check, one Sol set with its searches, $0.06 to $0.07. On these unit prices a 3-Reading, 3-Quiz Course is **about $1.07, against $1.80 to $1.83 in the morning**, and a Reading with its Quiz is about $0.32.
+
+Where it came from, and what did not move:
+
+- **The fact-check**, $0.65 to $0.75 in the morning, is $0.03 to $0.04: one set instead of two, and $0.005 a search instead of $0.05. Every key the Judge flagged was confirmed on the first search.
+- **One item set instead of two** also took the Starting Level check from 4.6 and 4.8 minutes to 1.7 and 1.4.
+- **The Quiz author at medium** cut hidden reasoning from 3.1k to 6.2k tokens per Quiz to 0.2k to 0.4k, but these Quizzes assess two Readings each and their visible output doubled, so a Quiz cost $0.051 to $0.065 against $0.054 to $0.089: about 15% less, all four passing their first draft. The $0.035 of the one-Reading Quiz in the live check does not carry over to two-Reading Quizzes.
+- **Readings and research did not change** per Reading, as decided (Parallel stays on `pro`).
+- **Sol instead of DeepSeek** on the small stages: validity, focus and the Blueprint together cost $0.03 to $0.04 either way, and the Blueprint designed in 0.7 minutes instead of 1.4 to 2.0.
+
+Two things the re-run turned up: two of Norse's four Parallel Pro runs failed after exactly 304 s, because Node's fetch gives up waiting for headers at 300 s while the adapter blocks on Parallel's result for up to ten minutes (SEN-126; those runs are billed by Parallel and recorded at $0 here), and the worker runs one job at a time, so Gram's Blueprint waited 16 minutes for Norse's generation, as it did in the morning. The run records are `docs/research/sen-120-test-course-run-norse.json` and `-gram.json`.
+
 ## Appendix: the queries
 
 Step kinds nest (fact-check under diagnostic, research and Readings under course generation), and a child step may carry no Course Request id, so every query walks the tree:
