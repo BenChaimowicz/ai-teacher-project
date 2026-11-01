@@ -1,6 +1,6 @@
 import { expect, test, type Browser } from "@playwright/test";
 import { SEEDED_COURSE, SEEDED_COURSE_ID } from "@senoy/db";
-import { authHeaders, testAccounts } from "../accounts.ts";
+import { testAccounts } from "../accounts.ts";
 import { resetFixture } from "./fixture.ts";
 
 /**
@@ -28,9 +28,9 @@ test("another Learner never sees account a's Course", async ({ browser }) => {
   await expect(page.getByRole("link", { name: /How you like to learn/ }).first()).toBeVisible();
   await expect(page.getByText(SEEDED_COURSE.title)).toHaveCount(0);
 
-  const headers = authHeaders("b");
-  expect((await page.request.get(`/api/courses/${SEEDED_COURSE_ID}`, { headers })).status()).toBe(404);
-  const library = await page.request.get("/api/library", { headers });
+  // page.request shares b's context, so it sends b's session cookies.
+  expect((await page.request.get(`/api/courses/${SEEDED_COURSE_ID}`)).status()).toBe(404);
+  const library = await page.request.get("/api/library");
   expect(library.status()).toBe(200);
   expect(JSON.stringify(await library.json())).not.toContain(SEEDED_COURSE_ID);
 });

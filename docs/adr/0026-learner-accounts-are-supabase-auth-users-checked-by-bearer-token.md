@@ -1,5 +1,7 @@
 # Learner accounts are Supabase Auth users, and the API checks a bearer token
 
+> **Superseded in part by [ADR 0027](0027-the-session-lives-in-httponly-cookies-set-by-the-api.md):** the session now lives in httpOnly cookies set by the API, and every sign-in flow goes through the API. The rest of this ADR still holds.
+
 Until SEN-110 the API loaded the first `learners` row on every request, so anyone who could reach it was the one Learner. Learners now sign up and sign in with Supabase Auth, which our Supabase project already includes (decision 2026-10-31). Supabase owns identity: emails, password hashes, Google identities, sessions and refresh tokens, in its `auth` schema. Our tables own everything else.
 
 **Sign-in happens in the browser.** The web app uses `supabase-js` to talk to Supabase Auth directly, for:

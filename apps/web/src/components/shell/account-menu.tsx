@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/toast.tsx";
  * focus to the button; Tab or a click outside closes and lets focus go where it was headed.
  */
 export function AccountMenu() {
-  const { me, session, signOut } = useAuth();
+  const { me, signOut } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -23,7 +23,7 @@ export function AccountMenu() {
   const menu = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const name = me?.displayName ?? null;
-  const email = me?.email ?? session?.user.email ?? null;
+  const email = me?.email ?? null;
 
   /** The menu's items, in order. */
   const items = () => [...(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];

@@ -16,7 +16,6 @@
     "@fontsource/space-grotesk": "^5.3.0",
     "@radix-ui/react-slot": "^1.2.3",
     "@senoy/db": "workspace:*",
-    "@supabase/supabase-js": "^2.118.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",

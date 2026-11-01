@@ -1,8 +1,6 @@
-import type { Session } from "@supabase/supabase-js";
 import { createContext, Fragment, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Navigate, Outlet, useLocation, type Location } from "react-router-dom";
-import { requestJson } from "@/lib/api.ts";
-import { supabase } from "@/lib/supabase.ts";
+import { apiFetch, requestJson, setUnauthorizedHandler } from "@/lib/api.ts";
 
 /** The signed-in Learner, as `GET /api/me` returns it. The Learner is the account. */
 export type Me = {
@@ -16,19 +14,24 @@ export type Me = {
   lessonsFinished: number;
 };
 
-/** `loading` until Supabase has read the saved session; nothing account-shaped renders before then. */
+/** `loading` until the first `GET /api/me` answers; nothing account-shaped renders before then. */
 export type AuthStatus = "loading" | "signed-out" | "signed-in";
 
 type AuthState = {
   status: AuthStatus;
-  session: Session | null;
-  /** The Learner from `/api/me`; null while it loads or if it failed. */
+  /** The Learner from `/api/me`; set whenever `status` is `signed-in`. */
   me: Me | null;
   /** Replaces the Learner after a change saved elsewhere, e.g. a new display name on the profile. */
   setMe: (me: Me) => void;
   /**
-   * Signs out. `local` ends this browser's session; `global` also revokes every other session
-   * (an access token already issued keeps working until it expires, at most an hour).
+   * Asks `GET /api/me` who is signed in, e.g. right after sign-in set the session cookies.
+   * @returns True when someone is signed in
+   * @throws When the API can't answer (anything but `200` or `401`)
+   */
+  refresh: () => Promise<boolean>;
+  /**
+   * Signs out through the API, which clears the session cookies. `local` ends this browser's session; `global` also
+   * revokes every other session (an access token already issued keeps working until it expires, at most an hour).
    */
   signOut: (scope: "local" | "global") => Promise<void>;
 };
@@ -38,58 +41,95 @@ export type FromState = { from?: Location };
 
 const AuthContext = createContext<AuthState | null>(null);
 
+/** Waits before the first probe tries again, in ms; one entry per retry. */
+const PROBE_RETRIES = [500, 1500, 3000];
+
 /**
- * Holds the Supabase session for the whole app and loads the signed-in Learner from `/api/me`.
+ * Asks the API who is signed in. The session is in httpOnly cookies (ADR 0027), so only the API can tell.
+ * @returns The Learner, or null when signed out
+ * @throws When the API answers anything but `200` or `401`, or can't be reached
+ */
+async function fetchMe(): Promise<Me | null> {
+  // This call handles its own 401, so apiFetch doesn't also report it.
+  const response = await apiFetch("/api/me", {}, { signOutOn401: false });
+  if (response.status === 401) return null;
+  if (!response.ok) {
+    throw new Error(`[auth-provider.tsx: fetchMe] Could not load the signed-in Learner || status=${response.status} || ${response.statusText}`);
+  }
+  return (await response.json()) as Me;
+}
+
+/**
+ * Knows who is signed in for the whole app: asks `GET /api/me` on load and after sign-in, and hears about any later
+ * `401` from `apiFetch`, which flips the app to signed out.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [status, setStatus] = useState<AuthStatus>("loading");
   const [me, setMeState] = useState<Me | null>(null);
-  const userId = session?.user.id ?? null;
 
-  useEffect(() => {
-    // INITIAL_SESSION arrives first, once the saved session (or one from an email link) is read.
-    // Supabase warns against calling its own methods inside this callback, so it only sets state.
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
-    return () => data.subscription.unsubscribe();
+  /** Records the answer from `/api/me`. */
+  const apply = useCallback((next: Me | null) => {
+    setMeState(next);
+    setStatus(next ? "signed-in" : "signed-out");
   }, []);
 
+  useEffect(() => setUnauthorizedHandler(() => apply(null)), [apply]);
+
   useEffect(() => {
-    setMeState(null);
-    if (!userId) return;
     let cancelled = false;
-    requestJson<Me>("/api/me", "GET", undefined, "Could not load your account")
-      .then((next) => {
-        if (!cancelled) setMeState(next);
-      })
-      .catch(() => undefined);
+    /** The first probe; retries a few times if the API is briefly away, then shows sign-in. */
+    async function probe() {
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          const next = await fetchMe();
+          if (!cancelled) apply(next);
+          return;
+        } catch {
+          const wait = PROBE_RETRIES[attempt];
+          if (wait === undefined) {
+            if (!cancelled) apply(null);
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, wait));
+          if (cancelled) return;
+        }
+      }
+    }
+    void probe();
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [apply]);
 
-  const signOut = useCallback(async (scope: "local" | "global") => {
-    const { error } = await supabase.auth.signOut({ scope });
-    if (error) {
-      throw new Error(`[auth-provider.tsx: signOut] Sign out failed || scope=${scope} || ${error.message}`);
-    }
-  }, []);
+  const refresh = useCallback(async () => {
+    const next = await fetchMe();
+    apply(next);
+    return next !== null;
+  }, [apply]);
+
+  const signOut = useCallback(
+    async (scope: "local" | "global") => {
+      try {
+        await requestJson<null>("/api/auth/sign-out", "POST", { scope }, "Couldn't sign you out.");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`[auth-provider.tsx: signOut] Sign out failed || scope=${scope} || ${message}`);
+      }
+      apply(null);
+    },
+    [apply],
+  );
 
   const value = useMemo<AuthState>(
-    () => ({
-      status: session === undefined ? "loading" : session ? "signed-in" : "signed-out",
-      session: session ?? null,
-      me,
-      setMe: setMeState,
-      signOut,
-    }),
-    [session, me, signOut],
+    () => ({ status, me, setMe: setMeState, refresh, signOut }),
+    [status, me, refresh, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 /**
- * The session, the signed-in Learner, and sign-out.
+ * Who is signed in, the Learner, and sign-in / sign-out.
  * @throws If used outside AuthProvider
  */
 export function useAuth() {
@@ -105,15 +145,15 @@ function Waiting() {
 
 /**
  * Route guard for everything signed-in. Signed-out people go to /sign-in, which brings them back here after.
- * Keyed by the user, so nothing one account loaded survives into another.
+ * Keyed by the Learner, so nothing one account loaded survives into another.
  * @param children - Providers that need a signed-in Learner; they wrap the routes below
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { status, session } = useAuth();
+  const { status, me } = useAuth();
   const location = useLocation();
   if (status === "loading") return <Waiting />;
   if (status === "signed-out") return <Navigate to="/sign-in" replace state={{ from: location } satisfies FromState} />;
-  return <Fragment key={session?.user.id}>{children}</Fragment>;
+  return <Fragment key={me?.id}>{children}</Fragment>;
 }
 
 /**

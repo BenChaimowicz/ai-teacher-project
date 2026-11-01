@@ -4,12 +4,13 @@ import { useAuth } from "@/components/auth/auth-provider.tsx";
 import { AuthField, AuthNotice, AuthScreen, PasswordInput } from "@/components/auth/auth-screen.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { useToast } from "@/components/ui/toast.tsx";
+import { requestJson } from "@/lib/api.ts";
 import { authErrorMessage, PASSWORD_RULE, passwordProblem } from "@/lib/auth-copy.ts";
-import { linkError, supabase } from "@/lib/supabase.ts";
 
 /**
- * Where the reset email's link lands. The link has already signed the person in, so they only pick a new password.
- * Without a session (link expired or already used) it points back to "forgot password".
+ * Where the reset email's link lands, through the API's confirm route, which has already signed the person in; they
+ * only pick a new password. Without a session (opened later, or after signing out) it points back to "forgot password".
+ * A bad or used link never gets here: the API sends it to sign-in with `?link=expired`.
  */
 export function ResetPasswordPage() {
   const { status } = useAuth();
@@ -32,11 +33,7 @@ export function ResetPasswordPage() {
     if (problem) return;
     setBusy(true);
     try {
-      const { error: failed } = await supabase.auth.updateUser({ password });
-      if (failed) {
-        setError(authErrorMessage(failed, "Couldn't save your new password. Try again."));
-        return;
-      }
+      await requestJson<null>("/api/auth/password", "POST", { password }, "Couldn't save your new password. Try again.");
       setDone(true);
       toast({ title: "Password changed", body: "You're signed in." });
       navigate("/", { replace: true });
@@ -51,7 +48,7 @@ export function ResetPasswordPage() {
 
   if (status === "signed-out") {
     return (
-      <AuthScreen title="That link has run out" lede={linkError ?? "Reset links work once, for a short while. Ask for a fresh one."}>
+      <AuthScreen title="That link has run out" lede="Reset links work once, for a short while. Ask for a fresh one.">
         <Button asChild size="lg" className="w-full">
           <Link to="/forgot-password">Send me a new link</Link>
         </Button>

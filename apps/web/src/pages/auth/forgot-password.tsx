@@ -3,13 +3,13 @@ import { Link, useLocation } from "react-router-dom";
 import { AuthField, AuthNotice, AuthScreen } from "@/components/auth/auth-screen.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
-import { authErrorMessage, hidesAccountExistence } from "@/lib/auth-copy.ts";
-import { supabase } from "@/lib/supabase.ts";
+import { requestJson } from "@/lib/api.ts";
+import { authErrorMessage } from "@/lib/auth-copy.ts";
 import type { AuthNavState } from "@/pages/auth/sign-in.tsx";
 
 /**
- * Asks Supabase to email a reset link. The link signs the person in on /reset-password, where they pick a new
- * password. The reply is the same whether or not the email has an account.
+ * Asks the API to email a reset link. The link signs the person in and lands on /reset-password, where they pick a
+ * new password. The reply is the same whether or not the email has an account.
  */
 export function ForgotPasswordPage() {
   const location = useLocation();
@@ -27,13 +27,7 @@ export function ForgotPasswordPage() {
     setBusy(true);
     setError(null);
     try {
-      const { error: failed } = await supabase.auth.resetPasswordForEmail(address, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (failed && !hidesAccountExistence(failed)) {
-        setError(authErrorMessage(failed, "Couldn't send a reset link. Try again."));
-        return;
-      }
+      await requestJson<null>("/api/auth/forgot", "POST", { email: address }, "Couldn't send a reset link. Try again.");
       setSentTo(address);
     } catch (caught) {
       setError(authErrorMessage(caught, "Couldn't send a reset link. Try again."));

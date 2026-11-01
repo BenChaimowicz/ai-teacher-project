@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import { createRemoteJWKSet, errors as joseErrors, jwtVerify } from "jose";
 import { learners } from "@senoy/db";
 import { randomDisplayName } from "@senoy/db/learner-name";
+import { clearSessionCookies, readSessionCookies, setSessionCookies } from "../lib/session-cookies.ts";
+import { AuthServiceError, type SessionTokens } from "../lib/supabase-auth.ts";
 
 /** A Learner row as stored in Postgres. */
 type Learner = typeof learners.$inferSelect;
@@ -17,10 +19,18 @@ export type VerifiedToken = { sub: string; email?: string };
  */
 export type TokenVerifier = (token: string) => Promise<VerifiedToken>;
 
+/**
+ * Trades a refresh token for a new session. Throws {@link AuthServiceError} when Supabase refuses it, or when Supabase
+ * could not be reached (`unavailable`).
+ */
+export type SessionRefresher = (refreshToken: string) => Promise<SessionTokens>;
+
 /** Options for the current-Learner plugin. */
 export type CurrentLearnerOptions = {
-  /** Checks each request's bearer token; the server passes {@link supabaseTokenVerifier}, tests a stand-in. */
+  /** Checks each request's access token; the server passes {@link supabaseTokenVerifier}, tests a stand-in. */
   verifyToken: TokenVerifier;
+  /** Refreshes an expired session; the server passes the Supabase auth service's `refresh`, tests a stand-in. */
+  refreshSession: SessionRefresher;
 };
 
 /** The token check could not run, so the token is neither valid nor invalid: answered 503, not 401. */
@@ -30,8 +40,10 @@ declare module "fastify" {
   interface FastifyRequest {
     /** The signed-in Learner; set on every `/api/*` request but `/api/health`. */
     currentLearner: Learner;
-    /** The Supabase user the bearer token names; set alongside `currentLearner`. */
+    /** The Supabase user the access token names; set alongside `currentLearner`. */
     authUser: VerifiedToken;
+    /** The session the request was checked with, after any refresh; set alongside `currentLearner`. */
+    authTokens: { accessToken: string; refreshToken: string | null };
   }
 }
 
@@ -85,7 +97,8 @@ export function supabaseTokenVerifier(supabaseUrl: string | undefined): TokenVer
 }
 
 /**
- * True when the request needs `currentLearner` (Learner-owned API routes). A CORS preflight never carries the token.
+ * True when the request needs `currentLearner` (Learner-owned API routes). A CORS preflight never carries the session.
+ * The sign-in routes are open (ADR 0027), except changing the password.
  * @param request - Incoming request
  */
 function needsLearner(request: FastifyRequest) {
@@ -93,26 +106,32 @@ function needsLearner(request: FastifyRequest) {
   const path = request.url.split("?")[0] ?? "";
   if (!path.startsWith("/api/")) return false;
   if (path === "/api/health") return false;
+  if (path.startsWith("/api/auth/") && path !== "/api/auth/password") return false;
   return true;
 }
 
-/**
- * The token from an `Authorization: Bearer <token>` header, or null.
- * @param header - The raw header
- */
-function bearerToken(header: string | undefined) {
-  const match = header?.match(/^Bearer\s+(\S+)\s*$/i);
-  return match?.[1] ?? null;
-}
+/** Sent when the sign-in check or the refresh could not reach Supabase; the session may still be good. */
+const CHECK_UNAVAILABLE_ERROR = "We couldn't check your sign-in. Try again.";
 
 /**
- * Checks the bearer token on every Learner-owned `/api/*` request and loads its Learner onto the request, creating the
- * Learner on the user's first call (ADR 0026).
+ * Checks the `kn_at` cookie on every Learner-owned `/api/*` request and loads its Learner onto the request, creating
+ * the Learner on the user's first call (ADR 0026). An expired or refused access token is refreshed with `kn_rt`, both
+ * cookies are set again, and the request carries on (ADR 0027).
  * @param app - Fastify app
- * @param options - The token checker
+ * @param options - The token checker and the session refresher
  */
 async function currentLearnerPlugin(app: FastifyInstance, options: CurrentLearnerOptions) {
-  const { verifyToken } = options;
+  const { verifyToken, refreshSession } = options;
+
+  /**
+   * The user an access token names, checked to be a Supabase user id.
+   * @param token - The access token
+   */
+  async function check(token: string) {
+    const user = await verifyToken(token);
+    if (!USER_ID.test(user.sub)) throw new Error(`The token's subject is not a user id || sub=${user.sub}`);
+    return user;
+  }
 
   /**
    * The Learner for a Supabase user. The common case is one read; a first call inserts (doing nothing if a concurrent
@@ -132,23 +151,45 @@ async function currentLearnerPlugin(app: FastifyInstance, options: CurrentLearne
 
   app.addHook("onRequest", async (request, reply) => {
     if (!needsLearner(request)) return;
-    const token = bearerToken(request.headers.authorization);
-    if (!token) return reply.code(401).send({ error: SIGN_IN_ERROR });
+    const cookies = readSessionCookies(request);
+    if (!cookies.accessToken && !cookies.refreshToken) return reply.code(401).send({ error: SIGN_IN_ERROR });
+    let tokens = cookies;
     let user: VerifiedToken;
     try {
-      user = await verifyToken(token);
-      if (!USER_ID.test(user.sub)) throw new Error(`The token's subject is not a user id || sub=${user.sub}`);
+      if (!cookies.accessToken) throw new Error("No access token cookie");
+      user = await check(cookies.accessToken);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof TokenCheckUnavailableError) {
         request.log.error(`[current-learner.ts: currentLearnerPlugin] Could not check a sign-in token || url=${request.url} || ${message}`);
-        return reply.code(503).send({ error: "We couldn't check your sign-in. Try again." });
+        return reply.code(503).send({ error: CHECK_UNAVAILABLE_ERROR });
       }
-      request.log.info(`[current-learner.ts: currentLearnerPlugin] Refused a sign-in token || url=${request.url} || ${message}`);
-      return reply.code(401).send({ error: SIGN_IN_ERROR });
+      if (!cookies.refreshToken) {
+        request.log.info(`[current-learner.ts: currentLearnerPlugin] Refused a sign-in token || url=${request.url} || ${message}`);
+        clearSessionCookies(request, reply);
+        return reply.code(401).send({ error: SIGN_IN_ERROR });
+      }
+      // Most often the access token simply expired (after an hour): refresh it, out of the Learner's sight.
+      try {
+        const session = await refreshSession(cookies.refreshToken);
+        user = await check(session.accessToken);
+        setSessionCookies(request, reply, session);
+        tokens = session;
+      } catch (refreshError) {
+        const refreshMessage = refreshError instanceof Error ? refreshError.message : String(refreshError);
+        // Supabase being unreachable says nothing about the session, so the cookies stay and the Learner can retry.
+        if (refreshError instanceof TokenCheckUnavailableError || (refreshError instanceof AuthServiceError && refreshError.unavailable)) {
+          request.log.error(`[current-learner.ts: currentLearnerPlugin] Could not refresh a session || url=${request.url} || ${refreshMessage}`);
+          return reply.code(503).send({ error: CHECK_UNAVAILABLE_ERROR });
+        }
+        request.log.info(`[current-learner.ts: currentLearnerPlugin] Refused a session refresh || url=${request.url} || ${refreshMessage}`);
+        clearSessionCookies(request, reply);
+        return reply.code(401).send({ error: SIGN_IN_ERROR });
+      }
     }
     try {
       request.authUser = user;
+      request.authTokens = { accessToken: tokens.accessToken!, refreshToken: tokens.refreshToken };
       request.currentLearner = await learnerFor(user.sub);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -160,4 +201,4 @@ async function currentLearnerPlugin(app: FastifyInstance, options: CurrentLearne
   });
 }
 
-export default fp(currentLearnerPlugin, { name: "current-learner", dependencies: ["db"] });
+export default fp(currentLearnerPlugin, { name: "current-learner", dependencies: ["db", "@fastify/cookie"] });

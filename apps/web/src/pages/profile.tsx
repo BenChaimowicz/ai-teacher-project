@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input.tsx";
 import { useToast } from "@/components/ui/toast.tsx";
 import { requestJson } from "@/lib/api.ts";
 import { authErrorMessage, PASSWORD_RULE, passwordProblem } from "@/lib/auth-copy.ts";
-import { supabase } from "@/lib/supabase.ts";
 import "@/styles/profile.css";
 
 /**
@@ -46,8 +45,8 @@ export function ProfilePage() {
  * The profile header: a big initials circle, the name (pencil to edit), email, member since, and two count-up tiles.
  */
 function ProfileHeader() {
-  const { me, session } = useAuth();
-  const email = me?.email ?? session?.user.email ?? null;
+  const { me } = useAuth();
+  const email = me?.email ?? null;
   const since = me ? monthYear(me.memberSince) : null;
   return (
     <section className="k-profile-head" aria-label="Your profile">
@@ -205,7 +204,7 @@ function PasswordCard() {
 
   const problem = passwordProblem(password);
 
-  /** Saves the new password with Supabase. */
+  /** Saves the new password through the API. */
   async function submit(event: FormEvent) {
     event.preventDefault();
     setTried(true);
@@ -213,11 +212,7 @@ function PasswordCard() {
     if (problem) return;
     setBusy(true);
     try {
-      const { error: failed } = await supabase.auth.updateUser({ password });
-      if (failed) {
-        setError(authErrorMessage(failed, "Couldn't change your password. Try again."));
-        return;
-      }
+      await requestJson<null>("/api/auth/password", "POST", { password }, "Couldn't change your password. Try again.");
       setPassword("");
       setTried(false);
       toast({ title: "Password changed" });

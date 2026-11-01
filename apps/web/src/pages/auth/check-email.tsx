@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AuthNotice, AuthScreen } from "@/components/auth/auth-screen.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { requestJson } from "@/lib/api.ts";
 import { authErrorMessage } from "@/lib/auth-copy.ts";
-import { supabase } from "@/lib/supabase.ts";
 import type { AuthNavState } from "@/pages/auth/sign-in.tsx";
 
 /**
@@ -23,15 +23,7 @@ export function CheckEmailPage() {
     setError(null);
     setNote(null);
     try {
-      const { error: failed } = await supabase.auth.resend({
-        type: "signup",
-        email,
-        options: { emailRedirectTo: `${window.location.origin}/` },
-      });
-      if (failed) {
-        setError(authErrorMessage(failed, "Couldn't send it again. Try again in a minute."));
-        return;
-      }
+      await requestJson<null>("/api/auth/resend", "POST", { email }, "Couldn't send it again. Try again in a minute.");
       setNote("Sent again. It can take a minute to arrive.");
     } catch (caught) {
       setError(authErrorMessage(caught, "Couldn't send it again. Try again in a minute."));

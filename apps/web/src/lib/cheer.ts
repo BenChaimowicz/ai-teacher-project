@@ -208,3 +208,13 @@ export function cheer(el: Element | null | undefined, text?: string) {
   );
   animation.onfinish = () => chip.remove();
 }
+
+/**
+ * Waits long enough for a cheer to be seen before the screen moves on, e.g. Jongi cheering after sign-in.
+ * Resolves at once under reduced motion.
+ * @param ms - How long to hold the moment
+ */
+export function holdCheer(ms = 900): Promise<void> {
+  if (prefersReducedMotion()) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

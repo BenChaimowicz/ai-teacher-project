@@ -22,6 +22,8 @@ const EMAILS = ["confirmation", "magic_link", "recovery"];
 /** Values that stand in for Supabase's template fields in `--preview`. */
 const SAMPLE = {
   "{{ .ConfirmationURL }}": "https://example.com/confirm",
+  "{{ .RedirectTo }}": "https://example.com/api/auth/confirm?next=/",
+  "{{ .TokenHash }}": "pkce_sample",
   "{{ .Token }}": "482913",
   "{{ .Email }}": "curious.owl@example.com",
 };

@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { isAuthError } from "@supabase/supabase-js";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useAuth, type FromState } from "@/components/auth/auth-provider.tsx";
 import { AuthField, AuthNotice, AuthScreen, PasswordInput } from "@/components/auth/auth-screen.tsx";
-import type { FromState } from "@/components/auth/auth-provider.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Input } from "@/components/ui/input.tsx";
-import { authErrorMessage, hidesAccountExistence } from "@/lib/auth-copy.ts";
+import { ApiError, requestJson } from "@/lib/api.ts";
+import { authErrorMessage, LINK_EXPIRED } from "@/lib/auth-copy.ts";
 import { PRODUCT_NAME } from "@/lib/brand-marks.ts";
-import { linkError, supabase } from "@/lib/supabase.ts";
+import { holdCheer } from "@/lib/cheer.ts";
 
 /** Location state the signed-out screens hand each other: where to go after, and the email typed so far. */
 export type AuthNavState = FromState & { email?: string };
@@ -15,11 +15,14 @@ export type AuthNavState = FromState & { email?: string };
 type Mode = "password" | "code";
 
 /**
- * Sign in with email and password, or with a 6-digit code sent by email. On success the route guard sends the
- * person on to where they were headed.
+ * Sign in with email and password, or with a 6-digit code sent by email, through the API, which sets the session
+ * cookies. On success Jongi cheers for a moment, then the route guard sends the person on to where they were headed.
+ * A bad email link lands here as `?link=expired`.
  */
 export function SignInPage() {
+  const { refresh } = useAuth();
   const location = useLocation();
+  const [params] = useSearchParams();
   const navState = (location.state as AuthNavState | null) ?? {};
   const [mode, setMode] = useState<Mode>("password");
   const [email, setEmail] = useState(navState.email ?? "");
@@ -27,7 +30,7 @@ export function SignInPage() {
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(linkError);
+  const [error, setError] = useState<string | null>(params.get("link") === "expired" ? LINK_EXPIRED : null);
   const [note, setNote] = useState<string | null>(null);
   const [unconfirmed, setUnconfirmed] = useState(false);
   // Signed in: Jongi cheers while the route guard sends the person on.
@@ -46,6 +49,23 @@ export function SignInPage() {
     setCode("");
   }
 
+  /**
+   * After the API set the session cookies: Jongi cheers for a moment, then the auth provider learns who signed in and
+   * the route guard moves on. If that check fails, the cheer stops and the caller shows the error.
+   */
+  async function finish() {
+    setDone(true);
+    try {
+      await holdCheer();
+      if (!(await refresh())) {
+        throw new Error(`[sign-in.tsx: finish] Signed in, but the API doesn't see the session || email=${email.trim()} || GET /api/me answered 401`);
+      }
+    } catch (error) {
+      setDone(false);
+      throw error;
+    }
+  }
+
   /** Signs in with email and password. */
   async function signInWithPassword(event: FormEvent) {
     event.preventDefault();
@@ -54,15 +74,16 @@ export function SignInPage() {
     setNote(null);
     setUnconfirmed(false);
     try {
-      const { error: failed } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (failed) {
-        if (isAuthError(failed) && failed.code === "email_not_confirmed") setUnconfirmed(true);
-        setError(authErrorMessage(failed, "Couldn't sign you in. Try again."));
-        return;
-      }
-      setDone(true);
+      await requestJson<null>("/api/auth/sign-in", "POST", { email: email.trim(), password }, "Couldn't sign you in. Try again.");
+      await finish();
     } catch (caught) {
-      setError(authErrorMessage(caught, "Couldn't sign you in. Try again."));
+      if (caught instanceof ApiError && caught.status === 403 && caught.code === "email_not_confirmed") setUnconfirmed(true);
+      setError(
+        authErrorMessage(caught, "Couldn't sign you in. Try again.", {
+          401: "That email and password don't match.",
+          403: "Confirm your email first. The link is in the welcome email we sent.",
+        }),
+      );
     } finally {
       setBusy(false);
     }
@@ -73,15 +94,7 @@ export function SignInPage() {
     setBusy(true);
     setError(null);
     try {
-      const { error: failed } = await supabase.auth.resend({
-        type: "signup",
-        email: email.trim(),
-        options: { emailRedirectTo: `${window.location.origin}/` },
-      });
-      if (failed) {
-        setError(authErrorMessage(failed, "Couldn't send it. Try again in a minute."));
-        return;
-      }
+      await requestJson<null>("/api/auth/resend", "POST", { email: email.trim() }, "Couldn't send it. Try again in a minute.");
       setUnconfirmed(false);
       setNote("Sent. Open the email and tap the button to finish.");
     } catch (caught) {
@@ -98,11 +111,8 @@ export function SignInPage() {
     setError(null);
     setNote(null);
     try {
-      const { error: failed } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: false } });
-      if (failed && !hidesAccountExistence(failed)) {
-        setError(authErrorMessage(failed, "Couldn't send a code. Try again."));
-        return;
-      }
+      // The API answers the same whether or not the email has an account.
+      await requestJson<null>("/api/auth/code", "POST", { email: email.trim() }, "Couldn't send a code. Try again.");
       setCodeSent(true);
       setNote(`If ${email.trim()} has an account, a 6-digit code is on its way.`);
     } catch (caught) {
@@ -118,14 +128,14 @@ export function SignInPage() {
     setBusy(true);
     setError(null);
     try {
-      const { error: failed } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
-      if (failed) {
-        setError(authErrorMessage(failed, "That code didn't work. Check it, or ask for a new one."));
-        return;
-      }
-      setDone(true);
+      await requestJson<null>("/api/auth/code/verify", "POST", { email: email.trim(), code: code.trim() }, "Couldn't sign you in. Try again.");
+      await finish();
     } catch (caught) {
-      setError(authErrorMessage(caught, "That code didn't work. Check it, or ask for a new one."));
+      setError(
+        authErrorMessage(caught, "Couldn't sign you in. Try again.", {
+          401: "That code didn't work or has run out. Ask for a new one.",
+        }),
+      );
     } finally {
       setBusy(false);
     }

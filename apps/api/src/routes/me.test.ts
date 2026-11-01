@@ -1,15 +1,18 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
+import cookie from "@fastify/cookie";
 import Fastify from "fastify";
 import fp from "fastify-plugin";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { courseCompletions, learners, lessonCompletions } from "@senoy/db";
 import { NAME_THINGS, NAME_TRAITS } from "@senoy/db/learner-name";
+import { AuthServiceError } from "../lib/supabase-auth.ts";
 import currentLearnerPlugin, {
   SIGN_IN_ERROR,
   supabaseTokenVerifier,
   TokenCheckUnavailableError,
+  type SessionRefresher,
   type TokenVerifier,
 } from "../plugins/current-learner.ts";
 import { fakeDb } from "./fake-db.ts";
@@ -24,21 +27,30 @@ const standInVerifier: TokenVerifier = async (token) => {
   return { sub: match[1]!, ...(match[2] ? { email: match[2] } : {}) };
 };
 
+/** Stand-in refresh: `rt-<user id>` refreshes to a fresh `token-<user id>`; `rt-down` can't reach Supabase; anything else is refused. */
+const standInRefresher: SessionRefresher = async (refreshToken) => {
+  if (refreshToken === "rt-down") throw new AuthServiceError("Supabase is down.", undefined, 0);
+  const match = refreshToken.match(/^rt-([\da-f-]{36})$/);
+  if (!match) throw new AuthServiceError("Refresh token not found.", "refresh_token_not_found", 400);
+  return { accessToken: `token-${match[1]}`, refreshToken: `rt-${match[1]}` };
+};
+
 /** The real plugin and /api/me over in-memory `learners` and completion tables, with the stand-in token check. */
 async function testApp() {
   const store = fakeDb([learners, courseCompletions, lessonCompletions]);
   const app = Fastify();
   await app.register(fp(async (instance) => { instance.decorate("db", store.db); }, { name: "db" }));
-  await app.register(currentLearnerPlugin, { verifyToken: standInVerifier });
+  await app.register(cookie);
+  await app.register(currentLearnerPlugin, { verifyToken: standInVerifier, refreshSession: standInRefresher });
   await app.register(healthRoutes);
   await app.register(meRoutes);
-  /** Calls the API with a bearer token, or none. */
+  /** Calls the API with a `kn_at` session cookie, or none. */
   const call = (method: "GET" | "PATCH", url: string, token?: string, payload?: object) =>
-    app.inject({ method, url, payload, headers: token ? { authorization: `Bearer ${token}` } : {} });
+    app.inject({ method, url, payload, cookies: token ? { kn_at: token } : {} });
   return { app, call, store, learnerRows: () => store.rows.get(learners)! as (typeof learners.$inferSelect)[] };
 }
 
-test("A request without a token, or with a refused one, is 401 and makes no Learner; /api/health stays open", async () => {
+test("A request without a session cookie, or with a refused one, is 401 and makes no Learner; /api/health stays open", async () => {
   const { app, call, learnerRows } = await testApp();
   try {
     for (const token of [undefined, "forged", `token-${"-".repeat(36)}`]) {
@@ -46,11 +58,58 @@ test("A request without a token, or with a refused one, is 401 and makes no Lear
       assert.equal(response.statusCode, 401);
       assert.deepEqual(response.json(), { error: SIGN_IN_ERROR });
     }
-    const basic = await app.inject({ method: "GET", url: "/api/me", headers: { authorization: "Basic abc" } });
-    assert.equal(basic.statusCode, 401);
+    const bearer = await app.inject({ method: "GET", url: "/api/me", headers: { authorization: `Bearer token-${randomUUID()}` } });
+    assert.equal(bearer.statusCode, 401, "The Authorization header no longer signs anyone in.");
     assert.equal(learnerRows().length, 0);
     const health = await call("GET", "/api/health");
     assert.equal(health.statusCode, 200);
+  } finally {
+    await app.close();
+  }
+});
+
+test("An expired access token with a refresh cookie is refreshed out of sight: both cookies are set again and the request succeeds", async () => {
+  const { app, learnerRows } = await testApp();
+  try {
+    const userId = randomUUID();
+    const response = await app.inject({ method: "GET", url: "/api/me", cookies: { kn_at: "expired", kn_rt: `rt-${userId}` } });
+    assert.equal(response.statusCode, 200);
+    const set = Object.fromEntries(response.cookies.map((c) => [c.name, c]));
+    assert.equal(set.kn_at?.value, `token-${userId}`);
+    assert.equal(set.kn_rt?.value, `rt-${userId}`);
+    for (const name of ["kn_at", "kn_rt"]) {
+      const c = set[name]!;
+      assert.equal(c.httpOnly, true);
+      assert.equal(c.sameSite, "Lax");
+      assert.equal(c.path, "/api");
+      assert.equal(c.maxAge, 400 * 24 * 60 * 60);
+      assert.ok(!c.secure, "Plain HTTP gets no Secure flag.");
+    }
+    assert.equal(learnerRows()[0]!.authUserId, userId);
+
+    const noAccess = await app.inject({ method: "GET", url: "/api/me", cookies: { kn_rt: `rt-${userId}` } });
+    assert.equal(noAccess.statusCode, 200, "A missing access cookie refreshes too.");
+  } finally {
+    await app.close();
+  }
+});
+
+test("A refused refresh clears both cookies and is 401; Supabase being down is 503 and keeps them", async () => {
+  const { app } = await testApp();
+  try {
+    const refused = await app.inject({ method: "GET", url: "/api/me", cookies: { kn_at: "expired", kn_rt: "rt-revoked" } });
+    assert.equal(refused.statusCode, 401);
+    assert.deepEqual(refused.json(), { error: SIGN_IN_ERROR });
+    const cleared = Object.fromEntries(refused.cookies.map((c) => [c.name, c]));
+    for (const name of ["kn_at", "kn_rt"]) {
+      assert.equal(cleared[name]?.value, "");
+      assert.equal(cleared[name]?.path, "/api");
+      assert.ok(cleared[name]!.expires! <= new Date(), `${name} expires at once`);
+    }
+
+    const down = await app.inject({ method: "GET", url: "/api/me", cookies: { kn_at: "expired", kn_rt: "rt-down" } });
+    assert.equal(down.statusCode, 503);
+    assert.equal(down.cookies.length, 0);
   } finally {
     await app.close();
   }

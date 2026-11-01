@@ -5,15 +5,19 @@ import { createClient } from "@supabase/supabase-js";
 
 /**
  * Test accounts on the shared Supabase project (decision 2026-10-31). Each run creates already-confirmed accounts,
- * signs them in, and saves each session as Playwright storage state, so tests start signed in without any email.
+ * signs them in from Node, and saves each session as the API's `kn_at` / `kn_rt` cookies in Playwright storage state
+ * (ADR 0027), so tests start signed in without any email, and `page.request` sends the cookies like the browser does.
  * Every account's email starts with `e2e-`, so teardown finds this run's accounts and any a crashed run left.
  */
 
 /** Where this run's accounts and sessions are written; ignored by git. */
 export const AUTH_DIR = resolve(fileURLToPath(new URL(".", import.meta.url)), ".auth");
 
-/** The web app's origin in browser tests; the session is stored for it. */
+/** The web app's origin in browser tests. Vite proxies `/api` to the API, so the browser sees one origin. */
 export const WEB_ORIGIN = "http://127.0.0.1:4190";
+
+/** How long the session cookies last, as the API sets them (400 days). */
+const COOKIE_LIFETIME_SECONDS = 400 * 24 * 60 * 60;
 
 /** Emails of test accounts start with this; nothing else on the project may. */
 const EMAIL_PREFIX = "e2e-";
@@ -41,11 +45,21 @@ function supabase(key: "SUPABASE_SECRET_KEY" | "SUPABASE_PUBLISHABLE_KEY") {
 }
 
 /**
- * The localStorage key supabase-js keeps the session under for this project.
+ * Playwright storage state holding a session the way the API stores it: the `kn_at` (access token) and `kn_rt`
+ * (refresh token) cookies, httpOnly, on `/api` for {@link WEB_ORIGIN}'s host.
+ * @param session - The tokens from signing in
  */
-function sessionKey() {
-  const ref = new URL(process.env.SUPABASE_URL!).hostname.split(".")[0];
-  return `sb-${ref}-auth-token`;
+function sessionState(session: { access_token: string; refresh_token: string }) {
+  const domain = new URL(WEB_ORIGIN).hostname;
+  const expires = Math.floor(Date.now() / 1000) + COOKIE_LIFETIME_SECONDS;
+  const cookie = { domain, path: "/api", expires, httpOnly: true, secure: false, sameSite: "Lax" as const };
+  return {
+    cookies: [
+      { ...cookie, name: "kn_at", value: session.access_token },
+      { ...cookie, name: "kn_rt", value: session.refresh_token },
+    ],
+    origins: [],
+  };
 }
 
 /**
@@ -71,7 +85,7 @@ export async function deleteTestAccounts() {
 }
 
 /**
- * Creates this run's confirmed accounts, signs each in, and writes its session as storage state for {@link WEB_ORIGIN}.
+ * Creates this run's confirmed accounts, signs each in, and writes its session cookies as storage state.
  * @returns The accounts, also written to `.auth/accounts.json` for the tests
  */
 export async function createTestAccounts(): Promise<TestAccounts> {
@@ -89,10 +103,7 @@ export async function createTestAccounts(): Promise<TestAccounts> {
       const { data: signedIn, error: signInError } = await auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
       const storageState = resolve(AUTH_DIR, `${name}.json`);
-      writeFileSync(storageState, JSON.stringify({
-        cookies: [],
-        origins: [{ origin: WEB_ORIGIN, localStorage: [{ name: sessionKey(), value: JSON.stringify(signedIn.session) }] }],
-      }));
+      writeFileSync(storageState, JSON.stringify(sessionState(signedIn.session)));
       accounts[name] = { id: created.user.id, email, password, storageState };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -101,24 +112,6 @@ export async function createTestAccounts(): Promise<TestAccounts> {
   }
   writeFileSync(resolve(AUTH_DIR, "accounts.json"), JSON.stringify(accounts, null, 2));
   return accounts;
-}
-
-/**
- * The `Authorization` header for a test account, from the session global setup saved. For API calls a test makes
- * itself with `page.request`, which the web app's token does not reach.
- * @param name - Which account; tests run as `a`
- */
-export function authHeaders(name: keyof TestAccounts = "a") {
-  try {
-    const state = JSON.parse(readFileSync(testAccounts()[name].storageState, "utf8")) as {
-      origins: { localStorage: { value: string }[] }[];
-    };
-    const session = JSON.parse(state.origins[0]!.localStorage[0]!.value) as { access_token: string };
-    return { Authorization: `Bearer ${session.access_token}` };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`[accounts.ts: authHeaders] Failed to read a test account's session || name=${name} || ${message}`);
-  }
 }
 
 /**

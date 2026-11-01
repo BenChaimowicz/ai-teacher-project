@@ -9,5 +9,9 @@
   "mailer_otp_length": 6,
   "mailer_otp_exp": 3600,
   "security_update_password_require_reauthentication": false,
-  "external_google_enabled": false
+  "external_google_enabled": false,
+  "rate_limit_otp": 1000,
+  "rate_limit_verify": 1000,
+  "rate_limit_token_refresh": 3000,
+  "rate_limit_email_sent": 100
 }

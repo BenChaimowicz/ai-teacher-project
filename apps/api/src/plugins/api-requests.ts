@@ -17,6 +17,15 @@ export function isRecordedApiPath(url: string) {
 }
 
 /**
+ * The URL to record: email-link landings carry a single-use sign-in token in their query, which is never stored.
+ * @param url - Raw request URL
+ */
+export function recordedUrl(url: string) {
+  const path = url.split("?")[0] ?? url;
+  return path === "/api/auth/confirm" ? path : url;
+}
+
+/**
  * The `error` field of a JSON error body, if there is one.
  * @param payload - The serialized reply payload
  */
@@ -55,7 +64,7 @@ async function apiRequestsPlugin(app: FastifyInstance) {
       void recordApiRequest({
         method: request.method,
         route: request.routeOptions.url ?? request.url.split("?")[0] ?? request.url,
-        url: request.url,
+        url: recordedUrl(request.url),
         statusCode: reply.statusCode,
         durationMs: Math.round(reply.elapsedTime),
         learnerId: (request.currentLearner as { id?: string } | undefined)?.id ?? null,
@@ -63,7 +72,7 @@ async function apiRequestsPlugin(app: FastifyInstance) {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      request.log.error(`[api-requests.ts: apiRequestsPlugin] Failed to record API Request || url=${request.url} || ${message}`);
+      request.log.error(`[api-requests.ts: apiRequestsPlugin] Failed to record API Request || url=${recordedUrl(request.url)} || ${message}`);
     }
   });
 }
