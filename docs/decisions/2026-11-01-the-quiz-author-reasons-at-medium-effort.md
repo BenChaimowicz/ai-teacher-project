@@ -12,3 +12,5 @@ status: active
 We turned down keeping high (no saving) and going to low or none (the Judge's reasons on the SEN-49 runs were about grounding, which is reasoning work, and we would rather not find out on real Learners).
 
 **What it costs:** the first-draft pass rate may fall. Every failed draft costs a repair of about $0.07 plus a Judge read, so a pass rate below about 12 of 15 would wipe out the saving. The condition on this decision: the Quiz live check must still pass on its first draft before the SEN-120 re-run of the Norse and Gram test Courses, and if the re-run's Quizzes need more repairs than before, the author goes back to high. The Judge's effort is not touched (ADR 0010).
+
+Checked the same day: the Quiz live check at medium passed on its first draft, the author call costing $0.035 in 39 s with 796 reasoning tokens, against an average of $0.069 in 100 s with 3,757 reasoning tokens over the 17 high-effort Quiz calls on record.
