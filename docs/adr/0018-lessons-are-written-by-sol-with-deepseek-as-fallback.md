@@ -1,5 +1,7 @@
 # Lessons are written by Sol, with DeepSeek as fallback
 
+> **Superseded by [ADR 0028](0028-every-author-stage-writes-with-sol-and-falls-back-to-terra.md):** DeepSeek is no longer called anywhere. Every author stage, Lessons included, writes with Sol and falls back to Terra, and no host is pinned. The measurements below still stand.
+
 Readings and Quizzes now have their own author pair: `openai/gpt-6.1-sol` writes them, and `deepseek/deepseek-v4-pro` is their fallback (`LESSON_GENERATOR_MODEL`, `LESSON_GENERATOR_FALLBACK_MODEL`). Every other stage keeps DeepSeek first and Sol as fallback. Luna still judges; when Sol wrote the artifact, the Judge's own fallback (Sol) is ruled out as before (ADR 0015).
 
 On 2026-10-24 and 25 (SEN-49), DeepSeek passed none of its 11 Lesson first drafts. Of 8 Readings, 1 passed after both repairs and 7 failed outright. Of 3 Quizzes, 2 passed after both repairs and 1 failed. The Judge's reasons were almost all the same kind: background knowledge the excerpts do not state, such as "thunder god" for Thor, "rainbow bridge" for Bifröst, Baldr dreaming "of his own death", or a stanza absent from "the oldest manuscript" where the excerpt names the Codex Regius. The prompt already forbids this ("even ones you believe are true"). Once ADR 0017 let Sol write a fresh draft after DeepSeek's repairs ran out, Sol's first draft passed all 3 times.

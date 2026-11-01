@@ -44,11 +44,11 @@ describe("createSetupReader", () => {
       urls.push(url);
       return new Response(JSON.stringify({ data: { endpoints: [endpoint("OpenAI", "0.0000001", ["response_format", "reasoning"])] } }));
     }) as unknown as typeof fetch;
-    const read = createSetupReader({ env: { GENERATOR_MODEL: "a/x", GENERATOR_PROVIDER_ORDER: "alibaba" }, fetch: fakeFetch });
+    const read = createSetupReader({ env: { GENERATOR_MODEL: "a/x" }, fetch: fakeFetch });
     const setup = await read();
     assert.deepEqual(setup.models.map((model) => model.role), ["generator", "generator_fallback", "lesson_generator", "lesson_generator_fallback", "judge", "judge_fallback"]);
     assert.equal(setup.models[0]!.modelId, "a/x");
-    assert.deepEqual(setup.models[0]!.preferredProviders, ["alibaba"]);
+    assert.deepEqual(setup.models[0]!.preferredProviders, []);
     assert.equal(setup.models[0]!.endpoints?.[0]?.provider, "OpenAI");
     assert.deepEqual(setup.research.map((entry) => [entry.slot, entry.vendor]), [["primary", "parallel"], ["secondary", "you"]]);
     assert.deepEqual(setup.vendors, ["openrouter", "parallel", "you"]);

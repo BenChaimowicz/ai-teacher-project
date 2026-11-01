@@ -201,7 +201,7 @@ describe("Setup checklist", () => {
     const app = buildConsoleApp(fakeStore().store, { setupChecklist: fakeChecklist().service });
     const response = await app.inject({ method: "GET", url: "/api/ops/setup-checklist" });
     assert.equal(response.statusCode, 200);
-    assert.equal(response.json().total, 69);
+    assert.equal(response.json().total, 61);
   });
 
   it("ticks and unticks an item", async () => {

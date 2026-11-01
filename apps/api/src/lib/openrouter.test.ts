@@ -165,7 +165,7 @@ test("Independent same-vendor models accept standard empty optional response fie
   }
 });
 
-test("Author calls prefer the configured hosts with fallback; Judge calls use default routing", async () => {
+test("No host is pinned: author and Judge calls use default routing, and only a caller-given order reaches the provider", async () => {
   const sent: { model: string; provider?: unknown }[] = [];
   const transport = createOpenRouterTransport({
     apiKey: "fixture-key",
@@ -175,15 +175,16 @@ test("Author calls prefer the configured hosts with fallback; Judge calls use de
       return new Response(JSON.stringify(completion('{"score":1}')), { status: 200 });
     },
   });
-  const config = loadModelConfig({ GENERATOR_MODEL: "fixture/author", JUDGE_MODEL: "fixture/judge", GENERATOR_PROVIDER_ORDER: " alibaba, baidu " });
+  const config = loadModelConfig({ GENERATOR_MODEL: "fixture/author", JUDGE_MODEL: "fixture/judge" });
   const { generator, judge } = createModelPorts({ config, transport });
   await generator.generateStructured(REQUEST);
   await judge.judge({ ...REQUEST, authorModelIds: [generator.modelId] });
+  await transport.complete("fixture/model", REQUEST, ["alibaba", "baidu"]);
   assert.deepEqual(sent.map((body) => body.provider), [
-    { require_parameters: true, order: ["alibaba", "baidu"], allow_fallbacks: true },
     { require_parameters: true },
+    { require_parameters: true },
+    { require_parameters: true, order: ["alibaba", "baidu"], allow_fallbacks: true },
   ]);
-  assert.deepEqual(loadModelConfig({}).generatorProviderOrder, ["alibaba"]);
 });
 
 test("A call that runs past its time limit is a timeout, not invalid output", async () => {
@@ -258,7 +259,7 @@ function scriptedTransport(...outcomes: (ModelError | number)[]) {
   return { transport, models, hosts };
 }
 
-const PORTS_CONFIG = { generatorModel: "fixture/author", generatorFallbackModel: "fixture/fallback", generatorProviderOrder: [],
+const PORTS_CONFIG = { generatorModel: "fixture/author", generatorFallbackModel: "fixture/fallback",
   lessonGeneratorModel: "fixture/fallback", lessonGeneratorFallbackModel: "fixture/author",
   judgeModel: "fixture/judge", judgeFallbackModel: "fixture/fallback" };
 const quiet = { warn: () => {} };
@@ -311,25 +312,24 @@ test("The Judge never falls back to a model that wrote the artifact, and uses it
   assert.deepEqual(primaryWrote.models, ["fixture/fallback"]);
 });
 
-test("Lessons are written by the Lesson pair, and the Generator's preferred hosts go with its model in either role", async () => {
-  const config = { ...PORTS_CONFIG, generatorProviderOrder: ["alibaba"] };
+test("Lessons are written by the Lesson pair, and no host is pinned in either role", async () => {
   const bad = () => new ModelError("invalid_output", { invalidCause: "unparseable" });
   const lesson = scriptedTransport(bad(), bad(), 0.5, 0.5);
-  const ports = createModelPorts({ config, transport: lesson.transport, log: quiet, authors: "lesson" });
+  const ports = createModelPorts({ config: PORTS_CONFIG, transport: lesson.transport, log: quiet, authors: "lesson" });
   assert.equal(ports.generator.modelId, "fixture/fallback");
   assert.equal(ports.fallbackGenerator.modelId, "fixture/author");
   assert.deepEqual(await ports.generator.generateStructured(REQUEST), { value: 0.5, modelId: "fixture/author" });
   await ports.fallbackGenerator.generateStructured(REQUEST);
   assert.deepEqual(lesson.models, ["fixture/fallback", "fixture/fallback", "fixture/author", "fixture/author"]);
-  assert.deepEqual(lesson.hosts, [undefined, undefined, ["alibaba"], ["alibaba"]]);
+  assert.deepEqual(lesson.hosts, [undefined, undefined, undefined, undefined]);
 
   const other = scriptedTransport(0.5, 0.5);
-  const generatorPorts = createModelPorts({ config, transport: other.transport, log: quiet });
+  const generatorPorts = createModelPorts({ config: PORTS_CONFIG, transport: other.transport, log: quiet });
   assert.equal(generatorPorts.generator.modelId, "fixture/author");
   await generatorPorts.generator.generateStructured(REQUEST);
   await generatorPorts.fallbackGenerator.generateStructured(REQUEST);
   assert.deepEqual(other.models, ["fixture/author", "fixture/fallback"]);
-  assert.deepEqual(other.hosts, [["alibaba"], undefined]);
+  assert.deepEqual(other.hosts, [undefined, undefined]);
 });
 
 test("A vision call sends its images after the JSON as high-detail data URLs, and the observer sees only their size", async () => {

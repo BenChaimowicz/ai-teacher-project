@@ -394,12 +394,12 @@ Domain **Generator** port. Model IDs live in shared server configuration, not on
 
 | Role | OpenRouter model ID | How |
 | --- | --- | --- |
-| Leading writer | `deepseek/deepseek-v4-pro` | Shared strict JSON-schema Chat Completions transport |
-| Fallback writer | `openai/gpt-6.1-sol` | Same transport; selection belongs to the calling generation stage |
-| Lesson writer (Readings and Quizzes) | `openai/gpt-6.1-sol` | Same transport (ADR 0018) |
-| Lesson fallback writer | `deepseek/deepseek-v4-pro` | Writes a fresh draft once the Lesson writer's repairs run out (ADR 0017) |
+| Leading writer (every author stage) | `openai/gpt-6.1-sol` | Shared strict JSON-schema Chat Completions transport (ADR 0028) |
+| Fallback writer | `openai/gpt-6.1-terra` | Same transport; selection belongs to the calling generation stage |
+| Lesson writer (Readings and Quizzes) | `openai/gpt-6.1-sol` | Same transport; its own setting, so Lessons can be pinned apart again (ADR 0018, ADR 0028) |
+| Lesson fallback writer | `openai/gpt-6.1-terra` | Writes a fresh draft once the Lesson writer's repairs run out (ADR 0017) |
 
-Claude is not a Generator fallback. No direct DeepSeek/OpenAI text adapters are required. Structured calls use `response_format: json_schema`, strict mode, `provider.require_parameters: true`, application-side output validation, and no search tools or plugins. Invalid output, refusal, interruption, or timeout is a provider failure, never a passing validity decision.
+Claude is not a Generator fallback, and DeepSeek is no longer called anywhere (ADR 0028). No direct OpenAI text adapter is required. Structured calls use `response_format: json_schema`, strict mode, `provider.require_parameters: true` with no host pinned, application-side output validation, and no search tools or plugins. Invalid output, refusal, interruption, or timeout is a provider failure, never a passing validity decision.
 
 Domain operations: `generateCitedReading` then `generateStructured`. Generate the cited reading first; generate quiz JSON from that reading (and, at Course time, from the assessed Lesson bodies plus Blueprint objectives). Two-step contract stays even when a provider could combine schemas.
 
@@ -490,9 +490,9 @@ Automated, binary, on every Course (including Test courses). Any fail fails that
 | Role | Model |
 | --- | --- |
 | Default Judge (text and vision) | `openai/gpt-6-luna` |
-| Judge fallback | `openai/gpt-6.1-sol`, **only when Sol did not author** that artifact |
+| Judge fallback | `openai/gpt-5.6-luna`, which never authors (ADR 0028) |
 
-Pairing: author `deepseek/deepseek-v4-pro` or `openai/gpt-6.1-sol` → judge `openai/gpt-6-luna`. If Luna is down or schema-fails: bump to Sol only when Sol did not write. Never DeepSeek as Judge. Never Sol judging a Sol-authored artifact. Do not default to Claude Sonnet or Opus.
+Pairing: author `openai/gpt-6.1-sol` or `openai/gpt-6.1-terra` → judge `openai/gpt-6-luna`. If Luna is down or schema-fails: `openai/gpt-5.6-luna`, which writes nothing. Never an author as Judge. Do not default to Claude Sonnet or Opus.
 
 Independence is different **model ID**, not different vendor. IDs live in config behind a thin Judge port, not on Lesson records.
 
@@ -506,7 +506,7 @@ type JudgeResult = {
 };
 ```
 
-If Test-course protocol finds missed factual errors, bump Judge SKU in config (`luna` → `gpt-6.1-sol`) without changing the pairing rule — never to the authoring model.
+If Test-course protocol finds missed factual errors, bump the Judge SKU in config (for example `gpt-6-luna` → `gpt-6-luna-pro`) without changing the pairing rule — never to an authoring model.
 
 **Repair budget.** Two regenerations per slot after the first failed validate (initial generate + two repairs). A Reading repair edits only the passages the failed checks name and keeps every other sentence verbatim, so a repair cannot add new problems elsewhere in the Lesson (ADR 0016). A passage the Judge fails as `off_goal` is cut, not rewritten; a section the cut empties is removed, and Citations and the source list are renumbered from what remains. A third failure on a Reading or Quiz slot sends it to the Lesson fallback writer, which writes a fresh draft from the same Sources or Lessons with its own two repairs (ADR 0017); only a failure after those is terminal: keep unpublished Lessons before it; Course Request fails; Retry refreshes that slot’s budget on the same approved Blueprint; Revise request discards unpublished Lessons. No Course-wide repair pool. Retrieval’s 2–3 query reformulations and the one media vision repair stay inside generate and do not draw on this number. A Judge **fail** consumes a regeneration of the artifact, not a second Judge SKU, unless the Judge call itself errored.
 

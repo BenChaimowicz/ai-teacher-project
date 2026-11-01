@@ -108,14 +108,12 @@ export function createSetupReader(options: {
 
   return async () => {
     const config = loadModelConfig(options.env);
+    // No host is pinned since ADR 0028, so every preferred list is empty; the field stays for the screen.
     const roles: { role: OpsSetupModel["role"]; modelId: string; preferredProviders: string[] }[] = [
-      { role: "generator", modelId: config.generatorModel, preferredProviders: config.generatorProviderOrder },
+      { role: "generator", modelId: config.generatorModel, preferredProviders: [] },
       { role: "generator_fallback", modelId: config.generatorFallbackModel, preferredProviders: [] },
-      // Preferred hosts go with the Generator model in whichever role it writes (ADR 0018).
-      ...(["lesson_generator", "lesson_generator_fallback"] as const).map((role) => {
-        const modelId = role === "lesson_generator" ? config.lessonGeneratorModel : config.lessonGeneratorFallbackModel;
-        return { role, modelId, preferredProviders: modelId === config.generatorModel ? config.generatorProviderOrder : [] };
-      }),
+      { role: "lesson_generator", modelId: config.lessonGeneratorModel, preferredProviders: [] },
+      { role: "lesson_generator_fallback", modelId: config.lessonGeneratorFallbackModel, preferredProviders: [] },
       { role: "judge", modelId: config.judgeModel, preferredProviders: [] },
       { role: "judge_fallback", modelId: config.judgeFallbackModel, preferredProviders: [] },
     ];
