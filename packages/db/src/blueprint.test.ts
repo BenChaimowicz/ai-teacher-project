@@ -54,6 +54,17 @@ test("Every slot needs a title, Lesson goal, objectives, a registered method, an
   assert.equal(failures(withSlot(0, { topicTags: ["Compound Meter", "six"] })).length, 1);
 });
 
+test("Only a Reading requires media: at most two images, each in a known Media category with 1–5 slug Topic tags", () => {
+  const grip = { mediaCategory: "drum-grip" as const, topicTags: ["matched-grip", "fulcrum"] };
+  const stroke = { mediaCategory: "drum-stroke" as const, topicTags: ["rebound-stroke"] };
+  assert.deepEqual(failures(withSlot(0, { requiredMedia: [grip, stroke] })), []);
+  assert.ok(failures(withSlot(0, { requiredMedia: [grip, stroke, grip] })).some((failure) => failure.includes("at most 2")));
+  assert.ok(failures(withSlot(2, { requiredMedia: [grip] })).some((failure) => failure.includes("not a Reading")));
+  assert.ok(failures(withSlot(0, { requiredMedia: [{ mediaCategory: "drum-video" as "drum-grip", topicTags: ["grip"] }] })).some((failure) => failure.includes("unknown Media category")));
+  assert.ok(failures(withSlot(0, { requiredMedia: [{ ...grip, topicTags: [] }] })).some((failure) => failure.includes("1–5 Topic tags")));
+  assert.ok(failures(withSlot(0, { requiredMedia: [{ ...grip, topicTags: ["Matched Grip"] }] })).some((failure) => failure.includes("lowercase slugs")));
+});
+
 test("A Quiz assesses existing, earlier Readings and lists 1–10 objectives", () => {
   assert.ok(failures(withSlot(2, { assessesSlotIds: [] })).some((failure) => failure.includes("assesses no")));
   assert.ok(failures(withSlot(2, { assessesSlotIds: ["slot1", "slot2", "slot9"] })).some((failure) => failure.includes("does not exist")));
@@ -98,7 +109,8 @@ test("Quizzes follow the Learner's Quiz cadence", () => {
   assert.deepEqual(blueprintCodeFailures(fourReadings, "module_end"), []);
 });
 
-test("Learner review sees titles and Lesson goals, not objectives, tags, or assessed slots", () => {
-  const view = learnerBlueprint(valid());
+test("Learner review sees titles and Lesson goals, not objectives, tags, assessed slots, or required media", () => {
+  const view = learnerBlueprint(withSlot(0, { requiredMedia: [{ mediaCategory: "drum-grip", topicTags: ["matched-grip"] }] }));
   assert.deepEqual(Object.keys(view.modules[0]!.slots[2]!).sort(), ["id", "lessonGoal", "method", "title"]);
+  assert.deepEqual(Object.keys(view.modules[0]!.slots[0]!).sort(), ["id", "lessonGoal", "method", "title"]);
 });

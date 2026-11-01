@@ -93,25 +93,41 @@ test("A Reading with one hostable raster media block passes the Code checks", ()
   assert.deepEqual(readingCodeFailures(lesson, RETRIEVED), []);
 });
 
-test("A media block with an unhostable licence, an SVG file, or no alt text fails", () => {
+test("A media block with an unhostable licence, a file type a Reading cannot attach, or no alt text fails; an SVG diagram passes", () => {
   const nonCommercial = valid();
   nonCommercial.body.sections[0]!.blocks.push(mediaBlock({ license: "cc_by_nc" as MediaLicense }));
   assert.ok(readingCodeFailures(nonCommercial, RETRIEVED).some((failure) => failure.includes("the product can host")));
 
   const svg = valid();
-  svg.body.sections[0]!.blocks.push(mediaBlock({ mimeType: "image/svg+xml" }));
-  assert.ok(readingCodeFailures(svg, RETRIEVED).some((failure) => failure.includes("image/svg+xml")));
+  svg.body.sections[0]!.blocks.push(mediaBlock({ mimeType: "image/svg+xml", license: "product_owned", source: null }));
+  assert.deepEqual(readingCodeFailures(svg, RETRIEVED), []);
+
+  const audio = valid();
+  audio.body.sections[0]!.blocks.push(mediaBlock({ kind: "audio", mimeType: "audio/mpeg" }));
+  assert.ok(readingCodeFailures(audio, RETRIEVED).some((failure) => failure.includes("audio/mpeg")));
 
   const noAlt = valid();
   noAlt.body.sections[0]!.blocks.push({ ...mediaBlock(), alt: " " });
   assert.ok(readingCodeFailures(noAlt, RETRIEVED).some((failure) => failure.includes("alt text")));
 });
 
-test("A Reading carries at most one media block, and no section is media alone", () => {
-  const two = valid();
-  two.body.sections[0]!.blocks.push(mediaBlock());
-  two.body.sections[1]!.blocks.push(mediaBlock());
-  assert.ok(readingCodeFailures(two, RETRIEVED).some((failure) => failure.includes("at most 1")));
+test("A Reading carries at most four media blocks, each a different file, and no section is media alone", () => {
+  /** The n-th distinct plate. */
+  const nth = (n: number) => mediaBlock({ id: `d0a1e001-0000-4000-8000-00000000000${n}`, storageKey: `library/norse/plate-${n}.jpg` });
+  const four = valid();
+  four.body.sections[0]!.blocks.push(nth(1), nth(2));
+  four.body.sections[1]!.blocks.push(nth(3), nth(4));
+  assert.deepEqual(readingCodeFailures(four, RETRIEVED), []);
+
+  const five = valid();
+  five.body.sections[0]!.blocks.push(nth(1), nth(2), nth(3));
+  five.body.sections[1]!.blocks.push(nth(4), nth(5));
+  assert.ok(readingCodeFailures(five, RETRIEVED).some((failure) => failure.includes("at most 4")));
+
+  const twice = valid();
+  twice.body.sections[0]!.blocks.push(mediaBlock());
+  twice.body.sections[1]!.blocks.push(mediaBlock());
+  assert.ok(readingCodeFailures(twice, RETRIEVED).some((failure) => failure.includes("each media file once")));
 
   const alone = valid();
   alone.body.sections.push({ heading: "A picture", blocks: [mediaBlock()] });

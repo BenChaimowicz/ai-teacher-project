@@ -1,0 +1,733 @@
+{
+  "startedAt": "2026-11-01T10:26:43.414Z",
+  "mediaCatalog": [
+    {
+      "mediaCategory": "bacterial-cell-wall",
+      "topicTags": [
+        "cell-wall",
+        "gram-negative",
+        "gram-positive",
+        "outer-membrane",
+        "peptidoglycan"
+      ]
+    },
+    {
+      "mediaCategory": "culture-technique",
+      "topicTags": [
+        "aseptic-technique",
+        "culture-transfer",
+        "emb-agar",
+        "escherichia-coli",
+        "inoculating-loop",
+        "inoculating-wire",
+        "isolated-colonies",
+        "quadrant-streak",
+        "streak-plate"
+      ]
+    },
+    {
+      "mediaCategory": "drum-grip",
+      "topicTags": [
+        "both-hands",
+        "comparison",
+        "fulcrum",
+        "german-grip",
+        "left-hand",
+        "matched-grip",
+        "snare",
+        "traditional-grip"
+      ]
+    },
+    {
+      "mediaCategory": "drum-kit-anatomy",
+      "topicTags": [
+        "bass-drum",
+        "crash",
+        "drum-kit",
+        "hi-hat",
+        "ride",
+        "snare",
+        "toms"
+      ]
+    },
+    {
+      "mediaCategory": "drum-notation",
+      "topicTags": [
+        "4-4",
+        "6-8",
+        "backbeat",
+        "beat-grouping",
+        "compound-meter",
+        "coordination",
+        "drum-notation",
+        "eighth-notes",
+        "hi-hat",
+        "hi-hat-pedal",
+        "legend",
+        "percussion-clef",
+        "rock-beat",
+        "simple-meter",
+        "staff",
+        "time-signature",
+        "x-notehead"
+      ]
+    },
+    {
+      "mediaCategory": "drum-stick-anatomy",
+      "topicTags": [
+        "balance-point",
+        "butt",
+        "drumstick",
+        "fulcrum",
+        "shaft",
+        "shoulder",
+        "tip"
+      ]
+    },
+    {
+      "mediaCategory": "drum-stroke",
+      "topicTags": [
+        "fulcrum",
+        "full-stroke",
+        "rebound",
+        "rebound-stroke",
+        "stick-height",
+        "stroke"
+      ]
+    },
+    {
+      "mediaCategory": "gram-stain-procedure",
+      "topicTags": [
+        "crystal-violet",
+        "decolorizer",
+        "gram-stain",
+        "iodine",
+        "procedure",
+        "safranin"
+      ]
+    },
+    {
+      "mediaCategory": "gram-stain-result",
+      "topicTags": [
+        "bacilli",
+        "cocci",
+        "diplococci",
+        "gram-negative",
+        "gram-positive",
+        "gram-stain",
+        "neisseria",
+        "photomicrograph",
+        "sputum"
+      ]
+    },
+    {
+      "mediaCategory": "microscopy",
+      "topicTags": [
+        "compound-microscope",
+        "condenser",
+        "focus",
+        "microscope",
+        "objective"
+      ]
+    },
+    {
+      "mediaCategory": "norse-mythic-depiction",
+      "topicTags": [
+        "aesir",
+        "baldr",
+        "cosmology",
+        "doepler",
+        "einherjar",
+        "fenrir",
+        "frolich",
+        "hodr",
+        "jormungandr",
+        "loki",
+        "midgard-serpent",
+        "mistletoe",
+        "mjolnir",
+        "norns",
+        "odin",
+        "prophecy",
+        "ragnarok",
+        "skuld",
+        "thor",
+        "urdarbrunnr",
+        "urdr",
+        "valhalla",
+        "valkyries",
+        "verdandi",
+        "voluspa",
+        "volva",
+        "world-tree",
+        "yggdrasil"
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "name": "drums",
+      "subject": "Drum kit",
+      "learningGoal": "Learn the drum-kit skills to work toward playing “Iris” by the Goo Goo Dolls: grip and strokes, reading drum notation, 4/4 and 6/8 grooves, and how to practise them",
+      "latencyMs": 129962,
+      "blueprint": {
+        "courseTitle": "Drum Kit for “Iris”: From First Grip to Your First Grooves",
+        "modules": [
+          {
+            "title": "Drum Kit Foundations for “Iris”",
+            "slots": [
+              {
+                "id": "slot1",
+                "method": "reading",
+                "title": "The Kit and the Grip",
+                "lessonGoal": "Identify the parts of a drum kit and hold the sticks with a relaxed matched grip to produce a clean rebound stroke.",
+                "objectives": [
+                  "Can name the snare drum, bass drum, mounted toms, floor tom, hi‑hat, and ride cymbal and describe their roles.",
+                  "Can identify the tip, shoulder, shaft, fulcrum point, and butt of a drumstick.",
+                  "Can place the stick in the fulcrum of a matched grip, with hands flat and wrists relaxed.",
+                  "Can execute a full stroke (starting high, rebounding back to the same height) to produce a clean, consistent sound on the snare."
+                ],
+                "topicTags": [
+                  "drum-kit-anatomy",
+                  "drumstick-anatomy",
+                  "matched-grip",
+                  "rebound-stroke"
+                ],
+                "assessesSlotIds": [],
+                "requiredMedia": [
+                  {
+                    "mediaCategory": "drum-kit-anatomy",
+                    "topicTags": [
+                      "drum-kit",
+                      "snare",
+                      "hi-hat",
+                      "bass-drum"
+                    ]
+                  },
+                  {
+                    "mediaCategory": "drum-grip",
+                    "topicTags": [
+                      "matched-grip",
+                      "fulcrum",
+                      "both-hands"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "slot2",
+                "method": "reading",
+                "title": "Your First Drum Notation",
+                "lessonGoal": "Read basic drum notation and count while playing simple eighth‑note patterns on the snare in 4/4.",
+                "objectives": [
+                  "Can identify the percussion staff, percussion clef, and instrument‑specific note head placements for snare, bass drum, and hi‑hat.",
+                  "Can interpret a 4/4 time signature and count eighth‑note subdivisions aloud.",
+                  "Can read and play a one‑bar snare exercise that mixes quarter notes and eighth notes with a steady pulse."
+                ],
+                "topicTags": [
+                  "drum-notation",
+                  "4-4",
+                  "eighth-notes",
+                  "percussion-clef"
+                ],
+                "assessesSlotIds": [],
+                "requiredMedia": [
+                  {
+                    "mediaCategory": "drum-notation",
+                    "topicTags": [
+                      "staff",
+                      "percussion-clef",
+                      "drum-notation",
+                      "legend"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "slot3",
+                "method": "quiz",
+                "title": "Kit, Grip, and First Notes Check",
+                "lessonGoal": "Show that you can set up a basic stroke and read simple rhythmic notation in 4/4.",
+                "objectives": [
+                  "Can match drum‑kit parts to their names and functions.",
+                  "Can select the correct grip fulcrum from a diagram.",
+                  "Can identify note placement on a percussion staff for snare, bass drum, and hi‑hat.",
+                  "Can choose the correct counting syllables for a short 4/4 rhythm."
+                ],
+                "topicTags": [
+                  "drum-kit-anatomy",
+                  "matched-grip",
+                  "drum-notation",
+                  "4-4"
+                ],
+                "assessesSlotIds": [
+                  "slot1",
+                  "slot2"
+                ]
+              },
+              {
+                "id": "slot4",
+                "method": "reading",
+                "title": "The 4/4 Rock Groove",
+                "lessonGoal": "Play a basic 4/4 rock groove that combines a backbeat snare with steady eighth notes on the hi‑hat and simple bass drum patterns.",
+                "objectives": [
+                  "Can define the backbeat and place it on beats 2 and 4 in a 4/4 measure.",
+                  "Can coordinate a constant eighth‑note hi‑hat part with snare and bass drum.",
+                  "Can read and play a standard rock beat notated with snare, hi‑hat (x‑noteheads), and bass drum.",
+                  "Can describe a short loop‑based practice method for building groove consistency."
+                ],
+                "topicTags": [
+                  "rock-beat",
+                  "backbeat",
+                  "coordination",
+                  "hi-hat"
+                ],
+                "assessesSlotIds": [],
+                "requiredMedia": [
+                  {
+                    "mediaCategory": "drum-notation",
+                    "topicTags": [
+                      "rock-beat",
+                      "hi-hat",
+                      "backbeat",
+                      "4-4",
+                      "x-notehead"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "slot5",
+                "method": "reading",
+                "title": "The 6/8 Feel and Your Practice Plan",
+                "lessonGoal": "Read and play a simple 6/8 groove and build a short daily routine for steady improvement.",
+                "objectives": [
+                  "Can explain how 6/8 differs from 4/4 as a compound meter with three eighth‑note subdivisions per beat.",
+                  "Can read a basic 6/8 drum groove that uses the hi‑hat on the beat and snare accents.",
+                  "Can outline a 15‑minute practice plan that warms up, isolates a groove, and ends with a play‑along track."
+                ],
+                "topicTags": [
+                  "6-8",
+                  "compound-meter",
+                  "practice-routine",
+                  "groove"
+                ],
+                "assessesSlotIds": [],
+                "requiredMedia": [
+                  {
+                    "mediaCategory": "drum-notation",
+                    "topicTags": [
+                      "6-8",
+                      "compound-meter",
+                      "hi-hat",
+                      "drum-notation"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "slot6",
+                "method": "quiz",
+                "title": "Grooves and Practice Check",
+                "lessonGoal": "Show that you understand 4/4 and 6/8 grooves and can design a practice session.",
+                "objectives": [
+                  "Can identify the backbeat placement in a notated rock beat.",
+                  "Can choose the correct counting for a 6/8 measure.",
+                  "Can order the steps of a recommended practice routine.",
+                  "Can match a notated groove to its time signature description."
+                ],
+                "topicTags": [
+                  "4-4",
+                  "6-8",
+                  "backbeat",
+                  "practice-routine"
+                ],
+                "assessesSlotIds": [
+                  "slot4",
+                  "slot5"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "judge": {
+        "pass": true,
+        "failedChecks": [],
+        "reasons": []
+      },
+      "required": [
+        {
+          "lesson": 1,
+          "title": "The Kit and the Grip",
+          "request": {
+            "mediaCategory": "drum-kit-anatomy",
+            "topicTags": [
+              "drum-kit",
+              "snare",
+              "hi-hat",
+              "bass-drum"
+            ]
+          },
+          "fills": [
+            "library/drums/drum-kit.svg"
+          ]
+        },
+        {
+          "lesson": 1,
+          "title": "The Kit and the Grip",
+          "request": {
+            "mediaCategory": "drum-grip",
+            "topicTags": [
+              "matched-grip",
+              "fulcrum",
+              "both-hands"
+            ]
+          },
+          "fills": [
+            "library/drums/matched-grip-both-hands.jpg",
+            "library/drums/german-grip.jpg",
+            "library/drums/traditional-and-matched-grip.jpg",
+            "library/drums/traditional-grip-left-hand.jpg"
+          ]
+        },
+        {
+          "lesson": 2,
+          "title": "Your First Drum Notation",
+          "request": {
+            "mediaCategory": "drum-notation",
+            "topicTags": [
+              "staff",
+              "percussion-clef",
+              "drum-notation",
+              "legend"
+            ]
+          },
+          "fills": [
+            "library/drums/notation-legend.svg"
+          ]
+        },
+        {
+          "lesson": 4,
+          "title": "The 4/4 Rock Groove",
+          "request": {
+            "mediaCategory": "drum-notation",
+            "topicTags": [
+              "rock-beat",
+              "hi-hat",
+              "backbeat",
+              "4-4",
+              "x-notehead"
+            ]
+          },
+          "fills": [
+            "library/drums/rock-beat-4-4.svg",
+            "library/drums/notation-legend.svg",
+            "library/drums/meter-4-4-vs-6-8.svg"
+          ]
+        },
+        {
+          "lesson": 5,
+          "title": "The 6/8 Feel and Your Practice Plan",
+          "request": {
+            "mediaCategory": "drum-notation",
+            "topicTags": [
+              "6-8",
+              "compound-meter",
+              "hi-hat",
+              "drum-notation"
+            ]
+          },
+          "fills": [
+            "library/drums/meter-4-4-vs-6-8.svg",
+            "library/drums/notation-legend.svg",
+            "library/drums/rock-beat-4-4.svg"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "microbiology",
+      "subject": "Microbiology lab fundamentals",
+      "learningGoal": "Understand Gram staining and the lab basics around it: aseptic technique, microscopy, and culture methods",
+      "latencyMs": 41572,
+      "blueprint": {
+        "courseTitle": "Microbiology Lab Fundamentals: Gram Staining and Essential Techniques",
+        "modules": [
+          {
+            "title": "Foundations of the Microbiology Lab",
+            "slots": [
+              {
+                "id": "slot1",
+                "method": "reading",
+                "title": "Aseptic Technique and Lab Safety",
+                "lessonGoal": "Apply aseptic technique to avoid contamination when handling microbial cultures.",
+                "objectives": [
+                  "List basic lab safety rules for working with microorganisms",
+                  "Describe the principles of aseptic technique",
+                  "Demonstrate proper hand washing and workspace disinfection",
+                  "Use an inoculating loop or wire safely near a flame",
+                  "Explain why aseptic technique is critical for obtaining pure cultures"
+                ],
+                "topicTags": [
+                  "aseptic-technique",
+                  "lab-safety",
+                  "contamination",
+                  "inoculating-loop"
+                ],
+                "assessesSlotIds": [],
+                "requiredMedia": [
+                  {
+                    "mediaCategory": "culture-technique",
+                    "topicTags": [
+                      "aseptic-technique",
+                      "inoculating-loop"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "slot2",
+                "method": "reading",
+                "title": "Using the Compound Light Microscope",
+                "lessonGoal": "Operate a compound light microscope to view stained bacterial specimens.",
+                "objectives": [
+                  "Identify the main parts of a compound light microscope",
+                  "Explain the function of the condenser, objective lenses, and focus knobs",
+                  "Demonstrate the steps to bring a specimen into focus under low and high power",
+                  "Describe the role of immersion oil in high-magnification microscopy",
+                  "Practise proper microscope care and cleaning"
+                ],
+                "topicTags": [
+                  "compound-microscope",
+                  "focus",
+                  "objective",
+                  "magnification"
+                ],
+                "assessesSlotIds": [],
+                "requiredMedia": [
+                  {
+                    "mediaCategory": "microscopy",
+                    "topicTags": [
+                      "compound-microscope",
+                      "focus",
+                      "objective"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "slot3",
+                "method": "quiz",
+                "title": "Lab Safety, Aseptic Technique, and Microscopy Check",
+                "lessonGoal": "Identify correct aseptic practices and microscope handling by answering questions that apply these fundamentals.",
+                "objectives": [
+                  "Select the appropriate aseptic action in a given lab scenario",
+                  "Recognise potential sources of contamination during culture transfer",
+                  "Match microscope parts to their functions",
+                  "Order the steps to focus on a specimen",
+                  "Diagnose common focusing problems and their remedies"
+                ],
+                "topicTags": [
+                  "aseptic-technique",
+                  "lab-safety",
+                  "compound-microscope",
+                  "focus",
+                  "diagnostic-quiz"
+                ],
+                "assessesSlotIds": [
+                  "slot1",
+                  "slot2"
+                ]
+              },
+              {
+                "id": "slot4",
+                "method": "reading",
+                "title": "Isolating Colonies: Streak Plate and Culture Transfer",
+                "lessonGoal": "Isolate single bacterial colonies using the streak plate method and perform aseptic transfers.",
+                "objectives": [
+                  "Explain the purpose of a streak plate in obtaining a pure culture",
+                  "Describe the quadrant streak technique to isolate colonies",
+                  "Practise aseptic transfer from a broth or slant to an agar plate",
+                  "Identify isolated colonies and understand their use in bacterial identification",
+                  "Discuss incubation conditions that support colony growth"
+                ],
+                "topicTags": [
+                  "streak-plate",
+                  "isolated-colonies",
+                  "pure-culture",
+                  "aseptic-transfer"
+                ],
+                "assessesSlotIds": [],
+                "requiredMedia": [
+                  {
+                    "mediaCategory": "culture-technique",
+                    "topicTags": [
+                      "quadrant-streak",
+                      "isolated-colonies",
+                      "streak-plate"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "slot5",
+                "method": "reading",
+                "title": "The Gram Stain: Procedure and Interpretation",
+                "lessonGoal": "Perform the Gram stain procedure on bacterial smears and interpret the results under the microscope.",
+                "objectives": [
+                  "List the Gram stain reagents in order and state their roles",
+                  "Prepare a bacterial smear from a colony or broth culture",
+                  "Describe how the cell wall structure determines Gram reaction",
+                  "Distinguish Gram-positive from Gram-negative bacteria by colour and morphology",
+                  "Recognise common Gram staining errors and apply troubleshooting steps"
+                ],
+                "topicTags": [
+                  "gram-stain",
+                  "peptidoglycan",
+                  "gram-positive",
+                  "gram-negative",
+                  "crystal-violet"
+                ],
+                "assessesSlotIds": [],
+                "requiredMedia": [
+                  {
+                    "mediaCategory": "gram-stain-procedure",
+                    "topicTags": [
+                      "gram-stain",
+                      "procedure",
+                      "crystal-violet",
+                      "safranin"
+                    ]
+                  },
+                  {
+                    "mediaCategory": "gram-stain-result",
+                    "topicTags": [
+                      "gram-positive",
+                      "gram-negative",
+                      "photomicrograph",
+                      "bacilli",
+                      "cocci"
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "slot6",
+                "method": "quiz",
+                "title": "Culture Methods and Gram Stain Assessment",
+                "lessonGoal": "Demonstrate understanding of culture methods and Gram staining by answering questions that integrate both techniques.",
+                "objectives": [
+                  "Choose the correct streak plate pattern for a desired outcome",
+                  "Identify contamination risks during transfer and incubation",
+                  "Sequence the Gram stain steps and associate each with its effect on the cell",
+                  "Predict the Gram reaction of bacteria based on cell wall composition",
+                  "Interpret photomicrographs of Gram-stained smears, noting shape and arrangement"
+                ],
+                "topicTags": [
+                  "streak-plate",
+                  "gram-stain",
+                  "gram-positive",
+                  "gram-negative",
+                  "photomicrograph"
+                ],
+                "assessesSlotIds": [
+                  "slot4",
+                  "slot5"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "judge": {
+        "pass": true,
+        "failedChecks": [],
+        "reasons": []
+      },
+      "required": [
+        {
+          "lesson": 1,
+          "title": "Aseptic Technique and Lab Safety",
+          "request": {
+            "mediaCategory": "culture-technique",
+            "topicTags": [
+              "aseptic-technique",
+              "inoculating-loop"
+            ]
+          },
+          "fills": [
+            "library/micro/inoculating-loops.jpg"
+          ]
+        },
+        {
+          "lesson": 2,
+          "title": "Using the Compound Light Microscope",
+          "request": {
+            "mediaCategory": "microscopy",
+            "topicTags": [
+              "compound-microscope",
+              "focus",
+              "objective"
+            ]
+          },
+          "fills": [
+            "library/micro/microscope-parts.png"
+          ]
+        },
+        {
+          "lesson": 4,
+          "title": "Isolating Colonies: Streak Plate and Culture Transfer",
+          "request": {
+            "mediaCategory": "culture-technique",
+            "topicTags": [
+              "quadrant-streak",
+              "isolated-colonies",
+              "streak-plate"
+            ]
+          },
+          "fills": [
+            "library/micro/streak-plate-ecoli-emb.jpg"
+          ]
+        },
+        {
+          "lesson": 5,
+          "title": "The Gram Stain: Procedure and Interpretation",
+          "request": {
+            "mediaCategory": "gram-stain-procedure",
+            "topicTags": [
+              "gram-stain",
+              "procedure",
+              "crystal-violet",
+              "safranin"
+            ]
+          },
+          "fills": [
+            "library/micro/gram-stain-procedure.png"
+          ]
+        },
+        {
+          "lesson": 5,
+          "title": "The Gram Stain: Procedure and Interpretation",
+          "request": {
+            "mediaCategory": "gram-stain-result",
+            "topicTags": [
+              "gram-positive",
+              "gram-negative",
+              "photomicrograph",
+              "bacilli",
+              "cocci"
+            ]
+          },
+          "fills": [
+            "library/micro/gram-stain-mixed-field.jpg",
+            "library/micro/gram-negative-bacilli-phil-1947.jpg",
+            "library/micro/gram-positive-cocci-phil-2296.jpg",
+            "library/micro/gram-positive-diplococci-sputum-phil-2842.jpg",
+            "library/micro/gram-negative-diplococci-phil-3693.jpg"
+          ]
+        }
+      ]
+    }
+  ]
+}

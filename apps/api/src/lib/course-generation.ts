@@ -133,6 +133,10 @@ export function failureReason(stage: Stage, error: unknown, written: number): st
       return `We couldn't find reliable Sources for the Lesson “${stage.title}”. Retry searches for it again${keptClause(written)}.`;
     }
     const retryStep = written === 0 ? "Retry tries that Lesson again." : `Retry tries again from there${keptClause(written)}.`;
+    // The prose passed, but the Lesson cannot teach without an image the media library could not supply (SEN-115).
+    if (error instanceof ReadingFailedError && error.requiredMediaMissing) {
+      return `We couldn't find an image that fits the Lesson “${stage.title}”, and it can't teach without one. ${retryStep}`;
+    }
     return failedCheck(error)
       ? `We couldn't write the Lesson “${stage.title}” so that it passed our quality checks. ${retryStep}`
       : `Generation was interrupted while writing the Lesson “${stage.title}”. ${RESUME_STEP}`;
@@ -447,7 +451,9 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
             });
           } catch (error) {
             // Rejected drafts are saved nowhere else, so the event keeps every draft, edit, and verdict, pass or fail.
-            if (error instanceof ReadingFailedError) step.setDetail({ grounding: error.grounding, rejectedSources: error.rejectedSources, rounds: error.rounds });
+            if (error instanceof ReadingFailedError) {
+              step.setDetail({ grounding: error.grounding, rejectedSources: error.rejectedSources, rounds: error.rounds, media: error.media });
+            }
             if (error instanceof ReuseUnfitError) step.setDetail({ reuseUnfit: error.reason, grounding: error.grounding, rounds: error.rounds });
             throw error;
           }

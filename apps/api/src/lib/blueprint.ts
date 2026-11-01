@@ -1,7 +1,10 @@
 import {
   blueprintCodeFailures,
+  blueprintSlots,
   MAX_COURSE_LESSONS,
   MAX_QUIZ_OBJECTIVES,
+  MAX_REQUIRED_MEDIA,
+  MAX_REQUIRED_MEDIA_TAGS,
   MIN_COURSE_LESSONS,
   MAX_TOPIC_TAGS,
   MIN_TOPIC_TAGS,
@@ -10,12 +13,14 @@ import {
   type CourseBlueprint,
   type JudgeResult,
 } from "@senoy/db/blueprint";
+import type { MediaCategory, MediaRequest } from "@senoy/db";
 import type { GoalScope } from "@senoy/db/course-request";
 import { isEvidenced, type GapConfirmation, type StartingLevel } from "@senoy/db/starting-level";
 import type { ExplanationOrder, QuizCadence } from "@senoy/db/teaching-profile";
 import { SEQUENCE_REACHES_GOAL } from "./course-judge.ts";
 import { ENGLISH_ONLY } from "./english-only.ts";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
+import type { MediaVocabulary } from "./media-library.ts";
 import { createModelPorts, type Generator, type Judge } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
 
@@ -42,6 +47,11 @@ export type BlueprintInput = {
    * redesign a plan that reaches it. Never set together with `revision`, which belongs to a plan not yet generated.
    */
   sequenceRedesign?: { previousBlueprint: CourseBlueprint; reasons: string[] };
+  /**
+   * What the media library holds, by Media category and Topic tags: the only images a Reading slot may require
+   * (SEN-115). Empty or absent, no slot requires media and the author is prompted as before.
+   */
+  mediaCatalog?: MediaVocabulary;
 };
 
 /** Revisions after the first design fails its checks (spec §6.2): initial design + two revisions, like a Lesson's repairs. */
@@ -108,6 +118,12 @@ const SCOPE_RULE = `"scope" is the focus the Learner confirmed for their Learnin
  */
 const NEW_TO_SUBJECT_RULE = `"newToSubject" is true: the Learner says they are brand new to this, and no capability was probed, so "inPlace" and "remainingGap" are empty. Assume nothing is in place: start from the fundamentals of the whole Learning Goal (within scope.inScope when there is a scope), and size the Course for a newcomer, with enough Lessons for someone starting from nothing to reach the Learning Goal.`;
 
+/**
+ * Added to every author prompt only when the media library has files, so a Blueprint can require the images a Reading
+ * cannot teach without (SEN-115). The schema offers only the catalog's categories and the tags in each.
+ */
+const MEDIA_RULE = `"mediaCatalog" lists the images the media library holds: each Media category with the Topic tags its files carry. Some reading Lessons cannot teach an objective unless the Learner sees something: a physical technique such as a grip or a stroke, a pattern written on a staff, a specimen or a stained result to recognise. On such a reading Lesson, list in "requiredMedia" each image it cannot teach without: its mediaCategory, and 1-${MAX_REQUIRED_MEDIA_TAGS} topicTags from that category naming what the image must show. At most ${MAX_REQUIRED_MEDIA} per Lesson. A Lesson is never written without its required images, so require one only when words alone cannot teach the objective, never to decorate, and only from mediaCatalog. Leave "requiredMedia" empty on every other reading and on every quiz.`;
+
 /** Added to the Judge prompt only when the Learner said they are brand new to this. */
 const NEW_TO_SUBJECT_JUDGE_RULE = `"newToSubject" is true: the Learner says they are brand new to this, and no capability was probed, so "inPlace" and "remainingGap" are empty. Never fail coverage or remaining_gap_only because those lists are empty. Judge sequence_reaches_goal, prerequisite_order and sizing for a newcomer: the Lessons should start from the fundamentals of the whole Learning Goal (within scope.inScope when there is a scope) and be enough for someone starting from nothing to reach it.`;
 
@@ -155,16 +171,47 @@ const SLOT_SCHEMA = {
   },
 } as const;
 
-const BLUEPRINT_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: ["courseTitle", "moduleTitle", "lessons"],
-  properties: {
-    courseTitle: { type: "string" },
-    moduleTitle: { type: "string" },
-    lessons: { type: "array", minItems: MIN_COURSE_LESSONS, maxItems: MAX_COURSE_LESSONS, items: SLOT_SCHEMA },
-  },
-} as const;
+/**
+ * Strict schema for a slot. With a media catalog, a slot also lists its required images: each is one category the
+ * catalog holds, with tags only from that category, so the author cannot ask for an image the catalog has no file for.
+ * @param catalog - The library's categories and tags; empty when it has none
+ */
+function slotSchema(catalog: MediaVocabulary) {
+  if (catalog.length === 0) return SLOT_SCHEMA;
+  const request = {
+    anyOf: catalog.map(({ mediaCategory, topicTags }) => ({
+      type: "object",
+      additionalProperties: false,
+      required: ["mediaCategory", "topicTags"],
+      properties: {
+        mediaCategory: { type: "string", enum: [mediaCategory] },
+        topicTags: { type: "array", minItems: 1, maxItems: MAX_REQUIRED_MEDIA_TAGS, items: { type: "string", enum: topicTags } },
+      },
+    })),
+  };
+  return {
+    ...SLOT_SCHEMA,
+    required: [...SLOT_SCHEMA.required, "requiredMedia"],
+    properties: { ...SLOT_SCHEMA.properties, requiredMedia: { type: "array", maxItems: MAX_REQUIRED_MEDIA, items: request } },
+  };
+}
+
+/**
+ * Strict schema for a whole Blueprint.
+ * @param catalog - The library's categories and tags; empty when it has none
+ */
+function blueprintSchema(catalog: MediaVocabulary) {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["courseTitle", "moduleTitle", "lessons"],
+    properties: {
+      courseTitle: { type: "string" },
+      moduleTitle: { type: "string" },
+      lessons: { type: "array", minItems: MIN_COURSE_LESSONS, maxItems: MAX_COURSE_LESSONS, items: slotSchema(catalog) },
+    },
+  } as const;
+}
 
 /** Narrows unknown model output to a plain object. */
 function record(value: unknown): Record<string, unknown> {
@@ -194,6 +241,20 @@ export function slugTag(tag: string): string {
 }
 
 /**
+ * Reads a slot's required images. Tags become slugs; whether each category and tag is one the catalog holds is left to
+ * the Code checks.
+ * @param value - The slot's `requiredMedia`, when the author was offered a catalog
+ */
+function requiredMediaOf(value: unknown): MediaRequest[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new ModelError("invalid_output");
+  return value.map((item) => {
+    const request = record(item);
+    return { mediaCategory: text(request.mediaCategory) as MediaCategory, topicTags: [...new Set(texts(request.topicTags).map(slugTag))] };
+  });
+}
+
+/**
  * Parses an authored Blueprint into one Module of slots with stable ids. Shape rules are left to the Code checks.
  * @param raw - Model output
  */
@@ -205,6 +266,7 @@ export function parseAuthoredBlueprint(raw: unknown): CourseBlueprint {
     if (lesson.method !== "reading" && lesson.method !== "quiz") throw new ModelError("invalid_output");
     const assessed = lesson.assessesLessonNumbers;
     if (!Array.isArray(assessed) || assessed.some((number) => !Number.isInteger(number))) throw new ModelError("invalid_output");
+    const requiredMedia = requiredMediaOf(lesson.requiredMedia);
     return {
       id: `slot${index + 1}`,
       method: lesson.method,
@@ -213,16 +275,31 @@ export function parseAuthoredBlueprint(raw: unknown): CourseBlueprint {
       objectives: texts(lesson.objectives),
       topicTags: texts(lesson.topicTags).map(slugTag),
       assessesSlotIds: [...new Set(assessed as number[])].map((number) => `slot${number}`),
+      ...(requiredMedia.length ? { requiredMedia } : {}),
     };
   });
   return { courseTitle: text(row.courseTitle), modules: [{ title: text(row.moduleTitle), slots }] };
 }
 
 /**
+ * Problems with a Blueprint's required images against the media catalog: each must name a category the catalog holds
+ * and share a Topic tag with a file in it, which is what library lookup needs to find one (SEN-115).
+ * @param blueprint - Blueprint to check
+ * @param catalog - The library's categories and tags
+ * @returns One problem per request the catalog cannot fill; empty when all can be
+ */
+export function requiredMediaCatalogFailures(blueprint: CourseBlueprint, catalog: MediaVocabulary): string[] {
+  return blueprintSlots(blueprint).flatMap((slot, index) => (slot.requiredMedia ?? [])
+    .filter((request) => !catalog.some(({ mediaCategory, topicTags }) => mediaCategory === request.mediaCategory && request.topicTags.some((tag) => topicTags.includes(tag))))
+    .map((request) => `Slot ${index + 1} requires a ${request.mediaCategory} image (${request.topicTags.join(", ")}) that no file in mediaCatalog fills.`));
+}
+
+/**
  * A Blueprint in the shape the author writes, so a revision sees its own draft.
  * @param blueprint - Parsed Blueprint
+ * @param withMedia - Whether the author was offered a media catalog, and so wrote each slot's required images
  */
-function authoredShape(blueprint: CourseBlueprint) {
+function authoredShape(blueprint: CourseBlueprint, withMedia: boolean) {
   const module = blueprint.modules[0]!;
   return {
     courseTitle: blueprint.courseTitle,
@@ -234,6 +311,7 @@ function authoredShape(blueprint: CourseBlueprint) {
       objectives: slot.objectives,
       topicTags: slot.topicTags,
       assessesLessonNumbers: slot.assessesSlotIds.map((id) => module.slots.findIndex((candidate) => candidate.id === id) + 1),
+      ...(withMedia ? { requiredMedia: slot.requiredMedia ?? [] } : {}),
     })),
   };
 }
@@ -289,9 +367,19 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
       // Likewise left out unless the Learner said they are brand new, so a probed Starting Level is designed as before.
       const newcomer = input.startingLevel.selfReportedNew === true;
       const newToSubject = newcomer ? { newToSubject: true as const } : {};
-      /** The author's system prompt, with the scope rule when there is a scope and the newcomer rule for a brand-new Learner. */
-      const authorPrompt = (prompt: string) => [prompt, ...(input.scope ? [SCOPE_RULE] : []), ...(newcomer ? [NEW_TO_SUBJECT_RULE] : [])].join("\n");
+      // Likewise left out when the library has nothing, so no slot can require an image (SEN-115).
+      const catalog = input.mediaCatalog ?? [];
+      const withMedia = catalog.length > 0;
+      /**
+       * The author's system prompt, with the scope rule when there is a scope, the newcomer rule for a brand-new Learner,
+       * and the media rule when the library has files.
+       */
+      const authorPrompt = (prompt: string) => [
+        prompt, ...(input.scope ? [SCOPE_RULE] : []), ...(newcomer ? [NEW_TO_SUBJECT_RULE] : []), ...(withMedia ? [MEDIA_RULE] : []),
+      ].join("\n");
       const judgePrompt = newcomer ? `${JUDGE_PROMPT}\n${NEW_TO_SUBJECT_JUDGE_RULE}` : JUDGE_PROMPT;
+      /** A Blueprint as the author writes it, with required images only when the author was offered the catalog. */
+      const shape = (previous: CourseBlueprint) => authoredShape(previous, withMedia);
       const authorInput = {
         subject: input.subject,
         learningGoal: input.learningGoal,
@@ -303,19 +391,20 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
         quizCadence: input.profile.quizCadence,
         explanationOrder: input.profile.explanationOrder,
         ...(marked ? { learnerMarkedIrrelevant: marked, learnerReason: input.revision!.feedback.reason } : {}),
+        ...(withMedia ? { mediaCatalog: catalog } : {}),
       };
-      const author = { schemaName: "course_blueprint", timeoutMs: AUTHOR_TIMEOUT_MS, reasoningMaxTokens: AUTHOR_REASONING_TOKENS, schema: BLUEPRINT_SCHEMA, parse: parseAuthoredBlueprint };
+      const author = { schemaName: "course_blueprint", timeoutMs: AUTHOR_TIMEOUT_MS, reasoningMaxTokens: AUTHOR_REASONING_TOKENS, schema: blueprintSchema(catalog), parse: parseAuthoredBlueprint };
       // After Learner review, the first design is a redesign of the plan they marked (spec §4.4); after the structural
       // return, of the plan whose written Lessons did not reach the goal (spec §6.5, SEN-85).
       const first = input.revision
         ? await generator.generateStructured({
-          ...author, systemPrompt: authorPrompt(LEARNER_REVISE_PROMPT), input: { ...authorInput, previousBlueprint: authoredShape(input.revision.previousBlueprint) },
+          ...author, systemPrompt: authorPrompt(LEARNER_REVISE_PROMPT), input: { ...authorInput, previousBlueprint: shape(input.revision.previousBlueprint) },
         })
         : input.sequenceRedesign
         ? await generator.generateStructured({
           ...author, systemPrompt: authorPrompt(SEQUENCE_REDESIGN_PROMPT),
           input: {
-            ...authorInput, previousBlueprint: authoredShape(input.sequenceRedesign.previousBlueprint),
+            ...authorInput, previousBlueprint: shape(input.sequenceRedesign.previousBlueprint),
             sequenceProblems: input.sequenceRedesign.reasons,
           },
         })
@@ -326,7 +415,7 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
 
       // A fail is a Blueprint revision, then the checks again (spec §6.2).
       for (let revision = 0; ; revision++) {
-        const codeFailures = blueprintCodeFailures(blueprint, input.profile.quizCadence);
+        const codeFailures = [...blueprintCodeFailures(blueprint, input.profile.quizCadence), ...requiredMediaCatalogFailures(blueprint, catalog)];
         let verdict: JudgeResult | null = null;
         if (!codeFailures.length) {
           const checked = blueprint;
@@ -344,7 +433,7 @@ export function createBlueprintBuilder(options: BlueprintBuilderOptions = {}): B
           if (verdict.pass) return { blueprint, judge: verdict };
         }
         if (revision >= MAX_BLUEPRINT_REVISIONS) throw new BlueprintFailedError(codeFailures, verdict);
-        const previousBlueprint = authoredShape(blueprint);
+        const previousBlueprint = shape(blueprint);
         const problems = codeFailures.length ? codeFailures : [...verdict!.failedChecks.map((check) => `Failed check: ${check}`), ...verdict!.reasons];
         const revised = await generator.generateStructured({
           ...author, systemPrompt: authorPrompt(REVISE_PROMPT), input: { ...authorInput, previousBlueprint, problems },

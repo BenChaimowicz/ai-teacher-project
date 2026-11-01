@@ -3,6 +3,12 @@ import { sql } from "drizzle-orm";
 import { publishedLessons, STORAGE_KEY_PATTERN, type Database } from "@senoy/db";
 import { createMediaStorage, mediaStorageConfigFromEnv, type MediaStorage } from "@senoy/media";
 
+/**
+ * Sent with every SVG: opened on its own, it may draw and style itself and do nothing else. The seed and the Reading
+ * both refuse an SVG with scripts or remote references (SEN-47, SEN-115); this keeps a missed one inert.
+ */
+export const SVG_CONTENT_SECURITY_POLICY = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
+
 /** Dependencies of the media route; tests inject both. */
 export type MediaRouteOptions = {
   /** Whether a published Lesson shows the file at this storage key; defaults to {@link publishedLessonShows}. */
@@ -52,6 +58,7 @@ export async function mediaRoutes(app: FastifyInstance, options: MediaRouteOptio
         return reply.code(404).send({ error: "Not found" });
       }
       if (object.byteSize > 0) reply.header("Content-Length", object.byteSize);
+      if (object.contentType === "image/svg+xml") reply.header("Content-Security-Policy", SVG_CONTENT_SECURITY_POLICY);
       return reply
         .header("Content-Type", object.contentType)
         .header("Cache-Control", "private, max-age=3600")

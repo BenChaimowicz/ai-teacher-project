@@ -1,4 +1,6 @@
-import { ATTACHABLE_MIME_TYPES, mediaDescriptorFailures, parseMediaDescriptorFields, type MediaDescriptorFields } from "./media.ts";
+import {
+  ATTACHABLE_MIME_TYPES, fillsRequest, mediaDescriptorFailures, parseMediaDescriptorFields, type MediaDescriptorFields, type MediaRequest,
+} from "./media.ts";
 
 /** Teaching-method id for reading Lessons. */
 export const READING_METHOD_ID = "reading" as const;
@@ -119,6 +121,31 @@ function parseBlock(raw: unknown): ReadingContentBlock | null {
  */
 export function proseBlocks(section: ReadingSection): ProseBlock[] {
   return section.blocks.filter((block): block is ProseBlock => block.kind === "prose");
+}
+
+/**
+ * Every media block of a body, in reading order.
+ * @param body - A reading body
+ */
+export function mediaBlocksOf(body: ReadingBody): MediaBlock[] {
+  return body.sections.flatMap((section) => section.blocks).filter((block): block is MediaBlock => block.kind === "media");
+}
+
+/**
+ * The required media a body does not show. Each request, in order, takes the first media block not already taken whose
+ * file fills it (same Media category, a shared Topic tag), so two requests are never met by one figure.
+ * @param body - A reading body
+ * @param required - The slot's required media
+ * @returns The requests no block fills; empty when every one is shown
+ */
+export function unfilledRequiredMedia(body: ReadingBody, required: readonly MediaRequest[]): MediaRequest[] {
+  const free = mediaBlocksOf(body);
+  return required.filter((request) => {
+    const at = free.findIndex((block) => fillsRequest(block.descriptor, request));
+    if (at < 0) return true;
+    free.splice(at, 1);
+    return false;
+  });
 }
 
 /**
