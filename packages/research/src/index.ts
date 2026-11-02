@@ -1,5 +1,14 @@
 export * from "./types.ts";
-export { RESEARCH_LIST_PRICES_USD, researchAdaptersFromEnv } from "./adapters/index.ts";
+export {
+  RESEARCH_LIST_PRICES_USD,
+  RESEARCH_TIER_ADAPTERS,
+  RESEARCH_TIER_MODES,
+  researchAdaptersForTier,
+  researchTierModeFromEnv,
+  researchTierOfAdapter,
+  type ResearchAdapterPair,
+  type ResearchTierMode,
+} from "./adapters/index.ts";
 export { applyHostPolicy, DENYLIST, PREFERENCE_LIST } from "./host-policy.ts";
 export { redact, runResearch, type ResearchCallObservation, type ResearchOptions } from "./research.ts";
 export { canonicalPageKey, sourceIdFor } from "./source-id.ts";

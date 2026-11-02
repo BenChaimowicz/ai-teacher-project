@@ -12,6 +12,48 @@ export type ValidityResult = {
   answerOptions?: string[];
 };
 
+/** Fewest and most readings a subject check offers before the Course Guide adds "None of these" (SEN-124). */
+export const MIN_SUBJECT_READINGS = 2;
+export const MAX_SUBJECT_READINGS = 5;
+
+/** One thing a typed subject may mean: a short label that becomes the subject if picked, and a one-line gloss. */
+export type SubjectReading = {
+  label: string;
+  gloss: string;
+};
+
+/**
+ * The subject check that runs right after Compose, before Validity (spec §4.2, SEN-124). `outcome` is null while the
+ * Learner chooses. `single`: one reading, nothing was asked. `chosen`: the Learner picked one of `readings`. `own_words`:
+ * the Learner chose "None of these" and typed `answer`. `check_failed`: the triage call failed and the subject stays as
+ * typed. In `chosen` and `own_words` the Request's `subject` holds the result; `subjectAsTyped` keeps what was written.
+ */
+export type SubjectCheck = {
+  outcome: "single" | "chosen" | "own_words" | "check_failed" | null;
+  subjectAsTyped: string;
+  /** Empty unless the check found several readings. */
+  readings: SubjectReading[];
+  /** The picked label or the typed answer; null until the Learner answers. */
+  answer: string | null;
+};
+
+/** Which adapter pair researches every Reading of a Course (spec §5.3, SEN-124). */
+export const RESEARCH_TIERS = ["deluxe", "regular"] as const;
+export type ResearchTier = (typeof RESEARCH_TIERS)[number];
+
+/**
+ * The triage model's rating of a focused Learning Goal, taken when generation starts. Code decides the tier from it:
+ * niche or scholarly is deluxe. `dense` never decides; it is kept for the Usage Console.
+ */
+export type ResearchTierRating = {
+  niche: boolean;
+  scholarly: boolean;
+  dense: boolean;
+  /** One plain sentence on why, for the Usage Console. */
+  reason: string;
+  modelId: string;
+};
+
 /** The single targeted clarification and the Learner's latest response. */
 export type ValidityClarification = {
   question: string;
@@ -88,7 +130,9 @@ export type GoalFocus = {
 };
 
 /**
- * Every Course Request status, in lifecycle order. `validity_passed` through `goal_focused` belong to focusing the
+ * Every Course Request status, in lifecycle order. `awaiting_subject_check` runs the subject check automatically after
+ * Compose, and `awaiting_subject_choice` waits for the Learner to pick a reading (SEN-124); both lead to `awaiting_validity`.
+ * `validity_passed` through `goal_focused` belong to focusing the
  * Learning Goal (SEN-90): questions open in `awaiting_focus_answers`, a proposed focus in `awaiting_focus_confirmation`,
  * and `goal_focused` means the goal is settled and the diagnostic may start. `assessment_*` through `starting_level_confirmed` belong to the
  * Starting Level diagnostic, where `assessment_failed` means the item set failed its checks with both Generators and only
@@ -98,6 +142,8 @@ export type GoalFocus = {
  */
 export const COURSE_REQUEST_STATUSES = [
   "draft",
+  "awaiting_subject_check",
+  "awaiting_subject_choice",
   "awaiting_validity",
   "awaiting_clarification",
   "rejected",
@@ -130,6 +176,8 @@ export type CourseRequestRecord = {
   createdAt: string;
   validity: ValidityResult | null;
   clarification: ValidityClarification | null;
+  /** Null until the subject check runs (and on Requests from before SEN-124). */
+  subjectCheck: SubjectCheck | null;
   /** Null until focusing starts after Validity passes (and on Requests from before SEN-90). */
   focus: GoalFocus | null;
   revisedFromId: string | null;

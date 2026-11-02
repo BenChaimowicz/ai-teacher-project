@@ -234,6 +234,7 @@ function pipelineEventWhere(filter: PipelineEventFilter): SQL {
 export function courseRequestRowsQuery(where: SQL, orderBy: SQL, window?: { limit: number; offset: number }): SQL {
   const paging = window ? sql`limit ${window.limit} offset ${window.offset}` : sql``;
   return sql`select cr.id, cr.subject, cr.learning_goal as "learningGoal", cr.status, cr.created_at as "createdAt",
+      cr.research_tier as "researchTier", cr.research_tier_rating as "researchTierRating",
       spend."actualUsd", spend."estimatedUsd", spend."unknownCount", spend.calls, spend."failedCalls",
       extract(epoch from (wall.last_finish - wall.first_start)) * 1000 as "wallMs"
     from course_requests cr

@@ -1,0 +1,143 @@
+{
+  "ranAt": "2026-11-02T11:13:26.892Z",
+  "apiUrl": "http://127.0.0.1:3000",
+  "runs": [
+    {
+      "name": "gram",
+      "subject": "Microbiology lab fundamentals",
+      "learningGoal": "Understand Gram staining and the lab basics around it: why Gram-positive and Gram-negative cell walls stain differently, the four reagent steps, reading a stained slide under the microscope, and the aseptic technique and culture methods that come before it.",
+      "requestId": "66885536-8622-439f-9d31-430e217a6832",
+      "resumed": true,
+      "startedAt": "2026-11-02T11:10:01.320Z",
+      "finishedAt": "2026-11-02T11:13:26.892Z",
+      "minutes": 3.4,
+      "finalStatus": "generation_failed",
+      "failureReason": "We couldn't find an image that fits the Lesson “Bring Stained Bacteria into Focus”, and it can't teach without one. Retry tries again from there, keeping the 3 Lessons already written.",
+      "timeline": [
+        {
+          "at": "2026-11-02T11:10:01.579Z",
+          "status": "generating",
+          "note": "resumed 66885536-8622-439f-9d31-430e217a6832"
+        },
+        {
+          "at": "2026-11-02T11:10:22.035Z",
+          "status": "generating",
+          "note": "lesson 3/6 · Bring Stained Bacteria into Focus"
+        },
+        {
+          "at": "2026-11-02T11:13:26.215Z",
+          "status": "generation_failed",
+          "note": "We couldn't find an image that fits the Lesson “Bring Stained Bacteria into Focus”, and it can't teach without one. Retry tries again from there, keeping the 3 Lessons already written."
+        }
+      ],
+      "cost": {
+        "stages": [
+          {
+            "kind": "blueprint",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0259
+          },
+          {
+            "kind": "blueprint",
+            "who": "judge",
+            "calls": 1,
+            "usd": 0.0005
+          },
+          {
+            "kind": "diagnostic",
+            "who": "author",
+            "calls": 3,
+            "usd": 0.0468
+          },
+          {
+            "kind": "diagnostic",
+            "who": "judge",
+            "calls": 2,
+            "usd": 0.0017
+          },
+          {
+            "kind": "fact_check",
+            "who": "judge",
+            "calls": 7,
+            "usd": 0.0018
+          },
+          {
+            "kind": "fact_check",
+            "who": "you",
+            "calls": 7,
+            "usd": 0.035
+          },
+          {
+            "kind": "goal_focus",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0016
+          },
+          {
+            "kind": "quiz",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0544
+          },
+          {
+            "kind": "quiz",
+            "who": "judge",
+            "calls": 2,
+            "usd": 0.0017
+          },
+          {
+            "kind": "reading",
+            "who": "author",
+            "calls": 11,
+            "usd": 0.2768
+          },
+          {
+            "kind": "reading",
+            "who": "judge",
+            "calls": 25,
+            "usd": 0.0197
+          },
+          {
+            "kind": "research",
+            "who": "parallel",
+            "calls": 3,
+            "usd": 0.075
+          },
+          {
+            "kind": "research",
+            "who": "you",
+            "calls": 3,
+            "usd": 0.036
+          },
+          {
+            "kind": "research_tier",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0002
+          },
+          {
+            "kind": "reuse",
+            "who": "author",
+            "calls": 4,
+            "usd": 0.0149
+          },
+          {
+            "kind": "subject_check",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0001
+          },
+          {
+            "kind": "validity",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0029
+          }
+        ],
+        "totalUsd": 0.595,
+        "calls": 74
+      }
+    }
+  ]
+}

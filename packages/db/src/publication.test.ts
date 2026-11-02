@@ -72,6 +72,7 @@ test("A Reading must still show every image its slot requires, each from a diffe
   const body = (...figures: unknown[]) => ({ sections: [{ heading: "Grip", blocks: [{ kind: "prose", text: "Hold it [1]." }, ...figures] }] }) as ReadingBody;
 
   assert.match(courseCodeFailures(approved, [reading!, quiz!]).join(" "), /slot1's checkpoint does not show its required drum-grip image \(matched-grip\)/);
+  assert.deepEqual(courseCodeFailures(approved, [reading!, quiz!], { requireMedia: false }), [], "With READING_MEDIA=off no image is required.");
   const one = courseCodeFailures(approved, [{ ...reading!, body: body(figure("f1", "drum-grip", ["matched-grip", "fulcrum"])) }, quiz!]);
   assert.equal(one.length, 1, "One figure fills one request, not two.");
   const offTopic = body(figure("f1", "drum-grip", ["traditional-grip"]), figure("f2", "drum-kit-anatomy", ["matched-grip"]));

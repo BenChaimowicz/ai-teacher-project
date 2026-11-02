@@ -27,6 +27,7 @@ const FIRST_RUN_LINES = ["New here? Let's pick something.", "Any topic works. On
 
 /** Plain-words line for a course that is being made. */
 const MAKING_LINE: Record<string, string> = {
+  awaiting_subject_check: "Checking your request",
   awaiting_validity: "Checking your request",
   assessment_preparing: "Preparing a few quick questions",
   blueprint_preparing: "Drafting your plan",
@@ -50,6 +51,8 @@ function needsCopy(status: string): { say: string; action: string; hint: string;
         hint: "Opens it, where Retry is",
         retry: true,
       };
+    case "awaiting_subject_choice":
+      return { say: "That could mean a few things. Which did you mean?", action: "Pick one", hint: "One tap" };
     case "awaiting_clarification":
       return { say: "I have one question before I can plan this.", action: "Answer it", hint: "Tap an answer" };
     case "goal_focused":

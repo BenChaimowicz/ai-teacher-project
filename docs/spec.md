@@ -114,6 +114,7 @@ One screen for every unpublished status. The body follows status; these are not 
 | Status surface | What the Learner does |
 | --- | --- |
 | Compose | One typed line: a topic ("Norse mythology") or what the Learner wants to be able to do. It is saved as the subject and as the Learning Goal as typed. There is no generic goal question; Goal focusing asks what part and how deep, with options built from the subject. A topic picked elsewhere (Home, Go deeper) is saved straight away. |
+| Subject | Nothing, if the subject has one reading. Otherwise **Which did you mean?** with two to five readings plus **None of these** (a short typed answer). |
 | Validity | Pass, one clarification, or reject. Reject: plain-language reason, safe reframe, **Revise request** (editable new Request). Rejected stays in history. No appeal. |
 | Focus | Nothing, if the goal is already precise. Otherwise a few tap-to-choose questions per round (each with **Something else** and **A broad overview is fine**), then the proposed goal with what it covers and leaves out: **That's it**, **Not quite** (while rounds remain), or **A broad overview is fine**. |
 | Assessment | First, **How much do you know about this already?**: **Brand new to this** (no items; Starting Level is the Learner's own word, §4.3) or **I know some of it** (the check). Then honesty copy; eight three-option items plus **I don’t know**. |
@@ -213,7 +214,15 @@ Write-time fields apply only to future Blueprints and must not silently rewrite 
 
 ### 4.2 Course Request and Validity gate
 
-The Learner creates a Course Request by selecting a subject and stating a Learning Goal. The Validity gate runs **before Assessment**. It does not search.
+The Learner creates a Course Request by selecting a subject and stating a Learning Goal. The subject is settled first, then the Validity gate runs **before Assessment**. Neither searches.
+
+#### Settling the subject
+
+A subject as typed can name several things ("Mercury", "Java", "Gram"). Right after Compose, the **subject check** asks the triage model (§5.4) which subjects the Learner may have meant. It runs automatically, before Validity, on every Course Request, and reads the subject and the goal as typed together ("Java for Android apps" has one reading).
+
+**One reading** passes straight through with nothing shown. **Several** become a Course Guide question: two to five readings, each a short label with a one-line gloss ("Mercury — the planet nearest the Sun"), plus **None of these** with a short typed answer. The chosen label, or the typed answer as written, becomes the Request's subject; the subject as typed stays recorded. A typed answer is not checked again: Validity judges it like any subject. There is no second round.
+
+**Statuses.** `awaiting_subject_check` (runs automatically after Compose), `awaiting_subject_choice`, then `awaiting_validity`. A failed subject check falls through to `awaiting_validity` with the subject as typed; it never blocks a Request. **Revise request** copies the settled subject into the draft, which is checked again.
 
 **Authority.** Versioned application rules own hard prohibitions. Those rules are also injected into the Generator’s system prompt, which judges whether the remaining subject and Learning Goal are real and learnable. The Course Guide cannot override policy or invent a different decision.
 
@@ -346,10 +355,16 @@ Approved full-Course generation is a durable Postgres-backed job. One active job
 
 Retrieval is two independent research calls on the same Lesson topic, not a single web-search API. With a Goal scope, the topic names what the Course covers and leaves out. The Generator synthesizes from both Source packs. Citations must point at Sources that appear in those packs; invented URLs are dropped. Vendor built-in web search is off.
 
-| Slot | Implementations (config picks one) | Job |
-| --- | --- | --- |
-| **Primary research** | Parallel Pro **or** Exa Agent high | Structured Source pack with citations |
-| **Secondary research** | You.com Research standard **or** Linkup M | Same topic, different engine, different index |
+| Slot | Deluxe tier | Regular tier | Job |
+| --- | --- | --- | --- |
+| **Primary research** | Parallel Pro | Parallel core | Structured Source pack with citations |
+| **Secondary research** | You.com Research standard | You.com Research lite | Same topic, different engine, different index |
+
+Exa Agent high and Linkup M remain spec options with no adapter.
+
+**Research tier.** Each Course Request carries one research tier that every Reading of its Course uses. When generation starts, the triage model (§5.4) rates the focused Learning Goal and its Goal scope on a rubric: is it niche (few general-audience Sources), is it scholarly (general references cannot carry it, so the best Sources are peer-reviewed or specialist), and is it dense in exact dates, names, figures or procedures. The rating is structured output and code decides: niche or scholarly is **deluxe**, otherwise **regular**. Density alone does not make a Course deluxe; it is stored for the Usage Console. A failed rating is deluxe. The rating and the tier are stored on the Request; a research call's tier follows from the adapter id its Usage Record already holds.
+
+Config `RESEARCH_TIER` is `deluxe` (default), `regular`, or `auto`. Only `auto` applies the rating; the other two force their tier, and the rating is still stored, so the Usage Console shows what `auto` would have picked. `auto` is turned on only after both Test courses pass end to end on the regular tier.
 
 Preference list and Denylist are host policy in the app, not a vendor-specific `boost_domains` scheme. `.edu` / `.gov` may be used as query hints; they are not automatic trust. Do not auto-promote every `.edu`. Prefer canonical hosts over aggregators. For scholarly topics, overlay OpenAlex or Semantic Scholar and prefer peer-reviewed secondary sources over news. Quotes come from extracted page text, not truncated snippets. Wikipedia via stable `oldid`. Cite and paraphrase OER; do not remix CC BY-NC-SA corpora into Lesson bodies. Issue English queries; do not hard-reject non-English Sources and do not machine-translate them. Keep a useful non-English page; the Lesson stays English; the source list keeps the published title and URL. Do not fail a Lesson solely because a Source is not English.
 
@@ -398,6 +413,7 @@ Domain **Generator** port. Model IDs live in shared server configuration, not on
 | Fallback writer | `openai/gpt-6.1-terra` | Same transport; selection belongs to the calling generation stage |
 | Lesson writer (Readings and Quizzes) | `openai/gpt-6.1-sol` | Same transport; its own setting, so Lessons can be pinned apart again (ADR 0018, ADR 0028) |
 | Lesson fallback writer | `openai/gpt-6.1-terra` | Writes a fresh draft once the Lesson writer's repairs run out (ADR 0017) |
+| Triage (subject check, research tier) | `openai/gpt-6-luna` | Same transport; its own setting, defaulting to the Judge's model. Two small structured calls per Request, no fallback: a failure takes the safe default (§4.2, §5.3) |
 
 Claude is not a Generator fallback, and DeepSeek is no longer called anywhere (ADR 0028). No direct OpenAI text adapter is required. Structured calls use `response_format: json_schema`, strict mode, `provider.require_parameters: true` with no host pinned, application-side output validation, and no search tools or plugins. Invalid output, refusal, interruption, or timeout is a provider failure, never a passing validity decision.
 
@@ -419,7 +435,7 @@ The reading and Quiz authors write to one teaching style guide: a reason to care
 
 ### 5.6 Demonstrative media
 
-Hosted inside the reading Lesson. Not an AV teaching method. Not from Search JSON. Off-app links may be ordinary Citations. Quizzes skip media.
+Hosted inside the reading Lesson. Not an AV teaching method. Not from Search JSON. Off-app links may be ordinary Citations. Quizzes skip media. Config `READING_MEDIA=off` leaves the library out of Reading generation, so no image is offered or required; test runs use it while media is being designed (default `on`).
 
 **Order, inside sequential Lesson generate, after caption/alt exist, before checkpoint:**
 

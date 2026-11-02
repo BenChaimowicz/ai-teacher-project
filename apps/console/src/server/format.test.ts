@@ -5,6 +5,7 @@ import {
   mergeFailureGroups,
   pipelineFailureReason,
   toCostSplit,
+  toCourseRequestRow,
   toIso,
   toLatencyHistogram,
   toMs,
@@ -115,6 +116,25 @@ describe("row mapping", () => {
     assert.equal(row.reasoningTokens, null);
     assert.equal(row.pipelineKind, null);
     assert.ok(!("request" in row) && !("response" in row));
+    assert.equal(row.researchTier, null, "A model call has no research tier.");
+  });
+
+  it("derives a research call's tier from its adapter id", () => {
+    const base = {
+      id: "u2", createdAt: "2026-11-02 10:00:00+00", durationMs: 1, vendor: "parallel", attempt: 1, outcome: "ok", costBasis: "estimated",
+    };
+    assert.equal(toUsageRecordRow({ ...base, role: "research_primary", modelId: "parallel-core" }).researchTier, "regular");
+    assert.equal(toUsageRecordRow({ ...base, role: "research_secondary", modelId: "you-research" }).researchTier, "deluxe");
+    assert.equal(toUsageRecordRow({ ...base, role: "research_primary", modelId: "you-search" }).researchTier, null);
+  });
+
+  it("maps a Course Request's research tier and rating, and none before generation", () => {
+    const rating = { niche: false, scholarly: true, dense: true, reason: "Specialist sources.", modelId: "openai/gpt-6-luna" };
+    const base = { id: "c1", subject: "Gram", learningGoal: "Stain", status: "generating", createdAt: "2026-11-02 10:00:00+00" };
+    const rated = toCourseRequestRow({ ...base, researchTier: "deluxe", researchTierRating: rating });
+    assert.deepEqual([rated.researchTier, rated.researchTierRating], ["deluxe", rating]);
+    const before = toCourseRequestRow({ ...base, researchTier: null, researchTierRating: null });
+    assert.deepEqual([before.researchTier, before.researchTierRating], [null, null]);
   });
 
   it("maps a pipeline event row with no Usage Records under it to zero spend", () => {

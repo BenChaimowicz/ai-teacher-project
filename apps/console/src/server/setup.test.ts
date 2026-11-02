@@ -46,15 +46,33 @@ describe("createSetupReader", () => {
     }) as unknown as typeof fetch;
     const read = createSetupReader({ env: { GENERATOR_MODEL: "a/x" }, fetch: fakeFetch });
     const setup = await read();
-    assert.deepEqual(setup.models.map((model) => model.role), ["generator", "generator_fallback", "lesson_generator", "lesson_generator_fallback", "judge", "judge_fallback"]);
+    assert.deepEqual(setup.models.map((model) => model.role), [
+      "generator", "generator_fallback", "lesson_generator", "lesson_generator_fallback", "judge", "judge_fallback", "triage",
+    ]);
     assert.equal(setup.models[0]!.modelId, "a/x");
     assert.deepEqual(setup.models[0]!.preferredProviders, []);
     assert.equal(setup.models[0]!.endpoints?.[0]?.provider, "OpenAI");
-    assert.deepEqual(setup.research.map((entry) => [entry.slot, entry.vendor]), [["primary", "parallel"], ["secondary", "you"]]);
+    assert.deepEqual(setup.research.map((entry) => [entry.tier, entry.slot, entry.adapterId, entry.vendor, entry.estimatedCostUsd]), [
+      ["deluxe", "primary", "parallel-pro", "parallel", 0.1],
+      ["deluxe", "secondary", "you-research", "you", 0.05],
+      ["regular", "primary", "parallel-core", "parallel", 0.025],
+      ["regular", "secondary", "you-research-lite", "you", 0.012],
+    ]);
+    assert.equal(setup.researchMode, "deluxe", "RESEARCH_TIER defaults to deluxe.");
+    assert.equal(setup.researchError, null);
     assert.deepEqual(setup.vendors, ["openrouter", "parallel", "you"]);
     const fetched = urls.length;
     await read();
     assert.equal(urls.length, fetched);
+  });
+
+  it("shows the RESEARCH_TIER mode, and reports a bad one instead of failing", async () => {
+    const quiet = (async () => new Response(JSON.stringify({ data: { endpoints: [] } }))) as unknown as typeof fetch;
+    assert.equal((await createSetupReader({ env: { RESEARCH_TIER: "auto" }, fetch: quiet })()).researchMode, "auto");
+    const bad = await createSetupReader({ env: { RESEARCH_TIER: "cheap" }, fetch: quiet })();
+    assert.equal(bad.researchMode, null);
+    assert.match(bad.researchError ?? "", /Unknown research tier \|\| RESEARCH_TIER=cheap/);
+    assert.equal(bad.research.length, 4, "The tiers are code, so they still show.");
   });
 
   it("reports a failed host list on that model instead of failing", async () => {

@@ -7,6 +7,7 @@ import { FOCUS_STATUSES, FocusHistory, FocusStage } from "@/components/make-cour
 import { LEVEL_STATUSES, LevelStage } from "@/components/make-course/level-stage.tsx";
 import { PLAN_STATUSES, PlanStage } from "@/components/make-course/plan-stage.tsx";
 import { errorText, onRequestChange } from "@/components/make-course/request-api.ts";
+import { SUBJECT_STATUSES, SubjectStage } from "@/components/make-course/subject-stage.tsx";
 import { RequestHistory, VALIDITY_STATUSES, ValidityStage } from "@/components/make-course/validity-stage.tsx";
 import { ShellActions, ShellTitle } from "@/components/shell/app-shell.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -31,7 +32,8 @@ const LINES = {
  * @param status - Request status
  */
 function stepOf(status: string) {
-  if (status === "draft") return 0;
+  // Settling which subject was meant is still the Topic step (SEN-124).
+  if (status === "draft" || SUBJECT_STATUSES.has(status)) return 0;
   if (VALIDITY_STATUSES.has(status) || FOCUS_STATUSES.has(status)) return 1;
   if (LEVEL_STATUSES.has(status)) return 2;
   if (status === "starting_level_confirmed" || status.startsWith("blueprint_")) return 3;
@@ -107,9 +109,10 @@ export function CourseRequestPage() {
       <ShellActions><FlowSteps current={stepOf(record.status)} /></ShellActions>
       <ChatThread key={record.id} replay>
         <RequestHistory record={record} />
+        {SUBJECT_STATUSES.has(record.status) ? <SubjectStage record={record} /> : null}
         {VALIDITY_STATUSES.has(record.status) ? <ValidityStage record={record} /> : null}
         {FOCUS_STATUSES.has(record.status) ? <FocusStage record={record} /> : null}
-        {!VALIDITY_STATUSES.has(record.status) && !FOCUS_STATUSES.has(record.status) ? (
+        {!SUBJECT_STATUSES.has(record.status) && !VALIDITY_STATUSES.has(record.status) && !FOCUS_STATUSES.has(record.status) ? (
           <>
             <FocusHistory record={record} />
             <LevelStage record={record} />

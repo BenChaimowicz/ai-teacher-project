@@ -13,9 +13,16 @@ export type LessonCheckpoint = typeof unpublishedLessons.$inferSelect;
  * approved Blueprint.
  * @param approved - The approved Blueprint
  * @param checkpoints - Every checkpoint saved for the Course Request
+ * @param options.requireMedia - False when Readings were written with no media library (`READING_MEDIA=off`), so no
+ *   image could be required; defaults to true
  * @returns Learner-invisible failure messages; empty when the Course may publish
  */
-export function courseCodeFailures(approved: ApprovedBlueprint, checkpoints: readonly LessonCheckpoint[]): string[] {
+export function courseCodeFailures(
+  approved: ApprovedBlueprint,
+  checkpoints: readonly LessonCheckpoint[],
+  options: { requireMedia?: boolean } = {},
+): string[] {
+  const requireMedia = options.requireMedia ?? true;
   const failures: string[] = [];
   const slots = blueprintSlots(approved.blueprint);
   for (const [position, slot] of slots.entries()) {
@@ -28,7 +35,7 @@ export function courseCodeFailures(approved: ApprovedBlueprint, checkpoints: rea
     if (checkpoint.teachingMethod !== slot.method) failures.push(`Slot ${slot.id} is a ${slot.method} but its checkpoint is a ${checkpoint.teachingMethod}.`);
     if (checkpoint.position !== position) failures.push(`Slot ${slot.id} is at position ${position} but its checkpoint is at ${checkpoint.position}.`);
     if (!checkpoint.judge.pass) failures.push(`Slot ${slot.id}'s checkpoint did not pass its Judge.`);
-    if (slot.method === READING_METHOD_ID && slot.requiredMedia?.length) {
+    if (requireMedia && slot.method === READING_METHOD_ID && slot.requiredMedia?.length) {
       for (const missing of unfilledRequiredMedia(checkpoint.body as ReadingBody, slot.requiredMedia)) {
         failures.push(`Slot ${slot.id}'s checkpoint does not show its required ${missing.mediaCategory} image (${missing.topicTags.join(", ")}).`);
       }

@@ -10,8 +10,8 @@ import { Field, Mono } from "@/components/ui";
 import { formatDateTime, formatDuration, formatInt, formatUsd } from "@/lib/format";
 import { useDrawers, useHref } from "@/lib/nav";
 import { useOps } from "@/lib/useOps";
-import { BILLING_HELP, METRIC_HELP } from "@/lib/glossary";
-import { BASIS_LABEL, tryLabel } from "@/lib/labels";
+import { BILLING_HELP, METRIC_HELP, RESEARCH_TIER_HELP } from "@/lib/glossary";
+import { BASIS_LABEL, RESEARCH_TIER_LABEL, tryLabel } from "@/lib/labels";
 import { cn } from "@/lib/cn";
 
 /**
@@ -109,6 +109,9 @@ function UsageRecordBody({ record: r }: { record: OpsUsageRecordDetail }) {
           <RoleBadge role={r.role} />
         </Field>
         <Field label="Attempt" tip={METRIC_HELP.attempt}>{r.attempt}</Field>
+        {r.researchTier && (
+          <Field label="Research tier" tip={RESEARCH_TIER_HELP.call}>{RESEARCH_TIER_LABEL[r.researchTier] ?? r.researchTier}</Field>
+        )}
         <Field label="Vendor">{r.vendor}</Field>
         <Field label="Provider" tip="The OpenRouter host that served the call. Helps spot one bad host (ADR 0015).">{r.provider ?? "—"}</Field>
         <Field label="Response id">

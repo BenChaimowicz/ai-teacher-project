@@ -1055,7 +1055,6 @@ test("A required image whose section is gone, or that the library cannot supply,
   const cases: [unknown, MediaLibrary | undefined, string][] = [
     [placing([{ ...PLACE, section: "A heading no draft has" }]), readable([nthPlate(1)]), "names a section the Lesson does not have"],
     [placing(), readable([]), "has no library file left to try"],
-    [placing(), undefined, "has no library file left to try"],
   ];
   for (const [draft, media, reason] of cases) {
     const { generator } = writer({ draft });
@@ -1132,4 +1131,15 @@ test("A reused Lesson places the images its new slot requires; its own image of 
   const { generator: unplaced } = writer({ draft: fitReply("verbatim") });
   await assert.rejects(createReadingGenerator({ generator: unplaced, judge: visionJudge(PASS).judge, media: readable([nthPlate(1)]) }).generate({ ...REQUIRING, reuse: SEED }),
     (error: unknown) => error instanceof ModelError && error.code === "invalid_output");
+});
+
+test("With no media library (READING_MEDIA=off) a slot's required images are not asked for, so the Lesson is written with none", async () => {
+  const { generator, calls } = writer({ draft: { ...authored(), media: [] } });
+  const { judge } = visionJudge(PASS);
+  const checked = await createReadingGenerator({ generator, judge }).generate(REQUIRING);
+
+  const author = calls[0]!;
+  assert.equal((author.input as { slot: { requiredMedia?: unknown } }).slot.requiredMedia, undefined);
+  assert.equal((author.schema as { properties: Record<string, unknown> }).properties.requiredMedia, undefined);
+  assert.deepEqual(checked.media, []);
 });

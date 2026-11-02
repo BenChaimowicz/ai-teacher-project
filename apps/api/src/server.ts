@@ -17,6 +17,7 @@ import { goalFocusRoutes } from "./routes/goal-focus.ts";
 import { startingLevelRoutes } from "./routes/starting-level.ts";
 import { createFixtureDiagnosticBuilder } from "./lib/diagnostic-fixture.ts";
 import { createFixtureValidityGate } from "./lib/validity-fixture.ts";
+import { createFixtureSubjectChecker } from "./lib/subject-check-fixture.ts";
 import { createFixtureGoalFocuser } from "./lib/goal-focus-fixture.ts";
 import { blueprintRoutes } from "./routes/blueprint.ts";
 import { libraryRoutes } from "./routes/library.ts";
@@ -64,7 +65,10 @@ async function start() {
     await app.register(libraryRoutes);
     // Browser tests run without provider calls; never set DIAGNOSTIC_FIXTURE in a deployed service.
     const fixtures = process.env.DIAGNOSTIC_FIXTURE === "1";
-    await app.register(courseRequestRoutes, { validityGate: fixtures ? createFixtureValidityGate() : undefined });
+    await app.register(courseRequestRoutes, {
+      validityGate: fixtures ? createFixtureValidityGate() : undefined,
+      subjectChecker: fixtures ? createFixtureSubjectChecker() : undefined,
+    });
     await app.register(goalFocusRoutes, { goalFocuser: fixtures ? createFixtureGoalFocuser() : undefined });
     await app.register(startingLevelRoutes, {
       diagnosticBuilder: fixtures ? createFixtureDiagnosticBuilder() : undefined,

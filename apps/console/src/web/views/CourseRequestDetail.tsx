@@ -1,3 +1,4 @@
+import type { ResearchTierRating } from "@senoy/db/course-request";
 import type { CostSplit, OpsCourseRequestDetail, OpsUsageRecordRow } from "@senoy/db/usage";
 import { ArrowLeft } from "lucide-react";
 import { useMemo } from "react";
@@ -11,7 +12,8 @@ import { UsageRecordTable } from "@/components/UsageRecordTable";
 import { Card, Field, Mono } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { CopyButton } from "@/components/CodeBlock";
-import { METRIC_HELP } from "@/lib/glossary";
+import { METRIC_HELP, RESEARCH_TIER_HELP } from "@/lib/glossary";
+import { RESEARCH_TIER_LABEL } from "@/lib/labels";
 import { formatDateTime, formatDuration, formatInt, formatPct, humanize, ratio } from "@/lib/format";
 import { useGo, useHref } from "@/lib/nav";
 import { useOps } from "@/lib/useOps";
@@ -45,7 +47,43 @@ function totalsByKind(records: OpsUsageRecordRow[]): StepTotal[] {
 }
 
 /**
- * One Course Request: its totals, a Gantt timeline of Pipeline Events with calls and Learner actions, the cost per
+ * The rating's three answers in a line, e.g. `niche no · scholarly yes · dense yes`.
+ * @param rating - The triage model's rating
+ */
+function ratingAnswers(rating: ResearchTierRating): string {
+  return (["niche", "scholarly", "dense"] as const).map((question) => `${question} ${rating[question] ? "yes" : "no"}`).join(" · ");
+}
+
+/**
+ * The research tier every Reading of the Course uses, and the rating behind it (SEN-124). Before generation there is
+ * none; a tier with no rating means the rating failed.
+ * @param props.cr - The Course Request detail
+ */
+function ResearchTierLine({ cr }: { cr: OpsCourseRequestDetail }) {
+  if (!cr.researchTier) return null;
+  const rating = cr.researchTierRating;
+  return (
+    <div className="glass mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-xl border px-4 py-2 text-xs">
+      <Field label="Research tier" tip={RESEARCH_TIER_HELP.tier}>
+        {RESEARCH_TIER_LABEL[cr.researchTier] ?? cr.researchTier}
+      </Field>
+      <Field label="Rating" tip={RESEARCH_TIER_HELP.rating} className="min-w-[14rem] flex-1">
+        {rating ? (
+          <span className="whitespace-normal">
+            <span className="font-mono">{ratingAnswers(rating)}</span>
+            <span className="text-muted-foreground"> · {rating.reason}</span>
+            <span className="text-muted-foreground"> · {rating.modelId}</span>
+          </span>
+        ) : (
+          <span className="text-est">Rating failed, so the tier fell back to its default.</span>
+        )}
+      </Field>
+    </div>
+  );
+}
+
+/**
+ * One Course Request: its totals, its research tier, a Gantt timeline of Pipeline Events with calls and Learner actions, the cost per
  * step, and every call.
  */
 export function CourseRequestDetail() {
@@ -107,6 +145,7 @@ function Body({ cr }: { cr: OpsCourseRequestDetail }) {
           </span>
         </Field>
       </div>
+      <ResearchTierLine cr={cr} />
 
       <Card title="Timeline" subtitle="Pipeline Events nested by parent. Click a bar for the step, a tick for the call." className="mb-4">
         {cr.events.length === 0 && cr.usageRecords.length === 0 ? (

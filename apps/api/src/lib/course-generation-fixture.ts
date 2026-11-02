@@ -30,7 +30,7 @@ function fixturePacks(topic: string): SourcePack[] {
 }
 
 /**
- * Deterministic Course generation for browser tests (`DIAGNOSTIC_FIXTURE=1`): no research or provider calls. The real
+ * Deterministic Course generation for browser tests (`DIAGNOSTIC_FIXTURE=1`): no research, research-tier, or provider calls. The real
  * pipeline runs — checkpoints, whole-Course Code checks, and atomic publish — with fixed research, Generators, and Judge.
  * Each Quiz item's correct option reads "Right answer n"; the others read "Wrong answer n…".
  * @param lessonDelayMs - How long each Lesson takes, so browser tests can see a job mid-run
@@ -40,6 +40,15 @@ export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGenerati
   const failedOnce = new Set<string>();
   return createCourseGeneration({
     research: async (topic) => fixturePacks(topic),
+    // A fixed rating, so browser tests make no triage call; deluxe matches the fixture packs' adapters.
+    researchTierRater: {
+      async choose() {
+        return {
+          tier: "deluxe", mode: "deluxe", error: null,
+          rating: { niche: false, scholarly: false, dense: true, reason: "Fixture rating.", modelId: "fixture/triage" },
+        };
+      },
+    },
     // Browser tests publish many Courses on one subject; reuse would make real model calls between them.
     findReuseCandidates: async () => [],
     readingGenerator: {

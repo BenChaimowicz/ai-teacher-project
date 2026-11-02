@@ -29,6 +29,7 @@
     "check:blueprint-order:live": "pnpm --filter @senoy/api exec tsx src/lib/blueprint-order.live-check.ts",
     "check:goal-focus-blueprint:live": "pnpm --filter @senoy/api exec tsx src/lib/goal-focus-blueprint.live-check.ts",
     "check:validity:live": "pnpm --filter @senoy/api exec tsx src/routes/validity.live-check.ts",
+    "check:subject-check:live": "pnpm --filter @senoy/api exec tsx src/routes/subject-check.live-check.ts",
     "check:goal-focus:live": "pnpm --filter @senoy/api exec tsx src/routes/goal-focus.live-check.ts",
     "db:generate": "pnpm --filter @senoy/db generate",
     "db:migrate": "pnpm --filter @senoy/db migrate",

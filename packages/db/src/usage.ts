@@ -3,6 +3,8 @@
  * shapes of the Operator-only `/api/ops/*` routes. The API builds these; the `/ops` screen reads them.
  */
 
+import type { ResearchTier, ResearchTierRating } from "./course-request.ts";
+
 /** The paid service a Usage Record called. */
 export const USAGE_VENDORS = ["openrouter", "parallel", "you"] as const;
 export type UsageVendor = (typeof USAGE_VENDORS)[number];
@@ -29,7 +31,7 @@ export const USAGE_ORIGINS = ["captured", "backfill"] as const;
 export type UsageOrigin = (typeof USAGE_ORIGINS)[number];
 
 /** Who made the call: a model port, or a research slot. */
-export const USAGE_ROLES = ["generator", "fallback_generator", "judge", "research_primary", "research_secondary"] as const;
+export const USAGE_ROLES = ["generator", "fallback_generator", "judge", "triage", "research_primary", "research_secondary"] as const;
 export type UsageRole = (typeof USAGE_ROLES)[number];
 
 /**
@@ -61,12 +63,14 @@ export type CostBasis = (typeof COST_BASES)[number];
 
 /** The platform's own steps that group Usage Records and give them their purpose. */
 export const PIPELINE_EVENT_KINDS = [
+  "subject_check",
   "validity",
   "goal_focus",
   "diagnostic",
   "fact_check",
   "blueprint",
   "course_generation",
+  "research_tier",
   "reuse",
   "research",
   "reading",
@@ -84,6 +88,7 @@ export type PipelineEventStatus = (typeof PIPELINE_EVENT_STATUSES)[number];
 /** Things a Learner did. */
 export const PRODUCT_EVENT_KINDS = [
   "course_request_created",
+  "course_request_subject_chosen",
   "course_request_clarified",
   "course_request_focused",
   "diagnostic_submitted",
@@ -218,6 +223,8 @@ export type OpsUsageRecordRow = {
   pipelineLabel: string | null;
   courseRequestId: string | null;
   courseRequestSubject: string | null;
+  /** Research calls: the tier the call's adapter belongs to, derived from `modelId`; null for model calls (SEN-124). */
+  researchTier: ResearchTier | null;
 };
 
 /** A page of a list route. */
@@ -277,6 +284,10 @@ export type OpsCourseRequestRow = CostSplit & {
   failedCalls: number;
   /** First Pipeline Event start to last finish. */
   wallMs: number | null;
+  /** The research tier every Reading uses; null until generation starts (SEN-124). */
+  researchTier: ResearchTier | null;
+  /** The triage model's rating behind the tier; null before generation or when the rating failed. */
+  researchTierRating: ResearchTierRating | null;
 };
 
 /** `GET /api/ops/course-requests/:id` — the timeline: every Pipeline Event (flat, with parents) and Usage Record. */
@@ -355,7 +366,7 @@ export type OpsModelEndpoint = {
 
 /** One configured model role and every host that could serve it. */
 export type OpsSetupModel = {
-  role: "generator" | "generator_fallback" | "lesson_generator" | "lesson_generator_fallback" | "judge" | "judge_fallback";
+  role: "generator" | "generator_fallback" | "lesson_generator" | "lesson_generator_fallback" | "judge" | "judge_fallback" | "triage";
   modelId: string;
   /** Hosts we ask OpenRouter to try first, in order. Empty = OpenRouter chooses. */
   preferredProviders: string[];
@@ -368,7 +379,10 @@ export type OpsSetupModel = {
 export type OpsSetup = {
   vendors: UsageVendor[];
   models: OpsSetupModel[];
-  research: { slot: "primary" | "secondary"; adapterId: string; vendor: UsageVendor; estimatedCostUsd: number }[];
+  /** Every research tier's two adapters, as the code defines them (SEN-124). */
+  research: { tier: ResearchTier; slot: "primary" | "secondary"; adapterId: string; vendor: UsageVendor; estimatedCostUsd: number }[];
+  /** `RESEARCH_TIER`: a forced tier, or `auto` to apply each Request's rating; null when it could not be read. */
+  researchMode: ResearchTier | "auto" | null;
   /** Why research config could not be read, if it could not. */
   researchError: string | null;
   fetchedAt: string;

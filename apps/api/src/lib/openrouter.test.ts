@@ -261,7 +261,7 @@ function scriptedTransport(...outcomes: (ModelError | number)[]) {
 
 const PORTS_CONFIG = { generatorModel: "fixture/author", generatorFallbackModel: "fixture/fallback",
   lessonGeneratorModel: "fixture/fallback", lessonGeneratorFallbackModel: "fixture/author",
-  judgeModel: "fixture/judge", judgeFallbackModel: "fixture/fallback" };
+  judgeModel: "fixture/judge", judgeFallbackModel: "fixture/fallback", triageModel: "fixture/triage" };
 const quiet = { warn: () => {} };
 
 test("One bad reply is retried once on the same model, then once on the fallback, which the reply names", async () => {

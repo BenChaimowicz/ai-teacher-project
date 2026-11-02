@@ -11,18 +11,23 @@ export type ModelConfig = {
   lessonGeneratorFallbackModel: string;
   judgeModel: string;
   judgeFallbackModel: string;
+  /** Answers the two small triage questions per Request: the subject check and the research tier (SEN-124). */
+  triageModel: string;
 };
 
 /** Reads model selection without requiring a provider key or making a provider call. */
 export function loadModelConfig(env: NodeJS.ProcessEnv = process.env): ModelConfig {
+  const judgeModel = env.JUDGE_MODEL?.trim() || "openai/gpt-6-luna";
   return {
     // Every author stage writes with Sol and falls back to Terra (ADR 0028); DeepSeek is gone, and so is its host pin.
     generatorModel: env.GENERATOR_MODEL?.trim() || "openai/gpt-6.1-sol",
     generatorFallbackModel: env.GENERATOR_FALLBACK_MODEL?.trim() || "openai/gpt-6.1-terra",
     lessonGeneratorModel: env.LESSON_GENERATOR_MODEL?.trim() || "openai/gpt-6.1-sol",
     lessonGeneratorFallbackModel: env.LESSON_GENERATOR_FALLBACK_MODEL?.trim() || "openai/gpt-6.1-terra",
-    judgeModel: env.JUDGE_MODEL?.trim() || "openai/gpt-6-luna",
+    judgeModel,
     // Never an author (ADR 0015): the previous Luna generation, so Sol-written Lessons keep a working Judge fallback.
     judgeFallbackModel: env.JUDGE_FALLBACK_MODEL?.trim() || "openai/gpt-5.6-luna",
+    // Cheap model, its own setting; defaults to the Judge's Luna (decision 2026-11-02).
+    triageModel: env.TRIAGE_MODEL?.trim() || judgeModel,
   };
 }

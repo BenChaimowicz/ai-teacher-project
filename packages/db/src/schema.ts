@@ -1,7 +1,15 @@
 import { sql } from "drizzle-orm";
 import { boolean, date, doublePrecision, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import type { ApprovedBlueprint, CourseBlueprint, JudgeResult } from "./blueprint.ts";
-import { COURSE_REQUEST_STATUSES, type GoalFocus, type ValidityClarification, type ValidityResult } from "./course-request.ts";
+import {
+  COURSE_REQUEST_STATUSES,
+  type GoalFocus,
+  type ResearchTier,
+  type ResearchTierRating,
+  type SubjectCheck,
+  type ValidityClarification,
+  type ValidityResult,
+} from "./course-request.ts";
 import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
 import type { LessonLineage } from "./lesson-reuse.ts";
@@ -41,6 +49,8 @@ export const courseRequests = pgTable("course_requests", {
   status: courseRequestStatus("status").notNull(),
   validity: jsonb("validity").$type<ValidityResult>(),
   clarification: jsonb("clarification").$type<ValidityClarification>(),
+  /** The subject check after Compose (SEN-124); `subject` holds the settled subject. */
+  subjectCheck: jsonb("subject_check").$type<SubjectCheck>(),
   /** How the Learning Goal was focused after Validity passed (SEN-90); `learningGoal` holds the result. */
   focus: jsonb("focus").$type<GoalFocus>(),
   revisedFromId: uuid("revised_from_id").references((): AnyPgColumn => courseRequests.id),
@@ -54,6 +64,10 @@ export const courseRequests = pgTable("course_requests", {
    */
   preparingToken: uuid("preparing_token"),
   preparingUntil: timestamp("preparing_until", { withTimezone: true }),
+  /** The research tier every Reading of this Course uses; set when generation starts (spec §5.3, SEN-124). */
+  researchTier: text("research_tier").$type<ResearchTier>(),
+  /** The triage model's rating behind the tier; null when the rating failed (the tier is then deluxe). */
+  researchTierRating: jsonb("research_tier_rating").$type<ResearchTierRating>(),
   /** Set when the Learner removed it from Home and the sidebar. Nothing else changes; it's just not listed. */
   hiddenAt: timestamp("hidden_at", { withTimezone: true }),
   /** When the Learner last opened its screen; the most recent one across the Library is the current course (SEN-97). */

@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { loadRootEnv } from "@senoy/db";
-import { researchAdaptersFromEnv, runResearch } from "@senoy/research";
+import { researchAdaptersForTier, researchTierModeFromEnv, runResearch } from "@senoy/research";
+import { tierFor } from "./research-tier.ts";
 import { trackResearchRun } from "./usage-tracking.ts";
 import { withLiveCheckTracking } from "./live-check-tracking.ts";
 
@@ -18,8 +19,10 @@ async function checkResearch() {
   const root = loadRootEnv(import.meta.url, 4);
   const outPath = resolve(root, process.argv[2] ?? "docs/research/sen-36-norse-source-packs.json");
   try {
-    const adapters = researchAdaptersFromEnv(process.env);
-    process.stdout.write(`Researching "${NORSE_LESSON_TOPIC}" with ${adapters.primary.id} + ${adapters.secondary.id}…\n`);
+    // No Request to rate here, so `auto` takes the unrated default (deluxe).
+    const tier = tierFor(researchTierModeFromEnv(process.env), null);
+    const adapters = researchAdaptersForTier(tier);
+    process.stdout.write(`Researching "${NORSE_LESSON_TOPIC}" on the ${tier} tier with ${adapters.primary.id} + ${adapters.secondary.id}…\n`);
     const packs = await runResearch(NORSE_LESSON_TOPIC, { ...adapters, env: process.env, ...trackResearchRun() });
     const json = `${JSON.stringify(packs, null, 2)}\n`;
     await writeFile(outPath, json);
