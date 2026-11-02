@@ -190,7 +190,7 @@ async function main() {
   if (!url || !apiKey) throw new Error("[backfill-parallel-runs: main] DATABASE_URL and PARALLEL_PRO_API_KEY are required");
   const db = createDb(url, { max: 1 });
   const result = await backfillParallelRuns(db, apiKey, (line) => process.stdout.write(`${line}\n`));
-  process.stdout.write(`done · saved=${result.saved} · failed=${result.failed}\n`);
+  process.stdout.write(`done · saved=${result.saved} · repriced=${result.repriced} · failed=${result.failed}\n`);
   process.exit(0);
 }
 
