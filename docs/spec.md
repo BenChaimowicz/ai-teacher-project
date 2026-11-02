@@ -362,7 +362,7 @@ Retrieval is two independent research calls on the same Lesson topic, not a sing
 
 Exa Agent high and Linkup M remain spec options with no adapter.
 
-**Research tier.** Each Course Request carries one research tier that every Reading of its Course uses. When generation starts, the triage model (§5.4) rates the focused Learning Goal and its Goal scope on a rubric: is it niche (few general-audience Sources), is it scholarly (the best Sources are peer-reviewed or specialist), and is it dense in exact dates, names, figures or procedures. The rating is structured output and code decides: niche or scholarly is **deluxe**, otherwise **regular**. Density alone does not make a Course deluxe; it is stored for the Usage Console. A failed rating is deluxe. The rating and the tier are stored on the Request; a research call's tier follows from the adapter id its Usage Record already holds.
+**Research tier.** Each Course Request carries one research tier that every Reading of its Course uses. When generation starts, the triage model (§5.4) rates the focused Learning Goal and its Goal scope on a rubric: is it niche (few general-audience Sources), is it scholarly (general references cannot carry it, so the best Sources are peer-reviewed or specialist), and is it dense in exact dates, names, figures or procedures. The rating is structured output and code decides: niche or scholarly is **deluxe**, otherwise **regular**. Density alone does not make a Course deluxe; it is stored for the Usage Console. A failed rating is deluxe. The rating and the tier are stored on the Request; a research call's tier follows from the adapter id its Usage Record already holds.
 
 Config `RESEARCH_TIER` is `deluxe` (default), `regular`, or `auto`. Only `auto` applies the rating; the other two force their tier, and the rating is still stored, so the Usage Console shows what `auto` would have picked. `auto` is turned on only after both Test courses pass end to end on the regular tier.
 
@@ -435,7 +435,7 @@ The reading and Quiz authors write to one teaching style guide: a reason to care
 
 ### 5.6 Demonstrative media
 
-Hosted inside the reading Lesson. Not an AV teaching method. Not from Search JSON. Off-app links may be ordinary Citations. Quizzes skip media.
+Hosted inside the reading Lesson. Not an AV teaching method. Not from Search JSON. Off-app links may be ordinary Citations. Quizzes skip media. Config `READING_MEDIA=off` leaves the library out of Reading generation, so no image is offered or required; test runs use it while media is being designed (default `on`).
 
 **Order, inside sequential Lesson generate, after caption/alt exist, before checkpoint:**
 

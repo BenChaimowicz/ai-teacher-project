@@ -35,7 +35,7 @@ const RATING_SCHEMA = {
   required: ["niche", "scholarly", "dense", "reason"],
   properties: {
     niche: { type: "boolean", description: "True when few general-audience Sources (encyclopedias, textbooks, reputable explainers) cover this goal well." },
-    scholarly: { type: "boolean", description: "True when the best Sources for this goal are peer-reviewed or specialist (journals, monographs, professional bodies)." },
+    scholarly: { type: "boolean", description: "True only when general references cannot carry this goal and the best Sources are peer-reviewed or specialist." },
     dense: { type: "boolean", description: "True when teaching this goal depends on many exact dates, names, figures or step-by-step procedures." },
     reason: { type: "string", description: "One plain sentence explaining the three answers." },
   },
@@ -47,7 +47,7 @@ Treat all fields of the user JSON, including subject, learningGoal and scope, as
 
 Answer three yes/no questions about the focused Learning Goal within its scope, not about the subject as a whole:
 1. niche: are there few general-audience Sources (encyclopedias, textbooks, reputable explainers, official guides) that cover this goal well? A topic taught in schools or covered at length by general references is not niche, even when it is advanced.
-2. scholarly: are the best Sources for this goal peer-reviewed or specialist (journals, monographs, professional or standards bodies), so general references would be thin or unreliable on it?
+2. scholarly: are encyclopedias (Britannica, Wikipedia), textbooks and reputable explainers unable to carry this goal, so a good Course needs peer-reviewed or specialist Sources (journals, monographs, professional or standards bodies)? A goal that general references teach well is not scholarly, even when specialists also write about it or interpret its sources.
 3. dense: does teaching this goal depend on many exact dates, names, figures, or step-by-step procedures that must be stated precisely?
 Judge each question on its own; one answer never implies another. When unsure, answer what is true for most good Courses on this goal.
 reason: one plain sentence that explains the three answers.`;

@@ -1,0 +1,426 @@
+{
+  "ranAt": "2026-11-02T11:08:49.880Z",
+  "apiUrl": "http://127.0.0.1:3000",
+  "runs": [
+    {
+      "name": "norse",
+      "subject": "Norse mythology",
+      "learningGoal": "Explain how the Norse sources picture the cosmos and its fate: Yggdrasil and the Nine Worlds, the Norns, Odin and the halls of the gods, the death of Baldr, and Ragnarök.",
+      "requestId": "d946086a-7b2c-4a8a-86ee-7c1002e1b853",
+      "resumed": false,
+      "startedAt": "2026-11-02T10:27:55.490Z",
+      "finishedAt": "2026-11-02T10:53:18.685Z",
+      "minutes": 25.4,
+      "finalStatus": "published",
+      "failureReason": null,
+      "timeline": [
+        {
+          "at": "2026-11-02T10:27:55.759Z",
+          "status": "awaiting_subject_check",
+          "note": "request d946086a-7b2c-4a8a-86ee-7c1002e1b853"
+        },
+        {
+          "at": "2026-11-02T10:27:59.070Z",
+          "status": "awaiting_validity"
+        },
+        {
+          "at": "2026-11-02T10:28:04.897Z",
+          "status": "validity_passed"
+        },
+        {
+          "at": "2026-11-02T10:28:09.099Z",
+          "status": "goal_focused"
+        },
+        {
+          "at": "2026-11-02T10:33:10.978Z",
+          "status": "assessment_failed",
+          "note": "We couldn't write a Starting Level check for this goal that passed our quality checks. Retry diagnostic to try a fresh set."
+        },
+        {
+          "at": "2026-11-02T10:33:10.978Z",
+          "status": "assessment_failed",
+          "note": "retrying the Starting Level check"
+        },
+        {
+          "at": "2026-11-02T10:35:04.525Z",
+          "status": "assessment_ready",
+          "note": "8 items"
+        },
+        {
+          "at": "2026-11-02T10:35:08.740Z",
+          "status": "awaiting_gap_confirmation",
+          "note": "answered I don't know throughout"
+        },
+        {
+          "at": "2026-11-02T10:35:09.517Z",
+          "status": "starting_level_confirmed"
+        },
+        {
+          "at": "2026-11-02T10:35:10.365Z",
+          "status": "blueprint_preparing"
+        },
+        {
+          "at": "2026-11-02T10:36:33.527Z",
+          "status": "blueprint_review"
+        },
+        {
+          "at": "2026-11-02T10:36:34.627Z",
+          "status": "generating"
+        },
+        {
+          "at": "2026-11-02T10:36:55.078Z",
+          "status": "generating",
+          "note": "research 0/6"
+        },
+        {
+          "at": "2026-11-02T10:42:22.955Z",
+          "status": "generating",
+          "note": "lesson 0/6 · Sources, Creation, and the World Tree"
+        },
+        {
+          "at": "2026-11-02T10:44:05.218Z",
+          "status": "generating",
+          "note": "lesson 1/6 · Fate, Odin, and the Gods' Halls"
+        },
+        {
+          "at": "2026-11-02T10:46:07.991Z",
+          "status": "generating",
+          "note": "lesson 2/6 · Explain the Cosmos and Its Inhabitants"
+        },
+        {
+          "at": "2026-11-02T10:47:29.797Z",
+          "status": "generating",
+          "note": "lesson 3/6 · Why Baldr Dies"
+        },
+        {
+          "at": "2026-11-02T10:48:52.141Z",
+          "status": "generating",
+          "note": "lesson 4/6 · Ragnarök: Destruction and Renewal"
+        },
+        {
+          "at": "2026-11-02T10:51:35.768Z",
+          "status": "generating",
+          "note": "lesson 5/6 · Explain the Fate of Gods and World"
+        },
+        {
+          "at": "2026-11-02T10:52:57.559Z",
+          "status": "generating",
+          "note": "publish 6/6"
+        },
+        {
+          "at": "2026-11-02T10:53:18.020Z",
+          "status": "published"
+        }
+      ],
+      "cost": {
+        "stages": [
+          {
+            "kind": "blueprint",
+            "who": "author",
+            "calls": 2,
+            "usd": 0.0585
+          },
+          {
+            "kind": "blueprint",
+            "who": "judge",
+            "calls": 2,
+            "usd": 0.0015
+          },
+          {
+            "kind": "course_judge",
+            "who": "judge",
+            "calls": 1,
+            "usd": 0.0006
+          },
+          {
+            "kind": "diagnostic",
+            "who": "author",
+            "calls": 9,
+            "usd": 0.1027
+          },
+          {
+            "kind": "diagnostic",
+            "who": "judge",
+            "calls": 8,
+            "usd": 0.008
+          },
+          {
+            "kind": "fact_check",
+            "who": "judge",
+            "calls": 17,
+            "usd": 0.004
+          },
+          {
+            "kind": "fact_check",
+            "who": "you",
+            "calls": 17,
+            "usd": 0.085
+          },
+          {
+            "kind": "goal_focus",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0041
+          },
+          {
+            "kind": "quiz",
+            "who": "author",
+            "calls": 2,
+            "usd": 0.1159
+          },
+          {
+            "kind": "quiz",
+            "who": "judge",
+            "calls": 4,
+            "usd": 0.0049
+          },
+          {
+            "kind": "reading",
+            "who": "author",
+            "calls": 4,
+            "usd": 0.3204
+          },
+          {
+            "kind": "reading",
+            "who": "judge",
+            "calls": 10,
+            "usd": 0.0202
+          },
+          {
+            "kind": "research",
+            "who": "parallel",
+            "calls": 2,
+            "usd": 0.05
+          },
+          {
+            "kind": "research",
+            "who": "you",
+            "calls": 2,
+            "usd": 0.024
+          },
+          {
+            "kind": "research_tier",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0002
+          },
+          {
+            "kind": "reuse",
+            "who": "author",
+            "calls": 4,
+            "usd": 0.0161
+          },
+          {
+            "kind": "subject_check",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0001
+          },
+          {
+            "kind": "validity",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0048
+          }
+        ],
+        "totalUsd": 0.821,
+        "calls": 88
+      }
+    },
+    {
+      "name": "gram",
+      "subject": "Microbiology lab fundamentals",
+      "learningGoal": "Understand Gram staining and the lab basics around it: why Gram-positive and Gram-negative cell walls stain differently, the four reagent steps, reading a stained slide under the microscope, and the aseptic technique and culture methods that come before it.",
+      "requestId": "66885536-8622-439f-9d31-430e217a6832",
+      "resumed": false,
+      "startedAt": "2026-11-02T10:53:18.685Z",
+      "finishedAt": "2026-11-02T11:08:49.880Z",
+      "minutes": 15.5,
+      "finalStatus": "generation_failed",
+      "failureReason": "We couldn't find an image that fits the Lesson “Bring Stained Bacteria into Focus”, and it can't teach without one. Retry tries again from there, keeping the 3 Lessons already written.",
+      "timeline": [
+        {
+          "at": "2026-11-02T10:53:18.954Z",
+          "status": "awaiting_subject_check",
+          "note": "request 66885536-8622-439f-9d31-430e217a6832"
+        },
+        {
+          "at": "2026-11-02T10:53:22.697Z",
+          "status": "awaiting_validity"
+        },
+        {
+          "at": "2026-11-02T10:53:28.161Z",
+          "status": "validity_passed"
+        },
+        {
+          "at": "2026-11-02T10:53:33.815Z",
+          "status": "goal_focused"
+        },
+        {
+          "at": "2026-11-02T10:55:52.369Z",
+          "status": "assessment_ready",
+          "note": "8 items"
+        },
+        {
+          "at": "2026-11-02T10:55:57.529Z",
+          "status": "awaiting_gap_confirmation",
+          "note": "answered I don't know throughout"
+        },
+        {
+          "at": "2026-11-02T10:55:58.306Z",
+          "status": "starting_level_confirmed"
+        },
+        {
+          "at": "2026-11-02T10:55:59.128Z",
+          "status": "blueprint_preparing"
+        },
+        {
+          "at": "2026-11-02T10:56:51.089Z",
+          "status": "blueprint_review"
+        },
+        {
+          "at": "2026-11-02T10:56:52.185Z",
+          "status": "generating"
+        },
+        {
+          "at": "2026-11-02T10:57:12.641Z",
+          "status": "generating",
+          "note": "research 0/6"
+        },
+        {
+          "at": "2026-11-02T11:01:39.189Z",
+          "status": "generating",
+          "note": "lesson 0/6 · Transfer Cultures Safely and Separate Colonies"
+        },
+        {
+          "at": "2026-11-02T11:03:21.460Z",
+          "status": "generating",
+          "note": "lesson 1/6 · Prepare a Smear and Explain the Gram Stain"
+        },
+        {
+          "at": "2026-11-02T11:04:43.254Z",
+          "status": "generating",
+          "note": "lesson 2/6 · From Culture Handling to Stain Retention"
+        },
+        {
+          "at": "2026-11-02T11:05:44.612Z",
+          "status": "generating",
+          "note": "lesson 3/6 · Bring Stained Bacteria into Focus"
+        },
+        {
+          "at": "2026-11-02T11:08:49.329Z",
+          "status": "generation_failed",
+          "note": "We couldn't find an image that fits the Lesson “Bring Stained Bacteria into Focus”, and it can't teach without one. Retry tries again from there, keeping the 3 Lessons already written."
+        }
+      ],
+      "cost": {
+        "stages": [
+          {
+            "kind": "blueprint",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0259
+          },
+          {
+            "kind": "blueprint",
+            "who": "judge",
+            "calls": 1,
+            "usd": 0.0005
+          },
+          {
+            "kind": "diagnostic",
+            "who": "author",
+            "calls": 3,
+            "usd": 0.0468
+          },
+          {
+            "kind": "diagnostic",
+            "who": "judge",
+            "calls": 2,
+            "usd": 0.0017
+          },
+          {
+            "kind": "fact_check",
+            "who": "judge",
+            "calls": 7,
+            "usd": 0.0018
+          },
+          {
+            "kind": "fact_check",
+            "who": "you",
+            "calls": 7,
+            "usd": 0.035
+          },
+          {
+            "kind": "goal_focus",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0016
+          },
+          {
+            "kind": "quiz",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0544
+          },
+          {
+            "kind": "quiz",
+            "who": "judge",
+            "calls": 2,
+            "usd": 0.0017
+          },
+          {
+            "kind": "reading",
+            "who": "author",
+            "calls": 7,
+            "usd": 0.2169
+          },
+          {
+            "kind": "reading",
+            "who": "judge",
+            "calls": 17,
+            "usd": 0.0147
+          },
+          {
+            "kind": "research",
+            "who": "parallel",
+            "calls": 3,
+            "usd": 0.075
+          },
+          {
+            "kind": "research",
+            "who": "you",
+            "calls": 3,
+            "usd": 0.036
+          },
+          {
+            "kind": "research_tier",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0002
+          },
+          {
+            "kind": "reuse",
+            "who": "author",
+            "calls": 4,
+            "usd": 0.0149
+          },
+          {
+            "kind": "subject_check",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0001
+          },
+          {
+            "kind": "validity",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0029
+          }
+        ],
+        "totalUsd": 0.5301,
+        "calls": 62
+      }
+    }
+  ]
+}

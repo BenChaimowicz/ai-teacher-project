@@ -1,0 +1,211 @@
+{
+  "ranAt": "2026-11-02T12:17:11.658Z",
+  "apiUrl": "http://127.0.0.1:3000",
+  "runs": [
+    {
+      "name": "gram",
+      "subject": "Microbiology lab fundamentals",
+      "learningGoal": "Understand Gram staining and the lab basics around it: why Gram-positive and Gram-negative cell walls stain differently, the four reagent steps, reading a stained slide under the microscope, and the aseptic technique and culture methods that come before it.",
+      "requestId": "c6a79b78-9ef8-4446-9e35-76f911b40ab2",
+      "resumed": false,
+      "startedAt": "2026-11-02T11:58:51.752Z",
+      "finishedAt": "2026-11-02T12:17:11.658Z",
+      "minutes": 18.3,
+      "finalStatus": "generation_failed",
+      "failureReason": "The finished Lessons didn't fit together well enough to publish as one Course. Retry checks them again.",
+      "timeline": [
+        {
+          "at": "2026-11-02T11:58:52.025Z",
+          "status": "awaiting_subject_check",
+          "note": "request c6a79b78-9ef8-4446-9e35-76f911b40ab2"
+        },
+        {
+          "at": "2026-11-02T11:58:55.546Z",
+          "status": "awaiting_validity"
+        },
+        {
+          "at": "2026-11-02T11:59:02.975Z",
+          "status": "validity_passed"
+        },
+        {
+          "at": "2026-11-02T11:59:08.664Z",
+          "status": "goal_focused"
+        },
+        {
+          "at": "2026-11-02T12:04:03.964Z",
+          "status": "assessment_ready",
+          "note": "8 items"
+        },
+        {
+          "at": "2026-11-02T12:04:08.908Z",
+          "status": "awaiting_gap_confirmation",
+          "note": "answered I don't know throughout"
+        },
+        {
+          "at": "2026-11-02T12:04:09.692Z",
+          "status": "starting_level_confirmed"
+        },
+        {
+          "at": "2026-11-02T12:04:10.536Z",
+          "status": "blueprint_preparing"
+        },
+        {
+          "at": "2026-11-02T12:04:52.107Z",
+          "status": "blueprint_review"
+        },
+        {
+          "at": "2026-11-02T12:04:53.189Z",
+          "status": "generating"
+        },
+        {
+          "at": "2026-11-02T12:05:13.648Z",
+          "status": "generating",
+          "note": "research 0/6"
+        },
+        {
+          "at": "2026-11-02T12:07:16.793Z",
+          "status": "generating",
+          "note": "lesson 0/6 · Handle Cultures Safely and Isolate Colonies"
+        },
+        {
+          "at": "2026-11-02T12:08:59.849Z",
+          "status": "generating",
+          "note": "lesson 1/6 · Compare the Two Main Bacterial Cell Walls"
+        },
+        {
+          "at": "2026-11-02T12:10:21.753Z",
+          "status": "generating",
+          "note": "lesson 2/6 · Culture Handling and Cell Walls"
+        },
+        {
+          "at": "2026-11-02T12:11:23.120Z",
+          "status": "generating",
+          "note": "lesson 3/6 · How the Four Gram-Stain Reagents Work"
+        },
+        {
+          "at": "2026-11-02T12:13:05.369Z",
+          "status": "generating",
+          "note": "lesson 4/6 · View and Describe a Stained Slide"
+        },
+        {
+          "at": "2026-11-02T12:14:47.710Z",
+          "status": "generating",
+          "note": "lesson 5/6 · Explain and Interpret a Gram Stain"
+        },
+        {
+          "at": "2026-11-02T12:17:10.907Z",
+          "status": "generation_failed",
+          "note": "The finished Lessons didn't fit together well enough to publish as one Course. Retry checks them again."
+        }
+      ],
+      "cost": {
+        "stages": [
+          {
+            "kind": "blueprint",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0268
+          },
+          {
+            "kind": "blueprint",
+            "who": "judge",
+            "calls": 1,
+            "usd": 0.0005
+          },
+          {
+            "kind": "diagnostic",
+            "who": "author",
+            "calls": 6,
+            "usd": 0.0667
+          },
+          {
+            "kind": "diagnostic",
+            "who": "judge",
+            "calls": 5,
+            "usd": 0.005
+          },
+          {
+            "kind": "fact_check",
+            "who": "judge",
+            "calls": 16,
+            "usd": 0.0033
+          },
+          {
+            "kind": "fact_check",
+            "who": "you",
+            "calls": 16,
+            "usd": 0.08
+          },
+          {
+            "kind": "goal_focus",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0045
+          },
+          {
+            "kind": "quiz",
+            "who": "author",
+            "calls": 4,
+            "usd": 0.2303
+          },
+          {
+            "kind": "quiz",
+            "who": "judge",
+            "calls": 4,
+            "usd": 0.0043
+          },
+          {
+            "kind": "reading",
+            "who": "author",
+            "calls": 4,
+            "usd": 0.2612
+          },
+          {
+            "kind": "reading",
+            "who": "judge",
+            "calls": 11,
+            "usd": 0.016
+          },
+          {
+            "kind": "research",
+            "who": "parallel",
+            "calls": 3,
+            "usd": 0.075
+          },
+          {
+            "kind": "research",
+            "who": "you",
+            "calls": 3,
+            "usd": 0.036
+          },
+          {
+            "kind": "research_tier",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0001
+          },
+          {
+            "kind": "reuse",
+            "who": "author",
+            "calls": 3,
+            "usd": 0.0088
+          },
+          {
+            "kind": "subject_check",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0001
+          },
+          {
+            "kind": "validity",
+            "who": "author",
+            "calls": 1,
+            "usd": 0.0061
+          }
+        ],
+        "totalUsd": 0.8247,
+        "calls": 81
+      }
+    }
+  ]
+}

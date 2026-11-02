@@ -283,6 +283,20 @@ async function chooseResearchTier({ request, rater, holding }: {
 }
 
 /**
+ * Whether Readings get images: `READING_MEDIA` is `on` (default) or `off`. Off leaves the media library out, so no
+ * image is offered or required; test runs use it while media is still being designed (decision 2026-11-02).
+ * @param env - Usually `process.env`
+ * @throws Error for any other value
+ */
+export function readingMediaFromEnv(env: Record<string, string | undefined>): "on" | "off" {
+  const value = env.READING_MEDIA?.trim().toLowerCase() || "on";
+  if (value !== "on" && value !== "off") {
+    throw new Error(`[course-generation.ts: readingMediaFromEnv] Unknown reading media setting || READING_MEDIA=${env.READING_MEDIA} || known=on,off`);
+  }
+  return value;
+}
+
+/**
  * First decides, for each Reading slot, whether it reuses a published Lesson (spec §5.8): published Readings on the
  * same subject that share a Topic tag are retrieved, and one fit call per slot with candidates judges them on
  * objectives. A slot that reuses one gets a copy of that Lesson's Source packs and is never researched.
@@ -357,7 +371,8 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       const tieredResearch = options.research ?? researchUntil(control.signal);
       /** Every research call of this Course runs on its stored tier. */
       const research: LessonResearch = (topic) => tieredResearch(topic, tier);
-      const generator = options.readingGenerator ?? createReadingGenerator({ transport, media: createMediaLibrary(db) });
+      const media = readingMediaFromEnv(process.env) === "on" ? createMediaLibrary(db) : undefined;
+      const generator = options.readingGenerator ?? createReadingGenerator({ transport, media });
       const reuseFit = options.reuseFit ?? createReuseFit({ transport });
       const findCandidates = options.findReuseCandidates ?? ((subject: string) => findReuseCandidates(db, subject));
       let pool: Promise<ReuseCandidate[]> | null = null;
@@ -601,7 +616,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       stage = { kind: "course" };
       await control.progress("publish", null);
       const checkpoints = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
-      const codeFailures = courseCodeFailures(approved, checkpoints);
+      const codeFailures = courseCodeFailures(approved, checkpoints, { requireMedia: media !== undefined });
       if (codeFailures.length) throw new CourseFailedError(codeFailures, null);
       const [diagnostic] = await db.select({ startingLevel: startingLevelDiagnostics.startingLevel }).from(startingLevelDiagnostics)
         .where(eq(startingLevelDiagnostics.courseRequestId, courseRequestId))

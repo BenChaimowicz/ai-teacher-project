@@ -981,8 +981,9 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
       // here and discards this slot's research, so Retry searches again rather than rewriting the same draft.
       if (objectives.length === 0) throw new LessonUnresearchableError(slot.id, rejectedSources);
 
-      // The slot's required images reach every author and fit pass; left out when it has none (SEN-115).
-      const required = slot.requiredMedia ?? [];
+      // The slot's required images reach every author and fit pass; left out when it has none (SEN-115), and when there
+      // is no media library to supply them (`READING_MEDIA=off`, decision 2026-11-02).
+      const required = options.media ? slot.requiredMedia ?? [] : [];
       const brief = {
         courseTitle: input.courseTitle,
         learningGoal: input.learningGoal,

@@ -23,7 +23,7 @@ import type { ResearchTier } from "@senoy/db/course-request";
 import type { SourcePack } from "@senoy/research";
 import { fakeDb } from "../routes/fake-db.ts";
 import type { CourseJudge, CourseOutline } from "./course-judge.ts";
-import { createCourseGeneration, CourseFailedError, failureReason, lessonResearchTopic, researchQueries, searchForEvidence } from "./course-generation.ts";
+import { createCourseGeneration, CourseFailedError, failureReason, lessonResearchTopic, readingMediaFromEnv, researchQueries, searchForEvidence } from "./course-generation.ts";
 import { LeaseLostError, type GenerationControl, type SettledStatus, type WorkerIdentity } from "./generation-job.ts";
 import type { ReuseFit, ReuseFitInput } from "./lesson-reuse.ts";
 import { QuizFailedError, type AuthoredItem, type QuizGenerator, type QuizInput, type QuizRound } from "./quiz-generation.ts";
@@ -1150,4 +1150,11 @@ test("The reuse step's Pipeline Event records the candidates offered, the pick, 
     reason: "Its objectives match the slot's.", modelId: "fixture/fit",
   });
   assert.deepEqual(detail("reading")!.lineage, { originLessonId: "origin-lesson", mode: "adapted" });
+});
+
+test("READING_MEDIA is on by default, may be turned off, and refuses anything else", () => {
+  assert.equal(readingMediaFromEnv({}), "on");
+  assert.equal(readingMediaFromEnv({ READING_MEDIA: " " }), "on");
+  assert.equal(readingMediaFromEnv({ READING_MEDIA: "OFF" }), "off");
+  assert.throws(() => readingMediaFromEnv({ READING_MEDIA: "no" }), /Unknown reading media setting/);
 });
