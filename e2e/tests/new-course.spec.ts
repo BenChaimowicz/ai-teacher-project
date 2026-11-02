@@ -40,6 +40,39 @@ test("A suggestion fills the topic in one tap", async ({ page }) => {
   await expect(page.getByRole("log").getByText(/^You: ?Norse mythology$/)).toBeVisible();
 });
 
+test("A subject with several readings asks Which did you mean?, and the pick becomes the subject", async ({ page }) => {
+  await resetFixture();
+  // The fixture subject checker (apps/api/src/lib/subject-check-fixture.ts) reads "Mercury" three ways.
+  await compose(page, "Mercury");
+  const readings = page.getByRole("group", { name: "Which did you mean?" });
+  await expect(readings).toBeVisible({ timeout: 10_000 });
+  await expect(readings.getByRole("button", { name: /The planet nearest the Sun/ })).toBeVisible();
+  await expect(page.getByRole("textbox")).toHaveCount(0);
+  await readings.getByRole("button", { name: /^Mercury \(planet\)/ }).click();
+  await expect(page.getByRole("group", { name: KNOW })).toBeVisible({ timeout: 15_000 });
+  const thread = page.getByRole("log");
+  await expect(thread.getByText(/^You: ?Mercury$/)).toBeVisible();
+  await expect(thread.getByText(/^You: ?Mercury \(planet\)$/)).toBeVisible();
+});
+
+test("None of these takes a short typed answer as the subject", async ({ page }) => {
+  await resetFixture();
+  await compose(page, "Mercury");
+  const readings = page.getByRole("group", { name: "Which did you mean?" });
+  await readings.getByRole("button", { name: /^None of these/ }).click({ timeout: 10_000 });
+  await page.getByLabel("In your own words").fill("The Mercury space programme");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByRole("group", { name: KNOW })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("log").getByText(/^You: ?The Mercury space programme$/)).toBeVisible();
+});
+
+test("A subject check that can't finish goes straight on with the subject as typed", async ({ page }) => {
+  await resetFixture();
+  await compose(page, "[subject-unavailable] drums");
+  await expect(page.getByRole("group", { name: KNOW })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("group", { name: "Which did you mean?" })).toHaveCount(0);
+});
+
 test("A clarification is answered by tapping, and a learnable framing passes", async ({ page }) => {
   await resetFixture();
   await compose(page, "How to feed unicorns");

@@ -20,20 +20,7 @@ import { IRRELEVANT_REASONS, type BlueprintFeedback, type IrrelevantReason } fro
 import { enqueueJob, jobOwner } from "../lib/generation-job.ts";
 import { studyLinksByCourseId } from "../lib/study.ts";
 import { recordProductEvent } from "../lib/usage-tracking.ts";
-
-/** Learner-facing Request fields; ownership is never exposed. */
-const requestFields = {
-  id: courseRequests.id,
-  subject: courseRequests.subject,
-  learningGoal: courseRequests.learningGoal,
-  status: courseRequests.status,
-  createdAt: courseRequests.createdAt,
-  validity: courseRequests.validity,
-  clarification: courseRequests.clarification,
-  focus: courseRequests.focus,
-  revisedFromId: courseRequests.revisedFromId,
-  failureReason: courseRequests.failureReason,
-};
+import { requestFields } from "../lib/course-request-fields.ts";
 
 /** Route parameters for one Request. */
 type RequestParams = { Params: { requestId: string } };

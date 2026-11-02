@@ -15,6 +15,7 @@ import {
 } from "@senoy/db";
 import { courseRequestRoutes } from "./course-requests.ts";
 import { libraryRoutes } from "./library.ts";
+import type { SubjectChecker } from "../lib/subject-check.ts";
 import type { ValidityGate } from "../lib/validity.ts";
 
 /** Stored Course Request fixture. */
@@ -34,13 +35,16 @@ function savedLearner(): typeof learners.$inferSelect {
   };
 }
 
+/** A subject checker that always finds one reading, so a Request goes straight on to Validity. */
+const singleReading: SubjectChecker = { async check() { return { kind: "single" }; } };
+
 /** Runs the real routes against isolated storage, including conditional state-transition writes. */
-async function testApp(learner = savedLearner(), failWrites = false, validityGate?: ValidityGate) {
+async function testApp(learner = savedLearner(), failWrites = false, validityGate?: ValidityGate, subjectChecker: SubjectChecker = singleReading) {
   const rows: CourseRequest[] = [];
   const dialect = new PgDialect();
   const columnKeys = {
     id: "id", learner_id: "learnerId", subject: "subject", learning_goal: "learningGoal", status: "status",
-    created_at: "createdAt", validity: "validity", clarification: "clarification", focus: "focus", revised_from_id: "revisedFromId",
+    created_at: "createdAt", validity: "validity", clarification: "clarification", subject_check: "subjectCheck", focus: "focus", revised_from_id: "revisedFromId",
     failure_reason: "failureReason", hidden_at: "hiddenAt", last_opened_at: "lastOpenedAt",
   } as const;
   /** Projects precisely the selected columns, as Postgres does. */
@@ -65,7 +69,7 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
       values: (values: typeof courseRequests.$inferInsert) => ({
         returning: async (fields?: Record<string, PgColumn>) => {
           if (failWrites) throw new Error("Database unavailable");
-          const row = { id: randomUUID(), createdAt: new Date(), validity: null, clarification: null, focus: null, revisedFromId: null, failureReason: null, hiddenAt: null, lastOpenedAt: null, ...values } as CourseRequest;
+          const row = { id: randomUUID(), createdAt: new Date(), validity: null, clarification: null, subjectCheck: null, focus: null, revisedFromId: null, failureReason: null, hiddenAt: null, lastOpenedAt: null, ...values } as CourseRequest;
           rows.push(row);
           return [project(row, fields)];
         },
@@ -127,7 +131,7 @@ async function testApp(learner = savedLearner(), failWrites = false, validityGat
   const app = Fastify();
   app.decorate("db", db as unknown as Database);
   app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
-  await app.register(courseRequestRoutes, { validityGate });
+  await app.register(courseRequestRoutes, { validityGate, subjectChecker });
   await app.register(libraryRoutes);
   return { app, learner, rows };
 }
@@ -150,7 +154,8 @@ test("Learner can save a subject and Learning Goal as an unpublished Course Requ
     assert.match(courseRequest.id, /^[\da-f-]{36}$/);
     assert.equal(courseRequest.subject, "Norse mythology");
     assert.equal(courseRequest.learningGoal, "Explain the mythic corpus.");
-    assert.equal(courseRequest.status, "awaiting_validity");
+    assert.equal(courseRequest.status, "awaiting_subject_check");
+    assert.equal(courseRequest.subjectCheck, null);
     assert.ok(!Number.isNaN(Date.parse(courseRequest.createdAt)));
     assert.equal(courseRequest.learnerId, undefined);
     const reopened = await app.inject({ method: "GET", url: `/api/course-requests/${courseRequest.id}` });
@@ -228,7 +233,7 @@ test("Saved Course Request can be reopened from Library and Open items", async (
         kind: "course_request",
         title: "Norse mythology",
         learningGoal: "Explain the mythic corpus.",
-        status: "awaiting_validity",
+        status: "awaiting_subject_check",
         href: `/course-requests/${courseRequest.id}`,
         // Only the Library says when it was last opened; it picks the current course from it.
         ...(url === "/api/library" ? { lastOpenedAt: null } : {}),
@@ -324,11 +329,13 @@ test("Persistence failure is reported without claiming the Course Request was sa
   }
 });
 
-/** Saves a Request for lifecycle tests through the real creation endpoint. */
+/** Saves a Request for lifecycle tests through the real creation endpoint and runs its subject check. */
 async function createRequest(app: FastifyInstance) {
   const response = await app.inject({ method: "POST", url: "/api/course-requests", payload: { subject: "Norse mythology", learningGoal: "Explain the mythic corpus." } });
   assert.equal(response.statusCode, 201, response.body);
-  return response.json().courseRequest;
+  const checked = await app.inject({ method: "POST", url: `/api/course-requests/${response.json().courseRequest.id}/subject-check`, payload: {} });
+  assert.equal(checked.statusCode, 200, checked.body);
+  return checked.json().courseRequest;
 }
 
 test("A passed validity outcome survives reopening and cannot be re-reviewed or edited", async () => {
@@ -400,11 +407,11 @@ test("Revise creates an editable new Request while rejected history and ownershi
     const saved = await app.inject({ method: "PATCH", url: draftUrl, payload: { subject: "  Safety  ", learningGoal: "  Learn prevention.  ", status: "validity_passed", learnerId: randomUUID() } });
     assert.equal(saved.statusCode, 200, saved.body);
     assert.equal(saved.json().courseRequest.subject, "Safety");
-    assert.equal(saved.json().courseRequest.status, "awaiting_validity");
+    assert.equal(saved.json().courseRequest.status, "awaiting_subject_check");
     assert.deepEqual((await app.inject({ method: "GET", url })).json(), rejected.json());
     const library = await app.inject({ method: "GET", url: "/api/library" });
     assert.equal(library.json().items.find((item: { id: string }) => item.id === row.id).status, "rejected");
-    assert.equal(library.json().items.find((item: { id: string }) => item.id === draft.id).status, "awaiting_validity");
+    assert.equal(library.json().items.find((item: { id: string }) => item.id === draft.id).status, "awaiting_subject_check");
     learner.id = randomUUID();
     for (const endpoint of [url, draftUrl]) {
       for (const [method, suffix, payload] of [["GET", "", undefined], ["POST", "/validity", {}], ["POST", "/revise", {}], ["PATCH", "", { subject: "Changed", learningGoal: "Changed" }]] as const) {
@@ -512,4 +519,168 @@ test("Another Learner cannot hide a Course Request or a Course from the Library:
   } finally {
     await app.close();
   }
+});
+
+/** The readings a two-reading check offers in these tests. */
+const MERCURY = [
+  { label: "Mercury (planet)", gloss: "The planet nearest the Sun" },
+  { label: "Mercury (element)", gloss: "The liquid metal, Hg" },
+];
+
+/** Saves a Request without running its subject check. */
+async function composeRequest(app: FastifyInstance, subject = "Mercury", learningGoal = subject) {
+  const response = await app.inject({ method: "POST", url: "/api/course-requests", payload: { subject, learningGoal } });
+  assert.equal(response.statusCode, 201, response.body);
+  return response.json().courseRequest as { id: string; status: string };
+}
+
+test("One reading goes straight on to Validity with the subject as typed and nothing asked", async () => {
+  const seen: unknown[] = [];
+  const { app } = await testApp(savedLearner(), false, undefined, {
+    async check(input) { seen.push(input); return { kind: "single" }; },
+  });
+  try {
+    const row = await composeRequest(app, "Java", "Java for Android apps");
+    const checked = await app.inject({ method: "POST", url: `/api/course-requests/${row.id}/subject-check`, payload: {} });
+    assert.equal(checked.statusCode, 200, checked.body);
+    const { courseRequest } = checked.json();
+    assert.equal(courseRequest.status, "awaiting_validity");
+    assert.equal(courseRequest.subject, "Java");
+    assert.deepEqual(courseRequest.subjectCheck, { outcome: "single", subjectAsTyped: "Java", readings: [], answer: null });
+    assert.deepEqual(seen, [{ subject: "Java", learningGoal: "Java for Android apps" }], "The subject and the goal are read together.");
+    assert.deepEqual((await app.inject({ method: "GET", url: `/api/course-requests/${row.id}` })).json(), checked.json());
+    const again = await app.inject({ method: "POST", url: `/api/course-requests/${row.id}/subject-check`, payload: {} });
+    assert.equal(again.statusCode, 409, "The check runs once per Request.");
+    assert.equal(seen.length, 1);
+  } finally { await app.close(); }
+});
+
+test("A failed subject check never blocks: the Request goes on to Validity with the subject as typed", async () => {
+  const { app } = await testApp(savedLearner(), false, undefined, {
+    async check() { return { kind: "check_failed", error: "[subject-check: check] Subject check failed || subject=Mercury || timeout" }; },
+  });
+  try {
+    const row = await composeRequest(app);
+    const checked = await app.inject({ method: "POST", url: `/api/course-requests/${row.id}/subject-check`, payload: {} });
+    assert.equal(checked.statusCode, 200, checked.body);
+    assert.equal(checked.json().courseRequest.status, "awaiting_validity");
+    assert.equal(checked.json().courseRequest.subject, "Mercury");
+    assert.deepEqual(checked.json().courseRequest.subjectCheck, { outcome: "check_failed", subjectAsTyped: "Mercury", readings: [], answer: null });
+  } finally { await app.close(); }
+});
+
+test("Several readings ask Which did you mean?, and a picked label becomes the subject while the typed one stays recorded", async () => {
+  const { app } = await testApp(savedLearner(), false, undefined, { async check() { return { kind: "several", readings: MERCURY }; } });
+  try {
+    const row = await composeRequest(app);
+    const url = `/api/course-requests/${row.id}`;
+    // Validity waits until the subject is settled.
+    assert.equal((await app.inject({ method: "POST", url: `${url}/subject-choice`, payload: { answer: "Mercury (planet)", ownWords: false } })).statusCode, 409);
+    const checked = await app.inject({ method: "POST", url: `${url}/subject-check`, payload: {} });
+    assert.equal(checked.statusCode, 200, checked.body);
+    assert.equal(checked.json().courseRequest.status, "awaiting_subject_choice");
+    assert.deepEqual(checked.json().courseRequest.subjectCheck, { outcome: null, subjectAsTyped: "Mercury", readings: MERCURY, answer: null });
+    assert.equal((await app.inject({ method: "POST", url: `${url}/validity`, payload: {} })).statusCode, 409);
+
+    for (const payload of [{}, { answer: "Mercury (planet)" }, { answer: "Mercury (god)", ownWords: false }, { answer: " ", ownWords: true }, { answer: 42, ownWords: true }, { answer: "x".repeat(301), ownWords: true }]) {
+      const bad = await app.inject({ method: "POST", url: `${url}/subject-choice`, payload });
+      assert.equal(bad.statusCode, 400, JSON.stringify(payload));
+      assert.deepEqual(bad.json(), { error: "Pick one of the subjects, or say it in a few words." });
+    }
+    const chosen = await app.inject({ method: "POST", url: `${url}/subject-choice`, payload: { answer: "  Mercury (planet) ", ownWords: false } });
+    assert.equal(chosen.statusCode, 200, chosen.body);
+    const { courseRequest } = chosen.json();
+    assert.equal(courseRequest.status, "awaiting_validity");
+    assert.equal(courseRequest.subject, "Mercury (planet)");
+    assert.equal(courseRequest.learningGoal, "Mercury");
+    assert.deepEqual(courseRequest.subjectCheck, { outcome: "chosen", subjectAsTyped: "Mercury", readings: MERCURY, answer: "Mercury (planet)" });
+    assert.deepEqual((await app.inject({ method: "GET", url })).json(), chosen.json());
+    assert.equal((await app.inject({ method: "POST", url: `${url}/subject-choice`, payload: { answer: "Mercury (element)", ownWords: false } })).statusCode, 409, "There is no second round.");
+  } finally { await app.close(); }
+});
+
+test("None of these takes a short typed answer, used as written and not checked again; Validity then judges it", async () => {
+  let checks = 0;
+  const evaluated: string[] = [];
+  const { app } = await testApp(savedLearner(), false, {
+    async evaluate({ subject }) { evaluated.push(subject); return { policyVersion: 1, outcome: "pass", reason: "Learnable.", safeReframe: null, question: null }; },
+  }, { async check() { checks++; return { kind: "several", readings: MERCURY }; } });
+  try {
+    const row = await composeRequest(app);
+    const url = `/api/course-requests/${row.id}`;
+    await app.inject({ method: "POST", url: `${url}/subject-check`, payload: {} });
+    const own = await app.inject({ method: "POST", url: `${url}/subject-choice`, payload: { answer: "  The Mercury space programme  ", ownWords: true } });
+    assert.equal(own.statusCode, 200, own.body);
+    assert.equal(own.json().courseRequest.subject, "The Mercury space programme");
+    assert.equal(own.json().courseRequest.subjectCheck.outcome, "own_words");
+    assert.equal(own.json().courseRequest.subjectCheck.answer, "The Mercury space programme");
+    assert.equal(checks, 1);
+    const passed = await app.inject({ method: "POST", url: `${url}/validity`, payload: {} });
+    assert.equal(passed.statusCode, 200, passed.body);
+    assert.equal(passed.json().courseRequest.status, "validity_passed");
+    assert.deepEqual(evaluated, ["The Mercury space programme"]);
+  } finally { await app.close(); }
+});
+
+test("Revise request copies the settled subject into a draft whose subject is checked again", async () => {
+  let checks = 0;
+  const { app } = await testApp(savedLearner(), false, {
+    async evaluate() { return { policyVersion: 1, outcome: "reject", reason: "A hard rule applies.", safeReframe: "Study prevention.", question: null }; },
+  }, { async check() { checks++; return { kind: "several", readings: MERCURY }; } });
+  try {
+    const row = await composeRequest(app);
+    const url = `/api/course-requests/${row.id}`;
+    await app.inject({ method: "POST", url: `${url}/subject-check`, payload: {} });
+    await app.inject({ method: "POST", url: `${url}/subject-choice`, payload: { answer: "Mercury (element)", ownWords: false } });
+    await app.inject({ method: "POST", url: `${url}/validity`, payload: {} });
+    const revised = await app.inject({ method: "POST", url: `${url}/revise` });
+    assert.equal(revised.statusCode, 201, revised.body);
+    const draft = revised.json().courseRequest;
+    assert.equal(draft.subject, "Mercury (element)");
+    assert.equal(draft.subjectCheck, null);
+    const saved = await app.inject({ method: "PATCH", url: `/api/course-requests/${draft.id}`, payload: { subject: "Mercury (element)", learningGoal: "Mercury (element)" } });
+    assert.equal(saved.json().courseRequest.status, "awaiting_subject_check");
+    const checked = await app.inject({ method: "POST", url: `/api/course-requests/${draft.id}/subject-check`, payload: {} });
+    assert.equal(checked.json().courseRequest.subjectCheck.subjectAsTyped, "Mercury (element)");
+    assert.equal(checks, 2);
+  } finally { await app.close(); }
+});
+
+test("The subject check and choice are private to their Learner", async () => {
+  const { app, learner } = await testApp(savedLearner(), false, undefined, { async check() { return { kind: "several", readings: MERCURY }; } });
+  try {
+    const row = await composeRequest(app);
+    const url = `/api/course-requests/${row.id}`;
+    learner.id = randomUUID();
+    for (const [suffix, payload] of [["/subject-check", {}], ["/subject-choice", { answer: "Mercury (planet)", ownWords: false }]] as const) {
+      assert.equal((await app.inject({ method: "POST", url: url + suffix, payload })).statusCode, 404);
+    }
+    assert.equal((await app.inject({ method: "POST", url: "/api/course-requests/not-a-uuid/subject-check", payload: {} })).statusCode, 400);
+  } finally { await app.close(); }
+});
+
+test("A subject check that loses a race to another one does not overwrite it", async () => {
+  const { promise: pending, resolve: finish } = Promise.withResolvers<{ kind: "single" }>();
+  const { promise: started, resolve: firstStarted } = Promise.withResolvers<void>();
+  let calls = 0;
+  const { app } = await testApp(savedLearner(), false, undefined, {
+    async check() {
+      if (++calls === 1) {
+        firstStarted();
+        return pending;
+      }
+      return { kind: "several", readings: MERCURY };
+    },
+  });
+  try {
+    const row = await composeRequest(app);
+    const url = `/api/course-requests/${row.id}`;
+    const first = Promise.resolve(app.inject({ method: "POST", url: `${url}/subject-check`, payload: {} }));
+    await started;
+    const second = await app.inject({ method: "POST", url: `${url}/subject-check`, payload: {} });
+    assert.equal(second.statusCode, 200, second.body);
+    finish({ kind: "single" });
+    assert.equal((await first).statusCode, 409);
+    assert.deepEqual((await app.inject({ method: "GET", url })).json(), second.json());
+  } finally { await app.close(); }
 });

@@ -1,25 +1,22 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { and, eq, isNull } from "drizzle-orm";
-import { courseRequests, generationJobs, unpublishedLessons, TEACHING_PROFILE_VERSION, type Database, type ValidityClarification } from "@senoy/db";
+import {
+  courseRequests,
+  generationJobs,
+  unpublishedLessons,
+  TEACHING_PROFILE_VERSION,
+  type Database,
+  type SubjectCheck,
+  type ValidityClarification,
+} from "@senoy/db";
+import { createSubjectChecker, type SubjectChecker } from "../lib/subject-check.ts";
 import { recordProductEvent, withPipelineEvent } from "../lib/usage-tracking.ts";
 import { createValidityGate, type ValidityGate } from "../lib/validity.ts";
+import { MAX_OWN_WORDS_LENGTH } from "./goal-focus.ts";
+import { requestFields } from "../lib/course-request-fields.ts";
 
-/** Learner-facing fields; ownership is never accepted from or exposed to the browser. */
-const requestFields = {
-  id: courseRequests.id,
-  subject: courseRequests.subject,
-  learningGoal: courseRequests.learningGoal,
-  status: courseRequests.status,
-  createdAt: courseRequests.createdAt,
-  validity: courseRequests.validity,
-  clarification: courseRequests.clarification,
-  focus: courseRequests.focus,
-  revisedFromId: courseRequests.revisedFromId,
-  failureReason: courseRequests.failureReason,
-};
-
-/** Injectable domain gate; persistence and HTTP semantics remain in these routes. */
-type CourseRequestOptions = { validityGate?: ValidityGate };
+/** Injectable domain steps; persistence and HTTP semantics remain in these routes. */
+type CourseRequestOptions = { validityGate?: ValidityGate; subjectChecker?: SubjectChecker };
 
 /** Route parameters shared by unpublished Request operations. */
 type RequestParams = { Params: { requestId: string } };
@@ -36,12 +33,29 @@ function editableFields(body: unknown) {
   return { subject: subject.trim(), learningGoal: learningGoal.trim() };
 }
 
+/**
+ * Reads the Learner's answer to "Which did you mean?": `{ answer, ownWords }`. A picked answer must be one of the
+ * offered labels exactly; an answer in their own words is trimmed and capped like other typed answers.
+ * @param body - Untrusted request body
+ * @param check - The stored subject check with its readings
+ * @returns The answer, or null when invalid
+ */
+export function readSubjectChoice(body: unknown, check: SubjectCheck): { answer: string; ownWords: boolean } | null {
+  const { answer, ownWords } = bodyFields(body);
+  if (typeof answer !== "string" || typeof ownWords !== "boolean") return null;
+  const trimmed = answer.trim();
+  if (!trimmed || trimmed.length > MAX_OWN_WORDS_LENGTH) return null;
+  if (!ownWords && !check.readings.some((reading) => reading.label === trimmed)) return null;
+  return { answer: trimmed, ownWords };
+}
+
 /** A Course Request id: a UUID. */
 const REQUEST_ID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
 
 /** Creates, reviews, clarifies, and revises unpublished Learner-owned Course Requests. */
 export async function courseRequestRoutes(app: FastifyInstance, options: CourseRequestOptions = {}) {
   const gate = options.validityGate ?? createValidityGate();
+  const subjectChecker = options.subjectChecker ?? createSubjectChecker();
 
   /** Validates the ID and reads a private Request, never leaking another Learner's history. */
   async function ownedRequest(id: string, learnerId: string, reply: FastifyReply) {
@@ -65,7 +79,7 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
       const fields = editableFields(request.body);
       if (!fields) return reply.code(400).send({ error: "Enter a subject and Learning Goal." });
       const [row] = await app.db.insert(courseRequests).values({
-        learnerId: request.currentLearner.id, ...fields, status: "awaiting_validity",
+        learnerId: request.currentLearner.id, ...fields, status: "awaiting_subject_check",
       }).returning(requestFields);
       if (!row) return reply.code(500).send({ error: "Failed to save Course Request." });
       void recordProductEvent("course_request_created", { learnerId: request.currentLearner.id, courseRequestId: row.id });
@@ -85,6 +99,71 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
       const message = error instanceof Error ? error.message : String(error);
       request.log.error(`[course-requests.ts: courseRequestRoutes] Failed to load Course Request || requestId=${request.params.requestId} || ${message}`);
       return reply.code(500).send({ error: "Failed to load Course Request." });
+    }
+  });
+
+  // The subject check runs by itself after Compose (spec §4.2). It never blocks a Request: a failed check goes on to
+  // Validity with the subject as typed.
+  app.post<RequestParams>("/api/course-requests/:requestId/subject-check", async (request, reply) => {
+    try {
+      const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
+      if (!row) return reply;
+      if (row.status !== "awaiting_subject_check") return reply.code(409).send({ error: "This Request is not awaiting a subject check." });
+      const result = await withPipelineEvent("subject_check", {
+        label: row.subject, courseRequestId: row.id, learnerId: request.currentLearner.id,
+      }, async (event) => {
+        const checked = await subjectChecker.check({ subject: row.subject, learningGoal: row.learningGoal });
+        event.setDetail(checked.kind === "several" ? { outcome: checked.kind, readings: checked.readings.length } : { outcome: checked.kind });
+        return checked;
+      });
+      if (result.kind === "check_failed") {
+        request.log.warn(`[course-requests.ts: courseRequestRoutes] Subject check failed; going on with the subject as typed || requestId=${row.id} || ${result.error}`);
+      }
+      const several = result.kind === "several";
+      const subjectCheck: SubjectCheck = {
+        outcome: several ? null : result.kind,
+        subjectAsTyped: row.subject,
+        readings: several ? result.readings : [],
+        answer: null,
+      };
+      const [updated] = await app.db.update(courseRequests)
+        .set({ subjectCheck, status: several ? "awaiting_subject_choice" : "awaiting_validity" })
+        .where(and(eq(courseRequests.id, row.id), eq(courseRequests.learnerId, request.currentLearner.id), eq(courseRequests.status, "awaiting_subject_check")))
+        .returning(requestFields);
+      if (!updated) return reply.code(409).send({ error: "This Request changed during the subject check. Reload it before continuing." });
+      return { courseRequest: updated };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      request.log.error(`[course-requests.ts: courseRequestRoutes] Failed to persist subject check || requestId=${request.params.requestId} || ${message}`);
+      return reply.code(500).send({ error: "Could not save the subject check. Reload the Request before trying again." });
+    }
+  });
+
+  // "Which did you mean?": one of the offered readings, or "None of these" with a short typed answer used as written.
+  app.post<RequestParams>("/api/course-requests/:requestId/subject-choice", async (request, reply) => {
+    try {
+      const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
+      if (!row) return reply;
+      if (row.status !== "awaiting_subject_choice" || !row.subjectCheck) {
+        return reply.code(409).send({ error: "This Request is not waiting for you to pick a subject." });
+      }
+      const choice = readSubjectChoice(request.body, row.subjectCheck);
+      if (!choice) return reply.code(400).send({ error: "Pick one of the subjects, or say it in a few words." });
+      const subjectCheck: SubjectCheck = { ...row.subjectCheck, outcome: choice.ownWords ? "own_words" : "chosen", answer: choice.answer };
+      const [updated] = await app.db.update(courseRequests)
+        .set({ subject: choice.answer, subjectCheck, status: "awaiting_validity" })
+        .where(and(eq(courseRequests.id, row.id), eq(courseRequests.learnerId, request.currentLearner.id), eq(courseRequests.status, "awaiting_subject_choice")))
+        .returning(requestFields);
+      if (!updated) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+      void recordProductEvent("course_request_subject_chosen", {
+        learnerId: request.currentLearner.id, courseRequestId: row.id,
+        detail: { outcome: subjectCheck.outcome, subjectAsTyped: row.subjectCheck.subjectAsTyped, subject: choice.answer },
+      });
+      return { courseRequest: updated };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      request.log.error(`[course-requests.ts: courseRequestRoutes] Failed to save subject choice || requestId=${request.params.requestId} || ${message}`);
+      return reply.code(500).send({ error: "Could not save your choice. Reload the Request before trying again." });
     }
   });
 
@@ -157,7 +236,8 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
         return reply.code(409).send({ error: "Save your Teaching Profile before creating a Course Request." });
       }
       // The current (possibly focused) goal carries over as editable text; `focus` does not, so the draft goes through
-      // Validity and focusing again, where a precise goal passes straight through (SEN-90).
+      // Validity and focusing again, where a precise goal passes straight through (SEN-90). The settled subject carries
+      // over too; `subjectCheck` does not, so the draft's subject is checked again (spec §4.2).
       // Only a failed Request has Lessons and a job to end with the new draft, so only it needs a transaction (SEN-102).
       const revise = async (transaction: Pick<Database, "insert" | "delete" | "update">) => {
         const [created] = await transaction.insert(courseRequests).values({
@@ -198,7 +278,7 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
       const fields = editableFields(request.body);
       if (!fields) return reply.code(400).send({ error: "Enter a subject and Learning Goal." });
       // One conditional write: it lands only on this Learner's draft. The Request is read only to say why it didn't.
-      const [updated] = await app.db.update(courseRequests).set({ ...fields, status: "awaiting_validity" }).where(and(
+      const [updated] = await app.db.update(courseRequests).set({ ...fields, status: "awaiting_subject_check" }).where(and(
         eq(courseRequests.id, requestId), eq(courseRequests.learnerId, request.currentLearner.id), eq(courseRequests.status, "draft"),
       )).returning(requestFields);
       if (updated) return { courseRequest: updated };

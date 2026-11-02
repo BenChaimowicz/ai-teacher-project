@@ -17,20 +17,7 @@ import {
 } from "@senoy/db";
 import { createDiagnosticBuilder, DiagnosticFailedError, type DiagnosticBuilder } from "../lib/diagnostic.ts";
 import { recordProductEvent, withPipelineEvent } from "../lib/usage-tracking.ts";
-
-/** Learner-facing Request fields; ownership is never exposed. */
-const requestFields = {
-  id: courseRequests.id,
-  subject: courseRequests.subject,
-  learningGoal: courseRequests.learningGoal,
-  status: courseRequests.status,
-  createdAt: courseRequests.createdAt,
-  validity: courseRequests.validity,
-  clarification: courseRequests.clarification,
-  focus: courseRequests.focus,
-  revisedFromId: courseRequests.revisedFromId,
-  failureReason: courseRequests.failureReason,
-};
+import { requestFields } from "../lib/course-request-fields.ts";
 
 /** Injectable diagnostic builder; persistence and HTTP semantics stay in these routes. */
 type StartingLevelOptions = { diagnosticBuilder?: DiagnosticBuilder };

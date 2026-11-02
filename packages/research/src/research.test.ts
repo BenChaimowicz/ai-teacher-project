@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { researchAdaptersFromEnv } from "./adapters/index.ts";
+import { RESEARCH_ADAPTER_VENDORS } from "@senoy/db/usage";
+import {
+  RESEARCH_TIER_ADAPTERS,
+  researchAdaptersForTier,
+  researchTierModeFromEnv,
+  researchTierOfAdapter,
+} from "./adapters/index.ts";
 import { parallelProAdapter } from "./adapters/parallel-pro.ts";
 import { youResearchAdapter } from "./adapters/you-research.ts";
 import { applyHostPolicy } from "./host-policy.ts";
@@ -217,12 +223,36 @@ test("A missing key fails before any vendor is called", async () => {
   assert.equal(called, false);
 });
 
-test("Config picks one adapter per slot and refuses unknown ids or the same engine twice", () => {
-  const defaults = researchAdaptersFromEnv({});
-  assert.equal(defaults.primary.id, "parallel-pro");
-  assert.equal(defaults.secondary.id, "you-research");
-  assert.throws(() => researchAdaptersFromEnv({ PRIMARY_RESEARCH_ADAPTER: "exa-agent" }), /Unknown research adapter/);
-  assert.throws(() => researchAdaptersFromEnv({ SECONDARY_RESEARCH_ADAPTER: "parallel-pro" }), /different engines/);
+test("RESEARCH_TIER picks deluxe by default, accepts regular and auto, and refuses anything else", () => {
+  assert.equal(researchTierModeFromEnv({}), "deluxe");
+  assert.equal(researchTierModeFromEnv({ RESEARCH_TIER: "  " }), "deluxe");
+  assert.equal(researchTierModeFromEnv({ RESEARCH_TIER: "regular" }), "regular");
+  assert.equal(researchTierModeFromEnv({ RESEARCH_TIER: "Auto" }), "auto");
+  assert.throws(() => researchTierModeFromEnv({ RESEARCH_TIER: "cheap" }), /Unknown research tier \|\| RESEARCH_TIER=cheap/);
+});
+
+test("Each research tier names its adapter pair once, on two different engines (spec §5.3)", () => {
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(RESEARCH_TIER_ADAPTERS).map(([tier, pair]) => [tier, [pair.primary.id, pair.secondary.id]])),
+    { deluxe: ["parallel-pro", "you-research"], regular: ["parallel-core", "you-research-lite"] },
+  );
+  for (const [tier, { primary, secondary }] of Object.entries(RESEARCH_TIER_ADAPTERS)) {
+    assert.notEqual(RESEARCH_ADAPTER_VENDORS[primary.id], RESEARCH_ADAPTER_VENDORS[secondary.id], `${tier} sends both slots to one vendor.`);
+  }
+  assert.equal(researchAdaptersForTier("regular"), RESEARCH_TIER_ADAPTERS.regular);
+  assert.ok(
+    researchAdaptersForTier("regular").primary.estimatedCostUsd + researchAdaptersForTier("regular").secondary.estimatedCostUsd <
+      researchAdaptersForTier("deluxe").primary.estimatedCostUsd + researchAdaptersForTier("deluxe").secondary.estimatedCostUsd,
+    "Regular is the cheaper tier.",
+  );
+});
+
+test("A research call's tier follows from its adapter id; an adapter no tier uses has none", () => {
+  assert.equal(researchTierOfAdapter("parallel-pro"), "deluxe");
+  assert.equal(researchTierOfAdapter("you-research"), "deluxe");
+  assert.equal(researchTierOfAdapter("parallel-core"), "regular");
+  assert.equal(researchTierOfAdapter("you-research-lite"), "regular");
+  assert.equal(researchTierOfAdapter("you-search"), null);
 });
 
 test("Parallel adapter creates a pro run, reads its result, and flattens basis citations", async () => {

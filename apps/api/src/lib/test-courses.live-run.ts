@@ -43,7 +43,7 @@ const GENERATION_LIMIT_MS = 90 * 60 * 1000;
 const MAX_STAGE_REPEATS = 2;
 
 /** The Request as the API returns it. */
-type RequestView = { id: string; status: string; failureReason: string | null };
+type RequestView = { id: string; status: string; failureReason: string | null; subjectCheck?: { subjectAsTyped: string } | null };
 
 /** What `GET /blueprint` says about a running generation. */
 type GenerationView = { status: string; stage: string | null; lessonNumber: number | null; lessonTitle: string | null; finishedLessons: number; totalLessons: number } | null;
@@ -191,6 +191,15 @@ async function runCourse(client: ReturnType<typeof createClient>, name: keyof ty
 
   for (;;) {
     switch (request.status) {
+      case "awaiting_subject_check":
+        request = (await post("subject-check")).courseRequest;
+        note(request.status);
+        break;
+      case "awaiting_subject_choice":
+        // The test courses keep their subjects as written, so a run stays comparable with earlier ones (SEN-124).
+        request = (await post("subject-choice", { answer: request.subjectCheck?.subjectAsTyped ?? "", ownWords: true })).courseRequest;
+        note(request.status, "kept the subject as typed");
+        break;
       case "draft":
       case "awaiting_validity":
         request = (await post("validity")).courseRequest;

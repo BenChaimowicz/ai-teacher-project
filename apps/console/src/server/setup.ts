@@ -1,6 +1,7 @@
 import { loadModelConfig } from "@senoy/api/model-config";
 import { RESEARCH_ADAPTER_VENDORS, USAGE_VENDORS, type OpsModelEndpoint, type OpsSetup, type OpsSetupModel } from "@senoy/db/usage";
-import { researchAdaptersFromEnv } from "@senoy/research";
+import { RESEARCH_TIERS } from "@senoy/db/course-request";
+import { researchAdaptersForTier, researchTierModeFromEnv } from "@senoy/research";
 
 /** OpenRouter's public list is re-read at most this often. */
 const CACHE_MS = 10 * 60 * 1000;
@@ -116,6 +117,7 @@ export function createSetupReader(options: {
       { role: "lesson_generator_fallback", modelId: config.lessonGeneratorFallbackModel, preferredProviders: [] },
       { role: "judge", modelId: config.judgeModel, preferredProviders: [] },
       { role: "judge_fallback", modelId: config.judgeFallbackModel, preferredProviders: [] },
+      { role: "triage", modelId: config.triageModel, preferredProviders: [] },
     ];
     const models = await Promise.all(
       roles.map(async (entry): Promise<OpsSetupModel> => {
@@ -127,18 +129,22 @@ export function createSetupReader(options: {
       }),
     );
 
-    let research: OpsSetup["research"] = [];
+    // The tiers are code, so they always read; only RESEARCH_TIER can be wrong.
+    const research: OpsSetup["research"] = RESEARCH_TIERS.flatMap((tier) => {
+      const { primary, secondary } = researchAdaptersForTier(tier);
+      return [
+        { tier, slot: "primary" as const, adapterId: primary.id, vendor: RESEARCH_ADAPTER_VENDORS[primary.id], estimatedCostUsd: primary.estimatedCostUsd },
+        { tier, slot: "secondary" as const, adapterId: secondary.id, vendor: RESEARCH_ADAPTER_VENDORS[secondary.id], estimatedCostUsd: secondary.estimatedCostUsd },
+      ];
+    });
+    let researchMode: OpsSetup["researchMode"] = null;
     let researchError: string | null = null;
     try {
-      const { primary, secondary } = researchAdaptersFromEnv(options.env);
-      research = [
-        { slot: "primary", adapterId: primary.id, vendor: RESEARCH_ADAPTER_VENDORS[primary.id], estimatedCostUsd: primary.estimatedCostUsd },
-        { slot: "secondary", adapterId: secondary.id, vendor: RESEARCH_ADAPTER_VENDORS[secondary.id], estimatedCostUsd: secondary.estimatedCostUsd },
-      ];
+      researchMode = researchTierModeFromEnv(options.env);
     } catch (error) {
       researchError = error instanceof Error ? error.message : String(error);
     }
 
-    return { vendors: [...USAGE_VENDORS], models, research, researchError, fetchedAt: now().toISOString() };
+    return { vendors: [...USAGE_VENDORS], models, research, researchMode, researchError, fetchedAt: now().toISOString() };
   };
 }

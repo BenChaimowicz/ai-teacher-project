@@ -6,8 +6,8 @@ import { Async, Spinner } from "@/components/States";
 import { Tip, TipBody } from "@/components/Tip";
 import { Card } from "@/components/ui";
 import { HostTable, sortHosts, type HostRow, type HostSort } from "@/views/overview/HostTable";
-import { METRIC_HELP } from "@/lib/glossary";
-import { MEASURE, SETUP_ROLE_LABEL, vendorLabel } from "@/lib/labels";
+import { METRIC_HELP, RESEARCH_TIER_HELP } from "@/lib/glossary";
+import { MEASURE, RESEARCH_TIER_LABEL, SETUP_ROLE_LABEL, vendorLabel } from "@/lib/labels";
 import { SERIES_COLORS } from "@/lib/palette";
 import { formatDuration, formatInt, formatPct, formatUsd, ratio } from "@/lib/format";
 import { useOps } from "@/lib/useOps";
@@ -200,14 +200,43 @@ function VendorStrip({ summary, setup, onVendor }: { summary: OpsSummary; setup:
               <span className="mt-2 block text-[11px] text-muted-foreground">
                 {v.calls ? `${formatInt(v.calls)} calls · ${formatPct(ratio(v.calls - v.failedCalls, v.calls), 0)} worked` : "No calls yet"}
                 {research.map((r) => (
-                  <span key={r.slot} className="mt-0.5 block">
-                    <span className="font-mono text-foreground/80">{r.adapterId}</span> ({r.slot}) ·{" "}
+                  <span key={`${r.tier}-${r.slot}`} className={cn("mt-0.5 block", setup?.researchMode && setup.researchMode !== "auto" && setup.researchMode !== r.tier && "opacity-60")}>
+                    <span className="font-mono text-foreground/80">{r.adapterId}</span> ({RESEARCH_TIER_LABEL[r.tier] ?? r.tier} {r.slot}) ·{" "}
                     <span className="italic text-est">~{formatUsd(r.estimatedCostUsd)}/call est.</span>
                   </span>
                 ))}
               </span>
             </button>
           </Tip>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * The research tiers as the code defines them, each with its two adapters and its estimated price per Reading, and the
+ * `RESEARCH_TIER` mode that picks between them (SEN-124).
+ * @param props.setup - The setup
+ */
+function ResearchTiers({ setup }: { setup: OpsSetup }) {
+  const tiers = [...new Set(setup.research.map((r) => r.tier))];
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+      <Tip content={<TipBody title="Research tier">{RESEARCH_TIER_HELP.mode}</TipBody>} underline>
+        RESEARCH_TIER
+      </Tip>
+      <span className="font-medium text-foreground">
+        {setup.researchMode ? RESEARCH_TIER_LABEL[setup.researchMode] ?? setup.researchMode : "unreadable"}
+      </span>
+      {tiers.map((tier) => {
+        const rows = setup.research.filter((r) => r.tier === tier);
+        const perReading = rows.reduce((sum, r) => sum + r.estimatedCostUsd, 0);
+        return (
+          <span key={tier} className={cn(setup.researchMode && setup.researchMode !== "auto" && setup.researchMode !== tier && "opacity-60")}>
+            {RESEARCH_TIER_LABEL[tier] ?? tier}: <span className="font-mono text-foreground/80">{rows.map((r) => r.adapterId).join(" + ")}</span> ·{" "}
+            <span className="italic text-est">~{formatUsd(perReading)}/Reading est.</span>
+          </span>
         );
       })}
     </div>
@@ -346,6 +375,8 @@ function ProviderGroups({
           />
         </section>
       )}
+
+      <ResearchTiers setup={setup} />
 
       {setup.researchError && (
         <div className="flex items-center gap-2 text-[11px] text-est">

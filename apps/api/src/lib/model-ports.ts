@@ -21,6 +21,13 @@ export interface Judge {
   judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>>;
 }
 
+/** Small structured questions on a cheap model, with no fallback: callers take a safe default on failure (SEN-124). */
+export interface Triage {
+  readonly modelId: string;
+  /** Asks the triage model once, retrying one bad reply on the same model. */
+  generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>>;
+}
+
 /** Where the ports report a call they are about to retry. */
 export type ModelPortsLog = { warn(message: string): void };
 
@@ -54,7 +61,9 @@ const defaultSleep = (ms: number) => new Promise<void>((done) => setTimeout(done
 type Attempt = { modelId: string };
 
 /** Port names in logs, by Usage Record role. */
-const PORT_NAMES: Record<ModelCallFrame["role"], string> = { generator: "generator", fallback_generator: "fallback generator", judge: "judge" };
+const PORT_NAMES: Record<ModelCallFrame["role"], string> = {
+  generator: "generator", fallback_generator: "fallback generator", judge: "judge", triage: "triage",
+};
 
 /**
  * Builds the attempt loop around one way of waiting.
@@ -111,9 +120,10 @@ function attempts(primary: Attempt, fallback: Attempt | null, excluded: readonly
 /**
  * Creates the domain ports backed by one transport, without making provider calls. `fallbackGenerator` is the
  * configured second author, for steps the spec repeats with another model after a failed check. With
- * `authors: "lesson"`, the two authors are the Lesson pair (ADR 0018).
+ * `authors: "lesson"`, the two authors are the Lesson pair (ADR 0018). `triage` answers the subject check and the
+ * research-tier rating (SEN-124).
  */
-export function createModelPorts(options: ModelPortsOptions = {}): { generator: Generator; fallbackGenerator: Generator; judge: Judge } {
+export function createModelPorts(options: ModelPortsOptions = {}): { generator: Generator; fallbackGenerator: Generator; judge: Judge; triage: Triage } {
   const config = options.config ?? loadModelConfig();
   const transport = options.transport ?? createTrackedTransport();
   const log = options.log ?? console;
@@ -150,6 +160,14 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
         }
         const judged = { ...structured, reasoningEffort: structured.reasoningEffort ?? JUDGE_REASONING_EFFORT };
         return attempt("judge", allowed, (next) => transport.complete(next.modelId, judged), log);
+      },
+    },
+    triage: {
+      modelId: config.triageModel,
+      /** Two attempts on the triage model, no fallback. */
+      generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
+        return attempt("triage", attempts({ modelId: config.triageModel }, null),
+          (next) => transport.complete(next.modelId, request), log);
       },
     },
   };

@@ -19,6 +19,7 @@ import {
   type Database,
   type ReuseCandidate,
 } from "@senoy/db";
+import type { ResearchTier } from "@senoy/db/course-request";
 import type { SourcePack } from "@senoy/research";
 import { fakeDb } from "../routes/fake-db.ts";
 import type { CourseJudge, CourseOutline } from "./course-judge.ts";
@@ -30,6 +31,7 @@ import { loadModelConfig } from "./model-config.ts";
 import { allSupported } from "./objective-grounding.ts";
 import { ModelError } from "./openrouter.ts";
 import { LessonUnresearchableError, ReadingFailedError, ReuseUnfitError, type ReadingGenerator, type ReadingInput } from "./reading-generation.ts";
+import type { ResearchTierChoice, ResearchTierInput, ResearchTierRater } from "./research-tier.ts";
 import { installUsageTracking, type PipelineEventFinish, type PipelineEventStart, type UsageSink } from "./usage-tracking.ts";
 
 const APPROVED: ApprovedBlueprint = {
@@ -94,6 +96,27 @@ function recordingGenerator(fail = false, unfit = false) {
     },
   };
   return { readingGenerator, inputs };
+}
+
+/** The rating the stub rater returns: mainstream and dense, so `auto` would pick regular. */
+const RATED_REGULAR: ResearchTierChoice = {
+  tier: "regular", mode: "auto", error: null,
+  rating: { niche: false, scholarly: false, dense: true, reason: "Widely taught, with many names.", modelId: "fixture/triage" },
+};
+
+/**
+ * Research-tier rater recording what it was asked to rate.
+ * @param choice - What it picks
+ */
+function recordingRater(choice: ResearchTierChoice = RATED_REGULAR) {
+  const inputs: ResearchTierInput[] = [];
+  const rater: ResearchTierRater = {
+    async choose(input) {
+      inputs.push(input);
+      return choice;
+    },
+  };
+  return { rater, inputs };
 }
 
 /** One item as the stub Quiz author wrote it, before its options were placed. */
@@ -263,6 +286,7 @@ function recordingReuseFit(pick: ReuseSetup["pick"] = () => null) {
  * @param before - Prepares storage before the run, as an earlier run would have left it
  * @param worker - The worker the run executes on
  * @param reuse - Published Readings on this subject and the fit call's picks; none by default
+ * @param choice - What the research-tier rater picks
  */
 async function run(
   fail: Failure = null,
@@ -272,6 +296,7 @@ async function run(
   research: (topic: string) => Promise<SourcePack[]> = async () => PACKS,
   worker?: WorkerIdentity,
   reuse: ReuseSetup = {},
+  choice: ResearchTierChoice = RATED_REGULAR,
 ) {
   const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
@@ -298,6 +323,8 @@ async function run(
   await db.insert(generationJobs).values({ courseRequestId: request!.id, learnerId: learner!.id, kind: "course", status: "running" });
   await before?.(db, request!.id);
   const topics: string[] = [];
+  const tiers: ResearchTier[] = [];
+  const { rater, inputs: rated } = recordingRater(choice);
   const { readingGenerator, inputs } = recordingGenerator(fail === "reading", fail === "reuse");
   const { reuseFit, inputs: fitInputs } = recordingReuseFit(reuse.pick);
   const { quizGenerator, inputs: quizInputs } = recordingQuizGenerator(fail === "quiz");
@@ -312,8 +339,8 @@ async function run(
   };
   const generation = createCourseGeneration({
     readingGenerator, quizGenerator: quizGeneratorSpy, courseJudge: courseJudgeOverride?.(rows) ?? courseJudge,
-    research: async (topic) => { topics.push(topic); return research(topic); },
-    findReuseCandidates: async () => reuse.candidates ?? [], reuseFit,
+    research: async (topic, tier) => { topics.push(topic); tiers.push(tier); return research(topic); },
+    findReuseCandidates: async () => reuse.candidates ?? [], reuseFit, researchTierRater: rater,
   });
   const job = recordingControl();
   const started = generation.start({
@@ -323,7 +350,7 @@ async function run(
   const stored = () => (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
   return {
     started, rows, topics, inputs, quizInputs, outlines, authors, publishedDuringGeneration, stored, job, requestId: request!.id, learnerId: learner!.id,
-    fitInputs,
+    fitInputs, tiers, rated,
   };
 }
 
@@ -357,6 +384,66 @@ test("The approved Reading slot is researched, its packs stored, then generated 
     instructionLanguage: "en", requiredReadingSupports: [], contentScope: "compact", explanationOrder: "topic_appropriate",
   }, "A checkpoint records the write-time values it was written for, so reuse can compare them later.");
   assert.deepEqual(saved.find((row) => row.teachingMethod === "quiz")!.writeTimeProfile, { instructionLanguage: "en" });
+});
+
+test("Generation start rates the focused goal once, stores tier and rating in one write, and researches on that tier (SEN-124)", async () => {
+  const recording = eventSink();
+  const uninstall = installUsageTracking({ sink: recording.sink, log: { error() {} } });
+  let requestWrites = 0;
+  /** Counts every write to the Course Request, so the tier and rating are seen to arrive together. */
+  const countWrites = async (db: Database, requestId: string) => {
+    const update = db.update.bind(db);
+    (db as { update: typeof db.update }).update = ((table: Parameters<typeof db.update>[0]) => {
+      if (table === courseRequests) requestWrites += 1;
+      return update(table);
+    }) as typeof db.update;
+    await db.update(courseRequests).set({ focus: {
+      originalGoal: "Norse", rounds: [], proposal: null, outcome: "focused",
+      scope: { inScope: ["Cosmology"], outOfScope: ["Later retellings"] },
+    } }).where(eq(courseRequests.id, requestId)).returning({ id: courseRequests.id });
+    requestWrites = 0;
+  };
+  try {
+    const { started, stored, rated, tiers } = await run(null, undefined, countWrites);
+    await started;
+    assert.equal(rated.length, 1, "The goal is rated once.");
+    assert.deepEqual(rated[0], {
+      subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world",
+      scope: { inScope: ["Cosmology"], outOfScope: ["Later retellings"] },
+    }, "The rater reads the focused goal and its scope.");
+    assert.equal(stored().researchTier, "regular");
+    assert.deepEqual(stored().researchTierRating, RATED_REGULAR.rating);
+    assert.deepEqual(tiers, ["regular"], "Every research call uses the stored tier.");
+    // One write for the tier and rating, one for publish.
+    assert.equal(requestWrites, 2);
+  } finally {
+    uninstall();
+  }
+  assert.deepEqual(recording.detail("research_tier"), { tier: "regular", rating: RATED_REGULAR.rating, mode: "auto" });
+  assert.equal(recording.detail("course_generation")!.researchTier, "regular");
+});
+
+test("A resumed or retried run reuses the stored research tier and never rates again (SEN-124)", async () => {
+  const rating = { niche: true, scholarly: false, dense: false, reason: "Few general Sources.", modelId: "fixture/triage" };
+  const { started, stored, rated, tiers } = await run(null, undefined, async (db, requestId) => {
+    await db.update(courseRequests).set({ researchTier: "deluxe", researchTierRating: rating })
+      .where(eq(courseRequests.id, requestId)).returning({ id: courseRequests.id });
+  });
+  await started;
+  assert.equal(rated.length, 0, "No second rating.");
+  assert.deepEqual(tiers, ["deluxe"]);
+  assert.equal(stored().researchTier, "deluxe");
+  assert.deepEqual(stored().researchTierRating, rating);
+});
+
+test("A failed rating still stores its tier, with no rating, and generation goes on (SEN-124)", async () => {
+  const failed: ResearchTierChoice = { tier: "deluxe", rating: null, mode: "auto", error: "Model provider did not finish within the time limit" };
+  const { started, stored, tiers } = await run(null, undefined, undefined, APPROVED, undefined, undefined, {}, failed);
+  await started;
+  assert.equal(stored().status, "published");
+  assert.equal(stored().researchTier, "deluxe");
+  assert.equal(stored().researchTierRating, null);
+  assert.deepEqual(tiers, ["deluxe"]);
 });
 
 test("Research with no usable Source fails the Course before writing, and discards that research so Retry searches again", async () => {
@@ -465,7 +552,9 @@ test("A provider error is told as an interruption", async () => {
   const [request] = await db.insert(courseRequests).values({
     learnerId: learner!.id, subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world", status: "generating",
   }).returning();
-  const generation = createCourseGeneration({ research: async () => { throw new Error("vendor down"); }, findReuseCandidates: async () => [] });
+  const generation = createCourseGeneration({
+    research: async () => { throw new Error("vendor down"); }, findReuseCandidates: async () => [], researchTierRater: recordingRater().rater,
+  });
   const { control, settled } = recordingControl();
   await assert.rejects(generation.start({ db, courseRequestId: request!.id, learnerId: learner!.id, approved: APPROVED, control }), /vendor down/);
   const stored = (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
@@ -727,6 +816,7 @@ test("A cancelled run stops at its next stage: the Lesson in flight is not saved
     findReuseCandidates: async () => [],
     // The Learner cancels while the Reading is being written.
     research: async () => { lose(); return PACKS; },
+    researchTierRater: recordingRater().rater,
     readingGenerator, quizGenerator, courseJudge: recordingCourseJudge().courseJudge,
   });
 
@@ -752,6 +842,7 @@ test("A run whose call was cut off because it lost its job ends with the loss, n
   const generation = createCourseGeneration({
     findReuseCandidates: async () => [],
     research: async () => PACKS,
+    researchTierRater: recordingRater().rater,
     readingGenerator: {
       // The heartbeat learns of the Cancel while the Reading is written, and the model call it cuts off fails.
       async generate() {

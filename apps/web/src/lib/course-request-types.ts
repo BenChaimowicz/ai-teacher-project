@@ -34,6 +34,8 @@ export type BlueprintView = {
 export function courseRequestStatusLabel(status: string): string {
   switch (status) {
     case "draft": return "Editable draft";
+    case "awaiting_subject_check": return "Checking which subject you mean";
+    case "awaiting_subject_choice": return "Pick which subject you mean";
     case "awaiting_validity": return "Awaiting validity review";
     case "awaiting_clarification": return "Awaiting your clarification";
     case "validity_passed": return "Validity review passed";

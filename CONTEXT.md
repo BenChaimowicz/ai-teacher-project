@@ -60,6 +60,10 @@ _Avoid_: Prompt, topic request
 The Course Request-time decision that combines deterministic policy rules with Generator judgment before the Starting Level diagnostic. It passes a valid request, asks the Course Guide to clarify ambiguous framing, or rejects a prohibited or unsupported factual premise.
 _Avoid_: Safety prompt, moderation prompt
 
+**Subject check**:
+The Course Request step right after Compose and before the Validity gate that settles which subject the Learner meant. The triage model reads the subject and the goal as typed together; one reading passes straight through, several become "Which did you mean?" with **None of these** and a short typed answer. The pick replaces the subject; the subject as typed stays recorded. It asks once and never blocks a Request: a failed check goes on with the subject as typed.
+_Avoid_: clarification (that is the Validity gate's learnability question), Goal focusing (that narrows the goal, not the subject), disambiguation prompt
+
 **Goal focusing**:
 The Course Request step after the Validity gate passes and before the Starting Level diagnostic that decides whether a Learning Goal is specific enough to design one Course for. A precise goal passes straight through; a broad or ambiguous one gets a few rounds of tap-to-choose questions, then a proposed rewritten Learning Goal with its Goal scope for the Learner to confirm. The Learner may skip it for a deliberate broad overview.
 _Avoid_: clarification (that is the Validity gate's learnability question), interview, refinement
@@ -265,6 +269,10 @@ _Avoid_: web search (when meaning this call), Secondary research
 **Secondary research**:
 A second research call on the same topic through a different engine and index, producing another Source pack. It always runs alongside Primary research, not as a fallback when Primary research fails.
 _Avoid_: fact-check (unqualified), fallback research, web search (when meaning this call), Primary research
+
+**Research tier**:
+Which adapter pair researches every Reading of a Course: **deluxe** (Parallel Pro and You.com Research) or **regular** (Parallel core and You.com Research lite). It is picked once when generation starts and stored on the Course Request with the rating behind it: the triage model says whether the focused Learning Goal is niche, scholarly, or dense in facts, and code makes niche or scholarly deluxe. A failed rating is deluxe. `RESEARCH_TIER` can force either tier; the rating is still stored.
+_Avoid_: research plan, research budget, deep research (when meaning the tier)
 
 **Preference list**:
 The ranked set of educational hosts the research layer prefers, without excluding the rest of the web.

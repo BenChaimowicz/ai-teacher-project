@@ -77,7 +77,7 @@ export type UsageSink = {
 export type TrackingContext = { pipelineEventId: string | null; courseRequestId: string | null; learnerId: string | null; claimToken: string | null };
 
 /** Which model port and which of its attempts is calling the transport (ADR 0015). */
-export type ModelCallFrame = { role: Extract<UsageRole, "generator" | "fallback_generator" | "judge">; attempt: number };
+export type ModelCallFrame = { role: Extract<UsageRole, "generator" | "fallback_generator" | "judge" | "triage">; attempt: number };
 
 /** The installed sink and research meter, or null when tracking is off. */
 let installed: { sink: UsageSink; log: TrackingLog; meter: ResearchMeter | null } | null = null;

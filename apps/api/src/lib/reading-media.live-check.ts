@@ -3,12 +3,13 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createDb, loadRootEnv, parseTeachingProfileAnswers, resolveTeachingProfile, type BlueprintSlot } from "@senoy/db";
 import { mediaBlocksOf, unfilledRequiredMedia } from "@senoy/db/reading-lesson";
-import { redact, researchAdaptersFromEnv, runResearch, type SourcePack } from "@senoy/research";
+import { redact, researchAdaptersForTier, researchTierModeFromEnv, runResearch, type SourcePack } from "@senoy/research";
 import { readingPlugin } from "../teaching-methods/reading.ts";
 import { lessonResearchTopic, writeTimeProfile } from "./course-generation.ts";
 import { createMediaLibrary } from "./media-library.ts";
 import { createModelPorts } from "./model-ports.ts";
 import { createReadingGenerator, ReadingFailedError } from "./reading-generation.ts";
+import { tierFor } from "./research-tier.ts";
 import { withLiveCheckTracking } from "./live-check-tracking.ts";
 
 /**
@@ -76,7 +77,9 @@ async function sourcePacks(path: string, topic: string): Promise<SourcePack[]> {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
   process.stdout.write(`No saved Source packs; researching "${topic}"…\n`);
-  const packs = await runResearch(topic, { ...researchAdaptersFromEnv(process.env), env: process.env });
+  // No Request to rate here, so `auto` takes the unrated default (deluxe).
+  const tier = tierFor(researchTierModeFromEnv(process.env), null);
+  const packs = await runResearch(topic, { ...researchAdaptersForTier(tier), env: process.env });
   await writeFile(path, `${JSON.stringify(packs, null, 2)}\n`);
   return packs;
 }

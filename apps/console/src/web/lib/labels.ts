@@ -41,12 +41,14 @@ export const BASIS_LABEL: Record<CostBasis, string> = { actual: "Exact", estimat
 
 /** Step names (Pipeline Event kinds). */
 export const KIND_LABEL: Record<PipelineEventKind, string> = {
+  subject_check: "Settling the subject",
   validity: "Checking the request",
   goal_focus: "Focusing the goal",
   diagnostic: "Placement questions",
   fact_check: "Fact check",
   blueprint: "Course plan",
   course_generation: "Writing the course",
+  research_tier: "Research tier",
   reuse: "Lesson reuse",
   research: "Research",
   reading: "Reading lesson",
@@ -61,6 +63,7 @@ export const ROLE_LABEL: Record<UsageRole, string> = {
   generator: "Generator",
   fallback_generator: "Fallback Generator",
   judge: "Judge",
+  triage: "Triage",
   research_primary: "Research (primary)",
   research_secondary: "Research (secondary)",
 };
@@ -133,6 +136,9 @@ export function tryLabel(attempt: number): string {
   return `Attempt ${attempt}`;
 }
 
+/** Research tier names (spec §5.3); `auto` is the `RESEARCH_TIER` mode that applies each Request's rating. */
+export const RESEARCH_TIER_LABEL: Record<string, string> = { deluxe: "Deluxe", regular: "Regular", auto: "Auto (rated)" };
+
 /** Names for the configured model roles in `/api/ops/setup`. */
 export const SETUP_ROLE_LABEL: Record<string, string> = {
   generator: "Generator",
@@ -140,5 +146,6 @@ export const SETUP_ROLE_LABEL: Record<string, string> = {
   lesson_generator: "Lesson Generator",
   lesson_generator_fallback: "Fallback Lesson Generator",
   judge: "Judge",
+  triage: "Triage",
   judge_fallback: "Fallback Judge",
 };

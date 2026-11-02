@@ -16,6 +16,8 @@ import type {
   UsageRole,
   UsageVendor,
 } from "@senoy/db";
+import { RESEARCH_TIERS, type ResearchTier, type ResearchTierRating } from "@senoy/db/course-request";
+import { researchTierOfAdapter } from "@senoy/research";
 
 /**
  * Pure helpers that turn raw SQL rows into the `/api/ops/*` contract. Postgres hands back counts and sums as strings
@@ -153,6 +155,8 @@ export function toUsageRecordRow(row: SqlRow): OpsUsageRecordRow {
     pipelineLabel: toText(row.pipelineLabel),
     courseRequestId: toText(row.courseRequestId),
     courseRequestSubject: toText(row.courseRequestSubject),
+    // No column: a research call's tier follows from its adapter id (spec §5.3, SEN-124).
+    researchTier: String(row.role).startsWith("research") ? researchTierOfAdapter(String(row.modelId)) : null,
   };
 }
 
@@ -196,6 +200,8 @@ export function toCourseRequestRow(row: SqlRow): OpsCourseRequestRow {
     calls: toNumber(row.calls),
     failedCalls: toNumber(row.failedCalls),
     wallMs: toMs(row.wallMs),
+    researchTier: RESEARCH_TIERS.includes(row.researchTier as ResearchTier) ? (row.researchTier as ResearchTier) : null,
+    researchTierRating: (row.researchTierRating as ResearchTierRating | null | undefined) ?? null,
   };
 }
 

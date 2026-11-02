@@ -32,6 +32,7 @@ export const INVALID_CAUSE_HELP: Record<string, string> = {
 export const ROLE_HELP: Record<UsageRole, string> = {
   generator: "The main model that writes things: request checks, placement questions, course plans, lessons, quizzes. Code: generator",
   fallback_generator: "The backup model. Used after the main one gave a bad answer twice, or to write a replacement set. Code: fallback_generator",
+  triage: "A cheap model for small questions: which subject the learner meant, and which research tier a course needs. No backup model. Code: triage",
   judge: "A model that checks another model's writing. It never reviews its own work. Code: judge",
   research_primary: "The main research service that finds sources for a lesson. Code: research_primary",
   research_secondary: "The backup research service. Code: research_secondary",
@@ -39,11 +40,13 @@ export const ROLE_HELP: Record<UsageRole, string> = {
 
 /** What each step does. */
 export const KIND_HELP: Record<PipelineEventKind, string> = {
+  subject_check: "Lists the subjects a typed subject may mean, so the learner can pick one before the request is checked. Code: subject_check",
   validity: "Decides whether a course request is fine, needs clarifying, or must be rejected. Code: validity",
   goal_focus: "Decides whether the learning goal is specific enough, asks the learner focusing questions if not, and proposes a focused goal. Code: goal_focus",
   diagnostic: "Writes the eight placement questions that find the learner's starting level. Code: diagnostic",
   fact_check: "Checks facts in the request or a draft. Code: fact_check",
   blueprint: "Designs the course plan: modules, lessons, goals, and quizzes. Code: blueprint",
+  research_tier: "Rates the focused goal (niche? scholarly? dense in facts?) and picks deluxe or regular research for every lesson. Code: research_tier",
   course_generation: "The whole writing run after the learner approves the plan. Research, lessons, quizzes, review, and publishing sit under it. Code: course_generation",
   reuse: "Decides whether one reading lesson can reuse a lesson already published in another course, before any research. A reused lesson is not researched. Code: reuse",
   research: "Finds web sources for one lesson. Code: research",
@@ -57,6 +60,7 @@ export const KIND_HELP: Record<PipelineEventKind, string> = {
 /** What each Learner action means. */
 export const PRODUCT_EVENT_HELP: Partial<Record<ProductEventKind, string>> = {
   course_request_created: "A learner asked for a new course (subject and goal).",
+  course_request_subject_chosen: "The learner picked which subject they meant, or typed their own under None of these.",
   course_request_clarified: "The learner answered a clarifying question about their request.",
   course_request_focused: "The learner's goal was settled: precise as typed, focused and confirmed, or skipped for a broad overview.",
   diagnostic_submitted: "The learner answered the placement questions.",
@@ -91,6 +95,15 @@ export const METRIC_HELP = {
   unknown: "Unknown: we were (or may have been) charged, but nothing told us how much, e.g. a call we stopped for taking too long.",
   vendorVsProvider:
     "Vendor is who we pay: OpenRouter for model calls, Parallel or You.com for research. Provider is who actually answered: OpenRouter routes each model call to a host (OpenAI, Google, Alibaba…). The same model can be cheaper or faster on one host.",
+} as const;
+
+/** Tooltips for the research tier and its rating (SEN-124). */
+export const RESEARCH_TIER_HELP = {
+  tier: "Which pair of research services finds sources for every lesson of this course. Deluxe: Parallel Pro + You.com Research. Regular: Parallel core + You.com Research lite, about a quarter of the price. Picked when writing starts and kept for the whole course. Code: research_tier",
+  mode: "The RESEARCH_TIER setting. Deluxe or Regular forces that tier for every course; Auto uses each course's rating. The rating is taken either way, so you can see what Auto would pick. Code: RESEARCH_TIER",
+  rating:
+    "The cheap triage model's three yes/no answers about the focused goal. Niche or scholarly earns Deluxe; dense in facts alone does not. A failed rating means Deluxe under Auto. Code: research_tier_rating",
+  call: "The tier this research call ran on, read from which research service it used.",
 } as const;
 
 /** Tooltips for the billing check and measured research cost. */

@@ -4,6 +4,10 @@ import Fastify from "fastify";
 import { createDb, learners, loadRootEnv, parseTeachingProfileAnswers, TEACHING_PROFILE_VERSION, type Database, type CourseRequestRecord } from "@senoy/db";
 import { courseRequestRoutes } from "./course-requests.ts";
 import { withLiveCheckTracking } from "../lib/live-check-tracking.ts";
+import type { SubjectChecker } from "../lib/subject-check.ts";
+
+/** This check is about Validity: every subject is taken as having one reading (the subject check has its own live check). */
+const singleReading: SubjectChecker = { async check() { return { kind: "single" }; } };
 
 /** Exercises real OpenRouter and hosted Postgres without leaving Learner or Request records behind. */
 async function checkValidity() {
@@ -19,12 +23,14 @@ async function checkValidity() {
         const app = Fastify({ logger: { level: "error" } });
         app.decorate("db", transaction as unknown as Database);
         app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
-        await app.register(courseRequestRoutes);
+        await app.register(courseRequestRoutes, { subjectChecker: singleReading });
         /** Saves and reviews one real Request through HTTP handlers. */
         async function review(subject: string, learningGoal: string, expected: string): Promise<CourseRequestRecord> {
           const created = await app.inject({ method: "POST", url: "/api/course-requests", payload: { subject, learningGoal } });
           assert.equal(created.statusCode, 201, created.body);
           const id = created.json().courseRequest.id;
+          const settled = await app.inject({ method: "POST", url: `/api/course-requests/${id}/subject-check`, payload: {} });
+          assert.equal(settled.json().courseRequest?.status, "awaiting_validity", settled.body);
           const checked = await app.inject({ method: "POST", url: `/api/course-requests/${id}/validity`, payload: {} });
           assert.equal(checked.statusCode, 200, checked.body);
           const row = checked.json().courseRequest as CourseRequestRecord;
@@ -55,7 +61,7 @@ async function checkValidity() {
           assert.equal(draft.revisedFromId, rejected.id);
           const saved = await app.inject({ method: "PATCH", url: `/api/course-requests/${draft.id}`, payload: { subject: "Unicorn mythology", learningGoal: "Explain how unicorns are depicted in documented mythological stories." } });
           assert.equal(saved.statusCode, 200, saved.body);
-          assert.equal(saved.json().courseRequest.status, "awaiting_validity");
+          assert.equal(saved.json().courseRequest.status, "awaiting_subject_check");
           assert.deepEqual((await app.inject({ method: "GET", url: `/api/course-requests/${rejected.id}` })).json(), { courseRequest: rejected });
           process.stdout.write("Confirmed unsupported premise rejected; editable revision preserves original history.\n");
         } finally { await app.close(); }

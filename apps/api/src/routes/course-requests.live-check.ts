@@ -62,7 +62,7 @@ async function checkCourseRequests() {
           const { courseRequest } = created.json();
           assert.equal(courseRequest.subject, "Norse mythology");
           assert.equal(courseRequest.learningGoal, "Explain the mythic corpus.");
-          assert.equal(courseRequest.status, "awaiting_validity");
+          assert.equal(courseRequest.status, "awaiting_subject_check");
           assert.equal(courseRequest.learnerId, undefined);
           const requestUrl = `/api/course-requests/${courseRequest.id}`;
           const reopened = await app.inject({ method: "GET", url: requestUrl });
@@ -76,7 +76,7 @@ async function checkCourseRequests() {
               kind: "course_request",
               title: "Norse mythology",
               learningGoal: "Explain the mythic corpus.",
-              status: "awaiting_validity",
+              status: "awaiting_subject_check",
               href: `/course-requests/${courseRequest.id}`,
             }]);
           }

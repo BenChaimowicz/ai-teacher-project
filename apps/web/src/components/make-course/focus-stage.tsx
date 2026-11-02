@@ -415,16 +415,19 @@ function ScopeList({ title, to, items, onMove, locked = false, out = false }: Sc
   );
 }
 
-/** "Something else": the one short field in this step. Enter sends it. */
-function OwnWords({ onAnswer, onBack }: { onAnswer: (text: string) => void; onBack: () => void }) {
+/**
+ * "Something else": the one short field in a step of options. Enter sends it.
+ * @param id - The field's id, unique on the screen
+ */
+export function OwnWords({ onAnswer, onBack, id = "focus-own-words" }: { onAnswer: (text: string) => void; onBack: () => void; id?: string }) {
   const [value, setValue] = useState("");
   const text = value.trim();
   return (
     <div className="mk-topic">
       <form onSubmit={(event) => { event.preventDefault(); if (text) onAnswer(text); }}>
-        <label htmlFor="focus-own-words" className="sr-only">In your own words</label>
+        <label htmlFor={id} className="sr-only">In your own words</label>
         <Input
-          id="focus-own-words"
+          id={id}
           autoFocus
           maxLength={OWN_WORDS_MAX}
           placeholder="In a few words…"

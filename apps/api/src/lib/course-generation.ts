@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { blueprintSlots, type ApprovedBlueprint, type BlueprintSlot, type JudgeResult } from "@senoy/db/blueprint";
-import type { GoalScope } from "@senoy/db/course-request";
+import type { GoalScope, ResearchTier } from "@senoy/db/course-request";
 import {
   courseBlueprints,
   courseCodeFailures,
@@ -22,7 +22,7 @@ import {
   type ReuseCandidate,
   type Transaction,
 } from "@senoy/db";
-import { researchAdaptersFromEnv, runResearch, type SourcePack } from "@senoy/research";
+import { researchAdaptersForTier, runResearch, type SourcePack } from "@senoy/research";
 import { quizPlugin } from "../teaching-methods/quiz.ts";
 import { readingPlugin } from "../teaching-methods/reading.ts";
 import type { TeachingMethodPlugin } from "../teaching-methods/types.ts";
@@ -31,6 +31,7 @@ import { enqueueJob, LeaseLostError, type GenerationControl, type SettledStatus,
 import { createReuseFit, findReuseCandidates, reuseSeed, type FindReuseCandidates, type ReuseFit } from "./lesson-reuse.ts";
 import { createMediaLibrary } from "./media-library.ts";
 import { loadModelConfig } from "./model-config.ts";
+import { createModelPorts } from "./model-ports.ts";
 import { createQuizGenerator, QuizFailedError, type CheckedQuiz, type QuizGenerator } from "./quiz-generation.ts";
 import {
   createReadingGenerator,
@@ -42,6 +43,7 @@ import {
   type PriorLesson,
   type ReadingGenerator,
 } from "./reading-generation.ts";
+import { createResearchTierRater, type ResearchTierRater } from "./research-tier.ts";
 import { createTrackedTransport, trackResearchRun, withPipelineEvent, type PipelineEventScope } from "./usage-tracking.ts";
 
 /** What one run of a claimed generation job receives. */
@@ -60,15 +62,19 @@ export interface CourseGeneration {
   start(input: GenerationStart): Promise<void>;
 }
 
-/** Primary and Secondary research for one Lesson topic. */
+/** Primary and Secondary research for one Lesson topic, on the Course's research tier. */
 export type LessonResearch = (topic: string) => Promise<SourcePack[]>;
 
+/** Primary and Secondary research for one Lesson topic on a given research tier (spec §5.3). */
+export type TieredResearch = (topic: string, tier: ResearchTier) => Promise<SourcePack[]>;
+
 /**
- * Injectable research, reuse lookup and fit, Generators, and whole-Course Judge; omitted ones are created lazily from
- * the environment, and the reuse lookup reads the run's database.
+ * Injectable research, research-tier rater, reuse lookup and fit, Generators, and whole-Course Judge; omitted ones are
+ * created lazily from the environment, and the reuse lookup reads the run's database.
  */
 export type CourseGenerationOptions = {
-  research?: LessonResearch;
+  research?: TieredResearch;
+  researchTierRater?: ResearchTierRater;
   findReuseCandidates?: FindReuseCandidates;
   reuseFit?: ReuseFit;
   readingGenerator?: ReadingGenerator;
@@ -234,21 +240,46 @@ export function writeTimeProfile(plugin: TeachingMethodPlugin, profile: Resolved
 }
 
 /**
- * Research run against both vendors with keys from the environment; each vendor call becomes a Usage Record, measured
- * against the vendor balance when the meter is on. Once `signal` aborts, calls in flight stop and the search throws its
- * reason instead of returning packs it never finished (SEN-93).
+ * Research run against the tier's two vendors with keys from the environment; each vendor call becomes a Usage Record,
+ * measured against the vendor balance when the meter is on. Once `signal` aborts, calls in flight stop and the search
+ * throws its reason instead of returning packs it never finished (SEN-93).
  * @param signal - The run's `GenerationControl.signal`
  */
-function researchUntil(signal: AbortSignal): LessonResearch {
+function researchUntil(signal: AbortSignal): TieredResearch {
   /** fetch that also stops when the run loses its job. */
   const fetch: typeof globalThis.fetch = (input, init) =>
     globalThis.fetch(input, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, signal]) : signal });
-  return async (topic) => {
+  return async (topic, tier) => {
     signal.throwIfAborted();
-    const packs = await runResearch(topic, { ...researchAdaptersFromEnv(process.env), env: process.env, fetch, ...trackResearchRun() });
+    const packs = await runResearch(topic, { ...researchAdaptersForTier(tier), env: process.env, fetch, ...trackResearchRun() });
     signal.throwIfAborted();
     return packs;
   };
+}
+
+/**
+ * Rates a Request's focused Learning Goal under its own `research_tier` Pipeline Event and stores the tier and the
+ * rating on the Request in one write, so a resumed or retried run reuses them (spec §5.3, SEN-124). A failed rating
+ * still stores a tier (deluxe under `auto`) with a null rating.
+ * @param input.request - The Course Request, with no research tier yet
+ * @param input.rater - Picks the tier
+ * @param input.holding - Runs the write only while the run still holds its job
+ * @returns The tier every research call of the Course uses
+ */
+async function chooseResearchTier({ request, rater, holding }: {
+  request: Pick<typeof courseRequests.$inferSelect, "id" | "subject" | "learningGoal" | "focus">;
+  rater: ResearchTierRater;
+  holding: (write: (transaction: Transaction) => Promise<unknown>) => Promise<void>;
+}): Promise<ResearchTier> {
+  const choice = await withPipelineEvent("research_tier", { label: request.learningGoal }, async (step) => {
+    const chosen = await rater.choose({ subject: request.subject, learningGoal: request.learningGoal, scope: request.focus?.scope ?? null });
+    step.setDetail({ tier: chosen.tier, rating: chosen.rating, mode: chosen.mode, ...(chosen.error ? { error: chosen.error } : {}) });
+    return chosen;
+  });
+  await holding((transaction) => transaction.update(courseRequests)
+    .set({ researchTier: choice.tier, researchTierRating: choice.rating })
+    .where(eq(courseRequests.id, request.id)).returning({ id: courseRequests.id }));
+  return choice.tier;
 }
 
 /**
@@ -263,6 +294,10 @@ function researchUntil(signal: AbortSignal): LessonResearch {
  * it was written from; one that cannot be made to fit is researched there and then and written like any other.
  * Then the whole-Course Code checks and one Judge pass over the outline (spec §6.5), and atomic publish:
  * the Course snapshot, the `published` status, and the job's success in one transaction.
+ *
+ * Before anything else, a Request with no research tier is rated under its own `research_tier` Pipeline Event and its
+ * tier and rating are stored on the Request in one write (spec §5.3, SEN-124); every research call of the Course then
+ * uses that tier's adapter pair, and a resumed or retried run reuses the stored tier and never rates again.
  *
  * A slot that already has stored research is not researched again, and one that has a checkpoint is not generated
  * again, so a resumed or reclaimed job continues from the next unfinished Lesson; earlier Readings reach later ones
@@ -280,7 +315,7 @@ function researchUntil(signal: AbortSignal): LessonResearch {
  * (spec §5.1, SEN-85): the job ends `needs_new_blueprint`, every unpublished Lesson and stored pack of the failed plan
  * is discarded, the approved snapshot is cleared with the Judge's reasons left on the draft, and the Request goes to
  * `blueprint_preparing` with a queued Blueprint job — so the Learner comes back to a new plan to review, not a dead end.
- * @param options - Injected research, reuse lookup and fit, Generators, and Judge; tests pass fixtures
+ * @param options - Injected research, research-tier rater, reuse lookup and fit, Generators, and Judge; tests pass fixtures
  */
 export function createCourseGeneration(options: CourseGenerationOptions = {}): CourseGeneration {
   return {
@@ -310,7 +345,18 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       const scope = request.focus?.scope ?? null;
       // Every model and research call of this run stops the moment the worker learns it lost the job (SEN-93).
       const transport = createTrackedTransport({ signal: control.signal });
-      const research = options.research ?? researchUntil(control.signal);
+      /** Runs one write only while this run still holds the job. */
+      const holding = (write: (transaction: Transaction) => Promise<unknown>) => db.transaction(async (transaction) => {
+        await control.hold(transaction);
+        await write(transaction);
+      });
+      const tier = request.researchTier ?? await chooseResearchTier({
+        request, rater: options.researchTierRater ?? createResearchTierRater({ triage: createModelPorts({ transport }).triage }), holding,
+      });
+      event.setDetail({ researchTier: tier });
+      const tieredResearch = options.research ?? researchUntil(control.signal);
+      /** Every research call of this Course runs on its stored tier. */
+      const research: LessonResearch = (topic) => tieredResearch(topic, tier);
       const generator = options.readingGenerator ?? createReadingGenerator({ transport, media: createMediaLibrary(db) });
       const reuseFit = options.reuseFit ?? createReuseFit({ transport });
       const findCandidates = options.findReuseCandidates ?? ((subject: string) => findReuseCandidates(db, subject));
@@ -318,11 +364,6 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       /** Every published Reading on this subject, looked up once per run and only when a slot needs it. */
       const reusePool = () => (pool ??= findCandidates(request.subject));
       const priorLessons: PriorLesson[] = [];
-      /** Runs one write only while this run still holds the job. */
-      const holding = (write: (transaction: Transaction) => Promise<unknown>) => db.transaction(async (transaction) => {
-        await control.hold(transaction);
-        await write(transaction);
-      });
       const finished = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
       const finishedSlotIds = new Set(finished.map((row) => row.slotId));
       const slots = blueprintSlots(approved.blueprint);

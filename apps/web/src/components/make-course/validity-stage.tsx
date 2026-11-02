@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ComposeFlow } from "@/components/make-course/compose-flow.tsx";
 import { ThreadEnd, WorkingLine, useAutoStep } from "@/components/make-course/flow.tsx";
 import { errorText, requestAction } from "@/components/make-course/request-api.ts";
+import { SubjectHistory } from "@/components/make-course/subject-stage.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { LearnerEcho, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { Input } from "@/components/ui/input.tsx";
@@ -18,12 +19,15 @@ export const VALIDITY_STATUSES = new Set(["draft", "awaiting_validity", "awaitin
 const UNRESOLVED = "The answer has not resolved the original question.";
 
 /**
- * What the Learner asked for, as the start of the thread: the topic, the goal, and any clarification already given.
+ * What the Learner asked for, as the start of the thread: the topic and goal as typed, which subject they meant when
+ * that was asked (SEN-124), and any clarification already given.
  */
 export function RequestHistory({ record }: { record: CourseRequestRecord }) {
   if (record.status === "draft") return null;
   // The goal as typed: focusing (SEN-90) may have rewritten learningGoal.
   const typedGoal = record.focus?.originalGoal ?? record.learningGoal;
+  // The subject as typed: the subject check (SEN-124) may have replaced subject with the Learner's pick.
+  const typedSubject = record.subjectCheck?.subjectAsTyped ?? record.subject;
   return (
     <>
       {record.revisedFromId ? (
@@ -32,14 +36,15 @@ export function RequestHistory({ record }: { record: CourseRequestRecord }) {
         </p>
       ) : null}
       <CompanionLine>What would you like to learn?</CompanionLine>
-      <LearnerEcho>{record.subject}</LearnerEcho>
+      <LearnerEcho>{typedSubject}</LearnerEcho>
       {/* Requests from before SEN-90 tapped a separate goal; newer ones typed one line that is both. */}
-      {typedGoal !== record.subject ? (
+      {typedGoal !== typedSubject ? (
         <>
           <CompanionLine>What would you like to get out of it?</CompanionLine>
           <LearnerEcho>{typedGoal}</LearnerEcho>
         </>
       ) : null}
+      <SubjectHistory record={record} />
       {record.clarification ? (
         <>
           <CompanionLine><b>{record.clarification.question}</b></CompanionLine>

@@ -106,6 +106,14 @@ pnpm check:validity:live
 
 This opt-in check makes billable model calls for corpus study, named-song skills, descriptive versus operational harm, protected copies, and an unsupported premise with clarification. Temporary Learners and Requests are rolled back, including on failure; existing data is untouched.
 
+To exercise the subject check (spec §4.2) on the real triage model and the configured Supabase database:
+
+```bash
+pnpm check:subject-check:live
+```
+
+This opt-in check makes billable triage calls for "Mercury" and "Java" (several readings), "Norse mythology" and "Java for Android apps" (one reading), then picks a reading. Temporary Learners and Requests are rolled back, including on failure.
+
 To exercise Lesson reuse (spec §5.8) on a real published Reading, against OpenRouter and the configured Supabase database:
 
 ```bash
