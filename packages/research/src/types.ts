@@ -50,6 +50,7 @@ export type SourcePack = {
   latencyMs: number;
   /** From the configured price table; neither vendor reports cost. 0 when the call did not complete. */
   estimatedCostUsd: number;
+  /** The vendor's id for the call; kept on a failed or timed-out pack when the vendor named the call before it ended. */
   vendorRequestId: string | null;
   /** The vendor's own written report. For debugging only; never given to the Generator. */
   vendorSummary: string | null;
@@ -77,6 +78,11 @@ export type AdapterCall = {
   apiKey: string;
   fetch: typeof fetch;
   signal: AbortSignal;
+  /**
+   * Told the vendor's id for this call as soon as the vendor names it, so a call that later fails or times out still
+   * carries the id (SEN-126: Parallel bills a run that completes after we stopped waiting).
+   */
+  onRequestId?: (requestId: string) => void;
 };
 
 /** One research vendor behind a slot. Adapters know nothing about Host policy. */

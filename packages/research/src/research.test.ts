@@ -155,6 +155,31 @@ test("A timed-out or failing call yields its own pack without the key; the other
   assert.ok(!JSON.stringify([p, s]).includes("secret-"));
 });
 
+test("A call that fails or times out after the vendor named it keeps the vendor's id on its pack", async () => {
+  const [p, s] = await runResearch(TOPIC, {
+    primary: {
+      ...fakeAdapter("parallel-pro", "PARALLEL_PRO_API_KEY", primaryResult),
+      research: async (_topic, { signal, onRequestId }) => {
+        onRequestId?.("trun_lost");
+        return new Promise((_, reject) => {
+          const pending = setTimeout(() => {}, 10_000);
+          signal.addEventListener("abort", () => { clearTimeout(pending); reject(signal.reason); });
+        });
+      },
+    },
+    secondary: {
+      ...fakeAdapter("you-research", "YOU_DOT_COM_API_KEY", secondaryResult),
+      research: async (_topic, { onRequestId }) => {
+        onRequestId?.("req_lost");
+        throw new TypeError("fetch failed");
+      },
+    },
+    env: ENV, fetch: wikipediaFetch,
+  });
+  assert.deepEqual([p.status, p.vendorRequestId, p.estimatedCostUsd], ["timed_out", "trun_lost", 0]);
+  assert.deepEqual([s.status, s.vendorRequestId, s.estimatedCostUsd], ["error", "req_lost", 0]);
+});
+
 test("The observer sees every vendor call with its pack and raw result, and its failure changes nothing", async () => {
   const seen: ResearchCallObservation[] = [];
   const [p, s] = await runResearch(TOPIC, {
@@ -216,10 +241,14 @@ test("Parallel adapter creates a pro run, reads its result, and flattens basis c
       },
     });
   };
-  const result = await parallelProAdapter.research(TOPIC, { apiKey: "k", fetch: fetchImpl, signal: new AbortController().signal });
+  const named: string[] = [];
+  const result = await parallelProAdapter.research(TOPIC, {
+    apiKey: "k", fetch: fetchImpl, signal: new AbortController().signal, onRequestId: (id) => named.push(id),
+  });
   assert.equal(JSON.parse(String(requests[0]!.init!.body)).processor, "pro");
   assert.equal((requests[0]!.init!.headers as Record<string, string>)["x-api-key"], "k");
-  assert.match(requests[1]!.url, /\/v1\/tasks\/runs\/trun_9\/result\?timeout=600$/);
+  assert.match(requests[1]!.url, /\/v1\/tasks\/runs\/trun_9\/result\?timeout=120$/);
+  assert.deepEqual(named, ["trun_9"]);
   assert.deepEqual(result, {
     requestId: "trun_9", summary: "# Report",
     sources: [
@@ -227,6 +256,35 @@ test("Parallel adapter creates a pro run, reads its result, and flattens basis c
       { url: "https://en.wikipedia.org/wiki/Yggdrasil", title: null, excerpts: [] },
     ],
   });
+});
+
+test("Parallel adapter asks again while Parallel answers 408 run still active, so a run past five minutes completes", async () => {
+  let polls = 0;
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    if (init?.method === "POST") return Response.json({ run_id: "trun_slow" }, { status: 202 });
+    polls += 1;
+    if (polls < 4) return Response.json({ type: "error", error: { message: "Request timed out; run still active" } }, { status: 408 });
+    return Response.json({ run: { run_id: "trun_slow", status: "completed" }, output: { content: "Late report", basis: [] } });
+  };
+  const result = await parallelProAdapter.research(TOPIC, { apiKey: "k", fetch: fetchImpl, signal: new AbortController().signal });
+  assert.equal(polls, 4);
+  assert.deepEqual(result, { requestId: "trun_slow", summary: "Late report", sources: [] });
+});
+
+test("Parallel adapter stops polling when its signal aborts, after naming the run", async () => {
+  const controller = new AbortController();
+  const named: string[] = [];
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    if (init?.method === "POST") return Response.json({ run_id: "trun_cut" });
+    init?.signal?.throwIfAborted();
+    controller.abort(new DOMException("limit", "TimeoutError"));
+    return new Response("{}", { status: 408 });
+  };
+  await assert.rejects(
+    parallelProAdapter.research(TOPIC, { apiKey: "k", fetch: fetchImpl, signal: controller.signal, onRequestId: (id) => named.push(id) }),
+    (error: Error) => error.name === "TimeoutError",
+  );
+  assert.deepEqual(named, ["trun_cut"]);
 });
 
 test("Parallel adapter fails when the run did not complete", async () => {
