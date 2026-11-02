@@ -13,6 +13,13 @@ const PROCESSORS = {
   core: { id: "parallel-core", estimatedCostUsd: 0.025, timeoutMs: 6 * 60 * 1000 },
 } as const satisfies Record<string, { id: ResearchAdapterId; estimatedCostUsd: number; timeoutMs: number }>;
 
+/**
+ * Seconds each result request waits for the run. Kept well under Node fetch's 300 s headers timeout, which dropped
+ * every `pro` run longer than five minutes when one request waited the whole time limit (SEN-126). Parallel answers
+ * 408 "run still active" when the wait ends first, and the adapter asks again until its own time limit.
+ */
+const RESULT_POLL_SECONDS = 120;
+
 /** The parts of a Task API result this adapter reads. */
 type TaskResult = {
   run?: { run_id?: unknown; status?: unknown };
@@ -23,8 +30,9 @@ type TaskResult = {
 };
 
 /**
- * Research through Parallel's Task API on one processor. Creates a run, then blocks on its result. Sources come from
- * the citations in `output.basis`.
+ * Research through Parallel's Task API on one processor. Creates a run, reports its id, then waits on its result in
+ * requests of `RESULT_POLL_SECONDS` until it ends or the call's signal aborts. Sources come from the citations in
+ * `output.basis`.
  * @param processor - Which Task API processor runs the topic
  */
 function parallelTaskAdapter(processor: keyof typeof PROCESSORS): ResearchAdapter {
@@ -34,7 +42,7 @@ function parallelTaskAdapter(processor: keyof typeof PROCESSORS): ResearchAdapte
     envKey: "PARALLEL_PRO_API_KEY",
     estimatedCostUsd,
     timeoutMs,
-    async research(topic, { apiKey, fetch, signal }) {
+    async research(topic, { apiKey, fetch, signal, onRequestId }) {
       const where = `[parallel-pro.ts: research ${processor}]`;
       const headers = { "x-api-key": apiKey, "content-type": "application/json" };
       const created = (await readVendorJson(
@@ -53,8 +61,14 @@ function parallelTaskAdapter(processor: keyof typeof PROCESSORS): ResearchAdapte
       )) as { run_id?: unknown };
       const runId = optionalString(created.run_id);
       if (!runId) throw new Error(`${where} Run was created without a run_id`);
-      const resultUrl = `${BASE_URL}/${encodeURIComponent(runId)}/result?timeout=${timeoutMs / 1000}`;
-      const result = (await readVendorJson(await fetch(resultUrl, { headers, signal }), where)) as TaskResult;
+      onRequestId?.(runId);
+      const resultUrl = `${BASE_URL}/${encodeURIComponent(runId)}/result?timeout=${RESULT_POLL_SECONDS}`;
+      let response = await fetch(resultUrl, { headers, signal });
+      while (response.status === 408) {
+        await response.body?.cancel();
+        response = await fetch(resultUrl, { headers, signal });
+      }
+      const result = (await readVendorJson(response, where)) as TaskResult;
       if (result.run?.status !== "completed") {
         throw new Error(`${where} Run did not complete || runId=${runId} || status=${String(result.run?.status)}`);
       }

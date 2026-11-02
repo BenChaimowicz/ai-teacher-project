@@ -38,6 +38,8 @@ type VendorCall = {
   outcome: { kind: "done"; result: VendorResult } | { kind: "timed_out" } | { kind: "error"; message: string };
   startedAt: Date;
   finishedAt: Date;
+  /** The id the vendor gave the call before it ended, if any; kept when the call failed or timed out. */
+  requestId: string | null;
 };
 
 /**
@@ -66,18 +68,23 @@ async function callVendor(
 ): Promise<VendorCall> {
   const startedAt = now();
   const signal = AbortSignal.timeout(adapter.timeoutMs);
+  let requestId: string | null = null;
+  const onRequestId = (id: string) => {
+    requestId = id;
+  };
   try {
-    const result = await adapter.research(topic, { apiKey, fetch: fetchImpl, signal });
-    return { outcome: { kind: "done", result }, startedAt, finishedAt: now() };
+    const result = await adapter.research(topic, { apiKey, fetch: fetchImpl, signal, onRequestId });
+    return { outcome: { kind: "done", result }, startedAt, finishedAt: now(), requestId: result.requestId ?? requestId };
   } catch (error) {
     const finishedAt = now();
     const timedOut = signal.aborted || (error instanceof Error && error.name === "TimeoutError");
-    if (timedOut) return { outcome: { kind: "timed_out" }, startedAt, finishedAt };
+    if (timedOut) return { outcome: { kind: "timed_out" }, startedAt, finishedAt, requestId };
     const message = error instanceof Error ? error.message : String(error);
     return {
       outcome: { kind: "error", message: redact(`[research.ts: callVendor] ${adapter.id} failed || ${message}`, apiKey) },
       startedAt,
       finishedAt,
+      requestId,
     };
   }
 }
@@ -150,7 +157,7 @@ function buildPack(
       status: call.outcome.kind === "timed_out" ? "timed_out" : "error",
       error: call.outcome.kind === "error" ? call.outcome.message : `No answer within ${adapter.timeoutMs} ms`,
       estimatedCostUsd: 0,
-      vendorRequestId: null,
+      vendorRequestId: call.requestId,
       vendorSummary: null,
       sources: [],
       filteredOut: [],

@@ -1,6 +1,6 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createDb, loadRootEnv, pipelineEvents, usageRecords, type Database } from "@senoy/db";
-import { RESEARCH_LIST_PRICES_USD } from "@senoy/research";
+import { RESEARCH_LIST_PRICES_USD, type ResearchAdapterId } from "@senoy/research";
 
 /** The parts of a stored Source pack this backfill reads. */
 export type StoredPack = {
@@ -24,6 +24,17 @@ export type ParallelRun = {
   modified_at: string;
 };
 
+/** The research adapters that run on Parallel's Task API. */
+const PARALLEL_ADAPTERS = new Set<string>(["parallel-pro", "parallel-core"]);
+
+/**
+ * List price of one run for a Parallel adapter id.
+ * @param adapter - `parallel-pro` or `parallel-core`
+ */
+function listPrice(adapter: string) {
+  return RESEARCH_LIST_PRICES_USD[adapter as ResearchAdapterId] ?? RESEARCH_LIST_PRICES_USD["parallel-pro"];
+}
+
 /** Source pack statuses that mean the vendor answered, mapped to Usage Record outcomes. */
 const ANSWERED: Record<string, "ok" | "empty_vendor" | "empty_filtered"> = { ok: "ok", empty_vendor: "empty_vendor", empty_filtered: "empty_filtered" };
 
@@ -43,11 +54,11 @@ export function backfillRow(pack: StoredPack, run: ParallelRun, pipelineEventId:
     pipelineEventId,
     vendor: "parallel",
     role: pack.slot === "primary" ? "research_primary" : "research_secondary",
-    modelId: "parallel-pro",
+    modelId: pack.adapter,
     responseId: run.run_id,
     attempt: 1,
     outcome: ANSWERED[pack.status] ?? (pack.status === "timed_out" ? "timeout" : "error"),
-    costUsd: billed ? RESEARCH_LIST_PRICES_USD["parallel-pro"] : 0,
+    costUsd: billed ? listPrice(pack.adapter) : 0,
     costBasis: "estimated",
     measurementNote: billed
       ? `Backfilled: Parallel reports this ${run.processor} run completed, so it was billed at list price`
@@ -58,6 +69,19 @@ export function backfillRow(pack: StoredPack, run: ParallelRun, pipelineEventId:
     createdAt,
     durationMs: Math.max(0, createdAt.getTime() - new Date(run.created_at).getTime()),
   };
+}
+
+/**
+ * The price for a live Usage Record of a Parallel call that errored at our end, which was saved at $0 (SEN-72), once
+ * Parallel says whether the run completed anyway (SEN-126: the run keeps going after our connection drops).
+ * @param record - The errored record: its adapter id and any balance-measurement note it already has
+ * @param run - Parallel's record of the run
+ * @returns The new cost and note when the run was billed, or null when it was not and the record stays at $0
+ */
+export function repricedError(record: { modelId: string; measurementNote: string | null }, run: ParallelRun) {
+  if (run.status !== "completed") return null;
+  const note = `Repriced: Parallel reports this ${run.processor} run completed after the call errored, so it was billed at list price`;
+  return { costUsd: listPrice(record.modelId), measurementNote: record.measurementNote ? `${record.measurementNote} · ${note}` : note };
 }
 
 /**
@@ -82,13 +106,15 @@ async function lookUpRun(runId: string, apiKey: string): Promise<ParallelRun> {
 }
 
 /**
- * One-off backfill: every Parallel run stored in `lesson_research` that is not yet a Usage Record is looked up at
- * Parallel and saved as a `backfill` Usage Record under a backfilled `research` Pipeline Event for its Course Request
- * and slot. Safe to run again: runs already recorded are skipped.
+ * Backfill: every Parallel run stored in `lesson_research` that is not yet a Usage Record is looked up at Parallel and
+ * saved as a `backfill` Usage Record under a backfilled `research` Pipeline Event for its Course Request and slot.
+ * Then every live Usage Record of a Parallel call that errored at $0 with a run id is looked up, and repriced at list
+ * price when the run completed anyway. Safe to run again: runs already recorded are skipped, and a repriced record is
+ * no longer at $0.
  * @param db - Database
  * @param apiKey - `PARALLEL_PRO_API_KEY`
  * @param log - Progress lines
- * @returns How many runs were saved, and how many lookups failed
+ * @returns How many runs were saved, how many errored records were repriced, and how many lookups failed
  */
 export async function backfillParallelRuns(db: Database, apiKey: string, log: (line: string) => void) {
   const rows = (await db.execute(sql`
@@ -102,7 +128,7 @@ export async function backfillParallelRuns(db: Database, apiKey: string, log: (l
   let saved = 0;
   let failed = 0;
   for (const row of rows) {
-    const packs = row.packs.filter((pack) => pack.adapter === "parallel-pro" && pack.vendorRequestId && !known.has(pack.vendorRequestId));
+    const packs = row.packs.filter((pack) => PARALLEL_ADAPTERS.has(pack.adapter) && pack.vendorRequestId && !known.has(pack.vendorRequestId));
     if (packs.length === 0) continue;
     for (const pack of packs) {
       let run: ParallelRun;
@@ -133,7 +159,27 @@ export async function backfillParallelRuns(db: Database, apiKey: string, log: (l
       log(`saved ${run.run_id} · ${run.status} · ${row.slotId} · ${run.created_at}`);
     }
   }
-  return { saved, failed };
+  const errored = (await db.execute(sql`
+    select id, model_id as "modelId", response_id as "responseId", measurement_note as "measurementNote" from usage_records
+    where vendor = 'parallel' and origin = 'captured' and outcome = 'error' and response_id is not null and coalesce(cost_usd, 0) = 0
+    order by created_at`)) as unknown as { id: string; modelId: string; responseId: string; measurementNote: string | null }[];
+  let repriced = 0;
+  for (const record of errored) {
+    let run: ParallelRun;
+    try {
+      run = await lookUpRun(record.responseId, apiKey);
+    } catch (error) {
+      failed += 1;
+      log(error instanceof Error ? error.message : String(error));
+      continue;
+    }
+    const price = repricedError(record, run);
+    if (!price) continue;
+    await db.update(usageRecords).set(price).where(eq(usageRecords.id, record.id));
+    repriced += 1;
+    log(`repriced ${run.run_id} · ${run.status} · $${price.costUsd}`);
+  }
+  return { saved, repriced, failed };
 }
 
 /** Runs the backfill against the configured database when this file is executed directly. */

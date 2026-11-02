@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { backfillRow, type ParallelRun, type StoredPack } from "./backfill-parallel-runs.ts";
+import { backfillRow, repricedError, type ParallelRun, type StoredPack } from "./backfill-parallel-runs.ts";
 
 const pack: StoredPack = {
   slot: "primary", adapter: "parallel-pro", topic: "Pacific currents", status: "timed_out", startedAt: "2026-10-19T04:01:37Z",
@@ -19,5 +19,20 @@ describe("Parallel run backfill", () => {
     const row = backfillRow({ ...pack, status: "error" }, { ...run, status: "failed" }, "event-1");
     assert.deepEqual([row.outcome, row.costUsd], ["error", 0]);
     assert.match(row.measurementNote ?? "", /not billed/);
+  });
+
+  it("prices a core pack at the core list price under its own adapter id", () => {
+    const row = backfillRow({ ...pack, adapter: "parallel-core" }, { ...run, processor: "core" }, "event-1");
+    assert.deepEqual([row.modelId, row.costUsd], ["parallel-core", 0.025]);
+  });
+
+  it("reprices an errored live record when Parallel says the run completed, keeping its measurement note", () => {
+    const price = repricedError({ modelId: "parallel-pro", measurementNote: "Overlapping call" }, run);
+    assert.equal(price?.costUsd, 0.1);
+    assert.match(price?.measurementNote ?? "", /^Overlapping call · Repriced: .*completed/);
+  });
+
+  it("leaves an errored live record at $0 when Parallel says the run failed", () => {
+    assert.equal(repricedError({ modelId: "parallel-pro", measurementNote: null }, { ...run, status: "failed" }), null);
   });
 });
