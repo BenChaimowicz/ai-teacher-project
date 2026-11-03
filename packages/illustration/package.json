@@ -1,0 +1,22 @@
+{
+  "name": "@senoy/illustration",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "fixtures": "tsx scripts/render-fixtures.ts"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@senoy/db": "workspace:*",
+    "@senoy/media": "workspace:*",
+    "roughjs": "^4.6.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
