@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { blueprintSlots, type ApprovedBlueprint } from "./blueprint.ts";
 import type { QuizBody } from "./quiz.ts";
-import { QUIZ_METHOD_ID, READING_METHOD_ID, unfilledRequiredMedia, type ReadingBody } from "./reading-lesson.ts";
+import { QUIZ_METHOD_ID, type ReadingBody } from "./reading-lesson.ts";
 import type { publishedCourses, publishedLessons, publishedModules, unpublishedLessons } from "./schema.ts";
 
 /** A stored unpublished Lesson checkpoint. */
@@ -9,20 +9,13 @@ export type LessonCheckpoint = typeof unpublishedLessons.$inferSelect;
 
 /**
  * Whole-Course Code checks before atomic publish (spec §6.5): every approved slot has one checkpoint of its method
- * whose checks passed, every Reading still shows the media its slot requires, and nothing is checkpointed off the
- * approved Blueprint.
+ * whose checks passed, and nothing is checkpointed off the approved Blueprint. A Reading without the visual its slot
+ * planned still publishes: a missing image is never a defect (SEN-121).
  * @param approved - The approved Blueprint
  * @param checkpoints - Every checkpoint saved for the Course Request
- * @param options.requireMedia - False when Readings were written with no media library (`READING_MEDIA=off`), so no
- *   image could be required; defaults to true
  * @returns Learner-invisible failure messages; empty when the Course may publish
  */
-export function courseCodeFailures(
-  approved: ApprovedBlueprint,
-  checkpoints: readonly LessonCheckpoint[],
-  options: { requireMedia?: boolean } = {},
-): string[] {
-  const requireMedia = options.requireMedia ?? true;
+export function courseCodeFailures(approved: ApprovedBlueprint, checkpoints: readonly LessonCheckpoint[]): string[] {
   const failures: string[] = [];
   const slots = blueprintSlots(approved.blueprint);
   for (const [position, slot] of slots.entries()) {
@@ -35,11 +28,6 @@ export function courseCodeFailures(
     if (checkpoint.teachingMethod !== slot.method) failures.push(`Slot ${slot.id} is a ${slot.method} but its checkpoint is a ${checkpoint.teachingMethod}.`);
     if (checkpoint.position !== position) failures.push(`Slot ${slot.id} is at position ${position} but its checkpoint is at ${checkpoint.position}.`);
     if (!checkpoint.judge.pass) failures.push(`Slot ${slot.id}'s checkpoint did not pass its Judge.`);
-    if (requireMedia && slot.method === READING_METHOD_ID && slot.requiredMedia?.length) {
-      for (const missing of unfilledRequiredMedia(checkpoint.body as ReadingBody, slot.requiredMedia)) {
-        failures.push(`Slot ${slot.id}'s checkpoint does not show its required ${missing.mediaCategory} image (${missing.topicTags.join(", ")}).`);
-      }
-    }
   }
   const slotIds = new Set(slots.map((slot) => slot.id));
   for (const checkpoint of checkpoints) {

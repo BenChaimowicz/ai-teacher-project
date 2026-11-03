@@ -10,7 +10,6 @@ import {
 import { blueprintSlots, type SequenceFailure } from "@senoy/db/blueprint";
 import { BlueprintFailedError, createBlueprintBuilder, MAX_BLUEPRINT_REVISIONS, type BlueprintBuilder } from "./blueprint.ts";
 import { LeaseLostError, type GenerationControl, type WorkerIdentity } from "./generation-job.ts";
-import { createMediaLibrary, type MediaVocabulary } from "./media-library.ts";
 import { withPipelineEvent } from "./usage-tracking.ts";
 
 /** What one run of a claimed Blueprint job receives. */
@@ -22,9 +21,6 @@ export type BlueprintJobStart = {
   /** The worker running the job, recorded on the `blueprint` Pipeline Event. */
   worker?: WorkerIdentity;
 };
-
-/** Where a Blueprint job reads the media catalog's categories and tags from; tests inject one. */
-export type MediaCatalogSource = (db: Database) => Promise<MediaVocabulary>;
 
 /** Blueprint design and system validation before Learner review; the worker runs it as a durable job (spec §5.1). */
 export interface BlueprintJob {
@@ -48,8 +44,7 @@ export const REVISE_FAILED_REASON = "We couldn't redo the plan without those les
 export const REDESIGN_FAILED_REASON = "Your lessons were written, but together they didn't reach your goal, and I couldn't come up with a better plan just now. Try again for a fresh plan, or change what you asked for.";
 
 /**
- * Creates the Blueprint job. A run designs from the confirmed Starting Level, the Learner's Teaching Profile and the
- * media catalog's categories and tags (which images a Reading slot may require, SEN-115), then
+ * Creates the Blueprint job. A run designs from the confirmed Starting Level and the Learner's Teaching Profile, then
  * saves the checked draft and moves the Request to `blueprint_review` in one transaction that proves it still holds
  * the job. The job keeps no checkpoints: a reclaimed run designs again from the start.
  *
@@ -60,12 +55,8 @@ export const REDESIGN_FAILED_REASON = "Your lessons were written, but together t
  * redesigns from them and replaces that draft. If the redesign fails, the Request returns to `blueprint_review` with
  * the draft the Learner reviewed, its marks cleared.
  * @param builder - Blueprint builder; tests and browser tests pass fixtures
- * @param mediaCatalog - Reads the media catalog's categories and tags; defaults to the library over `media_descriptors`
  */
-export function createBlueprintJob(
-  builder: BlueprintBuilder = createBlueprintBuilder(),
-  mediaCatalog: MediaCatalogSource = (db) => createMediaLibrary(db).vocabulary(),
-): BlueprintJob {
+export function createBlueprintJob(builder: BlueprintBuilder = createBlueprintBuilder()): BlueprintJob {
   return {
     start(input) {
       return withPipelineEvent("blueprint", {
@@ -88,8 +79,6 @@ export function createBlueprintJob(
             throw new Error(`[blueprint-job: start] Request, Teaching Profile, or confirmed Starting Level is missing || requestId=${courseRequestId}`);
           }
           const profile = resolveTeachingProfile(learner.teachingProfileAnswers);
-          // The images a Reading slot may require are the ones the library holds now (SEN-115).
-          const catalog = await mediaCatalog(db);
           event.setDetail({ subject: request.subject });
           const checked = await builder.build({
             subject: request.subject,
@@ -105,12 +94,11 @@ export function createBlueprintJob(
             },
             ...(reviewed && feedback?.irrelevantSlotIds.length ? { revision: { previousBlueprint: reviewed.draft, feedback } } : {}),
             ...(reviewed && sequenceFailure ? { sequenceRedesign: { previousBlueprint: reviewed.draft, reasons: sequenceFailure.reasons } } : {}),
-            mediaCatalog: catalog,
           });
           event.setDetail({
             courseTitle: checked.blueprint.courseTitle,
             slots: blueprintSlots(checked.blueprint).length,
-            requiredMedia: blueprintSlots(checked.blueprint).reduce((sum, slot) => sum + (slot.requiredMedia?.length ?? 0), 0),
+            visuals: blueprintSlots(checked.blueprint).reduce((sum, slot) => sum + (slot.visuals?.length ?? 0), 0),
             judgePass: checked.judge.pass,
           });
           await db.transaction(async (transaction) => {

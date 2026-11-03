@@ -112,18 +112,18 @@ test("A media block with an unhostable licence, a file type a Reading cannot att
   assert.ok(readingCodeFailures(noAlt, RETRIEVED).some((failure) => failure.includes("alt text")));
 });
 
-test("A Reading carries at most four media blocks, each a different file, and no section is media alone", () => {
+test("A Reading carries at most two media blocks, one per planned visual, each a different file, and no section is media alone", () => {
   /** The n-th distinct plate. */
   const nth = (n: number) => mediaBlock({ id: `d0a1e001-0000-4000-8000-00000000000${n}`, storageKey: `library/norse/plate-${n}.jpg` });
-  const four = valid();
-  four.body.sections[0]!.blocks.push(nth(1), nth(2));
-  four.body.sections[1]!.blocks.push(nth(3), nth(4));
-  assert.deepEqual(readingCodeFailures(four, RETRIEVED), []);
+  const two = valid();
+  two.body.sections[0]!.blocks.push(nth(1));
+  two.body.sections[1]!.blocks.push(nth(2));
+  assert.deepEqual(readingCodeFailures(two, RETRIEVED), []);
 
-  const five = valid();
-  five.body.sections[0]!.blocks.push(nth(1), nth(2), nth(3));
-  five.body.sections[1]!.blocks.push(nth(4), nth(5));
-  assert.ok(readingCodeFailures(five, RETRIEVED).some((failure) => failure.includes("at most 4")));
+  const three = valid();
+  three.body.sections[0]!.blocks.push(nth(1), nth(2));
+  three.body.sections[1]!.blocks.push(nth(3));
+  assert.ok(readingCodeFailures(three, RETRIEVED).some((failure) => failure.includes("at most 2")));
 
   const twice = valid();
   twice.body.sections[0]!.blocks.push(mediaBlock());

@@ -1,4 +1,4 @@
-import { MEDIA_CATEGORIES, type MediaRequest } from "./media.ts";
+import { MAX_SLOT_VISUALS, VISUAL_KINDS, type PlannedVisual } from "./media.ts";
 import { QUIZ_METHOD_ID, READING_METHOD_ID } from "./reading-lesson.ts";
 import type { SequenceMode } from "./sequence-mode.ts";
 import type { QuizCadence } from "./teaching-profile.ts";
@@ -12,15 +12,6 @@ export type BlueprintMethod = (typeof REGISTERED_METHODS)[number];
 /** Topic tags per slot (spec §4.4). */
 export const MIN_TOPIC_TAGS = 2;
 export const MAX_TOPIC_TAGS = 5;
-
-/**
- * Images a Reading slot may require, so a drum Lesson can require both grip and stroke
- * (docs/decisions/2026-11-01-a-reading-holds-at-most-two-required-and-two-optional-images.md).
- */
-export const MAX_REQUIRED_MEDIA = 2;
-
-/** Topic tags one required image may name. */
-export const MAX_REQUIRED_MEDIA_TAGS = 5;
 
 /** Objectives a Quiz slot may list (spec §6.2); more is structural. */
 export const MAX_QUIZ_OBJECTIVES = 10;
@@ -50,11 +41,13 @@ export const CADENCE_READINGS: Record<QuizCadence, { min: number; max: number } 
 
 /**
  * One Lesson-to-be. `assessesSlotIds` is empty except on a Quiz, where it names the Reading slots it assesses.
- * `requiredMedia` is set only on a Reading that cannot teach without the Learner seeing something: the images, by Media
- * category and Topic tags, its Lesson is not checkpointed without (SEN-115). The Blueprint author sets it, from what the
- * media catalog holds; the Learner never sees it. Absent on Blueprints written before it existed. `chapter` names the
- * Chapter a Reading belongs to (decision 2026-11-03): consecutive Readings with the same chapter are researched once and
- * written in one author call. Absent on a Quiz, and on Blueprints written before Chapters existed.
+ * `visuals` names what a Reading should show, the way a teacher plans what to draw on the board (SEN-121): each with
+ * its kind and the intent behind it, at most {@link MAX_SLOT_VISUALS}. The Reading's writer turns each into a brief,
+ * and a visual that cannot be made or found is dropped, never a defect. The Learner never sees it. Absent on a Quiz,
+ * and on Blueprints written before it existed (those written before SEN-121 may carry a `requiredMedia` key, which
+ * nothing reads). `chapter` names the Chapter a Reading belongs to (decision 2026-11-03): consecutive Readings with the
+ * same chapter are researched once and written in one author call. Absent on a Quiz, and on Blueprints written before
+ * Chapters existed.
  */
 export type BlueprintSlot = {
   id: string;
@@ -64,7 +57,7 @@ export type BlueprintSlot = {
   objectives: string[];
   topicTags: string[];
   assessesSlotIds: string[];
-  requiredMedia?: MediaRequest[];
+  visuals?: PlannedVisual[];
   chapter?: string;
 };
 
@@ -288,14 +281,12 @@ export function blueprintCodeFailures(blueprint: CourseBlueprint, cadence: QuizC
       failures.push(`${label} is not a Quiz and must not assess other slots.`);
     }
 
-    const required = slot.requiredMedia ?? [];
-    if (required.length && slot.method !== READING_METHOD_ID) failures.push(`${label} is not a Reading and must not require media.`);
-    if (required.length > MAX_REQUIRED_MEDIA) failures.push(`${label} requires ${required.length} images; a Reading requires at most ${MAX_REQUIRED_MEDIA}.`);
-    for (const request of required) {
-      if (!(MEDIA_CATEGORIES as readonly string[]).includes(request.mediaCategory)) failures.push(`${label} requires media in an unknown Media category, "${request.mediaCategory}".`);
-      if (request.topicTags.length === 0 || request.topicTags.length > MAX_REQUIRED_MEDIA_TAGS || request.topicTags.some((tag) => !TOPIC_TAG.test(tag))) {
-        failures.push(`${label} requires media with 1–${MAX_REQUIRED_MEDIA_TAGS} Topic tags as lowercase slugs.`);
-      }
+    const visuals = slot.visuals ?? [];
+    if (visuals.length && slot.method !== READING_METHOD_ID) failures.push(`${label} is not a Reading and must not plan visuals.`);
+    if (visuals.length > MAX_SLOT_VISUALS) failures.push(`${label} plans ${visuals.length} visuals; a Reading shows at most ${MAX_SLOT_VISUALS}.`);
+    for (const visual of visuals) {
+      if (!(VISUAL_KINDS as readonly string[]).includes(visual.kind)) failures.push(`${label} plans a visual of an unknown kind, "${visual.kind}".`);
+      if (!visual.intent.trim()) failures.push(`${label} plans a visual with no intent.`);
     }
   });
 

@@ -62,23 +62,11 @@ test("A missing, failed, misplaced, or off-Blueprint checkpoint fails the whole-
   assert.match(courseCodeFailures(APPROVED, [reading!, quiz!, { ...quiz!, id: "cp3", slotId: "slot9" }]).join(" "), /slot9 is not on the approved Blueprint/);
 });
 
-test("A Reading must still show every image its slot requires, each from a different media block", () => {
-  const grip = { mediaCategory: "drum-grip" as const, topicTags: ["matched-grip"] };
+test("A Reading without the visual its slot planned still publishes: a missing image is never a defect (SEN-121)", () => {
   const approved = structuredClone(APPROVED);
-  approved.blueprint.modules[0]!.slots[0]!.requiredMedia = [grip, grip];
+  approved.blueprint.modules[0]!.slots[0]!.visuals = [{ kind: "technique", intent: "Matched grip from above." }];
   const [reading, quiz] = checkpoints();
-  /** A media block showing a library file in `mediaCategory` tagged `topicTags`. */
-  const figure = (id: string, mediaCategory: string, topicTags: string[]) => ({ kind: "media", caption: "A grip.", alt: "Hands on sticks.", descriptor: { id, mediaCategory, topicTags } });
-  const body = (...figures: unknown[]) => ({ sections: [{ heading: "Grip", blocks: [{ kind: "prose", text: "Hold it [1]." }, ...figures] }] }) as ReadingBody;
-
-  assert.match(courseCodeFailures(approved, [reading!, quiz!]).join(" "), /slot1's checkpoint does not show its required drum-grip image \(matched-grip\)/);
-  assert.deepEqual(courseCodeFailures(approved, [reading!, quiz!], { requireMedia: false }), [], "With READING_MEDIA=off no image is required.");
-  const one = courseCodeFailures(approved, [{ ...reading!, body: body(figure("f1", "drum-grip", ["matched-grip", "fulcrum"])) }, quiz!]);
-  assert.equal(one.length, 1, "One figure fills one request, not two.");
-  const offTopic = body(figure("f1", "drum-grip", ["traditional-grip"]), figure("f2", "drum-kit-anatomy", ["matched-grip"]));
-  assert.equal(courseCodeFailures(approved, [{ ...reading!, body: offTopic }, quiz!]).length, 2, "A figure fills a request only in its category, sharing a tag.");
-  const both = body(figure("f1", "drum-grip", ["matched-grip"]), figure("f2", "drum-grip", ["matched-grip", "both-hands"]));
-  assert.deepEqual(courseCodeFailures(approved, [{ ...reading!, body: both }, quiz!]), []);
+  assert.deepEqual(courseCodeFailures(approved, [reading!, quiz!]), []);
 });
 
 test("A Reading commits to its section headings and a Quiz to its objectives", () => {
