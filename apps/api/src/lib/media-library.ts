@@ -57,6 +57,38 @@ export function rankCandidates(rows: readonly MediaDescriptorFields[], topicTags
     .map(({ row }) => row);
 }
 
+/** A `media_descriptors` row as the database returns it. */
+export type MediaDescriptorRow = typeof mediaDescriptors.$inferSelect;
+
+/**
+ * The files a Reading may attach, as descriptors, out of the catalog's rows. A file a person removed in the Usage
+ * Console is left out; one found on Commons and not reviewed yet is offered straight away (SEN-129). The review state
+ * and timestamps are dropped, so a Lesson's snapshot holds only descriptor fields.
+ * @param rows - Every `media_descriptors` row
+ */
+export function libraryFiles(rows: readonly MediaDescriptorRow[]): MediaDescriptorFields[] {
+  return rows.filter((row) => row.review !== "removed").map(descriptorOf).filter(isAttachable);
+}
+
+/**
+ * The descriptor fields of one row: everything but its review state and timestamps.
+ * @param row - A `media_descriptors` row
+ */
+export function descriptorOf(row: MediaDescriptorRow): MediaDescriptorFields {
+  const { createdAt: _created, updatedAt: _updated, review: _review, ...fields } = row;
+  return fields;
+}
+
+/**
+ * Library lookup for one request: attachable files in the Media category, ranked by {@link rankCandidates}.
+ * @param files - Attachable files, from {@link libraryFiles}
+ * @param mediaCategory - The requested category
+ * @param topicTags - The requested tags
+ */
+export function libraryCandidates(files: readonly MediaDescriptorFields[], mediaCategory: MediaCategory, topicTags: readonly string[]): MediaDescriptorFields[] {
+  return rankCandidates(files.filter((row) => row.mediaCategory === mediaCategory), topicTags);
+}
+
 /**
  * Reads a stream to the end.
  * @param body - The object's bytes
@@ -80,7 +112,7 @@ export function createMediaLibrary(db: Database, storage?: MediaStorage): MediaL
   /** Every file a Reading may attach. The catalog is a few dozen rows, so it is read whole and filtered here. */
   function attachable(): Promise<MediaDescriptorFields[]> {
     catalog ??= db.select().from(mediaDescriptors)
-      .then((rows) => rows.map(({ createdAt: _created, updatedAt: _updated, ...fields }) => fields).filter(isAttachable))
+      .then(libraryFiles)
       .catch((error: unknown) => {
         catalog = null;
         const message = error instanceof Error ? error.message : String(error);
@@ -95,7 +127,7 @@ export function createMediaLibrary(db: Database, storage?: MediaStorage): MediaL
     },
 
     async candidates(mediaCategory, topicTags) {
-      return rankCandidates((await attachable()).filter((row) => row.mediaCategory === mediaCategory), topicTags);
+      return libraryCandidates(await attachable(), mediaCategory, topicTags);
     },
 
     async bytes(descriptor) {

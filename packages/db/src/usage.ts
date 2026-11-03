@@ -4,9 +4,10 @@
  */
 
 import type { ResearchTier, ResearchTierRating } from "./course-request.ts";
+import type { MediaReview } from "./media.ts";
 
-/** The paid service a Usage Record called. */
-export const USAGE_VENDORS = ["openrouter", "parallel", "you"] as const;
+/** The external service a Usage Record called. Wikimedia Commons is free; its calls are recorded at a cost of 0 (SEN-129). */
+export const USAGE_VENDORS = ["openrouter", "parallel", "you", "wikimedia"] as const;
 export type UsageVendor = (typeof USAGE_VENDORS)[number];
 
 /** Which vendor bills each research adapter. */
@@ -30,8 +31,10 @@ export type BalanceVendor = (typeof BALANCE_VENDORS)[number];
 export const USAGE_ORIGINS = ["captured", "backfill"] as const;
 export type UsageOrigin = (typeof USAGE_ORIGINS)[number];
 
-/** Who made the call: a model port, or a research slot. */
-export const USAGE_ROLES = ["generator", "fallback_generator", "judge", "triage", "research_primary", "research_secondary"] as const;
+/** Who made the call: a model port, a research slot, or the Commons search for a missing image (`media_search`). */
+export const USAGE_ROLES = [
+  "generator", "fallback_generator", "judge", "triage", "research_primary", "research_secondary", "media_search",
+] as const;
 export type UsageRole = (typeof USAGE_ROLES)[number];
 
 /**
@@ -78,6 +81,7 @@ export const PIPELINE_EVENT_KINDS = [
   "quiz",
   "course_judge",
   "publish",
+  "media_search",
   "live_check",
 ] as const;
 export type PipelineEventKind = (typeof PIPELINE_EVENT_KINDS)[number];
@@ -575,4 +579,33 @@ export type OpsSetupChecklist = {
   total: number;
   /** Who this console ticks items as (the checkout's `git config user.name`); null means it can read but not tick. */
   operator: string | null;
+};
+
+/** One library file found on Wikimedia Commons, as the Usage Console's review list shows it (SEN-129). */
+export type OpsMediaReviewItem = {
+  id: string;
+  review: MediaReview;
+  caption: string;
+  alt: string;
+  /** A Media licence key, e.g. `cc_by_sa`. */
+  license: string;
+  licenseUrl: string | null;
+  /** The source page's title, author, and URL. */
+  source: { title: string; author: string; url: string } | null;
+  mediaCategory: string;
+  topicTags: string[];
+  mimeType: string;
+  width: number | null;
+  height: number | null;
+  /** When it was ingested, ISO. */
+  createdAt: string;
+  /** Published Lessons whose body shows this file; they keep showing it after a removal. */
+  lessonCount: number;
+};
+
+/** `GET /api/ops/media-review`: Commons files nobody has approved yet, and the latest ones already decided. */
+export type OpsMediaReview = {
+  unreviewed: OpsMediaReviewItem[];
+  /** The most recent approved or removed Commons files, newest first, so a decision can be checked or undone. */
+  decided: OpsMediaReviewItem[];
 };

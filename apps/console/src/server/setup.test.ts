@@ -60,7 +60,7 @@ describe("createSetupReader", () => {
     ]);
     assert.equal(setup.researchMode, "deluxe", "RESEARCH_TIER defaults to deluxe.");
     assert.equal(setup.researchError, null);
-    assert.deepEqual(setup.vendors, ["openrouter", "parallel", "you"]);
+    assert.deepEqual(setup.vendors, ["openrouter", "parallel", "you", "wikimedia"]);
     const fetched = urls.length;
     await read();
     assert.equal(urls.length, fetched);

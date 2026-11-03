@@ -12,6 +12,7 @@
   "dependencies": {
     "@senoy/api": "workspace:*",
     "@senoy/db": "workspace:*",
+    "@senoy/media": "workspace:*",
     "@senoy/research": "workspace:*",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.44.5",

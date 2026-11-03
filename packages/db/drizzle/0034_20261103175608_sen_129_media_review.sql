@@ -1,0 +1,2 @@
+CREATE TYPE "public"."media_review" AS ENUM('reviewed', 'unreviewed', 'removed');--> statement-breakpoint
+ALTER TABLE "media_descriptors" ADD COLUMN "review" "media_review" DEFAULT 'reviewed' NOT NULL;

@@ -2,7 +2,9 @@ import { createDb, loadRootEnv } from "@senoy/db";
 import { createParallelTokenKeeper, parallelAccountPath } from "@senoy/research";
 import { buildConsoleApp } from "./app.ts";
 import { createBillingService, vendorReadersFromEnv } from "./billing.ts";
+import { createMediaStorage, mediaStorageConfigFromEnv, type MediaStorage } from "@senoy/media";
 import { createDecisionsReader } from "./decisions.ts";
+import { createMediaReviewService } from "./media-review.ts";
 import { createOpsStore, runnerFor } from "./ops-store.ts";
 import { createOpenRouterHistoryReader } from "./openrouter-history.ts";
 import { createSetupReader } from "./setup.ts";
@@ -23,7 +25,8 @@ async function start() {
   const billing = createBillingService({ run, readers: vendorReadersFromEnv({ env: process.env, keeper }), keeper });
   const app = buildConsoleApp(createOpsStore(run), { logger: true, setup: createSetupReader({ env: process.env }), billing,
     openrouterHistory: createOpenRouterHistoryReader(run), decisions: createDecisionsReader({ root }),
-    setupChecklist: createSetupChecklistService({ root, operator: await readGitUserName(root) }) });
+    setupChecklist: createSetupChecklistService({ root, operator: await readGitUserName(root) }),
+    mediaReview: createMediaReviewService({ run, storage: optionalMediaStorage() }) });
 
   try {
     const port = Number(process.env.CONSOLE_API_PORT ?? 3100);
@@ -35,6 +38,19 @@ async function start() {
     const message = error instanceof Error ? error.message : String(error);
     app.log.error(`[index.ts: start] Failed to start the Usage Console API || ${message}`);
     process.exit(1);
+  }
+}
+
+/**
+ * The private media bucket, when its env keys are set. Without them Media review still lists files and takes decisions;
+ * it just shows no thumbnails.
+ * @returns The bucket, or null
+ */
+function optionalMediaStorage(): MediaStorage | null {
+  try {
+    return createMediaStorage(mediaStorageConfigFromEnv());
+  } catch {
+    return null;
   }
 }
 

@@ -1,4 +1,4 @@
-import { Activity, AlertOctagon, CheckSquare, Gauge, History, Scale, GitBranch, ListTree, Network, NotebookPen, Users } from "lucide-react";
+import { Activity, AlertOctagon, CheckSquare, Gauge, History, Image as ImageIcon, Scale, GitBranch, ListTree, Network, NotebookPen, Users } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { PipelineEventDrawer } from "@/components/PipelineEventDrawer";
 import { Tip, TipBody } from "@/components/Tip";
@@ -19,6 +19,7 @@ const NAV = [
   { to: "/failures", label: "Failures", icon: AlertOctagon, hint: "What failed and why, grouped by reason." },
   { to: "/activity", label: "Learner activity", icon: Users, hint: "Product Events: what Learners did." },
   { to: "/api", label: "API traffic", icon: Network, hint: "API Requests: hits on our own HTTP API." },
+  { to: "/media-review", label: "Media review", icon: ImageIcon, hint: "Images found on Wikimedia Commons, waiting for a person to approve or remove them." },
   { to: "/decisions", label: "Decisions", icon: NotebookPen, hint: "The team's decision log: what we decided, why, and when." },
   { to: "/setup", label: "Knibbler Setup", icon: CheckSquare, hint: "The founders' shared setup checklist: domain, email, vendor access." },
 ] as const;

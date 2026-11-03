@@ -13,7 +13,7 @@ import {
 import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
 import type { LessonLineage } from "./lesson-reuse.ts";
-import { MEDIA_KINDS, MEDIA_LICENSES, MEDIA_ORIGINS, type MediaCategory, type MediaSource } from "./media.ts";
+import { MEDIA_KINDS, MEDIA_LICENSES, MEDIA_ORIGINS, MEDIA_REVIEWS, type MediaCategory, type MediaSource } from "./media.ts";
 import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
@@ -566,6 +566,9 @@ export const mediaOrigin = pgEnum("media_origin", MEDIA_ORIGINS);
 /** The licence a file is hosted under. Only hostable families exist; CC BY-NC cannot be stored (spec §5.6). */
 export const mediaLicense = pgEnum("media_license", MEDIA_LICENSES);
 
+/** Whether a person has looked at a library file: reviewed, unreviewed (found on Commons), or removed (SEN-129). */
+export const mediaReview = pgEnum("media_review", MEDIA_REVIEWS);
+
 /**
  * One piece of Demonstrative media in the library: the Media catalog (spec §2). The bytes live in the private bucket
  * under `storageKey`; this row is the catalog, and Storage object metadata is not. Lookup is by `mediaCategory` plus
@@ -594,6 +597,8 @@ export const mediaDescriptors = pgTable(
     height: integer("height"),
     mediaCategory: text("media_category").$type<MediaCategory>().notNull(),
     topicTags: jsonb("topic_tags").$type<string[]>().notNull(),
+    /** Whether a person has looked at the file (SEN-129); seeded files default to `reviewed`. Not part of the descriptor. */
+    review: mediaReview("review").notNull().default("reviewed"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
