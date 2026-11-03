@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { MAX_READING_SECTIONS, MAX_READING_WORDS } from "./reading-lesson.ts";
 import type { BlueprintSlot } from "./blueprint.ts";
 import { quizCodeFailures, readingCodeFailures, type QuizLessonDraft, type ReadingLessonDraft } from "./lesson-checkpoint.ts";
 import type { MediaDescriptorFields, MediaLicense } from "./media.ts";
@@ -176,7 +177,7 @@ function quiz(): QuizLessonDraft {
       items: [1, 2, 3, 4, 5].map((n) => ({
         id: `item${n}`,
         prompt: `Question ${n}?`,
-        options: ["a", "b", "c", "d"].map((id) => ({ id, text: `Option ${id} of ${n}` })),
+        options: ["a", "b", "c", "d"].map((id) => ({ id, text: `Option ${id} of ${n}`, why: id === "b" ? "The Lesson says so." : "The Lesson says otherwise." })),
         correctOptionId: "b",
         explanations: { brief: "Brief.", standard: "Standard.", detailed: "Detailed." },
       })),
@@ -186,6 +187,15 @@ function quiz(): QuizLessonDraft {
 
 test("A five-item, four-option Quiz on a checkpointed preceding Reading passes the Code checks", () => {
   assert.deepEqual(quizCodeFailures(quiz(), SLOTS, CHECKPOINTED), []);
+});
+
+test("Every option carries a one-sentence why, and a why that names an option by letter fails like an explanation (decision 2026-11-03)", () => {
+  const missing = quiz();
+  missing.body.items[0]!.options[2] = { id: "c", text: "Option c of 1" };
+  assert.ok(quizCodeFailures(missing, SLOTS, CHECKPOINTED).some((failure) => failure.includes('Item 1 needs a one-sentence "why" on every option')));
+  const byLetter = quiz();
+  byLetter.body.items[1]!.options[0]!.why = "Option A mixes up the directions.";
+  assert.ok(quizCodeFailures(byLetter, SLOTS, CHECKPOINTED).some((failure) => failure.includes("Item 2's explanation or an option's why names an option by letter")));
 });
 
 test("A Quiz outside 5–10 items, or an item without four options and one key, fails", () => {
@@ -211,9 +221,7 @@ test("A Quiz outside 5–10 items, or an item without four options and one key, 
   lettered.body.items[1]!.explanations.brief = "Answer B is a trap, as is (c).";
   lettered.body.items[2]!.explanations.standard = "The first option is wrong because the Lesson says so.";
   lettered.body.items[3]!.explanations.detailed = "It is the ash; the third is wrong because it names Hel.";
-  assert.deepEqual(quizCodeFailures(lettered, SLOTS, CHECKPOINTED).map((failure) => failure.slice(0, 26)), [
-    "Item 1's explanation names", "Item 2's explanation names", "Item 3's explanation names", "Item 4's explanation names",
-  ]);
+  assert.deepEqual(quizCodeFailures(lettered, SLOTS, CHECKPOINTED).map((failure) => failure.slice(0, 45)), [1, 2, 3, 4].map((n) => `Item ${n}'s explanation or an option's why names`));
   const prose = quiz();
   prose.body.items[0]!.explanations.detailed = "Answer Asgard looks close, but the answer a careful reader picks is the ash. The first root runs under Hel.";
   assert.deepEqual(quizCodeFailures(prose, SLOTS, CHECKPOINTED), [], "Ordinary prose is not a letter reference.");
@@ -236,4 +244,43 @@ test("A Quiz fails when an assessed slot is missing, not a Reading, later, or no
   assert.deepEqual(quizCodeFailures(quiz(), [QUIZ_SLOT, READING_SLOT], CHECKPOINTED), ["Assessed slot slot1 does not precede the Quiz."]);
   assert.deepEqual(quizCodeFailures(quiz(), [{ ...READING_SLOT, method: "quiz" }, QUIZ_SLOT], CHECKPOINTED), ["Assessed slot slot1 is not a Reading."]);
   assert.deepEqual(quizCodeFailures(quiz(), [QUIZ_SLOT], CHECKPOINTED), ["Assessed slot slot1 is not in the Blueprint."]);
+});
+
+test("A Reading that asks the Learner a question, in its prose or a heading, fails and names each question (SEN-48)", () => {
+  const lesson = valid();
+  lesson.body.sections[0] = { heading: "Why a tree?", blocks: [{ kind: "prose", text: "Yggdrasil stands at the centre [1]. Can you say why it matters? It holds the worlds." }] };
+  const failures = readingCodeFailures(lesson, RETRIEVED);
+  assert.equal(failures.length, 1);
+  assert.match(failures[0]!, /asks the Learner no questions/);
+  assert.match(failures[0]!, /"Why a tree\?"; "Can you say why it matters\?"/);
+});
+
+test("Prose with Markdown or HTML in it fails and names the markup, since Study renders plain text (decision 2026-11-03)", () => {
+  const lesson = valid();
+  lesson.body.sections[0] = { heading: "Two colors", blocks: [{ kind: "prose", text: "One image shows purple beside pink [1]. ![Figure 2.34](src_8b67c17825) **Image labels:** purple is positive [2]." }] };
+  const failures = readingCodeFailures(lesson, RETRIEVED);
+  assert.equal(failures.length, 1, failures.join(" | "));
+  assert.match(failures[0]!, /plain text, not Markdown or HTML/);
+  assert.match(failures[0]!, /"!\["/);
+  assert.match(failures[0]!, /"\*\*"/);
+  const link = valid();
+  link.body.sections[0]!.blocks[0] = { kind: "prose", text: "See <b>the tree</b> at https://example.org/tree [1][2]." };
+  assert.match(readingCodeFailures(link, RETRIEVED)[0]!, /"<b>", "<\/b>", "https:\/\/example\.org\/tree"/);
+  assert.deepEqual(readingCodeFailures(valid(), RETRIEVED), [], "Plain prose with Citations passes as before.");
+});
+
+test("A Reading fits one screen: more words than the cap, markers aside, or more sections than the cap, fails (decision 2026-11-03)", () => {
+  /** The valid Lesson with one section of `count` words, closed by its Citations. */
+  const withWords = (count: number) => {
+    const lesson = valid();
+    lesson.body.sections = [{ heading: "One note", blocks: [{ kind: "prose", text: `${Array.from({ length: count }, () => "word").join(" ")} [1][2].` }] }];
+    return lesson;
+  };
+  const tooLong = readingCodeFailures(withWords(MAX_READING_WORDS + 1), RETRIEVED);
+  assert.equal(tooLong.length, 1);
+  assert.match(tooLong[0]!, new RegExp(`at most ${MAX_READING_WORDS} words of prose, not ${MAX_READING_WORDS + 1}`));
+  assert.deepEqual(readingCodeFailures(withWords(MAX_READING_WORDS), RETRIEVED), [], "A Citation marker, and the full stop after it, are not words.");
+  const many = valid();
+  many.body.sections = Array.from({ length: MAX_READING_SECTIONS + 1 }, (_, n) => ({ heading: `Note ${n}`, blocks: [{ kind: "prose" as const, text: "A fact [1][2]." }] }));
+  assert.match(readingCodeFailures(many, RETRIEVED)[0]!, new RegExp(`at most ${MAX_READING_SECTIONS} sections, not ${MAX_READING_SECTIONS + 1}`));
 });

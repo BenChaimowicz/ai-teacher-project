@@ -2,7 +2,8 @@ import { MAX_REQUIRED_MEDIA, type BlueprintSlot } from "./blueprint.ts";
 import type { LessonLineage } from "./lesson-reuse.ts";
 import { parseQuizBody, QUIZ_MAX_ITEMS, QUIZ_MIN_ITEMS, QUIZ_OPTION_COUNT, type QuizBody } from "./quiz.ts";
 import {
-  mediaBlockFailures, proseBlocks, QUIZ_METHOD_ID, READING_METHOD_ID, type MediaBlock, type NumberedSource, type ReadingBody,
+  MAX_READING_SECTIONS, MAX_READING_WORDS, mediaBlockFailures, proseBlocks, QUIZ_METHOD_ID, READING_METHOD_ID, readingWordCount,
+  type MediaBlock, type NumberedSource, type ReadingBody,
 } from "./reading-lesson.ts";
 
 /**
@@ -47,6 +48,9 @@ const CITATION_MARKER = /\[(\d+)\]/g;
 /** A Source ID marker the Generator wrote that was not resolved to a number. */
 const SOURCE_ID_MARKER = /\[[^\]]*\bsrc_[^\]]*\]/;
 
+/** Markdown or HTML in reading prose, which Study renders as plain text: image and link syntax, bold, tags, URLs, and a heading or list at a line start. */
+const MARKUP = /!\[|\]\(|\*\*|__|<\/?[a-z][^>]*>|https?:\/\/\S+|^\s*(?:#{1,6}\s|[-*+]\s|\d+\.\s)/gim;
+
 /** Optional images a Reading's writer may add of its own, beside the ones its slot requires (SEN-115). */
 export const MAX_OPTIONAL_MEDIA = 2;
 
@@ -80,6 +84,25 @@ export function readingCodeFailures(lesson: ReadingLessonDraft, retrievalUrls: R
   if (new Set(media.map((block) => block.descriptor.id)).size !== media.length) failures.push("A Reading shows each media file once.");
   for (const block of media) failures.push(...mediaBlockFailures(block));
   if (prose.some((text) => !text.trim())) failures.push("Every content block needs text.");
+  // A Reading explains and the Quiz checks (decision 2026-11-02): a question in it reads as a test the Learner cannot answer.
+  const questions = [...sections.map((section) => section.heading), ...prose].flatMap((text) => text.match(/[^.!?]*\?/g) ?? []).map((text) => text.trim());
+  if (questions.length) {
+    failures.push(`A Reading asks the Learner no questions. Rewrite each question as the plain statement it was asking for: ${questions.map((text) => `"${text}"`).join("; ")}`);
+  }
+  // Prose is plain text (decision 2026-11-03): Study renders no Markdown, and a repair once "provided" an image the Judge
+  // asked for by writing image syntax and a bold label into a paragraph. Images are blocks, never text.
+  const markup = [...sections.map((section) => section.heading), ...prose].flatMap((text) => text.match(MARKUP) ?? []);
+  if (markup.length) {
+    failures.push(`Prose is plain text, not Markdown or HTML: ${[...new Set(markup)].map((hit) => `"${hit.trim()}"`).join(", ")}. Say it in words; an image, figure, link, or label does not belong in the text.`);
+  }
+  // A Reading is about one screen (decision 2026-11-03): a longer one is cut, never paged; the Blueprint plans more Lessons.
+  const words = readingWordCount(lesson.body);
+  if (words > MAX_READING_WORDS) {
+    failures.push(`A Reading is about one screen: at most ${MAX_READING_WORDS} words of prose, not ${words}. Cut whole sentences no objective needs, Source ID markers included; do not compress by rewriting.`);
+  }
+  if (sections.length > MAX_READING_SECTIONS) {
+    failures.push(`A Reading has at most ${MAX_READING_SECTIONS} sections, not ${sections.length}. Cut the sections an objective does not need, paragraph by paragraph.`);
+  }
   if (prose.some((text) => SOURCE_ID_MARKER.test(text))) failures.push("A Citation points at a Source ID outside this Lesson's Source packs.");
 
   const numbers = lesson.citations.map((citation) => citation.n);
@@ -171,8 +194,11 @@ export function quizCodeFailures(lesson: QuizLessonDraft, slots: readonly Bluepr
     if (texts.some((text) => !text) || new Set(texts).size !== texts.length) failures.push(`${label} needs ${QUIZ_OPTION_COUNT} different, non-empty options.`);
     if (texts.some((text) => PLACEHOLDER_OPTION.test(text))) failures.push(`${label} has a placeholder instead of an option.`);
     if (options.filter((option) => option.id === item.correctOptionId).length !== 1) failures.push(`${label} needs exactly one correct option.`);
-    if (Object.values(item.explanations ?? {}).some((text) => OPTION_REFERENCE.some((pattern) => pattern.test(text)))) {
-      failures.push(`${label}'s explanation names an option by letter or position; options are shuffled, so name it by its content.`);
+    // Feedback per option (decision 2026-11-03): every option says in one sentence why it is right or wrong.
+    if (options.some((option) => !option.why?.trim())) failures.push(`${label} needs a one-sentence "why" on every option.`);
+    const feedback = [...Object.values(item.explanations ?? {}), ...options.map((option) => option.why ?? "")];
+    if (feedback.some((text) => OPTION_REFERENCE.some((pattern) => pattern.test(text)))) {
+      failures.push(`${label}'s explanation or an option's why names an option by letter or position; options are shuffled, so name it by its content.`);
     }
   }
   const prompts = items.map((item) => item.prompt?.trim().toLowerCase());

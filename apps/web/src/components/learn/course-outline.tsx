@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { QUIZ_METHOD_ID } from "@senoy/db/reading-lesson";
-import { Check, Lock } from "lucide-react";
+import { BookA, Check, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
+import { collectCourseWords } from "@/components/learn/words.ts";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { SegmentedProgress, type SegmentState } from "@/components/ui/progress.tsx";
 import { pickCourseIcon } from "@/lib/brand-marks.ts";
@@ -28,17 +30,21 @@ type CourseOutlineProps = {
   /** Section headings of the open reading Lesson, ticked as the Learner reads past them. */
   sections?: string[];
   sectionsRead?: boolean[];
+  /** The Course's Words page is on screen, so its row is the current one. */
+  activeWords?: boolean;
 };
 
 /**
- * The Course page in the Study sidebar: icon, title, progress, and every Lesson with its state.
+ * The Course page in the Study sidebar: icon, title, progress, every Lesson with its state, and a last row to the
+ * Course's Words page with how many words are open.
  *
  * Rendered from the payload's modules and lessons, in order, with no assumptions about a fixed plan,
  * so a path that changes (a lesson added or removed by the Adaptive Course project) just re-renders.
  * Lessons the server marks as added can show a "new" tag once the payload carries that flag.
  */
-export function CourseOutline({ payload, activeLessonId, sections = [], sectionsRead = [] }: CourseOutlineProps) {
+export function CourseOutline({ payload, activeLessonId, sections = [], sectionsRead = [], activeWords = false }: CourseOutlineProps) {
   const lessons = payload.modules.flatMap((module) => module.lessons);
+  const wordCount = useMemo(() => collectCourseWords(payload).count, [payload]);
   const quizzes = lessons.filter((lesson) => lesson.teachingMethod === QUIZ_METHOD_ID);
   const quizzesPassed = quizzes.filter((lesson) => lesson.completed).length;
   const segments: SegmentState[] = lessons.map((lesson) =>
@@ -134,6 +140,23 @@ export function CourseOutline({ payload, activeLessonId, sections = [], sections
           </ul>
         </div>
       ))}
+      <ul className="l-ol l-words-row" aria-label="Course pages">
+        <li className={cn(activeWords && "now")}>
+          <Link to={`/study/${payload.course.id}/words`} className="row" aria-current={activeWords ? "page" : undefined}>
+            <span className="idx" aria-hidden="true" />
+            <span className="ic">
+              <BookA aria-hidden="true" />
+            </span>
+            <span className="t">Words</span>
+            {wordCount > 0 ? (
+              <span className="cnt">
+                {wordCount}
+                <span className="sr-only"> {wordCount === 1 ? "word" : "words"}</span>
+              </span>
+            ) : null}
+          </Link>
+        </li>
+      </ul>
     </nav>
   );
 }

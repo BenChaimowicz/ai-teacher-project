@@ -43,10 +43,80 @@ export type ReadingSection = {
   blocks: ReadingContentBlock[];
 };
 
-/** Method-private body of a reading Lesson. */
+/**
+ * One word of a Reading the Learner may not know, with a plain-words definition Study shows on hover, tap, and on the
+ * Course's Words page (SEN-48). `term` appears in the Lesson's prose as written. The definition says what the thing is,
+ * in the word's ordinary meaning, carries no Citation, and contradicts nothing the Lesson or its excerpts state, which
+ * the glossary Judge checked. The Course keeps one meaning per word (decision 2026-11-03): a word an earlier Lesson
+ * defined keeps that definition here.
+ */
+export type GlossaryEntry = {
+  term: string;
+  definition: string;
+};
+
+/** The most words one Reading's glossary holds. */
+export const MAX_GLOSSARY_TERMS = 12;
+
+/**
+ * A Reading is about one screen (decision 2026-11-03): about this many words of prose, Citation markers aside. A little
+ * scrolling is fine, since Lessons carry images; a wall of text is not. An idea that needs more gets another Lesson from
+ * the Blueprint, not a longer one.
+ */
+export const READING_WORD_TARGET = { low: 150, high: 250 } as const;
+
+/** The most words of prose one Reading holds; the Code check fails a longer one, and the repair cuts toward it. */
+export const MAX_READING_WORDS = 320;
+
+/** The most sections one Reading holds; Study shows each as a paper note. */
+export const MAX_READING_SECTIONS = 4;
+
+/** Method-private body of a reading Lesson. `glossary` is absent on a Lesson written before SEN-48 or with no hard words. */
 export type ReadingBody = {
   sections: ReadingSection[];
+  glossary?: GlossaryEntry[];
 };
+
+/**
+ * Words of prose in a Reading, Citation markers (`[n]` or `[src_…]`) aside, as the one-screen cap counts them.
+ * @param body - The Reading's body, or a draft's sections
+ */
+export function readingWordCount(body: Pick<ReadingBody, "sections">): number {
+  // A token with no letter or digit, like the "." left after a sentence-final marker, is not a word.
+  return body.sections.flatMap(proseBlocks)
+    .reduce((count, block) => count + block.text.replace(/\[[^\]]*\]/g, " ").split(/\s+/).filter((token) => /[\p{L}\p{N}]/u.test(token)).length, 0);
+}
+
+/**
+ * Whether `term` appears in `text` as a whole word or phrase, ignoring case.
+ * @param text - Prose to look in
+ * @param term - The glossary term
+ */
+export function mentionsTerm(text: string, term: string): boolean {
+  const escaped = term.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return escaped.length > 0 && new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "iu").test(text);
+}
+
+/**
+ * Reads a glossary: entries with a term and definition, each term once ignoring case, at most
+ * {@link MAX_GLOSSARY_TERMS}. Invalid rows are dropped; anything that is not a list becomes [].
+ * @param raw - The body's `glossary` field
+ */
+export function parseGlossary(raw: unknown): GlossaryEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const entries: GlossaryEntry[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as { term?: unknown; definition?: unknown };
+    if (!isNonEmptyString(row.term) || !isNonEmptyString(row.definition)) continue;
+    const term = row.term.trim();
+    if (seen.has(term.toLowerCase())) continue;
+    seen.add(term.toLowerCase());
+    entries.push({ term, definition: row.definition.trim() });
+  }
+  return entries.slice(0, MAX_GLOSSARY_TERMS);
+}
 
 /**
  * True when `value` is a non-empty string.
@@ -170,13 +240,14 @@ function parseSection(raw: unknown): ReadingSection | null {
 export function parseReadingBody(raw: unknown): ReadingBody | null {
   try {
     if (!raw || typeof raw !== "object") return null;
-    const row = raw as { sections?: unknown };
+    const row = raw as { sections?: unknown; glossary?: unknown };
     if (!Array.isArray(row.sections)) return null;
     const sections = row.sections
       .map((section) => parseSection(section))
       .filter((section): section is ReadingSection => section != null);
     if (sections.length === 0) return null;
-    return { sections };
+    const glossary = parseGlossary(row.glossary);
+    return glossary.length ? { sections, glossary } : { sections };
   } catch {
     return null;
   }

@@ -30,7 +30,7 @@ import { QuizFailedError, type AuthoredItem, type QuizGenerator, type QuizInput,
 import { loadModelConfig } from "./model-config.ts";
 import { allSupported } from "./objective-grounding.ts";
 import { ModelError } from "./openrouter.ts";
-import { LessonUnresearchableError, ReadingFailedError, ReuseUnfitError, type ReadingGenerator, type ReadingInput } from "./reading-generation.ts";
+import { LessonUnresearchableError, ReadingFailedError, ReuseUnfitError, type ReadingGenerator, type ReadingInput, type ChapterInput, type PriorLesson } from "./reading-generation.ts";
 import type { ResearchTierChoice, ResearchTierInput, ResearchTierRater } from "./research-tier.ts";
 import { installUsageTracking, type PipelineEventFinish, type PipelineEventStart, type UsageSink } from "./usage-tracking.ts";
 
@@ -67,9 +67,27 @@ const PACKS = [{ slot: "primary", sources: [SOURCE] }, { slot: "secondary", sour
  * Generator returning a fixed passing reading for whichever slot it is given, adapted from its reused Lesson when it
  * has one; `fail` throws a Judge failure, and `unfit` refuses every reused Lesson.
  */
-function recordingGenerator(fail = false, unfit = false) {
+function recordingGenerator(fail = false, unfit = false, chapters = false) {
   const inputs: ReadingInput[] = [];
+  const chapterInputs: ChapterInput[] = [];
+  const finishes: { slotId: string; priorLessons: PriorLesson[] }[] = [];
   const readingGenerator: ReadingGenerator = {
+    // With `chapters`, a Chapter draft records what it was asked and finishes each Lesson through `generate`.
+    ...(chapters ? {
+      async draftChapter(input: ChapterInput) {
+        chapterInputs.push(input);
+        const { chapter, slots, ...shared } = input;
+        void chapter;
+        return {
+          modelId: "fixture/author", rejectedSources: [],
+          lessons: slots.map((slot) => ({ slotId: slot.id, grounding: allSupported(slot.objectives), draft: [], media: [] })),
+          finish: (slotId: string, priorLessons: PriorLesson[]) => {
+            finishes.push({ slotId, priorLessons });
+            return readingGenerator.generate({ ...shared, slot: slots.find((slot) => slot.id === slotId)!, priorLessons });
+          },
+        };
+      },
+    } : {}),
     async generate(input) {
       inputs.push(input);
       if (fail) throw new ReadingFailedError([], { pass: false, failedChecks: ["claim_support"], reasons: ["Unsupported."] });
@@ -78,6 +96,7 @@ function recordingGenerator(fail = false, unfit = false) {
       return {
         judge: { pass: true, failedChecks: [], reasons: [] },
         media: [],
+        glossary: { proposed: [], rejected: [] },
         repairs: 0,
         grounding: allSupported(input.slot.objectives),
         authorModelIds: ["fixture/author"],
@@ -95,7 +114,7 @@ function recordingGenerator(fail = false, unfit = false) {
       };
     },
   };
-  return { readingGenerator, inputs };
+  return { readingGenerator, inputs, chapterInputs, finishes };
 }
 
 /** The rating the stub rater returns: mainstream and dense, so `auto` would pick regular. */
@@ -123,7 +142,7 @@ function recordingRater(choice: ResearchTierChoice = RATED_REGULAR) {
 const QUIZ_ITEM: AuthoredItem = {
   objective: "Describe Yggdrasil",
   prompt: "Question 1?",
-  options: ["a", "b", "c", "d"].map((id) => ({ id: `opt${id}`, text: `${id}1`, correct: id === "c" })),
+  options: ["a", "b", "c", "d"].map((id) => ({ id: `opt${id}`, text: `${id}1`, correct: id === "c", why: `Why ${id}.` })),
   explanations: { brief: "B.", standard: "S.", detailed: "D." },
 };
 
@@ -297,6 +316,7 @@ async function run(
   worker?: WorkerIdentity,
   reuse: ReuseSetup = {},
   choice: ResearchTierChoice = RATED_REGULAR,
+  chapters = false,
 ) {
   const { db, rows } = fakeDb(TABLES);
   const [learner] = await db.insert(learners).values({
@@ -325,7 +345,7 @@ async function run(
   const topics: string[] = [];
   const tiers: ResearchTier[] = [];
   const { rater, inputs: rated } = recordingRater(choice);
-  const { readingGenerator, inputs } = recordingGenerator(fail === "reading", fail === "reuse");
+  const { readingGenerator, inputs, chapterInputs, finishes } = recordingGenerator(fail === "reading", fail === "reuse", chapters);
   const { reuseFit, inputs: fitInputs } = recordingReuseFit(reuse.pick);
   const { quizGenerator, inputs: quizInputs } = recordingQuizGenerator(fail === "quiz");
   const { courseJudge, outlines, authors } = recordingCourseJudge(fail === "course");
@@ -350,7 +370,7 @@ async function run(
   const stored = () => (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
   return {
     started, rows, topics, inputs, quizInputs, outlines, authors, publishedDuringGeneration, stored, job, requestId: request!.id, learnerId: learner!.id,
-    fitInputs, tiers, rated,
+    fitInputs, tiers, rated, chapterInputs, finishes,
   };
 }
 
@@ -365,6 +385,7 @@ test("The approved Reading slot is researched, its packs stored, then generated 
   assert.deepEqual(inputs[0]!.packs, PACKS);
   assert.deepEqual(Object.keys(inputs[0]!.profile).sort(), ["contentScope", "explanationOrder", "instructionLanguage", "requiredReadingSupports"]);
   assert.equal(inputs[0]!.profile.contentScope, "compact");
+  assert.equal(inputs[0]!.startingLevel?.remainingGapStatement, "Your Course would start at the World Tree.", "Each Reading is written for where this Learner starts (SEN-48).");
 
   const saved = rows.get(unpublishedLessons)! as (typeof unpublishedLessons.$inferSelect)[];
   assert.equal(saved.filter((row) => row.teachingMethod === "reading").length, 1);
@@ -1063,7 +1084,7 @@ test("A slot the fit call picks a Lesson for is not researched: it gets a copy o
 
 test("A reused Lesson written for another profile is offered as adapt at most", async () => {
   const { started, inputs } = await run(null, undefined, originResearch, APPROVED, undefined, undefined, {
-    candidates: [candidate({ writtenFor: { ...candidate().writtenFor, contentScope: "standard" } })],
+    candidates: [candidate({ writtenFor: { ...candidate().writtenFor, explanationOrder: "example_first" } })],
     pick: (input) => input.candidates[0]!.lessonId,
   });
   await started;
@@ -1157,4 +1178,54 @@ test("READING_MEDIA is on by default, may be turned off, and refuses anything el
   assert.equal(readingMediaFromEnv({ READING_MEDIA: " " }), "on");
   assert.equal(readingMediaFromEnv({ READING_MEDIA: "OFF" }), "off");
   assert.throws(() => readingMediaFromEnv({ READING_MEDIA: "no" }), /Unknown reading media setting/);
+});
+
+/** The approved plan with the World Tree as a Chapter of two Readings, then one Quiz on both. */
+const CHAPTERED: ApprovedBlueprint = {
+  ...APPROVED,
+  blueprint: {
+    courseTitle: "Norse cosmology",
+    modules: [{
+      title: "The world tree",
+      slots: [
+        { ...APPROVED.blueprint.modules[0]!.slots[0]!, chapter: "The tree" },
+        {
+          id: "slot2", method: "reading", chapter: "The tree", title: "The Roots", lessonGoal: "Name the three roots.",
+          objectives: ["Name its roots"], topicTags: ["yggdrasil", "roots"], assessesSlotIds: [],
+        },
+        {
+          id: "slot3", method: "quiz", title: "Check: the World Tree", lessonGoal: "Recall how Yggdrasil connects the worlds.",
+          objectives: ["Describe Yggdrasil", "Name its roots"], topicTags: ["yggdrasil", "quiz"], assessesSlotIds: ["slot1", "slot2"],
+        },
+      ],
+    }],
+  },
+};
+
+test("A Chapter is researched once and drafted in one call, and each Lesson is finished in order with the Lessons before it (decision 2026-11-03)", async () => {
+  const { started, rows, topics, inputs, chapterInputs, finishes } = await run(null, undefined, undefined, CHAPTERED, undefined, undefined, {}, RATED_REGULAR, true);
+  await started;
+
+  assert.equal(topics.length, 1, "One search for the Chapter, not one per Reading.");
+  assert.match(topics[0]!, /^The tree \(Norse mythology\)\. Describe how Yggdrasil connects the Nine Worlds\. Name the three roots\. Covers: Describe Yggdrasil; Name its roots\./);
+  assert.equal(chapterInputs.length, 1);
+  assert.deepEqual(chapterInputs[0]!.slots.map((slot) => slot.id), ["slot1", "slot2"]);
+  assert.equal(chapterInputs[0]!.chapter, "The tree");
+  assert.deepEqual(chapterInputs[0]!.packs, PACKS);
+  assert.deepEqual(finishes.map(({ slotId, priorLessons }) => [slotId, priorLessons.map((lesson) => lesson.title)]), [["slot1", []], ["slot2", ["The World Tree"]]]);
+  assert.equal(inputs.length, 2, "The fixture finishes each Lesson through the single-Lesson path.");
+  const research = rows.get(lessonResearch)! as (typeof lessonResearch.$inferSelect)[];
+  assert.deepEqual(research.map((row) => row.slotId).sort(), ["slot1", "slot2"], "Each Reading keeps its own research row of the shared packs.");
+  assert.deepEqual(research[0]!.sourcePacks, research[1]!.sourcePacks);
+  const saved = rows.get(unpublishedLessons)! as (typeof unpublishedLessons.$inferSelect)[];
+  assert.equal(saved.filter((row) => row.teachingMethod === "reading").length, 2);
+  assert.equal(saved.filter((row) => row.teachingMethod === "quiz").length, 1);
+});
+
+test("A generator without a Chapter draft, and a Chapter of one Reading, write each Lesson on its own as before", async () => {
+  const { started, topics, inputs, chapterInputs } = await run(null, undefined, undefined, CHAPTERED);
+  await started;
+  assert.equal(chapterInputs.length, 0);
+  assert.equal(topics.length, 1, "Research is still one search per Chapter.");
+  assert.deepEqual(inputs.map((input) => input.slot.id), ["slot1", "slot2"]);
 });

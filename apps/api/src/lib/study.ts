@@ -9,6 +9,7 @@ import {
   lessonCompletions,
   lockedLessonIds,
   parseNumberedSources,
+  parseReadingBody,
   parseSequenceMode,
   publishedLessons,
   QUIZ_METHOD_ID,
@@ -380,6 +381,63 @@ export async function completeLesson(
     throw new Error(
       `[study.ts: completeLesson] Failed to complete Lesson || courseId=${courseId} || lessonId=${lessonId} || ${message}`,
     );
+  }
+}
+
+/** What opening a glossary word returns: nothing on success, since it changes no Study state. */
+export type GlossaryOpenResult = { ok: true } | { ok: false; status: 400 | 404; error: string };
+
+/**
+ * Records that the Learner opened one word's definition in a Reading (SEN-48). It writes no Study state, only the
+ * product event, so the console sees which words Learners need. Only a word in that Lesson's glossary counts.
+ * @param store - Study store
+ * @param learnerId - Current Learner
+ * @param courseId - Published Course id
+ * @param lessonId - The Reading
+ * @param term - The glossary term opened, as the body spells it
+ */
+export async function openGlossaryTerm(
+  store: StudyStore,
+  learnerId: string,
+  courseId: string,
+  lessonId: string,
+  term: unknown,
+): Promise<GlossaryOpenResult> {
+  try {
+    if (typeof term !== "string" || !term.trim()) return { ok: false, status: 400, error: "term must be a word from the Lesson's glossary." };
+    const context = await loadCourseContext(store, learnerId, courseId);
+    if (!context) return { ok: false, status: 404, error: "Published Course not found." };
+    const lesson = context.lessons.find((row) => row.id === lessonId);
+    if (!lesson) return { ok: false, status: 404, error: "Lesson not found." };
+    const entry = (parseReadingBody(lesson.body)?.glossary ?? []).find((row) => row.term.toLowerCase() === term.trim().toLowerCase());
+    if (!entry) return { ok: false, status: 404, error: "That word is not in this Lesson's glossary." };
+    void recordProductEvent("glossary_term_opened", { learnerId, detail: { courseId, lessonId, title: lesson.title, term: entry.term } });
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `[study.ts: openGlossaryTerm] Failed to record a glossary word || courseId=${courseId} || lessonId=${lessonId} || ${message}`,
+    );
+  }
+}
+
+/**
+ * Records that the Learner opened the Course's Words page (decision 2026-11-03): every word its Readings defined, in one
+ * list. It writes no Study state, only the product event, with how many words the page held.
+ * @param store - Study store
+ * @param learnerId - Current Learner
+ * @param courseId - Published Course id
+ */
+export async function openCourseWords(store: StudyStore, learnerId: string, courseId: string): Promise<GlossaryOpenResult> {
+  try {
+    const context = await loadCourseContext(store, learnerId, courseId);
+    if (!context) return { ok: false, status: 404, error: "Published Course not found." };
+    const terms = new Set(context.lessons.flatMap((row) => (parseReadingBody(row.body)?.glossary ?? []).map((entry) => entry.term.toLowerCase())));
+    void recordProductEvent("course_words_opened", { learnerId, detail: { courseId, words: terms.size } });
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`[study.ts: openCourseWords] Failed to record the Words page || courseId=${courseId} || ${message}`);
   }
 }
 

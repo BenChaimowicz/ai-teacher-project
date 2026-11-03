@@ -37,7 +37,7 @@ test("First run asks seven tapped questions with a live summary, saves the SEN-3
   await reading.getByRole("button", { name: /^That's it/ }).click();
   await expect(panel.getByText("plain wording")).toBeVisible();
 
-  await tap(page, "How much should one lesson cover?", /^One key idea/);
+  await tap(page, "How much should the course cover?", /^Just the essentials/);
   await tap(page, "How should a lesson move along?", /^No preference/);
   await tap(page, "When there's a good example, what comes first?", /^Skip this one/);
   await tap(page, "How often would you like a quick check?", /^After every lesson/);
@@ -58,10 +58,10 @@ test("First run asks seven tapped questions with a live summary, saves the SEN-3
     feedbackDepth: { status: "selected", value: "detailed" },
   });
 
-  await panel.getByRole("button", { name: /^Change lesson size/ }).click();
-  await tap(page, "How much should one lesson cover?", /^The fuller story/);
+  await panel.getByRole("button", { name: /^Change course size/ }).click();
+  await tap(page, "How much should the course cover?", /^The fuller story/);
   await expect(page.getByText(/Updated. Pacing/)).toBeVisible();
-  await expect(panel.getByText("long", { exact: true })).toBeVisible();
+  await expect(panel.getByText("fuller", { exact: true })).toBeVisible();
   expect((await savedAnswers())?.contentScope).toEqual({ status: "selected", value: "extended" });
 
   await page.getByRole("button", { name: /^Make my first course/ }).click();
@@ -85,7 +85,7 @@ test("Returning shows each setting with a change button; a change saves at once,
   await page.goto("/teaching-profile");
   await expect(page.getByRole("heading", { name: "How you like to learn" })).toBeVisible();
   const settings = page.getByRole("list", { name: "Your settings" });
-  await expect(settings.getByText("short", { exact: true })).toBeVisible();
+  await expect(settings.getByText("essentials", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Change pacing" }).click();
   await tap(page, "How should a lesson move along?", /^Pause after each section/);

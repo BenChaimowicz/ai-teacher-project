@@ -8,7 +8,7 @@ import {
   submitQuiz,
   type QuizRequest,
 } from "../lib/quiz-play.ts";
-import { completeLesson, loadCourseSummary, loadStudyCourse, switchSequenceMode } from "../lib/study.ts";
+import { completeLesson, loadCourseSummary, loadStudyCourse, openCourseWords, openGlossaryTerm, switchSequenceMode } from "../lib/study.ts";
 import { drizzleStudyStore, type StudyStore } from "../lib/study-store.ts";
 
 /** Options for Study routes. Tests pass an in-memory store. */
@@ -108,6 +108,18 @@ export async function studyRoutes(app: FastifyInstance, options: StudyRoutesOpti
     return send(request, reply, "complete Lesson", () =>
       completeLesson(store, request.currentLearner.id, courseId, lessonId),
     );
+  });
+
+  app.post("/api/courses/:courseId/lessons/:lessonId/glossary-opens", (request, reply) => {
+    const { courseId, lessonId } = request.params as LessonParams;
+    return send(request, reply, "record a glossary word", () =>
+      openGlossaryTerm(store, request.currentLearner.id, courseId, lessonId, bodyField(request, "term")),
+    );
+  });
+
+  app.post("/api/courses/:courseId/words-opens", (request, reply) => {
+    const { courseId } = request.params as { courseId: string };
+    return send(request, reply, "record the Words page", () => openCourseWords(store, request.currentLearner.id, courseId));
   });
 
   app.put("/api/courses/:courseId/sequence-mode", (request, reply) => {

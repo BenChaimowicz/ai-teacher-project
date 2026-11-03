@@ -6,6 +6,7 @@ import { MoreHorizontal } from "lucide-react";
 import { useCompanionLines } from "@/components/companion/companion-provider.tsx";
 import { CourseOutline } from "@/components/learn/course-outline.tsx";
 import { FinishLine } from "@/components/learn/finish-line.tsx";
+import { stepAfter } from "@/components/learn/next-step.ts";
 import { ReadingPanel } from "@/components/learn/reading-panel.tsx";
 import { StudyChromeProvider, useStudyChrome } from "@/components/learn/study-chrome.tsx";
 import { ShellActions, ShellOutline, ShellTitle, useShell } from "@/components/shell/app-shell.tsx";
@@ -241,6 +242,8 @@ function StudyScreen() {
   const finish = visible.completed ? (
     <FinishLine courseId={courseId} next={next} courseComplete={Boolean(payload.course.completedAt)} />
   ) : null;
+  // Where the completion action leads, read from the Course as it will be once this Lesson is complete.
+  const after = stepAfter(courseId, lessons, visible.id);
 
   return (
     <>
@@ -292,6 +295,7 @@ function StudyScreen() {
           onPayload={setPayload}
           lessonNumber={lessonNumber}
           finish={finish}
+          next={after}
         />
       ) : (
         <div className="mx-auto max-w-[720px]">

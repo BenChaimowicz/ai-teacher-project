@@ -22,11 +22,11 @@ export function createFixtureBlueprintBuilder(): BlueprintBuilder {
             title: "Fixture Module",
             slots: [
               {
-                id: "slot1", method: "reading", title: `Reading: ${first}`, lessonGoal: `Use ${first} toward your goal.`,
+                id: "slot1", method: "reading", chapter: first, title: `Reading: ${first}`, lessonGoal: `Use ${first} toward your goal.`,
                 objectives: [`Explain ${first}`], topicTags: ["fixture", "reading"], assessesSlotIds: [],
               },
               {
-                id: "slot2", method: "reading", title: `Reading: ${second}`, lessonGoal: `Use ${second} toward your goal.`,
+                id: "slot2", method: "reading", chapter: second, title: `Reading: ${second}`, lessonGoal: `Use ${second} toward your goal.`,
                 objectives: [`Explain ${second}`], topicTags: ["fixture", "reading"], assessesSlotIds: [],
               },
               {

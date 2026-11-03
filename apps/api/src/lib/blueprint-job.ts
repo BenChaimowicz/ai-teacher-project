@@ -101,6 +101,7 @@ export function createBlueprintJob(
               instructionLanguage: profile.instructionLanguage.value,
               quizCadence: profile.quizCadence.value,
               explanationOrder: profile.explanationOrder.value,
+              contentScope: profile.contentScope.value,
             },
             ...(reviewed && feedback?.irrelevantSlotIds.length ? { revision: { previousBlueprint: reviewed.draft, feedback } } : {}),
             ...(reviewed && sequenceFailure ? { sequenceRedesign: { previousBlueprint: reviewed.draft, reasons: sequenceFailure.reasons } } : {}),

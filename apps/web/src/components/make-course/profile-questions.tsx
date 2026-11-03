@@ -69,12 +69,12 @@ export const PROFILE_QUESTIONS: ProfileQuestion[] = [
     defaultChip: "nothing extra",
   },
   {
-    field: "contentScope", short: "lesson size", about: "how much one lesson covers", icon: <Layers />,
-    ask: "How much should one lesson cover?",
+    field: "contentScope", short: "course size", about: "how much the course covers", icon: <Layers />,
+    ask: "How much should the course cover?",
     choices: [
-      { value: "compact", label: "One key idea", description: "Short and focused", chip: "short", line: "short lessons" },
-      { value: "standard", label: "A few connected ideas", description: "The usual", chip: "standard", line: "standard lessons" },
-      { value: "extended", label: "The fuller story", description: "Longer, with fewer breaks", chip: "long", line: "longer lessons" },
+      { value: "compact", label: "Just the essentials", description: "The fewest lessons that get you there", chip: "essentials", line: "a short course" },
+      { value: "standard", label: "The essentials, with examples", description: "The usual", chip: "standard", line: "a standard course" },
+      { value: "extended", label: "The fuller story", description: "More lessons, more context", chip: "fuller", line: "a fuller course" },
     ],
     defaultChip: "standard",
   },
@@ -184,7 +184,7 @@ export function oneLiner(draft: ProfileDraft): string {
     return fallback;
   };
   const parts = [
-    line("contentScope", "standard lessons"),
+    line("contentScope", "a standard course"),
     line("explanationOrder", "examples when they help"),
     line("feedbackTiming", "feedback after each question"),
     line("sectionAdvance", null),

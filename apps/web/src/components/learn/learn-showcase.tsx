@@ -47,7 +47,17 @@ const ITEM: PublicQuizItem = {
     { id: "d", text: "A Roman historian" },
   ],
 } as PublicQuizItem;
-const KEY = { itemId: "demo-q", correctOptionId: "a", explanation: "Snorri wrote it around 1220, as a handbook for young poets." };
+const KEY = {
+  itemId: "demo-q",
+  correctOptionId: "a",
+  explanation: "Snorri wrote it around 1220, as a handbook for young poets.",
+  optionNotes: {
+    a: "The lesson names Snorri Sturluson, an Icelandic chieftain, as its author.",
+    b: "Odin is a god in the stories; the lesson says a man wrote them down.",
+    c: "The unnamed poets wrote the Poetic Edda, not the Prose Edda.",
+    d: "The lesson says the Prose Edda is Icelandic and from the 1200s.",
+  },
+};
 
 /** One titled block, matching the reference page's sections. */
 function Block({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
@@ -107,22 +117,51 @@ export function LearnShowcase() {
           <ReadingView
             lessonId="demo-reading"
             title="Where the myths come from"
-            lessonGoal="what the Eddas are, who wrote them down, and why that matters."
+            lessonGoal="what the two Eddas are, who wrote them down, and why they are read with care."
             lessonNumber={3}
             completed={completed}
             paused={false}
             onComplete={async () => setCompleted(true)}
             finish={<Button variant="ghost" onClick={() => setCompleted(false)}>Reset sample</Button>}
-            citations={[{ n: 1, title: "Prose Edda, Wikipedia", url: "https://en.wikipedia.org/wiki/Prose_Edda" }]}
+            citations={[
+              { n: 1, title: "Poetic Edda, Wikipedia", url: "https://en.wikipedia.org/wiki/Poetic_Edda" },
+              { n: 2, title: "Prose Edda, Wikipedia", url: "https://en.wikipedia.org/wiki/Prose_Edda" },
+            ]}
             body={{
               sections: [
                 {
-                  heading: "The Prose Edda",
+                  heading: "Two books called Edda",
                   blocks: [
-                    { kind: "prose", text: "Around 1220, Snorri Sturluson wrote the Prose Edda, a handbook for young poets.[1] He retold the myths in plain prose." },
-                    { kind: "prose", text: "In doing so he gave us the most complete version of Norse mythology we have. Hover the small number to see its source." },
+                    {
+                      kind: "prose",
+                      text: "Almost everything we know about Norse mythology comes from two Icelandic books, both called the Edda.[1][2] The Poetic Edda is a collection of old poems about gods and heroes, copied down around 1270 by a scribe whose name we do not know. The Prose Edda is younger and has an author: Snorri Sturluson, an Icelandic chieftain, wrote it around 1220 as a handbook for young poets.[2]",
+                    },
                   ],
                 },
+                {
+                  heading: "Why Snorri wrote it down",
+                  blocks: [
+                    {
+                      kind: "prose",
+                      text: "By Snorri's time Iceland had been Christian for two centuries, and the old poems were getting hard to follow. Court poets still used the kenning, a short riddling phrase such as Odin's mead for poetry, and a poet who did not know the stories behind them could not use them well.[2] So Snorri retold the myths in plain prose, as the background a working poet needed.",
+                    },
+                  ],
+                },
+                {
+                  heading: "Reading them with care",
+                  blocks: [
+                    {
+                      kind: "prose",
+                      text: "Both Eddas were written down by Christians long after the old religion had faded, so they are a late and partial record. Snorri sometimes smoothed stories into a tidier shape than the poems suggest, and some tales survive in only one source.[1] Scholars read the two side by side, and treat a myth that appears in both as better attested than one that appears in just one.",
+                    },
+                  ],
+                },
+              ],
+              glossary: [
+                { term: "Norse mythology", definition: "The stories the pre-Christian peoples of Scandinavia told about their gods." },
+                { term: "Poetic Edda", definition: "A collection of old Norse poems about gods and heroes, copied down in Iceland around 1270." },
+                { term: "Prose Edda", definition: "A thirteenth-century Icelandic handbook that retells the Norse myths in prose." },
+                { term: "kenning", definition: "A short riddling phrase that stands for a plain word, such as Odin's mead for poetry." },
               ],
             }}
           />

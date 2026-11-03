@@ -27,16 +27,14 @@ test("An approved Blueprint generates a Course that publishes to Home and comple
   await main.getByRole("link", { name: /^Continue/ }).click();
   await expect(page.getByText("Fixture Course · 0 / 3")).toBeVisible();
   await expect(page.getByText("Fixture prose for Reading: Fixture capability 4.")).toBeVisible();
-  await page.getByRole("button", { name: "I've read it" }).click();
+  // "I've read it" completes the Lesson and opens the next one in the same click (decision 2026-11-03).
+  await page.getByRole("button", { name: "I've read it, next lesson" }).click();
   await expect(page.getByText("Fixture Course · 1 / 3")).toBeVisible();
-
-  const lessons = page.getByRole("navigation", { name: "Lessons" });
-  await lessons.getByRole("link", { name: "Reading: Fixture capability 5" }).click();
   await expect(page.getByText("Fixture prose for Reading: Fixture capability 5.")).toBeVisible();
-  await page.getByRole("button", { name: "I've read it" }).click();
-  await expect(page.getByText("Fixture Course · 2 / 3")).toBeVisible();
 
-  await lessons.getByRole("link", { name: "Quiz: Fixture capability 4 and Fixture capability 5" }).click();
+  await page.getByRole("button", { name: "I've read it, start the quiz" }).click();
+  await expect(page.getByText("Fixture Course · 2 / 3")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Quiz: Fixture capability 4 and Fixture capability 5" })).toBeVisible();
   for (let n = 1; n <= QUIZ_ITEMS; n += 1) {
     const item = page.getByRole("group", { name: `${n}. Fixture question ${n}?` });
     await item.getByRole("radio", { name: `Right answer ${n}` }).check();

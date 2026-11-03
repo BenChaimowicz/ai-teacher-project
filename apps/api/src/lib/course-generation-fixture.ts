@@ -68,6 +68,7 @@ export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGenerati
           rounds: [],
           rejectedSources: [],
           media: [],
+          glossary: { proposed: [], rejected: [] },
           lesson: {
             slotId: slot.id, teachingMethod: "reading", title: slot.title, lessonGoal: slot.lessonGoal,
             objectives: slot.objectives, topicTags: slot.topicTags, lineage: null,
@@ -101,10 +102,10 @@ export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGenerati
                   id: `item${n}`,
                   prompt: `Fixture question ${n}?`,
                   options: [
-                    { id: "opt1", text: `Wrong answer ${n}a` },
-                    { id: "opt2", text: `Right answer ${n}` },
-                    { id: "opt3", text: `Wrong answer ${n}b` },
-                    { id: "opt4", text: `Wrong answer ${n}c` },
+                    { id: "opt1", text: `Wrong answer ${n}a`, why: `Fixture why ${n}a.` },
+                    { id: "opt2", text: `Right answer ${n}`, why: `Fixture why ${n}.` },
+                    { id: "opt3", text: `Wrong answer ${n}b`, why: `Fixture why ${n}b.` },
+                    { id: "opt4", text: `Wrong answer ${n}c`, why: `Fixture why ${n}c.` },
                   ],
                   correctOptionId: "opt2",
                   explanations: { brief: `Brief ${n}.`, standard: `Standard ${n}.`, detailed: `Detailed ${n}.` },

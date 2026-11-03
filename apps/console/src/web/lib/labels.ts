@@ -51,6 +51,7 @@ export const KIND_LABEL: Record<PipelineEventKind, string> = {
   research_tier: "Research tier",
   reuse: "Lesson reuse",
   research: "Research",
+  chapter: "Chapter draft",
   reading: "Reading lesson",
   quiz: "Quiz",
   course_judge: "Final review",

@@ -1,6 +1,6 @@
 import type { BlueprintSlot } from "./blueprint.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
-import type { ReadingBody } from "./reading-lesson.ts";
+import { MAX_READING_WORDS, readingWordCount, type ReadingBody } from "./reading-lesson.ts";
 import type { ContentScope } from "./teaching-profile.ts";
 
 /** How a reused Lesson was copied into its new Course (spec §5.8). */
@@ -72,9 +72,10 @@ function tagKey(tag: string): string {
 /**
  * Whether a candidate is retrieved for a Reading slot (spec §5.8). The lookup already matched subject and teaching
  * method; this adds at least one overlapping Topic tag, the same instruction language (a Lesson can't be adapted into
- * another language), and a contentScope no shorter than this Learner's, because an adapt pass may trim a Lesson but
- * never grow it. A verbatim copy is left out, since its origin is in the pool with the same body. Tags retrieve; they do
- * not judge fit.
+ * another language), and a body within the one-screen word cap, because an adapt pass may trim a Lesson but never
+ * rewrite it (decision 2026-11-03; every Reading published before it is too long). `contentScope` no longer sizes a
+ * Lesson, so it is not compared. A verbatim copy is left out, since its origin is in the pool with the same body. Tags
+ * retrieve; they do not judge fit.
  * @param slot - The Blueprint slot looking for a Lesson
  * @param candidate - A published Reading on the same subject
  * @param profile - The write-time values this Learner's Lessons are written for
@@ -86,13 +87,14 @@ export function retrievable(slot: Pick<BlueprintSlot, "topicTags">, candidate: R
   const writtenFor = readingProfile(candidate.writtenFor);
   // Every profile resolved to English before checkpoints recorded one, so an unrecorded Lesson is English.
   if ((writtenFor?.instructionLanguage ?? "en") !== profile.instructionLanguage) return false;
-  if (writtenFor && CONTENT_SCOPES.indexOf(writtenFor.contentScope) < CONTENT_SCOPES.indexOf(profile.contentScope)) return false;
+  if (readingWordCount(candidate.body) > MAX_READING_WORDS) return false;
   return true;
 }
 
 /**
- * Whether a candidate may be reused verbatim: it was written for exactly this Learner's four write-time values. Any
- * difference, or values never recorded, makes it adapt at most.
+ * Whether a candidate may be reused verbatim: it was written for exactly this Learner's write-time values that shape the
+ * text (language, reading supports, explanation order; `contentScope` sizes the Course, not the Lesson). Any difference,
+ * or values never recorded, makes it adapt at most.
  * @param candidate - A retrieved candidate
  * @param profile - The write-time values this Learner's Lessons are written for
  */
@@ -102,6 +104,5 @@ export function verbatimAllowed(candidate: Pick<ReuseCandidate, "writtenFor">, p
   const supports = (values: string[]) => [...new Set(values)].sort().join(",");
   return writtenFor.instructionLanguage === profile.instructionLanguage &&
     supports(writtenFor.requiredReadingSupports) === supports(profile.requiredReadingSupports) &&
-    writtenFor.contentScope === profile.contentScope &&
     writtenFor.explanationOrder === profile.explanationOrder;
 }

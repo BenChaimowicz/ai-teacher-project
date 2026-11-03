@@ -143,8 +143,10 @@ test("Free jump: disclaimer, later Lessons open before a pass, no way back to li
   const lessons = await openLessons(page);
   await lessons.getByRole("link", { name: FOLLOW_UP_TITLE }).click();
   await expect(page).toHaveURL(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
-  await page.getByRole("button", { name: "I've read it" }).click();
+  // After the last Lesson, "I've read it" opens the first Lesson still open, in the same click.
+  await page.getByRole("button", { name: "I've read it, next lesson" }).click();
   await expect(page.getByText("The square knot · 1 / 3")).toBeVisible();
+  await expect(page).toHaveURL(lessonUrl(SEEDED_READING_LESSON_ID));
 
   await page.getByRole("button", { name: "Course menu" }).click();
   await expect(page.getByRole("menuitem", { name: "Switch to free jump" })).toHaveCount(0);

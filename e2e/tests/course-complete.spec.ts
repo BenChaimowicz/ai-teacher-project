@@ -17,9 +17,10 @@ test("Next Lesson walks the fixture Course to the Course-complete screen, and Ho
 
   await expect(page.getByText(`${SEEDED_COURSE.title} · 0 / 3`)).toBeVisible();
   await expect(page.getByRole("link", { name: "Next Lesson" })).toHaveCount(0);
-  await page.getByRole("button", { name: "I've read it" }).click();
-  await page.getByRole("link", { name: "Next Lesson" }).click();
+  // "I've read it" completes the Lesson and opens the next one in the same click (decision 2026-11-03).
+  await page.getByRole("button", { name: "I've read it, start the quiz" }).click();
   await expect(page).toHaveURL(lessonUrl(SEEDED_QUIZ_LESSON_ID));
+  await expect(page.getByText(`${SEEDED_COURSE.title} · 1 / 3`)).toBeVisible();
 
   await answerAll(page, 4, true);
   await page.getByRole("button", { name: "Submit" }).click();
@@ -27,9 +28,8 @@ test("Next Lesson walks the fixture Course to the Course-complete screen, and Ho
   await page.getByRole("link", { name: "Next Lesson" }).click();
   await expect(page).toHaveURL(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
 
-  await page.getByRole("button", { name: "I've read it" }).click();
-  await expect(page.getByText(`${SEEDED_COURSE.title} · 3 / 3`)).toBeVisible();
-  await page.getByRole("link", { name: "Finish Course" }).click();
+  // The last Lesson's tile finishes the Course in the same click.
+  await page.getByRole("button", { name: "I've read it, finish the course" }).click();
 
   await expect(page).toHaveURL(`/study/${SEEDED_COURSE_ID}/complete`);
   await expect(page.getByRole("heading", { name: `You finished ${SEEDED_COURSE.title}` })).toBeVisible();

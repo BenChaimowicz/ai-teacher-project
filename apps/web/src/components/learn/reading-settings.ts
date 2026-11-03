@@ -31,23 +31,23 @@ export type ReadingMode = ModeShape & { key: ReadingModeKey; name: string; descr
 
 export const READING_MODES: ReadingMode[] = [
   {
-    key: "comfort", name: "Comfort", layout: "scroll", font: "sans", size: 18, width: "medium", lineSpacing: 1, letterSpacing: false,
+    key: "comfort", name: "Comfort", layout: "scroll", font: "sans", size: 16, width: "medium", lineSpacing: 1, letterSpacing: false,
     description: "Clean sans (Manrope), roomy lines, about 66 characters wide. Good for most reading.",
   },
   {
-    key: "focus", name: "Focus", layout: "focus", font: "sans", size: 18, width: "medium", lineSpacing: 1, letterSpacing: false,
+    key: "focus", name: "Focus", layout: "focus", font: "sans", size: 16, width: "medium", lineSpacing: 1, letterSpacing: false,
     description: "Sidebar tucked away, header fades while you read. The paragraph you're on stays lit.",
   },
   {
-    key: "spaced", name: "Spaced", layout: "scroll", font: "hyper", size: 20, width: "narrow", lineSpacing: 2, letterSpacing: true,
+    key: "spaced", name: "Spaced", layout: "scroll", font: "hyper", size: 18, width: "narrow", lineSpacing: 2, letterSpacing: true,
     description: "Hyperlegible type with extra letter and line spacing. Easier for dyslexic or tired eyes.",
   },
   {
-    key: "book", name: "Book", layout: "book", font: "serif", size: 18, width: "medium", lineSpacing: 1, letterSpacing: false,
+    key: "book", name: "Book", layout: "book", font: "serif", size: 16, width: "medium", lineSpacing: 1, letterSpacing: false,
     description: "Two columns in a book serif, one page at a time. Turn pages with ← →, like an e-reader.",
   },
   {
-    key: "skim", name: "Skim", layout: "skim", font: "sans", size: 16, width: "wide", lineSpacing: 0, letterSpacing: false,
+    key: "skim", name: "Skim", layout: "skim", font: "sans", size: 15, width: "wide", lineSpacing: 0, letterSpacing: false,
     description: "Compact, key sentences highlighted, sections folded. Good for review.",
   },
 ];
@@ -104,7 +104,9 @@ export function withMode(settings: ReadingSettings, key: ReadingModeKey): Readin
 }
 
 /**
- * CSS custom properties the reading page reads (`--r-*`).
+ * CSS custom properties the reading page reads (`--r-*`). `--r-page` is the page's own width, which `.l-read` takes as
+ * its max-width: the text measure (about 0.56em per character) at the text size, plus the page's 28px side padding
+ * each side. The number lives here only.
  * @param settings - Current settings
  */
 export function readingStyle(settings: ReadingSettings): CSSProperties {
@@ -114,7 +116,7 @@ export function readingStyle(settings: ReadingSettings): CSSProperties {
     "--r-lh": String(LINE_HEIGHT[settings.lineSpacing]),
     "--r-ls": settings.letterSpacing ? "0.05em" : "0em",
     "--r-ws": settings.letterSpacing ? "0.16em" : "0em",
-    "--r-measure": String(MEASURE[settings.width]),
+    "--r-page": `${MEASURE[settings.width] * 0.56 * settings.size + 56}px`,
   } as CSSProperties;
 }
 

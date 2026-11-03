@@ -73,7 +73,7 @@ async function checkFocusedBlueprints() {
     const started = Date.now();
     const checked = await builder.build({
       subject: SUBJECT, learningGoal: proposal.learningGoal, scope: proposal.scope, startingLevel, confirmation: "looks_right",
-      profile: { instructionLanguage: resolved.instructionLanguage.value, quizCadence: resolved.quizCadence.value, explanationOrder: resolved.explanationOrder.value },
+      profile: { instructionLanguage: resolved.instructionLanguage.value, quizCadence: resolved.quizCadence.value, explanationOrder: resolved.explanationOrder.value, contentScope: resolved.contentScope.value },
     });
     assert.ok(checked.judge.pass, `Blueprint Judge failed: ${checked.judge.failedChecks.join(", ")}`);
     const slots = blueprintSlots(checked.blueprint);

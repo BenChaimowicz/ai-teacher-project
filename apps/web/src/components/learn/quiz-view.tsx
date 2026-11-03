@@ -56,7 +56,8 @@ type QuestionProps = {
 /**
  * One question card: the prompt, four answer tiles (radios), Check (per-item timing), the verdict, and
  * the right answer with why. A right answer gets a soft green rim; a wrong one shakes, is struck through and
- * flagged, and the right one is marked.
+ * flagged, and the right one is marked. Once the item has feedback, each option shows its one-line note under
+ * its text (why the key is right; what each distractor contradicts); never before, and not on older Quizzes.
  */
 export function QuestionCard({ item, index, total, streak, results, chosen, locked, canCheck, result, revealed, busy, onAnswer, onCheck }: QuestionProps) {
   const card = useRef<HTMLFieldSetElement>(null);
@@ -103,6 +104,9 @@ export function QuestionCard({ item, index, total, streak, results, chosen, lock
           const isChosen = chosen === option.id;
           const isKey = result === false && revealed?.correctOptionId === option.id;
           const state = isChosen && result === true ? "good" : isChosen && result === false ? "miss" : isKey ? "reveal" : null;
+          // The option's note arrives with the feedback; the key's reads as why it is right, the rest as why not.
+          const note = revealed && result !== undefined ? revealed.optionNotes?.[option.id] : undefined;
+          const noteTone = revealed?.correctOptionId === option.id ? "right" : isChosen ? "picked" : "other";
           return (
             <label
               key={option.id}
@@ -122,7 +126,17 @@ export function QuestionCard({ item, index, total, streak, results, chosen, lock
                   {optionIndex + 1}
                 </span>
               </span>
-              <span className="tt">{option.text}</span>
+              <span className="l-opt">
+                <span className="tt">{option.text}</span>
+                {note ? (
+                  <span className={cn("l-opt-why", noteTone)}>
+                    <span className="g" aria-hidden="true">
+                      {noteTone === "right" ? "✓" : "✕"}
+                    </span>
+                    {note}
+                  </span>
+                ) : null}
+              </span>
               {state === "miss" ? (
                 <span className="k-rib l-flag pick" aria-hidden="true">
                   your pick
