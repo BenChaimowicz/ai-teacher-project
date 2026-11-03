@@ -32,6 +32,16 @@ Demonstrative media comes from a seeded catalog (spec §2, §5.6). The files are
 
 A Reading's writer may ask for one image: a Media category and Topic tags from what the library holds, the section it follows, and the caption and alt text the Learner will read. Once the Reading passes its Judge, the best-matching raster file that passes the descriptor rules is sent to a separate vision Judge call against that caption and alt. On a pass the Lesson body gains a media block holding a copy of the descriptor; on a miss or a failure the image is dropped and the Lesson goes on without it. Study shows the file at `/media/<storage key>`, which the API streams from the bucket only when a published Lesson's body holds that key. SVG files are not attached yet (SEN-115).
 
+## Illustrations
+
+A Reading's depiction or diagram is drawn by `packages/illustration` (SEN-128) in one papercraft house style (decision 2026-11-03). The illustrator model answers a `VisualBrief` with a **scene plan**: a closed set of cut-paper blocks (shapes, tapered limbs, foliage, a tree, standing figures, a few creatures and lab objects, cells, numbered discs, arrows, text, panels, Jongi) placed on a fixed 1200 x 800 sheet, plus labels the engine places itself so they never overlap. `SCENE_PLAN_SCHEMA` is the strict structured-output schema the model answers in, `scenePlanFailures` lists every problem with a reply in plain language, and `renderScenePlan` draws a valid plan as SVG and PNG; the same plan always gives the same bytes. Colours are palette names from `apps/web/src/index.css`, never hex. Generated PNGs are filed under `generated/<sha256>.png` in the media bucket as product-owned, origin `generated` descriptors. Jongi renders as a marked placeholder until the poses are exported from `jongi.blend`.
+
+```bash
+pnpm --filter @senoy/illustration fixtures
+```
+
+draws the committed fixture plans in `packages/illustration/fixtures/` (Yggdrasil and the Gram stain steps) to PNGs beside them and prints how long each render took.
+
 ## Decisions
 
 Every mid-sized or bigger decision the team makes about a ticket is one Markdown file in [`docs/decisions/`](docs/decisions/README.md): what we decided, why, and when. The Usage Console reads that folder off disk and shows it under **Decisions**, so an entry written now appears on the next refresh — there is no database and nothing to migrate. Architectural choices still get a full ADR in [`docs/adr/`](docs/adr).
