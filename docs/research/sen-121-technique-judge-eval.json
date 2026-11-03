@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-11-03T21:43:10.541Z",
+  "startedAt": "2026-11-03T22:30:31.932Z",
   "setPath": "docs\\research\\sen-121-technique-judge-set.json",
   "authorModelIds": [
     "openai/gpt-6.1-sol"
@@ -8,248 +8,7 @@
     {
       "model": "openai/gpt-6-luna",
       "right": 9,
-      "falsePasses": 0,
-      "falseFails": 4,
-      "errors": 0,
-      "verdicts": [
-        {
-          "name": "matched grip in both hands, correct",
-          "expected": "pass",
-          "got": "fail",
-          "right": false,
-          "reasons": [
-            "“each stick is pinched between the pad of the thumb and the first joint of the index finger”: the contact point and first joint are obscured, so the pinch cannot be verified in either hand.",
-            "“each stick is pinched between the thumb and the first joint of the index finger”: the caption claims a specific contact the image does not clearly show."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 21366
-        },
-        {
-          "name": "German grip, palm down, correct",
-          "expected": "pass",
-          "got": "fail",
-          "right": false,
-          "reasons": [
-            "“the stick is held between the thumb and the index finger” — the contact point is obscured by the hand, so this cannot be seen clearly.",
-            "“the other fingers wrap under the stick” — the fingers and their position beneath the stick are hidden by the closed hand.",
-            "“German matched grip” — the image does not show the grip clearly enough to establish that technique; the caption also claims finger placement that is not visible."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 9745
-        },
-        {
-          "name": "traditional grip in the left hand, correct",
-          "expected": "pass",
-          "got": "fail",
-          "right": false,
-          "reasons": [
-            "“the stick passes over the ring finger” — the stick’s path across the curled fingers is ambiguous, so the ring finger crossing cannot be confirmed.",
-            "“passes over the ring finger” — the caption states a crossing the image does not clearly show."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 10448
-        },
-        {
-          "name": "traditional beside matched, each named, correct",
-          "expected": "pass",
-          "got": "pass",
-          "right": true,
-          "reasons": [],
-          "failedChecks": [],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 9162
-        },
-        {
-          "name": "French grip from Commons, correct",
-          "expected": "pass",
-          "got": "fail",
-          "right": false,
-          "reasons": [
-            "“the palm faces inward, sideways, not down” — the palm’s orientation is not clearly visible from this angle.",
-            "“the stick is held between the thumb and the index finger” — the contact point is obscured, so the hold cannot be confirmed.",
-            "Caption phrase “the palm faces inward” — that orientation is not clearly shown.",
-            "Alt phrase “the palm turned sideways” — that orientation is not clearly shown."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit",
-            "alt_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 23900
-        },
-        {
-          "name": "traditional grip judged as matched grip",
-          "expected": "fail",
-          "got": "fail",
-          "right": true,
-          "reasons": [
-            "“the palm faces down, knuckles up” — the palm faces the camera, so the knuckles are not visible.",
-            "“the stick is pinched between the pad of the thumb and the first joint of the index finger” — that contact point is not clearly visible; the stick lies across the exposed palm.",
-            "Caption phrase “palm down” — the image shows the palm facing the camera.",
-            "Alt phrase “palm down” — the image shows the palm facing the camera."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit",
-            "alt_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 11795
-        },
-        {
-          "name": "traditional beside matched judged as both matched",
-          "expected": "fail",
-          "got": "fail",
-          "right": true,
-          "reasons": [
-            "“both hands hold their stick the same way” — the left and right hands use visibly different grips.",
-            "“both palms face down” — the left palm faces toward the camera, not down.",
-            "“each stick is pinched between thumb and index finger” — the left hand’s pinch is not clearly visible.",
-            "Caption phrase “Matched grip in both hands, palms down” does not match the different grips or the left palm’s orientation.",
-            "Alt phrase “each holding a drumstick palm down” does not describe the left hand’s visible orientation."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit",
-            "alt_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 13261
-        },
-        {
-          "name": "German grip judged as French grip",
-          "expected": "fail",
-          "got": "fail",
-          "right": true,
-          "reasons": [
-            "“the thumb sits on top of the stick” — the thumb’s position is obscured at the grip.",
-            "“the palm faces inward, sideways, not down” — the hand is shown with its back facing the camera and the palm appears turned down, not sideways.",
-            "“the fingers are under the stick” — the fingers’ position relative to the stick is hidden by the closed hand.",
-            "“palm facing inward” — the image does not show the palm facing inward; it appears turned down.",
-            "“the palm turned sideways” — the image does not show the palm turned sideways, and the thumb’s position is not clear."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit",
-            "alt_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 12271
-        },
-        {
-          "name": "French grip from Commons judged as German grip",
-          "expected": "fail",
-          "got": "fail",
-          "right": true,
-          "reasons": [
-            "The mustShow item “the thumb lies along the side of the stick, not on top” is not clearly visible; the thumb’s position relative to the stick is obscured at the grip.",
-            "The caption phrase “the thumb along the side of the stick” claims a position the image does not clearly show."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 11084
-        },
-        {
-          "name": "fulcrum at the butt end, a subtle wrong brief",
-          "expected": "fail",
-          "got": "fail",
-          "right": true,
-          "reasons": [
-            "“each hand grips its stick at the butt, the very back end, so no stick extends behind the hand”: the stick ends are hidden, so the butt ends cannot be confirmed.",
-            "“the thumb and index finger pinch the stick right at its end”: the actual ends are obscured by the hands.",
-            "Caption phrase “fulcrum at the butt end” is not visibly verifiable.",
-            "Alt phrase “by their very ends” is not visibly verifiable."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit",
-            "alt_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 15388
-        },
-        {
-          "name": "a drum kit drawing judged as a grip",
-          "expected": "fail",
-          "got": "fail",
-          "right": true,
-          "reasons": [
-            "“a hand holding a drumstick”: the image is a drawing, not the required real photograph.",
-            "“the palm faces down”: the drawing does not clearly show the palm orientation.",
-            "“the stick is pinched between thumb and index finger”: the drawing does not clearly show this grip.",
-            "“palm down, the stick pinched between thumb and index finger”: those technique details are not clearly visible in the drawing.",
-            "“A hand seen from above holding a drumstick palm down”: the image is dominated by a drawn drum kit, not a clear view of a hand."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit",
-            "alt_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 9845
-        },
-        {
-          "name": "the rebound-stroke strip judged as a grip",
-          "expected": "fail",
-          "got": "fail",
-          "right": true,
-          "reasons": [
-            "“a real hand holding a drumstick” — the image is a diagram of a stick moving above a drum; no hand is shown.",
-            "“the palm faces down” — no hand or palm is visible.",
-            "“the stick is pinched between thumb and index finger” — no fingers or grip are shown.",
-            "Caption phrase “Matched grip: palm down, the stick pinched between thumb and index finger” describes a grip that the image does not show.",
-            "The alt says a hand is holding a drumstick palm down, but the image shows a diagram of a stick stroke with no hand."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit",
-            "alt_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 5996
-        },
-        {
-          "name": "a Thor plate judged as a grip",
-          "expected": "fail",
-          "got": "fail",
-          "right": true,
-          "reasons": [
-            "“a real hand holding a drumstick”: the image is an illustration of a person holding other objects, not a real hand holding a drumstick.",
-            "“the palm faces down”: the image does not show the described drumstick grip or make the palm orientation clear.",
-            "“the stick is pinched between thumb and index finger”: no drumstick or such pinch is visible.",
-            "Caption phrase “Matched grip”: the image does not show a matched grip or a drumstick.",
-            "Alt text “A hand seen from above holding a drumstick palm down”: the image shows an illustrated seated person, not that view or action."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit",
-            "alt_fit"
-          ],
-          "judgeModelId": "openai/gpt-6-luna",
-          "latencyMs": 6597
-        }
-      ]
-    },
-    {
-      "model": "openai/gpt-5.6-luna",
-      "right": 10,
-      "falsePasses": 0,
+      "falsePasses": 1,
       "falseFails": 3,
       "errors": 0,
       "verdicts": [
@@ -259,35 +18,242 @@
           "got": "fail",
           "right": false,
           "reasons": [
-            "“each stick is pinched between the pad of the thumb and the first joint of the index finger”: the index-finger contact point is hidden and cannot be verified in either hand.",
-            "“the remaining fingers curl loosely around the stick”: the fingers appear tightly closed and their loose curl around each stick is not clearly visible.",
-            "The caption’s phrase “each stick is pinched between the thumb and the first joint of the index finger” is not visibly supported because the index-finger contact is obscured.",
-            "The alt text’s phrase “index fingers hooked under them” is not visibly supported because neither index finger is clearly visible under its stick."
+            "“each index finger curls around its stick, with the other fingers closed around the stick beneath it”: the fingers overlap, so the index finger’s curl and the other fingers’ placement beneath it cannot be clearly verified on either hand."
+          ],
+          "failedChecks": [
+            "must_show"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 16405
+        },
+        {
+          "name": "German grip, palm down, correct",
+          "expected": "pass",
+          "got": "pass",
+          "right": true,
+          "reasons": [],
+          "failedChecks": [],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 3669
+        },
+        {
+          "name": "traditional grip in the left hand, correct",
+          "expected": "pass",
+          "got": "fail",
+          "right": false,
+          "reasons": [
+            "“A left hand” — the visible hand is the opposite hand, with the thumb on the viewer’s left.",
+            "“left hand” — the caption names a different hand from the one shown."
+          ],
+          "failedChecks": [
+            "must_show",
+            "caption_fit"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 27944
+        },
+        {
+          "name": "traditional beside matched, each named, correct",
+          "expected": "pass",
+          "got": "pass",
+          "right": true,
+          "reasons": [],
+          "failedChecks": [],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 7632
+        },
+        {
+          "name": "French grip from Commons, correct",
+          "expected": "pass",
+          "got": "fail",
+          "right": false,
+          "reasons": [
+            "“the hand is turned on its side, so the back of the hand faces sideways rather than up”: the back of the hand appears to face up.",
+            "“the hand turned on its side”: this is not shown; the back of the hand appears to face up.",
+            "“the hand turned on its side”: this is not shown; the back of the hand appears to face up."
           ],
           "failedChecks": [
             "must_show",
             "caption_fit",
             "alt_fit"
           ],
-          "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 11607
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 17721
         },
         {
-          "name": "German grip, palm down, correct",
-          "expected": "pass",
+          "name": "traditional grip judged as matched grip",
+          "expected": "fail",
           "got": "fail",
-          "right": false,
+          "right": true,
           "reasons": [
-            "“the stick is held between the thumb and the index finger” cannot be verified because the stick’s contact with those fingers is obscured.",
-            "“the other fingers wrap under the stick” cannot be seen from this angle.",
-            "The caption’s claims that the stick is “between thumb and index finger” and that the fingers are “wrapped underneath” are not visibly supported."
+            "“the back of the hand faces up, palm down, so no palm is visible” — the palm faces the camera.",
+            "“the fingers close over the stick from above, knuckles up” — the fingers are visible beneath the stick, not closed over it from above.",
+            "“the thumb lies along the top of the stick” — the thumb is not visibly lying along the stick.",
+            "Caption phrase “Matched grip” and its description do not match the visible palm-up hold.",
+            "The alt says “palm down, knuckles up,” but the image shows the palm facing the camera."
+          ],
+          "failedChecks": [
+            "must_show",
+            "caption_fit",
+            "alt_fit"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 6425
+        },
+        {
+          "name": "traditional beside matched judged as both matched",
+          "expected": "fail",
+          "got": "fail",
+          "right": true,
+          "reasons": [
+            "“both hands hold their stick the same way” — the left and right hands use visibly different grips.",
+            "“both hands are turned palm down with the fingers closed over the sticks from above” — the left palm is visible and its fingers are not closed over the stick from above.",
+            "“no palm is visible” — the left palm is clearly visible.",
+            "Caption phrase “both palms down, the fingers closed over the sticks” does not match the visible left-hand grip.",
+            "The alt says each hand is palm down with fingers closed over the stick, but the left hand is visibly held differently."
+          ],
+          "failedChecks": [
+            "must_show",
+            "caption_fit",
+            "alt_fit"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 4154
+        },
+        {
+          "name": "German grip judged as French grip",
+          "expected": "fail",
+          "got": "fail",
+          "right": true,
+          "reasons": [
+            "“the hand is turned on its side, so the back of the hand faces sideways rather than up” — the back of the hand faces upward.",
+            "“the thumb lies on top of the stick, nail up, in full view” — the thumb and its nail are not clearly visible on top of the stick.",
+            "“the fingers curl beneath the stick” — the fingers’ position beneath the stick is obscured by the hand.",
+            "Caption phrase “French grip: the hand on its side with the thumb on top of the stick and the fingers beneath it” describes a grip that the image does not show.",
+            "Alt phrase “the thumb on top and the hand turned sideways” does not match the visible hand position."
+          ],
+          "failedChecks": [
+            "must_show",
+            "caption_fit",
+            "alt_fit"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 5066
+        },
+        {
+          "name": "French grip from Commons judged as German grip",
+          "expected": "fail",
+          "got": "fail",
+          "right": true,
+          "reasons": [
+            "“the thumb is tucked at the side of the stick below the knuckles, out of sight from above” — the thumb is visible beside the stick, so this position is not shown.",
+            "“the thumb tucked at the side of the stick” — the caption claims a position the image does not show."
           ],
           "failedChecks": [
             "must_show",
             "caption_fit"
           ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 9731
+        },
+        {
+          "name": "index fingers straight along the sticks, a subtle wrong brief",
+          "expected": "fail",
+          "got": "pass",
+          "right": false,
+          "reasons": [],
+          "failedChecks": [],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 9210
+        },
+        {
+          "name": "a drum kit drawing judged as a grip",
+          "expected": "fail",
+          "got": "fail",
+          "right": true,
+          "reasons": [
+            "“a real hand holding a drumstick, photographed” — the image is line art, not a photograph.",
+            "“the back of the hand faces up, palm down” — the tiny, stylized hand does not make its orientation clear.",
+            "“the fingers close over the stick from above” — the finger placement is too small and unclear to verify.",
+            "“Matched grip” and “the back of the hand up, the fingers closed over the stick from above” — the drawing does not clearly show these details.",
+            "“A hand seen from above” and “palm down” — the small illustrated hand’s viewpoint and orientation are unclear."
+          ],
+          "failedChecks": [
+            "must_show",
+            "caption_fit",
+            "alt_fit"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 13070
+        },
+        {
+          "name": "the rebound-stroke strip judged as a grip",
+          "expected": "fail",
+          "got": "fail",
+          "right": true,
+          "reasons": [
+            "“a real hand holding a drumstick, photographed” — the image is a diagram of a drumstick stroke, not a photograph of a hand.",
+            "“the back of the hand faces up, palm down” — no hand is visible.",
+            "“the fingers close over the stick from above” — no fingers are visible.",
+            "Caption phrase “Matched grip” — the image shows a four-stage drumstick stroke, not a matched grip.",
+            "Alt text “A hand seen from above holding a drumstick palm down” — the image shows no hand; it shows a diagram of a drumstick stroke."
+          ],
+          "failedChecks": [
+            "must_show",
+            "caption_fit",
+            "alt_fit"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 4437
+        },
+        {
+          "name": "a Thor plate judged as a grip",
+          "expected": "fail",
+          "got": "fail",
+          "right": true,
+          "reasons": [
+            "“a real hand holding a drumstick, photographed” — the image is an illustration of a seated man, not a photograph, and no drumstick is visible.",
+            "“the back of the hand faces up, palm down” — the required hand orientation cannot be seen clearly.",
+            "“the fingers close over the stick from above” — no drumstick or matching finger position is visible.",
+            "Caption phrase “Matched grip” and the described hand position are not shown.",
+            "The alt describes a hand holding a drumstick from above, which is not what is visibly shown."
+          ],
+          "failedChecks": [
+            "must_show",
+            "caption_fit",
+            "alt_fit"
+          ],
+          "judgeModelId": "openai/gpt-6-luna",
+          "latencyMs": 6904
+        }
+      ]
+    },
+    {
+      "model": "openai/gpt-5.6-luna",
+      "right": 12,
+      "falsePasses": 0,
+      "falseFails": 1,
+      "errors": 0,
+      "verdicts": [
+        {
+          "name": "matched grip in both hands, correct",
+          "expected": "pass",
+          "got": "pass",
+          "right": true,
+          "reasons": [],
+          "failedChecks": [],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 6799
+          "latencyMs": 7435
+        },
+        {
+          "name": "German grip, palm down, correct",
+          "expected": "pass",
+          "got": "pass",
+          "right": true,
+          "reasons": [],
+          "failedChecks": [],
+          "judgeModelId": "openai/gpt-5.6-luna",
+          "latencyMs": 9204
         },
         {
           "name": "traditional grip in the left hand, correct",
@@ -297,7 +263,7 @@
           "reasons": [],
           "failedChecks": [],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 61970
+          "latencyMs": 96652
         },
         {
           "name": "traditional beside matched, each named, correct",
@@ -307,7 +273,7 @@
           "reasons": [],
           "failedChecks": [],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 4316
+          "latencyMs": 6566
         },
         {
           "name": "French grip from Commons, correct",
@@ -315,14 +281,17 @@
           "got": "fail",
           "right": false,
           "reasons": [
-            "The palm’s orientation cannot be determined clearly enough to verify that it faces inward, sideways, rather than down.",
-            "The contact point is partly obscured by the curled fingers, so it is not unambiguous that the stick is held between the thumb and index finger."
+            "“the hand is turned on its side, so the back of the hand faces sideways rather than up” is not clearly shown; the broad back of the hand appears to face upward toward the camera.",
+            "The caption phrase “the hand turned on its side” describes an orientation the image does not clearly show.",
+            "The alt phrase “the hand turned on its side” does not match the visibly upward-facing hand orientation."
           ],
           "failedChecks": [
-            "must_show"
+            "must_show",
+            "caption_fit",
+            "alt_fit"
           ],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 7392
+          "latencyMs": 26259
         },
         {
           "name": "traditional grip judged as matched grip",
@@ -330,13 +299,11 @@
           "got": "fail",
           "right": true,
           "reasons": [
-            "“the palm faces down, knuckles up”: The visible palm faces the camera, while the knuckles are not shown facing up.",
-            "“the stick is pinched between the pad of the thumb and the first joint of the index finger”: The required thumb–index pinch point is not clearly visible.",
-            "“the other fingers wrap under the stick”: The fingers’ position beneath the stick is not unambiguously visible.",
-            "Caption phrase “palm down”: The photograph shows a palm-up grip rather than the described orientation.",
-            "Caption phrase “the stick pinched between thumb and index finger”: The described pinch is not clearly shown.",
-            "Alt phrase “palm down”: The visible hand is palm-up, so the alt text describes the wrong position.",
-            "Alt phrase “thumb along the stick”: The thumb’s required placement along the stick is not clearly visible."
+            "“the back of the hand faces up, palm down, so no palm is visible” — the palm is visibly facing up toward the viewer.",
+            "“the fingers close over the stick from above, knuckles up” — the grip shows the fingers and palm from below rather than fingers closing over the stick from above.",
+            "“the thumb lies along the top of the stick” — the thumb is positioned beside the stick, not visibly lying along its top.",
+            "Caption phrase “the back of the hand up” does not match the visibly palm-up grip.",
+            "Alt phrase “holding a drumstick palm down, knuckles up” does not match the visibly palm-up grip."
           ],
           "failedChecks": [
             "must_show",
@@ -344,7 +311,7 @@
             "alt_fit"
           ],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 9068
+          "latencyMs": 7927
         },
         {
           "name": "traditional beside matched judged as both matched",
@@ -352,10 +319,11 @@
           "got": "fail",
           "right": true,
           "reasons": [
-            "“both hands hold their stick the same way”: the left hand is palm-up toward the camera while the right hand is palm-down, so the grips are not matched.",
-            "“both palms face down”: the left palm visibly faces upward/toward the camera.",
-            "Caption phrase “palms down”: the left hand is not palm-down.",
-            "Alt phrase “each holding a drumstick palm down”: the left hand is visibly palm-up rather than palm-down."
+            "“both hands hold their stick the same way”: the left hand grips the stick differently from the right, with the left palm facing upward and the fingers open beneath the stick.",
+            "“both hands are turned palm down with the fingers closed over the sticks from above”: the left hand is not palm down and its fingers are not closed over the stick from above.",
+            "“no palm is visible”: the left palm is clearly visible.",
+            "Caption phrase “both palms down, the fingers closed over the sticks”: the image shows the left palm facing upward with an open grip.",
+            "Alt phrase “each holding a drumstick palm down with the fingers closed over it”: the left hand is not palm down and does not have its fingers closed over the stick."
           ],
           "failedChecks": [
             "must_show",
@@ -363,7 +331,7 @@
             "alt_fit"
           ],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 9167
+          "latencyMs": 5655
         },
         {
           "name": "German grip judged as French grip",
@@ -371,21 +339,19 @@
           "got": "fail",
           "right": true,
           "reasons": [
-            "“the thumb sits on top of the stick” cannot be seen clearly because the grip is obscured by the hand.",
-            "“the palm faces inward, sideways, not down” cannot be determined because the palm is not visible from this angle.",
-            "“the fingers are under the stick” cannot be seen because the fingers and underside of the stick are hidden by the grip.",
-            "The caption phrase “the thumb on top of the stick and the palm facing inward” claims positioning that the image does not visibly establish.",
-            "The alt phrase “the thumb on top and the palm turned sideways” describes positioning that cannot be determined from the image.",
-            "The grip is too obscured and the relevant hand surfaces overlap, so the technique is not clearly readable."
+            "“the hand is turned on its side, so the back of the hand faces sideways rather than up” is not clearly shown; the hand is viewed from above and its orientation is ambiguous.",
+            "“the thumb lies on top of the stick, nail up, in full view” is not shown; the thumb and its nail are obscured.",
+            "“the fingers curl beneath the stick” cannot be verified because the stick’s contact with the fingers is hidden by the hand.",
+            "The caption’s “thumb on top of the stick and the fingers beneath it” is not visible in the photograph.",
+            "The alt text’s “thumb on top and the hand turned sideways” is not clearly depicted."
           ],
           "failedChecks": [
             "must_show",
             "caption_fit",
-            "alt_fit",
-            "unreadable"
+            "alt_fit"
           ],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 9248
+          "latencyMs": 8618
         },
         {
           "name": "French grip from Commons judged as German grip",
@@ -393,26 +359,11 @@
           "got": "fail",
           "right": true,
           "reasons": [
-            "The thumb placement at the grip is obscured and ambiguous, so “the thumb lies along the side of the stick, not on top” cannot be verified.",
-            "The caption’s claim “the thumb along the side of the stick” is not clearly shown by the image."
-          ],
-          "failedChecks": [
-            "must_show",
-            "caption_fit"
-          ],
-          "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 20173
-        },
-        {
-          "name": "fulcrum at the butt end, a subtle wrong brief",
-          "expected": "fail",
-          "got": "fail",
-          "right": true,
-          "reasons": [
-            "“each hand grips its stick at the butt, the very back end, so no stick extends behind the hand”: the actual stick ends are covered by the fingers, so this cannot be confirmed from the image.",
-            "“the thumb and index finger pinch the stick right at its end”: the endpoint is hidden, so the pinch cannot be verified as being exactly at the end.",
-            "“fulcrum at the butt end of the stick”: the image does not clearly show that the fulcrum is at the butt end.",
-            "“by their very ends, with no stick showing behind the hands”: the covered endpoints make this description unverifiable."
+            "“the back of the hand faces up with the knuckles on top, palm down” is not clearly visible; the hand is shown from the side and the palm/knuckle orientation cannot be determined unambiguously.",
+            "“the thumb is tucked at the side of the stick below the knuckles, out of sight from above” is not shown; the thumb appears visible at the grip rather than hidden from above.",
+            "“the fingers close over the stick from above” is not clearly shown; the fingers appear to wrap around the stick from the side or underneath.",
+            "The caption phrase “the back of the hand up, knuckles on top, the thumb tucked at the side” claims a hand orientation and thumb position that the image does not visibly establish.",
+            "The alt phrase “seen from above holding a drumstick palm down, knuckles up” does not match what is unambiguously visible; the image is a side-oblique view and does not clearly show palm-down, knuckles-up positioning."
           ],
           "failedChecks": [
             "must_show",
@@ -420,7 +371,26 @@
             "alt_fit"
           ],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 17360
+          "latencyMs": 9998
+        },
+        {
+          "name": "index fingers straight along the sticks, a subtle wrong brief",
+          "expected": "fail",
+          "got": "fail",
+          "right": true,
+          "reasons": [
+            "“each index finger lies straight out along the top of its stick, pointing toward the tip, not curled around it”: the index fingers are not clearly visible as straight along the sticks and could be curled around them.",
+            "“the other fingers close around the stick beneath the straight index finger”: the required finger arrangement cannot be confirmed because the index-finger position is obscured.",
+            "The caption phrase “with the index fingers pointing straight down the sticks” is not visibly supported.",
+            "The alt phrase “each index finger extended straight along the top of its stick” is not visibly supported."
+          ],
+          "failedChecks": [
+            "must_show",
+            "caption_fit",
+            "alt_fit"
+          ],
+          "judgeModelId": "openai/gpt-5.6-luna",
+          "latencyMs": 46436
         },
         {
           "name": "a drum kit drawing judged as a grip",
@@ -428,11 +398,11 @@
           "got": "fail",
           "right": true,
           "reasons": [
-            "\"a hand holding a drumstick\": The image is a line drawing of a drum kit, not a real photograph clearly demonstrating a hand holding a drumstick.",
-            "\"the palm faces down\": The small line-drawn hand shapes are too ambiguous to establish palm orientation.",
-            "\"the stick is pinched between thumb and index finger\": The grip and thumb–index contact are not clearly visible.",
-            "\"Matched grip: palm down, the stick pinched between thumb and index finger\": The image does not visibly demonstrate this grip.",
-            "\"A hand seen from above holding a drumstick palm down\": The image is predominantly a drum-kit drawing and does not clearly show the described hand view."
+            "“a real hand holding a drumstick, photographed” is not shown; the image is a line drawing of a drum kit with no real hand or photograph.",
+            "“the back of the hand faces up, palm down” cannot be seen because no hand is shown.",
+            "“the fingers close over the stick from above” cannot be seen because no gripping hand or fingers are shown.",
+            "The caption’s claim “the back of the hand up, the fingers closed over the stick from above” is not depicted.",
+            "The alt text describes “a hand seen from above holding a drumstick palm down,” but the image shows a drawn drum kit instead."
           ],
           "failedChecks": [
             "must_show",
@@ -440,7 +410,7 @@
             "alt_fit"
           ],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 10262
+          "latencyMs": 9383
         },
         {
           "name": "the rebound-stroke strip judged as a grip",
@@ -448,11 +418,11 @@
           "got": "fail",
           "right": true,
           "reasons": [
-            "“a real hand holding a drumstick” is not shown; the image is a four-panel diagram of a stick with no hand.",
-            "“the palm faces down” cannot be seen because no hand or palm is shown.",
-            "“the stick is pinched between thumb and index finger” is not shown; there are no fingers.",
-            "The caption phrase “palm down, the stick pinched between thumb and index finger” describes a grip that the image does not show.",
-            "The alt text “A hand seen from above holding a drumstick palm down” does not describe the visible four-panel stick-and-drum diagram."
+            "“a real hand holding a drumstick, photographed” is not shown; the image is a diagram of a stick and drum head with no hand.",
+            "“the back of the hand faces up, palm down” cannot be seen because no hand is shown.",
+            "“the fingers close over the stick from above” cannot be seen because no fingers or hand are shown.",
+            "The caption phrase “the back of the hand up, the fingers closed over the stick from above” describes a grip that the image does not show.",
+            "The alt text “A hand seen from above holding a drumstick palm down” describes a hand and grip absent from the image."
           ],
           "failedChecks": [
             "must_show",
@@ -460,7 +430,7 @@
             "alt_fit"
           ],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 4997
+          "latencyMs": 4814
         },
         {
           "name": "a Thor plate judged as a grip",
@@ -468,11 +438,11 @@
           "got": "fail",
           "right": true,
           "reasons": [
-            "“a real hand holding a drumstick”: the image is an illustration of a seated person, and no hand holding a drumstick is shown.",
-            "“the palm faces down”: no hand is shown from above with its palm clearly facing down.",
-            "“the stick is pinched between thumb and index finger”: no drumstick or thumb-and-index pinch is visible.",
-            "Caption phrase “Matched grip”: the image does not show the stated matched-grip technique, palm position, or pinch.",
-            "Alt phrase “A hand seen from above holding a drumstick palm down”: the image shows a seated illustrated person, not a hand holding a drumstick from above."
+            "“a real hand holding a drumstick, photographed”: the image is a black-and-white illustration of a seated figure and does not show a photographed hand holding a drumstick.",
+            "“the back of the hand faces up, palm down”: the required hand orientation is not shown in a clear above-view.",
+            "“the fingers close over the stick from above”: no drumstick or clearly visible fingers closing over it from above is shown.",
+            "Caption phrase “Matched grip: the back of the hand up, the fingers closed over the stick from above” describes a technique that is not visible in the illustration.",
+            "Alt text “A hand seen from above holding a drumstick palm down” does not describe the pictured seated figure illustration."
           ],
           "failedChecks": [
             "must_show",
@@ -480,7 +450,7 @@
             "alt_fit"
           ],
           "judgeModelId": "openai/gpt-5.6-luna",
-          "latencyMs": 10381
+          "latencyMs": 7698
         }
       ]
     }

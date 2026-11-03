@@ -45,7 +45,7 @@ export function loadModelConfig(env: NodeJS.ProcessEnv = process.env): ModelConf
     // The illustrator is an author like any other: the Generator pair unless pinned apart (SEN-121).
     illustratorModel: env.ILLUSTRATOR_MODEL?.trim() || generatorModel,
     illustratorFallbackModel: env.ILLUSTRATOR_FALLBACK_MODEL?.trim() || generatorFallbackModel,
-    // A Luna by default; the technique-Judge eval picks the one that rejects wrong grips (SEN-121).
-    techniqueJudgeModel: env.TECHNIQUE_JUDGE_MODEL?.trim() || judgeModel,
+    // Picked by the technique-Judge eval on 2026-11-04: 12 of 13 right, no wrong grip let through (SEN-121).
+    techniqueJudgeModel: env.TECHNIQUE_JUDGE_MODEL?.trim() || "openai/gpt-5.6-luna",
   };
 }

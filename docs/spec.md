@@ -508,7 +508,7 @@ Automated, binary, on every Course (including Test courses). Any fail fails that
 | --- | --- |
 | Default Judge (text and vision) | `openai/gpt-6-luna` |
 | Judge fallback | `openai/gpt-5.6-luna`, which never authors (ADR 0028) |
-| Technique Judge (vision, technique photographs) | `TECHNIQUE_JUDGE_MODEL`: an OpenAI model that writes nothing, a Luna by default, picked by `pnpm check:technique-judge:live` from a set of right and wrong drum-grip images (SEN-121) |
+| Technique Judge (vision, technique photographs) | `TECHNIQUE_JUDGE_MODEL`: `openai/gpt-5.6-luna`, an OpenAI model that writes nothing, picked on 2026-11-04 (12 of 13 right, no wrong grip let through) by `pnpm check:technique-judge:live` from a set of right and wrong drum-grip images (SEN-121) |
 
 Pairing: author `openai/gpt-6.1-sol` or `openai/gpt-6.1-terra` → judge `openai/gpt-6-luna`. If Luna is down or schema-fails: `openai/gpt-5.6-luna`, which writes nothing. Never an author as Judge. Do not default to Claude Sonnet or Opus.
 
