@@ -4,3 +4,4 @@ export * from "./storage.ts";
 export { PAPER_COLOURS, type PaperColour } from "./palette.ts";
 export { placeLabels, type PlacedLabel } from "./labels.ts";
 export { CANVAS, grainTilePng } from "./style.ts";
+export { FIXTURES_DIR, readFixture } from "./fixtures.ts";

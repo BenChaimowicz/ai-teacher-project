@@ -4,8 +4,8 @@
  */
 import { blob, curve, ellipse, limb, place, placeKnots, rng, roundRect, type Knot, type Pt } from "./geometry.ts";
 import { darken, HEX, lighten, mix, type PaperColour } from "./palette.ts";
-import type { Box, CellsItem, CreatureItem, Depth, FigureItem, JongiItem, ObjectItem, ShapeItem, TreeItem } from "./scene-plan.ts";
-import { SHEET_MARGIN, Style } from "./style.ts";
+import { crownBoxOf, type Box, type CellsItem, type CreatureItem, type Depth, type FigureItem, type JongiItem, type ObjectItem, type ShapeItem, type TreeItem } from "./scene-plan.ts";
+import { CARD_INSET, SHEET_MARGIN, Style } from "./style.ts";
 
 /** Shadow depth and edge light for each plan depth. */
 const DEPTHS: Record<Depth, { depth: number; rim: number }> = {
@@ -44,7 +44,7 @@ function fit(box: Box, baseW: number, baseH: number): { cx: number; cy: number; 
  */
 export function sheet(s: Style): void {
   s.piece(roundRect(SHEET_MARGIN, SHEET_MARGIN - 2, s.width - 2 * SHEET_MARGIN, s.height - 2 * SHEET_MARGIN + 2, 10), { fill: HEX.sheet, seed: 1, depth: 8, rim: 0.12, step: 30 });
-  s.piece(roundRect(44, 40, s.width - 88, s.height - 80, 8), { fill: HEX.raised, seed: 2, depth: 4, rim: 0.1, step: 30 });
+  s.piece(roundRect(CARD_INSET.x, CARD_INSET.y, s.width - 2 * CARD_INSET.x, s.height - 2 * CARD_INSET.y, 8), { fill: HEX.raised, seed: 2, depth: 4, rim: 0.1, step: 30 });
 }
 
 /**
@@ -126,9 +126,9 @@ export function tree(s: Style, item: TreeItem, seed: number): void {
   const wood = HEX[item.wood];
   const woodDark = darken(wood, 0.3);
   const cx = x + w / 2;
-  const crownW = item.crown === "wide" ? w : item.crown === "round" ? w * 0.72 : w * 0.5;
-  const crownH = item.crown === "narrow" ? h * 0.62 : h * 0.52;
-  const crownBox: Box = { x: cx - crownW / 2, y, w: crownW, h: crownH };
+  const crownBox = crownBoxOf(item);
+  const crownW = crownBox.w;
+  const crownH = crownBox.h;
   const crownCy = y + crownH / 2;
   const ground = y + h * 0.8;
   const trunkW = Math.max(20, Math.min(w * 0.07, h * 0.12, 80));

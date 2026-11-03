@@ -8,7 +8,7 @@
  * counts). The TypeScript types mirror the schema for the renderer.
  */
 import { PAPER_COLOURS, type PaperColour } from "./palette.ts";
-import { CANVAS, SHEET_MARGIN } from "./style.ts";
+import { CANVAS, CARD_INSET } from "./style.ts";
 
 /** A point on the canvas, in canvas units from the top-left. */
 export type Point = { x: number; y: number };
@@ -123,8 +123,23 @@ export const MAX_CELLS = 40;
 /** The most points a cutout, and the most knots a limb, may have. */
 export const MAX_POINTS = 40;
 
-/** The area a plan may place things in: the sheet, inside the desk margin. */
-export const SHEET = { x0: SHEET_MARGIN, y0: SHEET_MARGIN, x1: CANVAS.width - SHEET_MARGIN, y1: CANVAS.height - SHEET_MARGIN } as const;
+/**
+ * The area a plan may place things in: the raised card the renderer draws on the sheet, so a panel or band laid at
+ * its edge sits on the card rather than hanging over it.
+ */
+export const SHEET = { x0: CARD_INSET.x, y0: CARD_INSET.y, x1: CANVAS.width - CARD_INSET.x, y1: CANVAS.height - CARD_INSET.y } as const;
+
+/**
+ * The box a tree's crown fills: across the top of the tree's box, as wide as its crown kind allows. The renderer draws
+ * the crown here, and the validator keeps model-drawn limbs from lying over it.
+ * @param tree - The tree block
+ */
+export function crownBoxOf(tree: TreeItem): Box {
+  const { x, y, w, h } = tree.box;
+  const crownW = tree.crown === "wide" ? w : tree.crown === "round" ? w * 0.72 : w * 0.5;
+  const crownH = tree.crown === "narrow" ? h * 0.62 : h * 0.52;
+  return { x: x + w / 2 - crownW / 2, y, w: crownW, h: crownH };
+}
 
 const colour = (what: string) => ({ type: "string", enum: [...PAPER_COLOURS], description: what });
 const depth = { type: "string", enum: ["flat", "low", "raised"], description: "How far the piece stands off the sheet." };
@@ -147,7 +162,7 @@ const block = (type: string, description: string, properties: Record<string, unk
 /**
  * The scene plan as an OpenAI strict structured-output schema: every property required, no extra properties, null
  * instead of missing, and a closed `anyOf` of blocks told apart by `type`. Coordinates are canvas units on a
- * 1200 x 800 sheet whose usable area is 22..1178 by 22..778; the renderer draws the sheet itself.
+ * 1200 x 800 sheet whose usable area is the raised card, 44..1156 by 40..760; the renderer draws the sheet itself.
  */
 export const SCENE_PLAN_SCHEMA = {
   type: "object",
@@ -398,9 +413,39 @@ function itemFailures(item: SceneItem, path: string, failures: string[]): void {
 }
 
 /**
+ * Whether a point lies inside a box.
+ * @param p - The point
+ * @param b - The box
+ */
+function inBox(p: Point, b: Box): boolean {
+  return p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+}
+
+/**
+ * The draw-order rule for limbs: a limb drawn after a tree or a foliage block, with a knot inside that block's crown,
+ * would lie on top of the leaves, where a branch or a trunk never reads right. Blocks are drawn in order, so the fix
+ * is to put the limb before the crown, which then covers it where they overlap. Reported once per limb.
+ * @param items - Every block of the plan, in draw order
+ * @param index - The block to check; anything but a limb passes
+ * @param failures - Collects every problem
+ */
+function limbOverCrownFailure(items: readonly SceneItem[], index: number, failures: string[]): void {
+  const item = items[index]!;
+  if (item.type !== "limb") return;
+  for (let at = 0; at < index; at++) {
+    const earlier = items[at]!;
+    const crown = earlier.type === "tree" ? crownBoxOf(earlier) : earlier.type === "foliage" ? earlier.box : null;
+    if (crown && item.knots.some((knot) => inBox(knot, crown))) {
+      failures.push(`plan.items[${index}] (limb) has a knot inside the crown of plan.items[${at}] (${earlier.type}), which is drawn before it, so it would lie on top of the leaves; put the limb before that block so the leaves cover it, or keep it out of the crown.`);
+      return;
+    }
+  }
+}
+
+/**
  * Every problem with a scene plan, in plain language: first where it departs from the schema, then where it breaks
- * the rules the schema cannot say (on the sheet, enough points, sane counts, text present and short). Empty when the
- * plan can be drawn.
+ * the rules the schema cannot say (on the sheet, enough points, sane counts, text present and short, no limb drawn
+ * over a crown). Empty when the plan can be drawn.
  * @param raw - A model's reply, parsed from JSON
  */
 export function scenePlanFailures(raw: unknown): string[] {
@@ -414,6 +459,7 @@ export function scenePlanFailures(raw: unknown): string[] {
   if (plan.items.length > MAX_ITEMS) failures.push(`plan.items holds ${plan.items.length} blocks; the most is ${MAX_ITEMS}.`);
   if (plan.labels.length > MAX_LABELS) failures.push(`plan.labels holds ${plan.labels.length} labels; the most is ${MAX_LABELS}.`);
   plan.items.forEach((item, index) => itemFailures(item, `plan.items[${index}]`, failures));
+  plan.items.forEach((item, index) => limbOverCrownFailure(plan.items, index, failures));
   plan.labels.forEach((label, index) => {
     if (!label.text.trim()) failures.push(`plan.labels[${index}].text is empty.`);
     else if (label.text.length > MAX_TEXT_LENGTH) failures.push(`plan.labels[${index}].text is longer than ${MAX_TEXT_LENGTH} characters.`);

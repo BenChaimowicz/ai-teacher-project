@@ -7,7 +7,7 @@ import type { JudgeResult } from "@senoy/db/blueprint";
 import { SCENE_PLAN_SCHEMA, type ScenePlan } from "@senoy/illustration";
 import { sha256Of, type MediaStorage } from "@senoy/media";
 import { LeaseLostError } from "./generation-job.ts";
-import { createIllustrator, ILLUSTRATION_ATTEMPTS, ILLUSTRATOR_SCHEMA, parseIllustratorPlan } from "./illustrator.ts";
+import { createIllustrator, ILLUSTRATION_ATTEMPTS, ILLUSTRATOR_EXAMPLES, ILLUSTRATOR_PROMPT, ILLUSTRATOR_SCHEMA, illustratorExamples, parseIllustratorPlan } from "./illustrator.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createModelPorts, type Generator, type ModelReply, type StructuredRequest } from "./model-ports.ts";
 import { ModelError } from "./openrouter.ts";
@@ -27,6 +27,9 @@ const BRIEF: VisualBrief = {
 
 /** The committed Yggdrasil fixture plan, which the engine draws. */
 const PLAN = JSON.parse(readFileSync(new URL("../../../../packages/illustration/fixtures/yggdrasil.json", import.meta.url), "utf8")) as ScenePlan;
+
+/** The committed Gram stain fixture plan, the diagram example. */
+const GRAM = JSON.parse(readFileSync(new URL("../../../../packages/illustration/fixtures/gram.json", import.meta.url), "utf8")) as ScenePlan;
 
 const PASS: JudgeResult = { pass: true, failedChecks: [], reasons: [] };
 const FAIL: JudgeResult = { pass: false, failedChecks: ["must_show"], reasons: ["Only two roots reach the ground."] };
@@ -85,9 +88,35 @@ test("The illustrator is offered every block but Jongi, and a plan that uses Jon
 
   assert.equal(parseIllustratorPlan(PLAN), PLAN);
   const jongi = { ...PLAN, items: [...PLAN.items, { type: "jongi", pose: "pointing", x: 600, y: 700, height: 120, facing: "left", signText: null }] };
-  for (const bad of [jongi, { ...PLAN, items: [] }, { ...PLAN, labels: [{ text: "off", target: { x: -5, y: 0 }, side: null }] }]) {
+  // The 2026-11-03 Norse render: a branch drawn after the foliage lay on top of the leaves.
+  const branchOverCrown = { ...PLAN, items: [
+    { type: "foliage", box: { x: 285, y: 241, w: 300, h: 180 }, colour: "leaf", shade: "leaf-dark" },
+    { type: "limb", knots: [{ x: 594, y: 395, width: 44 }, { x: 505, y: 354, width: 30 }, { x: 379, y: 287, width: 8 }], colour: "wood", depth: "raised" },
+  ] };
+  // The 2026-11-03 stroke render: a panel at x 36 hung over the card's edge at 44.
+  const panelOffCard = { ...PLAN, items: [{ type: "panel", box: { x: 36, y: 130, w: 260, h: 604 }, colour: "plum", title: null }] };
+  for (const bad of [jongi, { ...PLAN, items: [] }, { ...PLAN, labels: [{ text: "off", target: { x: -5, y: 0 }, side: null }] }, branchOverCrown, panelOffCard]) {
     assert.throws(() => parseIllustratorPlan(bad), (error: unknown) => error instanceof ModelError && error.code === "invalid_output" && error.invalidCause === "check");
   }
+  assert.equal(parseIllustratorPlan({ ...branchOverCrown, items: [...branchOverCrown.items].reverse() }).items.length, 2, "The same branch drawn before the foliage is fine.");
+});
+
+test("The illustrator is shown the committed fixture plans as worked examples of quality and composition, read from the fixture files", async () => {
+  assert.deepEqual(ILLUSTRATOR_EXAMPLES, { depiction: "yggdrasil", diagram: "gram" });
+  const examples = await illustratorExamples();
+  assert.deepEqual(examples, [{ kind: "depiction", plan: PLAN }, { kind: "diagram", plan: GRAM }], "One source of truth: the plans are the fixture files, not a copy in the prompt.");
+  assert.equal(await illustratorExamples(), examples, "Read once per process.");
+  assert.match(ILLUSTRATOR_PROMPT, /"examples" holds two finished plans/);
+  assert.match(ILLUSTRATOR_PROMPT, /They show quality and composition only; their content is theirs/);
+  assert.match(ILLUSTRATOR_PROMPT, /back to front: ground and panels first, then roots and limbs, then a trunk, then a crown/);
+  assert.match(ILLUSTRATOR_PROMPT, /Every shape must read as something\. Never an empty outline, a ring, or a bare circle standing for a thing/);
+  assert.match(ILLUSTRATOR_PROMPT, /prefer the compound blocks/);
+  assert.match(ILLUSTRATOR_PROMPT, /x 44\.\.1156, y 40\.\.760/, "The bounds are the card the renderer draws, from the engine's own constant.");
+  assert.doesNotMatch(ILLUSTRATOR_PROMPT, /norse|yggdrasil|gram stain|drum/i, "The system prompt stays subject-neutral (ADR 0011); the examples travel in the user JSON.");
+
+  const planner = scriptedPlanner(PLAN);
+  await createIllustrator({ storage: fakeBucket().storage, judgeVisual: scriptedJudge(PASS).judgeVisual, generator: planner.generator })(BRIEF, []);
+  assert.deepEqual(planner.calls[0]!.input.examples, examples, "The examples reach the model in the user JSON.");
 });
 
 test("A brief is planned, drawn, judged by a non-author, stored under generated/ and described as product-owned", async () => {

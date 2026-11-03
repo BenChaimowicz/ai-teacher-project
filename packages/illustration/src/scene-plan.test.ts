@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 import { FIXTURES_DIR } from "./fixtures.ts";
 import { PAPER_COLOURS } from "./palette.ts";
-import { MAX_LABELS, parseScenePlan, SCENE_PLAN_SCHEMA, scenePlanFailures } from "./scene-plan.ts";
+import { crownBoxOf, MAX_LABELS, parseScenePlan, SCENE_PLAN_SCHEMA, scenePlanFailures } from "./scene-plan.ts";
 
 /** A small valid plan to break in one place at a time. */
 const plan = (): Record<string, unknown> => ({
@@ -88,7 +88,7 @@ test("a plan that departs from the schema is named field by field", () => {
 test("a plan that obeys the schema but cannot be drawn is refused with the rule it breaks", () => {
   const offSheet = plan();
   (offSheet.items as Record<string, unknown>[])[0].box = { x: 1100, y: 400, w: 140, h: 66 };
-  assert.deepEqual(scenePlanFailures(offSheet), ["plan.items[0] (object) box must lie on the sheet, x 22..1178 and y 22..778, with a positive size."]);
+  assert.deepEqual(scenePlanFailures(offSheet), ["plan.items[0] (object) box must lie on the sheet, x 44..1156 and y 40..760, with a positive size."]);
 
   const flat = plan();
   (flat.items as Record<string, unknown>[])[0].box = { x: 100, y: 400, w: 0, h: 66 };
@@ -126,6 +126,22 @@ test("a plan that obeys the schema but cannot be drawn is refused with the rule 
   const shortArrow = plan();
   (shortArrow.items as unknown[]).push({ type: "arrow", from: { x: 100, y: 100 }, to: { x: 110, y: 100 }, colour: "gold" });
   assert.deepEqual(scenePlanFailures(shortArrow), ["plan.items[2] (arrow) is shorter than 20 units."]);
+});
+
+test("a limb drawn after a crown with a knot inside it is refused, and the same limb drawn before the crown is fine", () => {
+  const foliage = { type: "foliage", box: { x: 300, y: 200, w: 300, h: 180 }, colour: "leaf", shade: "leaf-dark" };
+  const tree = { type: "tree", box: { x: 700, y: 100, w: 400, h: 600 }, roots: 3, crown: "round", leaves: "leaf", wood: "wood" };
+  const branch = { type: "limb", knots: [{ x: 450, y: 450, width: 30 }, { x: 400, y: 300, width: 12 }], colour: "wood", depth: "raised" };
+  const intoTree = { type: "limb", knots: [{ x: 900, y: 500, width: 30 }, { x: 900, y: 250, width: 10 }], colour: "wood", depth: "raised" };
+  const overBoth = { title: null, items: [foliage, tree, branch, intoTree], labels: [] };
+  assert.deepEqual(scenePlanFailures(overBoth), [
+    "plan.items[2] (limb) has a knot inside the crown of plan.items[0] (foliage), which is drawn before it, so it would lie on top of the leaves; put the limb before that block so the leaves cover it, or keep it out of the crown.",
+    "plan.items[3] (limb) has a knot inside the crown of plan.items[1] (tree), which is drawn before it, so it would lie on top of the leaves; put the limb before that block so the leaves cover it, or keep it out of the crown.",
+  ]);
+  assert.deepEqual(scenePlanFailures({ title: null, items: [branch, intoTree, foliage, tree], labels: [] }), [], "Drawn first, the crown covers them.");
+  const belowCrown = { ...intoTree, knots: [{ x: 900, y: 650, width: 30 }, { x: 900, y: 500, width: 10 }] };
+  assert.deepEqual(scenePlanFailures({ title: null, items: [tree, belowCrown], labels: [] }), [], "A limb under the crown, along the trunk, is fine after the tree.");
+  assert.deepEqual(crownBoxOf(tree as never), { x: 756, y: 100, w: 288, h: 312 });
 });
 
 test("parsing an invalid plan throws with every failure listed", () => {

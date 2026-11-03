@@ -9,7 +9,8 @@ import { readingPlugin } from "../teaching-methods/reading.ts";
 import { findVisualOnCommons } from "./commons-ingest.ts";
 import { WIKIMEDIA_CONTACT_ENV } from "./commons.ts";
 import { lessonResearchTopic, writeTimeProfile } from "./course-generation.ts";
-import { createIllustrator } from "./illustrator.ts";
+import type { ScenePlan } from "@senoy/illustration";
+import { createIllustrator, type Illustrator } from "./illustrator.ts";
 import { createMediaLibrary } from "./media-library.ts";
 import { createModelPorts } from "./model-ports.ts";
 import { createReadingGenerator, ReadingFailedError, type CommonsFinder } from "./reading-generation.ts";
@@ -123,13 +124,25 @@ async function checkReadingMedia() {
     const withCommons = Boolean(process.env[WIKIMEDIA_CONTACT_ENV]?.trim());
     process.stdout.write(`Generating "${run.slot.title}" with ${generator.modelId}, judged by ${judge.modelId}, illustrated by ${illustratorPorts.generator.modelId}, planning ${planned.length} visual(s)${withCommons ? ", Commons on" : ", Commons off (WIKIMEDIA_CONTACT unset)"}…\n`);
 
+    /**
+     * Every scene plan the illustrator drew this run, with its verdict, kept in the run record so a reviewer can
+     * re-render a plan with the engine and compare it with the committed fixtures without querying the database.
+     */
+    const illustrations: { subject: string; attempts: { modelId: string; pass: boolean | null; error: string | null; plan: ScenePlan | null }[] }[] = [];
+    const illustrator = createIllustrator({ storage, judgeVisual, generator: illustratorPorts.generator });
+    const recorded: Illustrator = async (brief, authors) => {
+      const illustration = await illustrator(brief, authors);
+      illustrations.push({ subject: brief.subject, attempts: illustration.attempts.map(({ modelId, judge: verdict, error, plan }) => ({ modelId, pass: verdict?.pass ?? null, error: error ?? null, plan })) });
+      return illustration;
+    };
+
     const startedAt = new Date();
     let outcome;
     try {
       const checked = await createReadingGenerator({
         generator, fallbackGenerator, judge, judgeVisual,
         media: createMediaLibrary(db, storage),
-        illustrator: createIllustrator({ storage, judgeVisual, generator: illustratorPorts.generator }),
+        illustrator: recorded,
         ...(withCommons ? { commons } : {}),
       }).generate({
         courseTitle: run.courseTitle,
@@ -146,7 +159,7 @@ async function checkReadingMedia() {
       outcome = { status: "failed", lesson: error.lesson, judge: error.judge, codeFailures: error.codeFailures, rounds: error.rounds, visuals: [] };
     }
     const latencyMs = Date.now() - startedAt.getTime();
-    const json = `${JSON.stringify({ startedAt: startedAt.toISOString(), latencyMs, sourcePacks: packPath.slice(root.length + 1), slot: run.slot, profile, ...outcome }, null, 2)}\n`;
+    const json = `${JSON.stringify({ startedAt: startedAt.toISOString(), latencyMs, sourcePacks: packPath.slice(root.length + 1), slot: run.slot, profile, ...outcome, illustrations }, null, 2)}\n`;
     await writeFile(outPath, json);
 
     process.stdout.write(`${outcome.status} · ${(latencyMs / 1000).toFixed(1)} s · ${outcome.visuals.length} visual(s) briefed · wrote ${outPath}\n`);
