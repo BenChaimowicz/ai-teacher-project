@@ -580,7 +580,7 @@ Selection driver: personal learning goals, which doubles as authentic QA. Course
 
 Broadened from Gram staining, which stays the centerpiece; also aseptic technique, microscopy, culture methods. A Learner entering at a higher Starting Level skips evidenced basics.
 
-**Media.** Gram photomicrographs are real library files (CDC PHIL and/or Commons), never generated: a result to recognise by eye is a `technique` visual. Cell-wall and procedure diagrams are `diagram` visuals: drawn first in the house style as plainly a schematic, else library — never a fake microscope field. Optional silent sequence of reagent steps from library/SVG states, not a video model.
+**Media.** A Gram result to recognise is a `diagram` visual: drawn first in the house style as a plain schematic, never a fake microscope field, with real photomicrographs (CDC PHIL and/or Commons library files) as the fallback. Photomicrographs are never generated (decision 2026-11-03). Cell-wall and procedure diagrams are `diagram` visuals: drawn first in the house style as plainly a schematic, else library — never a fake microscope field. Optional silent sequence of reagent steps from library/SVG states, not a video model.
 
 **Protocol extra:** Gram photomicrographs are real library files, never generated.
 

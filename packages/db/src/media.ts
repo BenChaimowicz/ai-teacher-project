@@ -51,9 +51,8 @@ export type MediaCategory = (typeof MEDIA_CATEGORIES)[number];
 
 /**
  * What a Reading's visual is (SEN-121): a *depiction* of a myth, a person or a place; a *diagram* of a process or a
- * structure; or a *technique*, which is a real photograph the Learner needs: a position or movement they copy with
- * their body, or a real specimen or result they must learn to recognise by eye (spec §7.1: photomicrographs are never
- * generated). Depictions and diagrams are drawn first; a technique is a real image, from the library or Wikimedia
+ * structure, including a specimen or result to recognise, drawn as a plain schematic; or a *technique*, a real photograph
+ * of a position or movement the Learner copies with their body. Depictions and diagrams are drawn first; a technique is a real image, from the library or Wikimedia
  * Commons, and is never drawn (decision 2026-11-03).
  */
 export const VISUAL_KINDS = ["depiction", "diagram", "technique"] as const;
