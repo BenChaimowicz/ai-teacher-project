@@ -14,8 +14,14 @@ export function isUnsafeSvg(bytes: Uint8Array): boolean {
   return UNSAFE_SVG.test(Buffer.from(bytes).toString("utf8"));
 }
 
-/** The one font SVG labels are drawn with, committed beside the package so a host without fonts draws them too. */
-const FONT_FILE = resolve(fileURLToPath(new URL(".", import.meta.url)), "../fonts/DejaVuSansCondensed.ttf");
+/**
+ * The one font SVG labels are drawn with, committed beside the package so a host without fonts draws them too. The
+ * illustration engine draws its tags with the same file, so a plan renders byte-identically on every machine.
+ */
+export const SVG_FONT_FILE = resolve(fileURLToPath(new URL(".", import.meta.url)), "../fonts/DejaVuSansCondensed.ttf");
+
+/** The family name inside {@link SVG_FONT_FILE}. */
+export const SVG_FONT_FAMILY = "DejaVu Sans Condensed";
 
 /** Width a diagram is drawn at for the vision check: wide enough for its smallest labels to be read. */
 const RASTER_WIDTH = 1600;
@@ -32,7 +38,7 @@ export function rasterizeSvg(bytes: Uint8Array): Uint8Array {
     const drawn = new Resvg(Buffer.from(bytes), {
       fitTo: { mode: "width", value: RASTER_WIDTH },
       background: "white",
-      font: { loadSystemFonts: false, fontFiles: [FONT_FILE], defaultFontFamily: "DejaVu Sans Condensed", sansSerifFamily: "DejaVu Sans Condensed" },
+      font: { loadSystemFonts: false, fontFiles: [SVG_FONT_FILE], defaultFontFamily: SVG_FONT_FAMILY, sansSerifFamily: SVG_FONT_FAMILY },
     }).render();
     return new Uint8Array(drawn.asPng());
   } catch (error) {
