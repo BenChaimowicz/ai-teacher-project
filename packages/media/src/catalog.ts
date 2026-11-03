@@ -24,6 +24,9 @@ export type ResolvedCatalogEntry = { descriptor: MediaDescriptorFields; bytes: U
 /** Where library files live in the bucket. `/media/library/…` is the stable path a Lesson will serve them from. */
 export const LIBRARY_KEY_PREFIX = "library/";
 
+/** Where files found on Wikimedia Commons live, inside the library (SEN-129). A seeded file never lands here. */
+export const COMMONS_KEY_PREFIX = `${LIBRARY_KEY_PREFIX}commons/`;
+
 /** The directory the seed files are committed to. */
 export const CATALOG_DIR = resolve(fileURLToPath(new URL(".", import.meta.url)), "../catalog");
 
@@ -38,6 +41,16 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   ".mp3": "audio/mpeg",
   ".ogg": "audio/ogg",
 };
+
+/**
+ * An image's pixel width and height, read from its bytes.
+ * @param bytes - A still's bytes
+ * @throws Error when the bytes are not an image type `image-size` can read
+ */
+export function pixelSize(bytes: Uint8Array): { width: number; height: number } {
+  const { width, height } = imageSize(bytes);
+  return { width, height };
+}
 
 /**
  * Turns a catalog entry into a full Media descriptor by reading its file: storage key, MIME type, byte size, digest and
@@ -60,9 +73,7 @@ export function resolveCatalogEntry(entry: CatalogEntry, bytes: Uint8Array): Res
   let height: number | null = null;
   if (mimeType.startsWith("image/")) {
     try {
-      const size = imageSize(bytes);
-      width = size.width;
-      height = size.height;
+      ({ width, height } = pixelSize(bytes));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`[catalog.ts: resolveCatalogEntry] Failed to read image dimensions || file=${file} || ${message}`);

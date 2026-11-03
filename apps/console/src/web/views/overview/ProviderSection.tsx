@@ -21,6 +21,7 @@ const VENDOR_HELP: Record<string, string> = {
   openrouter: "Every model call goes through OpenRouter. It routes each call to a provider (host) and reports the exact cost.",
   parallel: "Research vendor. It never reports what it charged, so its spend is estimated from the price list.",
   you: "Research vendor. It never reports what it charged, so its spend is estimated from the price list.",
+  wikimedia: "Wikimedia Commons, searched for images the library lacks. It is free, so every call costs 0.",
 };
 
 /** Tooltip copy explaining vendor vs provider (also used by the Calls provider filter). */

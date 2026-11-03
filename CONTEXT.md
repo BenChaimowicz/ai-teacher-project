@@ -334,6 +334,10 @@ _Avoid_: Topic tag, folder, album
 The kind, caption, alt text, Source, license, origin (library or generated), storage key, Media category, and Topic tags for one piece of Demonstrative media. Library lookup uses category and tags; which Lessons use the file is a join, not a tag. A published Lesson copies these fields so later descriptor edits do not change it.
 _Avoid_: metadata (unqualified), sidecar (when speaking to Learners)
 
+**Media review**:
+Whether a person has looked at a library file: reviewed, unreviewed, or removed. Seeded files are reviewed. A file found on Wikimedia Commons joins the library unreviewed and is used at once; an Operator approves or removes it in the Usage Console. A removed file is never offered to a new Reading, but Lessons that already show it keep it. It is library state, not part of the Media descriptor a Lesson copies.
+_Avoid_: approval queue, moderation (when meaning this), pending
+
 **Generator**:
 The component that turns retrieved Sources into Lesson content.
 _Avoid_: LLM (when meaning this component), synthesizer, agent (when meaning this component)

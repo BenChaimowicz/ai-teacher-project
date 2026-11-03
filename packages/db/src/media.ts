@@ -56,6 +56,47 @@ export type MediaCategory = (typeof MEDIA_CATEGORIES)[number];
 export type MediaRequest = { mediaCategory: MediaCategory; topicTags: string[] };
 
 /**
+ * What a Reading's visual is (SEN-121): a *depiction* of a myth, a person or a place; a *diagram* of a process or a
+ * structure; or a *technique* the Learner copies with their body. Depictions and diagrams are drawn first; a technique is
+ * a real image, from the library or Wikimedia Commons (decision 2026-11-03).
+ */
+export const VISUAL_KINDS = ["depiction", "diagram", "technique"] as const;
+
+/** One of {@link VISUAL_KINDS}. */
+export type VisualKind = (typeof VISUAL_KINDS)[number];
+
+/**
+ * The Reading writer's description of one visual, shared by everything that makes or finds it: the illustrator draws
+ * from it (SEN-128), Commons search and ingest look for it (SEN-129), and the Vision Judge checks the result against
+ * `mustShow`, harshly for a technique.
+ */
+export type VisualBrief = {
+  kind: VisualKind;
+  /** One plain sentence naming what the visual shows, such as "Yggdrasil, the Norse world ash, and the beings around it". */
+  subject: string;
+  /** Facts that must be visibly right, one per item, such as "exactly three roots". The Judge fails any it cannot see. */
+  mustShow: string[];
+  /** One short sentence the Learner reads under the visual, with no Citation. */
+  caption: string;
+  /** What is visible, for a Learner who cannot see it. */
+  alt: string;
+  /** The library category and tags a found or drawn file is looked up and filed under. */
+  mediaCategory: MediaCategory;
+  topicTags: string[];
+};
+
+/**
+ * Whether a person has looked at a library file (SEN-129). Seeded files were checked by a person before they were
+ * committed, so they start `reviewed`. A file found on Wikimedia Commons is used straight away as `unreviewed` until
+ * someone approves it in the Usage Console or removes it. A `removed` file is never offered to a new Reading, but its
+ * row and bytes stay, so a Lesson that already shows it keeps working, and the same file is never ingested again.
+ */
+export const MEDIA_REVIEWS = ["reviewed", "unreviewed", "removed"] as const;
+
+/** One of {@link MEDIA_REVIEWS}. */
+export type MediaReview = (typeof MEDIA_REVIEWS)[number];
+
+/**
  * Whether a file fills a request the way lookup finds it: the same Media category and at least one shared Topic tag.
  * @param descriptor - The file's category and tags
  * @param request - What was asked for

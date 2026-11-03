@@ -1,6 +1,7 @@
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import type { BillingService } from "./billing.ts";
 import type { DecisionsReader } from "./decisions.ts";
+import type { MediaReviewService } from "./media-review.ts";
 import type { OpsStore } from "./ops-store.ts";
 import type { OpenRouterHistoryReader } from "./openrouter-history.ts";
 import type { SetupReader } from "./setup.ts";
@@ -29,6 +30,8 @@ export type ConsoleAppOptions = {
   decisions?: DecisionsReader;
   /** The founders' shared setup checklist; without it `/setup-checklist` answers 404. */
   setupChecklist?: SetupChecklistService;
+  /** Approving and removing files found on Wikimedia Commons; without it `/media-review` answers 404. */
+  mediaReview?: MediaReviewService;
   /** Whether Fastify logs (Pino); tests leave it off. */
   logger?: boolean;
   /** The current instant, injected for tests; defaults to the wall clock. */
@@ -82,6 +85,23 @@ function idParam(request: FastifyRequest): string {
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
 /**
+ * Refuses a write that did not come from this machine's console screen: 403 for a non-loopback Host, 415 for a body
+ * that is not JSON (which a browser cannot send cross-site without a CORS preflight this API never grants).
+ * @param request - The Fastify request
+ * @param reply - The Fastify reply
+ * @param what - What is being changed, for the 403 message
+ * @returns The reply when refused, else null
+ */
+function refuseForeignWrite(request: FastifyRequest, reply: FastifyReply, what: string) {
+  const host = (request.headers.host ?? "").replace(/:\d+$/, "").toLowerCase();
+  if (!LOOPBACK_HOSTS.has(host)) return reply.code(403).send({ error: `${what} only takes changes from this machine.` });
+  if (!(request.headers["content-type"] ?? "").startsWith("application/json")) {
+    return reply.code(415).send({ error: "Send the change as JSON." });
+  }
+  return null;
+}
+
+/**
  * Refuses a checklist write that did not come from this machine's console screen, so the only people who can tick
  * items are those running the console in their own checkout. Answers 403 for a non-loopback Host or a checkout with no
  * `git config user.name`, and 415 for a body that is not JSON (which a browser cannot send cross-site without a
@@ -92,11 +112,8 @@ const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
  * @returns The reply when refused, else null
  */
 function refuseChecklistWrite(request: FastifyRequest, reply: FastifyReply, operator: string | null) {
-  const host = (request.headers.host ?? "").replace(/:\d+$/, "").toLowerCase();
-  if (!LOOPBACK_HOSTS.has(host)) return reply.code(403).send({ error: "The setup checklist only takes changes from this machine." });
-  if (!(request.headers["content-type"] ?? "").startsWith("application/json")) {
-    return reply.code(415).send({ error: "Send the change as JSON." });
-  }
+  const foreign = refuseForeignWrite(request, reply, "The setup checklist");
+  if (foreign) return foreign;
   if (!operator) {
     return reply.code(403).send({ error: "Set your name with `git config user.name` to tick items, then restart the console." });
   }
@@ -181,6 +198,39 @@ export function buildConsoleApp(store: OpsStore, options: ConsoleAppOptions = {}
         const done = (request.body as { done?: unknown } | null)?.done;
         if (typeof done !== "boolean") return reply.code(400).send({ error: "Body must be { \"done\": true | false }" });
         return answer(request, reply, "PUT /setup-checklist/items/:key", () => checklist.setDone(key, done));
+      });
+
+      ops.get("/media-review", (request, reply) =>
+        answer(request, reply, "GET /media-review", async () => (options.mediaReview ? options.mediaReview.list() : null),
+          "Media review is not available"));
+
+      ops.put("/media-review/:id", async (request, reply) => {
+        const review = options.mediaReview;
+        if (!review) return reply.code(404).send({ error: "Media review is not available" });
+        const refused = refuseForeignWrite(request, reply, "Media review");
+        if (refused) return refused;
+        const decision = (request.body as { review?: unknown } | null)?.review;
+        if (decision !== "reviewed" && decision !== "removed") {
+          return reply.code(400).send({ error: "Body must be { \"review\": \"reviewed\" | \"removed\" }" });
+        }
+        return answer(request, reply, "PUT /media-review/:id", () => review.decide(idParam(request), decision), "No Commons file has that id");
+      });
+
+      ops.get("/media-review/:id/file", async (request, reply) => {
+        const review = options.mediaReview;
+        if (!review) return reply.code(404).send({ error: "Media review is not available" });
+        try {
+          const file = await review.file(idParam(request));
+          if (!file) return reply.code(404).send({ error: "No file to show" });
+          if (file.byteSize > 0) reply.header("Content-Length", file.byteSize);
+          return reply.header("Content-Type", file.contentType).header("X-Content-Type-Options", "nosniff")
+            .header("Cache-Control", "private, max-age=3600").send(file.body);
+        } catch (error) {
+          if (error instanceof QueryError) return reply.code(400).send({ error: error.message });
+          const message = error instanceof Error ? error.message : String(error);
+          request.log.error(`[app.ts: GET /media-review/:id/file] Failed to stream a Commons file || url=${request.url} || ${message}`);
+          return reply.code(502).send({ error: "The file is unavailable right now." });
+        }
       });
 
       ops.get("/openrouter-history", (request, reply) =>

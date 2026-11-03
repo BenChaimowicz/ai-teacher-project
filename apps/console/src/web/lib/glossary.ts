@@ -36,6 +36,7 @@ export const ROLE_HELP: Record<UsageRole, string> = {
   judge: "A model that checks another model's writing. It never reviews its own work. Code: judge",
   research_primary: "The main research service that finds sources for a lesson. Code: research_primary",
   research_secondary: "The backup research service. Code: research_secondary",
+  media_search: "A free Wikimedia Commons call: a search for an image the library lacks, or the download of one file it found. Code: media_search",
 };
 
 /** What each step does. */
@@ -55,6 +56,7 @@ export const KIND_HELP: Record<PipelineEventKind, string> = {
   quiz: "Writes one quiz and checks it matches the lessons. Code: quiz",
   course_judge: "A last review of the whole course for consistency, by a model that wrote none of it. Code: course_judge",
   publish: "Final checks and publishing the finished course. Code: publish",
+  media_search: "Looks on Wikimedia Commons for an image the library lacks: searches, keeps only files we may host, has the vision Judge check each against what it must show, and adds the first that passes to the library as not yet reviewed (see Media review). Code: media_search",
   live_check: "A developer's live check (a pnpm check:*:live script) calling the real models and research vendors. Its label is the script; no Learner caused it. Code: live_check",
 };
 
