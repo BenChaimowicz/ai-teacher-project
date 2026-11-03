@@ -57,6 +57,8 @@ export type QuizAnswerKey = {
   itemId: string;
   correctOptionId: string;
   explanation: string;
+  /** One sentence per option, by option id, saying why it is right or wrong (decision 2026-11-03); absent on older Quizzes. */
+  optionNotes?: Record<string, string>;
 };
 
 /** What the Course-complete screen shows. */

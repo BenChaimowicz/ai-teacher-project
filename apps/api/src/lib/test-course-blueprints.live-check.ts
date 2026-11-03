@@ -54,7 +54,7 @@ async function checkTestCourseBlueprints() {
       try {
         checked = await builder.build({
           subject: course.subject, learningGoal: course.learningGoal, scope: null, startingLevel, confirmation: "looks_right",
-          profile: { instructionLanguage: resolved.instructionLanguage.value, quizCadence: resolved.quizCadence.value, explanationOrder: resolved.explanationOrder.value },
+          profile: { instructionLanguage: resolved.instructionLanguage.value, quizCadence: resolved.quizCadence.value, explanationOrder: resolved.explanationOrder.value, contentScope: "standard"},
           mediaCatalog,
         });
       } catch (error) {

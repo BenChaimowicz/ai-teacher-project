@@ -74,7 +74,7 @@ async function checkNaturalOrder() {
     process.stdout.write(`\nRun ${run}:\n`);
     const checked = await builder.build({
       subject: "Norse mythology", learningGoal: LEARNING_GOAL, scope: null, startingLevel: STARTING_LEVEL, confirmation: "looks_right",
-      profile: { instructionLanguage: "en", quizCadence: "every_reading", explanationOrder: "principle_first" },
+      profile: { instructionLanguage: "en", quizCadence: "every_reading", explanationOrder: "principle_first", contentScope: "standard" },
     }).catch((error: unknown) => {
       if (!(error instanceof BlueprintFailedError)) throw error;
       const last = error.judge?.failedChecks ?? [];

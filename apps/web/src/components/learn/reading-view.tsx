@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import type { MediaLicense } from "@senoy/db";
-import { proseBlocks, type MediaBlock, type NumberedSource, type ReadingBody } from "@senoy/db/reading-lesson";
+import { proseBlocks, type GlossaryEntry, type MediaBlock, type NumberedSource, type ReadingBody } from "@senoy/db/reading-lesson";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useCompanion } from "@/components/companion/companion-provider.tsx";
 import { useShell } from "@/components/shell/app-shell.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { ChatThread, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { OptionTiles, type OptionTile } from "@/components/ui/option-tiles.tsx";
 import { useToast } from "@/components/ui/toast.tsx";
+import { GlossaryLayer, MarkedText } from "@/components/learn/glossary.tsx";
+import { citationNumber, createGlossaryMatcher, markProse, proseParts, termKey, type TermSegment } from "@/components/learn/glossary-marks.ts";
+import type { NextStep } from "@/components/learn/next-step.ts";
 import { isLightSurface, readingStyle } from "@/components/learn/reading-settings.ts";
+import { mostCitedSource } from "@/components/learn/sources.ts";
 import { useStudyChrome } from "@/components/learn/study-chrome.tsx";
-import { cheer } from "@/lib/cheer.ts";
+import { cheer, holdCheer } from "@/lib/cheer.ts";
 import { cn } from "@/lib/utils";
 import "@/components/learn/learn.css";
 
 const BOOK_GAP = 64;
-const pad = (n: number) => String(n).padStart(2, "0");
+const pad =(n: number) => String(n).padStart(2, "0");
 
 /**
  * Splits a paragraph into its first sentence (the "key" line Skim highlights) and the rest.
@@ -87,18 +92,24 @@ function MediaFigure({ block }: { block: MediaBlock }) {
   );
 }
 
-type ProseProps = { text: string; sources: Map<number, NumberedSource>; onCite: (event: MouseEvent<HTMLAnchorElement>, n: number) => void };
+type ProseProps = {
+  text: string;
+  sources: Map<number, NumberedSource>;
+  onCite: (event: MouseEvent<HTMLAnchorElement>, n: number) => void;
+  /** Glossary marks, one entry per {@link proseParts} part (from `markProse`); absent when the Lesson has no glossary. */
+  marks?: (TermSegment[] | null)[];
+};
 
 /**
  * Prose with [n] markers turned into small superscript links. The source title shows on hover and focus,
- * so the reader doesn't have to leave the line.
+ * so the reader doesn't have to leave the line. Glossary terms in `marks` get a dotted underline and a definition.
  */
-function Prose({ text, sources, onCite }: ProseProps) {
+function Prose({ text, sources, onCite, marks }: ProseProps) {
   return (
     <>
-      {text.replace(/\s+(?=\[\d+\])/g, "").split(/(\[\d+\])/g).map((part, index, parts) => {
-        const match = /^\[(\d+)\]$/.exec(part);
-        if (!match) {
+      {proseParts(text).map((part, index, parts) => {
+        const n = citationNumber(part);
+        if (n == null) {
           if (part === "" && index > 0 && index < parts.length - 1) {
             return (
               <span key={index} className="l-cite-sep" aria-hidden="true">
@@ -106,9 +117,9 @@ function Prose({ text, sources, onCite }: ProseProps) {
               </span>
             );
           }
-          return <span key={index}>{part}</span>;
+          const segments = marks?.[index];
+          return <span key={index}>{segments ? <MarkedText segments={segments} /> : part}</span>;
         }
-        const n = Number(match[1]);
         const source = sources.get(n);
         return (
           <a
@@ -129,6 +140,8 @@ function Prose({ text, sources, onCite }: ProseProps) {
 
 type ReadingViewProps = {
   lessonId: string;
+  /** The Course, for the link to its Words page under the sources; absent in the showcase, which has no Course. */
+  courseId?: string;
   title: string;
   lessonGoal: string;
   lessonNumber?: number;
@@ -139,25 +152,39 @@ type ReadingViewProps = {
   paused: boolean;
   /** Marks the Lesson complete. Rejects with a message the page shows. */
   onComplete: () => Promise<void>;
-  /** Next Lesson / Finish Course, shown once the Lesson is complete. */
+  /** Next Lesson / Finish Course, shown once the Lesson is complete (a revisit, or when `next` is absent). */
   finish?: ReactNode;
+  /**
+   * Where "I've read it" goes once the Lesson is complete, in the same click: the next Lesson, or the Course-complete
+   * screen. Absent or null, the tile only completes and the finish line takes over.
+   */
+  next?: NextStep | null;
+  /** Called the first time each glossary term's definition opens on this page (records the product event). */
+  onGlossaryOpen?: (entry: GlossaryEntry) => void;
 };
 
-const END_OPTIONS: OptionTile<"read" | "stay">[] = [
-  { id: "read", label: "I've read it", description: "Marks this lesson done", tone: "primary", value: "read" },
-  { id: "stay", label: "Not yet, stay here", description: "Keep reading. No rush.", tone: "quiet", value: "stay" },
-];
+/** The second half of the "I've read it" tile, by where it leads. */
+const NEXT_LABEL: Record<NextStep["kind"], string> = { reading: "next lesson", quiz: "start the quiz", finish: "finish the course" };
+
+const STAY_OPTION: OptionTile<"read" | "stay"> = { id: "stay", label: "Not yet, stay here", description: "Keep reading. No rush.", tone: "quiet", value: "stay" };
+
+/** How long the "lesson read" cheer plays on the tile before the next screen opens. */
+const NEXT_HOLD_MS = 600;
 
 /**
  * A reading Lesson in the current reading mode: Comfort/Spaced scroll, Focus lights the paragraph
- * you're on, Book pages through two columns, Skim folds sections to their key sentences.
- * Ends with the companion's "I've read it" prompt, which is the completion action.
+ * you're on, Book pages through two columns, Skim folds sections to their key sentences. Each section
+ * is a paper note; a hard word's definition is Jongi's speech bubble on the word. The sources end with "Start here",
+ * the Source the prose cites most, and a link to the Course's Words page.
+ * Ends with the companion's "I've read it" prompt, which is the completion action and, given `next`, opens the next
+ * Lesson (or the Course-complete screen) in the same click (decision 2026-11-03).
  */
-export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, citations, completed, paused, onComplete, finish }: ReadingViewProps) {
+export function ReadingView({ lessonId, courseId, title, lessonGoal, lessonNumber, body, citations, completed, paused, onComplete, finish, next, onGlossaryOpen }: ReadingViewProps) {
   const { settings, setSectionsRead } = useStudyChrome();
   const { setReadingProgress, sidebarOpen } = useShell();
   const { say } = useCompanion();
   const toast = useToast();
+  const navigate = useNavigate();
   const layout = settings.layout;
   const total = body.sections.length;
 
@@ -173,12 +200,44 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
   const view = useRef<HTMLDivElement>(null);
   const flow = useRef<HTMLDivElement>(null);
   const halfSaid = useRef(false);
+  const glossaryOpened = useRef(new Set<string>());
+  // False once this Lesson is gone, so the held navigation after "I've read it" never overrides where the Learner went.
+  const mounted = useRef(true);
 
   const sources = useMemo(() => new Map(citations.map((row) => [row.n, row])), [citations]);
+  const endOptions = useMemo<OptionTile<"read" | "stay">[]>(
+    () => [
+      {
+        id: "read",
+        label: next ? `I've read it, ${NEXT_LABEL[next.kind]}` : "I've read it",
+        description: next ? next.description : "Marks this lesson done",
+        tone: "primary",
+        value: "read",
+      },
+      STAY_OPTION,
+    ],
+    [next],
+  );
   const minutes = Math.max(1, Math.round(wordCount(body) / 200));
   const allShown = revealed >= total;
   const book = layout === "book";
   const lastPage = page >= pages - 1;
+  const matcher = useMemo(() => createGlossaryMatcher(body.glossary), [body.glossary]);
+  const startHere = useMemo(() => mostCitedSource(body, citations), [body, citations]);
+
+  /**
+   * Records a definition opening once per term per page view; never blocks or fails the reading.
+   * @param entry - The opened glossary entry
+   */
+  const onTermOpen = useCallback(
+    (entry: GlossaryEntry) => {
+      const key = `${lessonId}:${termKey(entry.term)}`;
+      if (glossaryOpened.current.has(key)) return;
+      glossaryOpened.current.add(key);
+      onGlossaryOpen?.(entry);
+    },
+    [lessonId, onGlossaryOpen],
+  );
 
   useEffect(() => {
     setRevealed(paused ? 1 : total);
@@ -203,6 +262,13 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
   }, [read, setSectionsRead]);
 
   useEffect(() => () => setSectionsRead([]), [setSectionsRead]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   /**
    * Ticks a section in the sidebar outline, with a small cheer from the tick.
@@ -359,7 +425,8 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
   }
 
   /**
-   * The end prompt: "I've read it" completes; "Not yet" leaves the prompt for later.
+   * The end prompt: "I've read it" completes and, given `next`, opens it once the cheer has played; "Not yet" leaves
+   * the prompt for later. A failed completion shows its message and stays, so nothing moves on unrecorded.
    * @param option - Picked tile
    */
   async function onEnd(option: OptionTile<"read" | "stay">) {
@@ -376,6 +443,9 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
       cheer(tile, "lesson read");
       toast({ title: "Lesson read", body: `${title}${lessonNumber ? ` · lesson ${pad(lessonNumber)} done` : ""}`, tone: "celebrate" });
       say("Done reading. Nice pace.", "cheer");
+      if (!next) return;
+      await holdCheer(NEXT_HOLD_MS);
+      if (mounted.current) navigate(next.to);
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "Could not mark complete");
       setEndKey((key) => key + 1);
@@ -394,7 +464,7 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
         ) : (
           <>
             <CompanionLine key="ask">That's the lesson. Did it make sense?</CompanionLine>
-            <OptionTiles options={END_OPTIONS} onPick={onEnd} label="End of lesson" resetKey={endKey} />
+            <OptionTiles options={endOptions} onPick={onEnd} label="End of lesson" resetKey={endKey} />
           </>
         )}
       </ChatThread>
@@ -419,7 +489,7 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
           <span>{minutes} min</span>
           <span aria-hidden="true">·</span>
           <span>
-            {total} {total === 1 ? "section" : "sections"}
+            {total} {total === 1 ? "note" : "notes"}
           </span>
           {citations.length > 0 ? (
             <>
@@ -431,68 +501,82 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
           ) : null}
         </p>
       </header>
-      <div className="l-prose">
-        {shownSections.map((section, index) => {
-          const open = !fold || unfolded.has(index);
-          const hasMore = section.blocks.some((block) => block.kind === "media" || splitKey(block.text)[1].trim().length > 0);
-          return (
-            <section key={`${section.heading}-${index}`} aria-labelledby={`sec-${lessonId}-${index}`}>
-              <h2 id={`sec-${lessonId}-${index}`} data-sec-end={index > 0 ? index - 1 : undefined}>
-                <span className="sec-n" aria-hidden="true">
-                  {lessonNumber ? `${lessonNumber}.${index + 1}` : index + 1}
-                </span>
-                {section.heading}
-              </h2>
-              {section.blocks.map((block, blockIndex) => {
-                // In Skim a figure waits with the rest of its section until the section is expanded.
-                if (block.kind === "media") return open ? <MediaFigure key={blockIndex} block={block} /> : null;
-                if (!fold) {
-                  return (
-                    <p key={blockIndex} className="fb">
-                      <Prose text={block.text} sources={sources} onCite={onCite} />
-                    </p>
-                  );
-                }
-                const [key, rest] = splitKey(block.text);
+      {shownSections.map((section, index) => {
+        const open = !fold || unfolded.has(index);
+        const hasMore = section.blocks.some((block) => block.kind === "media" || splitKey(block.text)[1].trim().length > 0);
+        // A glossary term is marked the first time it shows in each section, in reading order.
+        const seen = new Set<string>();
+        const mark = (text: string) => (matcher ? markProse(text, matcher, seen) : undefined);
+        return (
+          <section key={`${section.heading}-${index}`} className="l-note" aria-labelledby={`sec-${lessonId}-${index}`}>
+            <h2 id={`sec-${lessonId}-${index}`} data-sec-end={index > 0 ? index - 1 : undefined}>
+              <span className="sec-n" aria-hidden="true">
+                {lessonNumber ? `${lessonNumber}.${index + 1}` : index + 1}
+              </span>
+              {section.heading}
+            </h2>
+            {section.blocks.map((block, blockIndex) => {
+              // In Skim a figure waits with the rest of its section until the section is expanded.
+              if (block.kind === "media") return open ? <MediaFigure key={blockIndex} block={block} /> : null;
+              if (!fold) {
                 return (
                   <p key={blockIndex} className="fb">
-                    <span className="key">
-                      <Prose text={key} sources={sources} onCite={onCite} />
-                    </span>
-                    {open && rest ? <Prose text={rest} sources={sources} onCite={onCite} /> : null}
+                    <Prose text={block.text} sources={sources} onCite={onCite} marks={mark(block.text)} />
                   </p>
                 );
-              })}
-              {fold && hasMore ? (
-                <button
-                  type="button"
-                  className="l-sec-more"
-                  aria-expanded={open}
-                  onClick={() =>
-                    setUnfolded((current) => {
-                      const next = new Set(current);
-                      if (next.has(index)) next.delete(index);
-                      else next.add(index);
-                      return next;
-                    })
-                  }
-                >
-                  {open ? "collapse ↑" : "expand ↓"}
-                </button>
-              ) : null}
-            </section>
-          );
-        })}
-      </div>
+              }
+              const [key, rest] = splitKey(block.text);
+              const keyMarks = mark(key);
+              return (
+                <p key={blockIndex} className="fb">
+                  <span className="key">
+                    <Prose text={key} sources={sources} onCite={onCite} marks={keyMarks} />
+                  </span>
+                  {open && rest ? <Prose text={rest} sources={sources} onCite={onCite} marks={mark(rest)} /> : null}
+                </p>
+              );
+            })}
+            {fold && hasMore ? (
+              <button
+                type="button"
+                className="l-sec-more"
+                aria-expanded={open}
+                onClick={() =>
+                  setUnfolded((current) => {
+                    const next = new Set(current);
+                    if (next.has(index)) next.delete(index);
+                    else next.add(index);
+                    return next;
+                  })
+                }
+              >
+                {open ? "collapse ↑" : "expand ↓"}
+              </button>
+            ) : null}
+          </section>
+        );
+      })}
       {allShown ? (
         <aside className="l-sources fb" aria-labelledby={`sources-${lessonId}`} data-sec-end={total - 1}>
           {citations.length > 0 ? (
             <>
               <h2 id={`sources-${lessonId}`}>sources</h2>
+              {startHere ? (
+                <p className="l-start">
+                  <span className="k-rib" aria-hidden="true">
+                    start here
+                  </span>
+                  <a href={startHere.url} target="_blank" rel="noreferrer">
+                    <span className="sr-only">Start here: </span>
+                    {startHere.title}
+                  </a>
+                  <span className="why">If you read one thing after this lesson, read this.</span>
+                </p>
+              ) : null}
               <ol>
                 {citations.map((row) => (
                   <li key={row.n} id={`citation-${row.n}`} tabIndex={-1}>
-                    <b>[{row.n}]</b>
+                    <b>{row.n}</b>
                     <a href={row.url} target="_blank" rel="noreferrer">
                       {row.title}
                     </a>
@@ -505,18 +589,18 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
               End of the lesson
             </h2>
           )}
+          {courseId ? (
+            <Link to={`/study/${courseId}/words`} className="l-words-link">
+              All the words in this course →
+            </Link>
+          ) : null}
         </aside>
       ) : null}
     </>
   );
 
-  return (
-    <article
-      ref={article}
-      aria-label={title}
-      className={cn("l-read", `lay-${layout}`, `surf-${settings.surface}`, `f-${settings.font}`, surfaceLight && "light")}
-      style={readingStyle(settings)}
-    >
+  const reading = (
+    <>
       {book ? (
         <>
           <div className="l-book-view" ref={view}>
@@ -543,11 +627,28 @@ export function ReadingView({ lessonId, title, lessonGoal, lessonNumber, body, c
         <div className="l-continue">
           <Button onClick={() => setRevealed((count) => Math.min(total, count + 1))}>Continue</Button>
           <span>
-            section {revealed} of {total}
+            note {revealed} of {total}
           </span>
         </div>
       ) : null}
       {endArea}
+    </>
+  );
+
+  return (
+    <article
+      ref={article}
+      aria-label={title}
+      className={cn("l-read", `lay-${layout}`, `surf-${settings.surface}`, `f-${settings.font}`, surfaceLight && "light")}
+      style={readingStyle(settings)}
+    >
+      {matcher ? (
+        <GlossaryLayer onOpen={onTermOpen} resetKey={`${lessonId}:${book ? page : "scroll"}`}>
+          {reading}
+        </GlossaryLayer>
+      ) : (
+        reading
+      )}
     </article>
   );
 }

@@ -3,6 +3,7 @@ import {
   canSubmitQuiz,
   isAnswerCorrect,
   isPassingScore,
+  optionNotes,
   parseQuizAnswers,
   parseQuizBody,
   QUIZ_METHOD_ID,
@@ -54,6 +55,8 @@ export type QuizAnswerKey = {
   itemId: string;
   correctOptionId: string;
   explanation: string;
+  /** Each option's one-sentence why, by option id (decision 2026-11-03); absent on a Quiz written without them. */
+  optionNotes?: Record<string, string>;
 };
 
 /** A Quiz error the route sends as-is. */
@@ -123,10 +126,12 @@ function quizView(quiz: QuizContext, profile: ResolvedTeachingProfile): QuizView
       const answer = answers[item.id];
       if (!answer || !(submitted || answer.checked)) continue;
       results[item.id] = isAnswerCorrect(item, answer);
+      const notes = optionNotes(item);
       answerKeys[item.id] = {
         itemId: item.id,
         correctOptionId: item.correctOptionId,
         explanation: item.explanations[profile.feedbackDepth.value],
+        ...(notes ? { optionNotes: notes } : {}),
       };
     }
     attempt = {

@@ -25,11 +25,23 @@ export const MAX_REQUIRED_MEDIA_TAGS = 5;
 /** Objectives a Quiz slot may list (spec §6.2); more is structural. */
 export const MAX_QUIZ_OBJECTIVES = 10;
 
-/** Lessons a Course may hold. The cap keeps one generation run to about half an hour (SEN-82). */
+/**
+ * Lessons a Course may hold. Each Reading is about one screen (decision 2026-11-03), so a Course needs more of them than when
+ * the cap was 6 to keep a run near half an hour (SEN-82); Lessons are still written one after another.
+ */
 export const MIN_COURSE_LESSONS = 3;
-export const MAX_COURSE_LESSONS = 6;
+export const MAX_COURSE_LESSONS = 30;
 
-/** How many Readings each Quiz cadence puts before a Quiz, within one Module (spec §4.1 Q6). */
+/** Readings one Chapter holds: one topic, researched once and written in one author call (decision 2026-11-03). */
+export const MAX_CHAPTER_LESSONS = 4;
+
+/** Chapters a Course may hold. This, not the Lesson cap, is what keeps one generation run near half an hour. */
+export const MAX_COURSE_CHAPTERS = 6;
+
+/**
+ * How many Chapters each Quiz cadence puts before a Quiz, within one Module (spec §4.1 Q6). The cadence counted
+ * Readings until each Reading became one screen; a Chapter is what a Reading was then (decision 2026-11-03).
+ */
 export const CADENCE_READINGS: Record<QuizCadence, { min: number; max: number } | "module"> = {
   every_reading: { min: 1, max: 1 },
   every_2_to_3_readings: { min: 2, max: 3 },
@@ -40,7 +52,9 @@ export const CADENCE_READINGS: Record<QuizCadence, { min: number; max: number } 
  * One Lesson-to-be. `assessesSlotIds` is empty except on a Quiz, where it names the Reading slots it assesses.
  * `requiredMedia` is set only on a Reading that cannot teach without the Learner seeing something: the images, by Media
  * category and Topic tags, its Lesson is not checkpointed without (SEN-115). The Blueprint author sets it, from what the
- * media catalog holds; the Learner never sees it. Absent on Blueprints written before it existed.
+ * media catalog holds; the Learner never sees it. Absent on Blueprints written before it existed. `chapter` names the
+ * Chapter a Reading belongs to (decision 2026-11-03): consecutive Readings with the same chapter are researched once and
+ * written in one author call. Absent on a Quiz, and on Blueprints written before Chapters existed.
  */
 export type BlueprintSlot = {
   id: string;
@@ -51,7 +65,11 @@ export type BlueprintSlot = {
   topicTags: string[];
   assessesSlotIds: string[];
   requiredMedia?: MediaRequest[];
+  chapter?: string;
 };
+
+/** One Chapter: a run of consecutive Readings on one topic, researched once and written together (decision 2026-11-03). */
+export type BlueprintChapter = { title: string; slots: BlueprintSlot[] };
 
 /** A named grouping of slots. */
 export type BlueprintModule = {
@@ -130,11 +148,68 @@ export function blueprintSlots(blueprint: CourseBlueprint): BlueprintSlot[] {
   return blueprint.modules.flatMap((module) => module.slots);
 }
 
+/**
+ * The key two Readings share when they are in the same Chapter. A Reading planned before Chapters existed is a Chapter
+ * of its own.
+ * @param slot - A Reading slot
+ */
+export function chapterKey(slot: BlueprintSlot): string {
+  return slot.chapter?.trim().toLowerCase() || `slot:${slot.id}`;
+}
+
+/**
+ * The Chapters of a Blueprint in Course order: each run of consecutive Readings with the same chapter, Quizzes left
+ * out. A Quiz between two Readings of one chapter splits it into two runs here, which the Code checks fail.
+ * @param blueprint - Stored Blueprint
+ */
+export function blueprintChapters(blueprint: CourseBlueprint): BlueprintChapter[] {
+  const chapters: BlueprintChapter[] = [];
+  let last: { key: string; chapter: BlueprintChapter } | null = null;
+  for (const slot of blueprintSlots(blueprint)) {
+    if (slot.method !== READING_METHOD_ID) {
+      last = null;
+      continue;
+    }
+    const key = chapterKey(slot);
+    if (last && last.key === key) {
+      last.chapter.slots.push(slot);
+      continue;
+    }
+    last = { key, chapter: { title: slot.chapter?.trim() || slot.title, slots: [slot] } };
+    chapters.push(last.chapter);
+  }
+  return chapters;
+}
+
+/**
+ * Chapter problems (decision 2026-11-03): every Reading names its Chapter, a Chapter's Readings sit together with no
+ * other Reading or Quiz between them, a Chapter holds at most {@link MAX_CHAPTER_LESSONS} Readings, and a Course at most
+ * {@link MAX_COURSE_CHAPTERS} Chapters.
+ * @param blueprint - Blueprint to check
+ */
+function chapterFailures(blueprint: CourseBlueprint): string[] {
+  const failures: string[] = [];
+  blueprintSlots(blueprint).forEach((slot, index) => {
+    if (slot.method === READING_METHOD_ID && !slot.chapter?.trim()) failures.push(`Slot ${index + 1} is a Reading that names no chapter.`);
+  });
+  const seen = new Set<string>();
+  for (const chapter of blueprintChapters(blueprint)) {
+    const key = chapterKey(chapter.slots[0]!);
+    if (seen.has(key)) failures.push(`Chapter “${chapter.title}” is split: its Readings must sit together, with no other Reading or Quiz between them.`);
+    seen.add(key);
+    if (chapter.slots.length > MAX_CHAPTER_LESSONS) {
+      failures.push(`Chapter “${chapter.title}” has ${chapter.slots.length} Readings; a Chapter holds at most ${MAX_CHAPTER_LESSONS}.`);
+    }
+  }
+  if (seen.size > MAX_COURSE_CHAPTERS) failures.push(`A Course has at most ${MAX_COURSE_CHAPTERS} Chapters, not ${seen.size}.`);
+  return failures;
+}
+
 const TOPIC_TAG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
  * Quiz-placement problems: every Module ends on a Quiz, every Reading is assessed by the next Quiz after it, and the
- * Readings before each Quiz follow the Learner's Quiz cadence.
+ * Chapters before each Quiz follow the Learner's Quiz cadence.
  * @param blueprint - Blueprint to check
  * @param cadence - The Learner's resolved Quiz cadence
  */
@@ -155,9 +230,10 @@ function cadenceFailures(blueprint: CourseBlueprint, cadence: QuizCadence): stri
       quizzes += 1;
       const unassessed = readings.filter((reading) => !slot.assessesSlotIds.includes(reading.id));
       if (unassessed.length) failures.push(`“${slot.title}” must assess every Reading since the previous Quiz.`);
-      if (rule !== "module" && (readings.length < rule.min || readings.length > rule.max)) {
+      const chapters = new Set(readings.map(chapterKey)).size;
+      if (rule !== "module" && (chapters < rule.min || chapters > rule.max)) {
         const span = rule.min === rule.max ? `${rule.min}` : `${rule.min}–${rule.max}`;
-        failures.push(`“${slot.title}” follows ${readings.length} Readings; the Quiz cadence asks for ${span}.`);
+        failures.push(`“${slot.title}” follows ${chapters} Chapters; the Quiz cadence asks for ${span}.`);
       }
       readings = [];
     }
@@ -228,6 +304,7 @@ export function blueprintCodeFailures(blueprint: CourseBlueprint, cadence: QuizC
   if (!slots.some((slot) => slot.method === READING_METHOD_ID) || !slots.some((slot) => slot.method === QUIZ_METHOD_ID)) {
     failures.push("The Blueprint needs at least one Reading and one Quiz.");
   }
+  failures.push(...chapterFailures(blueprint));
   failures.push(...cadenceFailures(blueprint, cadence));
   return failures;
 }

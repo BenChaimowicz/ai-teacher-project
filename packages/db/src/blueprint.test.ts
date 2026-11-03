@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { blueprintCodeFailures, learnerBlueprint, type BlueprintSlot, type CourseBlueprint } from "./blueprint.ts";
+import { blueprintChapters, blueprintCodeFailures, learnerBlueprint, type BlueprintSlot, type CourseBlueprint } from "./blueprint.ts";
 
-/** A Reading slot. */
-function reading(n: number): BlueprintSlot {
+/** A Reading slot, in a Chapter of its own unless `chapter` says otherwise. */
+function reading(n: number, chapter = `Chapter ${n}`): BlueprintSlot {
   return {
     id: `slot${n}`, method: "reading", title: `Reading ${n}`, lessonGoal: `Do reading thing ${n}.`,
-    objectives: [`Objective ${n}`], topicTags: ["meter", `topic-${n}`], assessesSlotIds: [],
+    objectives: [`Objective ${n}`], topicTags: ["meter", `topic-${n}`], assessesSlotIds: [], chapter,
   };
 }
 
@@ -80,12 +80,48 @@ test("No two slots share a Lesson goal, and a Course needs at least one Reading 
   assert.ok(failures(noQuiz).some((failure) => failure.includes("at least one Reading and one Quiz")));
 });
 
-test("A Course holds 3–6 Lessons", () => {
-  assert.ok(failures(course(reading(1), quiz(2, [1]))).some((failure) => failure.includes("3–6 Lessons, not 2")));
-  const seven = course(reading(1), reading(2), quiz(3, [1, 2]), reading(4), reading(5), reading(6), quiz(7, [4, 5, 6]));
-  assert.ok(failures(seven).some((failure) => failure.includes("3–6 Lessons, not 7")));
-  const six = course(reading(1), reading(2), quiz(3, [1, 2]), reading(4), reading(5), quiz(6, [4, 5]));
-  assert.deepEqual(failures(six), []);
+test("A Course holds 3–30 Lessons in at most 6 Chapters: one-screen Readings need more of them (decision 2026-11-03)", () => {
+  assert.ok(failures(course(reading(1), quiz(2, [1]))).some((failure) => failure.includes("3–30 Lessons, not 2")));
+  /** Readings in pairs, each pair followed by its Quiz, `pairs` times over. */
+  const paired = (pairs: number) => course(...Array.from({ length: pairs }, (_, pair) => {
+    const first = pair * 3 + 1;
+    return [reading(first), reading(first + 1), quiz(first + 2, [first, first + 1])];
+  }).flat());
+  assert.ok(failures(paired(11)).some((failure) => failure.includes("3–30 Lessons, not 33")));
+  assert.ok(failures(paired(4)).some((failure) => failure.includes("at most 6 Chapters, not 8")));
+  const fourteen = course(
+    reading(1, "A"), reading(2, "A"), reading(3, "B"), reading(4, "B"), quiz(5, [1, 2, 3, 4]),
+    reading(6, "C"), reading(7, "C"), reading(8, "C"), reading(9, "D"), quiz(10, [6, 7, 8, 9]),
+    reading(11, "E"), reading(12, "E"), reading(13, "F"), quiz(14, [11, 12, 13]),
+  );
+  assert.deepEqual(failures(fourteen), []);
+});
+
+test("A Chapter's Readings sit together, name their chapter, and number at most 4 (decision 2026-11-03)", () => {
+  const split = course(reading(1, "A"), reading(2, "B"), reading(3, "A"), quiz(4, [1, 2, 3]));
+  assert.ok(failures(split).some((failure) => failure.includes("Chapter “A” is split")));
+  const quizInside = course(reading(1, "A"), quiz(2, [1]), reading(3, "A"), reading(4, "B"), quiz(5, [3, 4]));
+  assert.ok(failures(quizInside).some((failure) => failure.includes("Chapter “A” is split")));
+  const unnamed = course(reading(1, ""), reading(2, "B"), quiz(3, [1, 2]));
+  assert.ok(failures(unnamed).some((failure) => failure.includes("Slot 1 is a Reading that names no chapter")));
+  const fat = course(reading(1, "A"), reading(2, "A"), reading(3, "A"), reading(4, "A"), reading(5, "A"), reading(6, "B"), quiz(7, [1, 2, 3, 4, 5, 6]));
+  assert.ok(failures(fat).some((failure) => failure.includes("Chapter “A” has 5 Readings")));
+  assert.deepEqual(blueprintChapters(fourteenChapters()).map((chapter) => [chapter.title, chapter.slots.map((slot) => slot.id)]), [
+    ["A", ["slot1", "slot2"]], ["B", ["slot3"]],
+  ]);
+});
+
+/** Two Chapters, one of two Readings and one of one, then their Quiz. */
+function fourteenChapters(): CourseBlueprint {
+  return course(reading(1, "A"), reading(2, " a "), reading(3, "B"), quiz(4, [1, 2, 3]));
+}
+
+test("The Quiz cadence counts Chapters, not Readings (decision 2026-11-03)", () => {
+  const twoChapters = course(reading(1, "A"), reading(2, "A"), reading(3, "A"), reading(4, "B"), quiz(5, [1, 2, 3, 4]));
+  assert.deepEqual(failures(twoChapters), [], "Four Readings in two Chapters satisfy every 2–3.");
+  const oneChapter = course(reading(1, "A"), reading(2, "A"), reading(3, "A"), quiz(4, [1, 2, 3]));
+  assert.ok(failures(oneChapter).some((failure) => failure.includes("follows 1 Chapters; the Quiz cadence asks for 2–3")));
+  assert.deepEqual(blueprintCodeFailures(oneChapter, "every_reading"), [], "One Chapter per Quiz is 'after every reading' now.");
 });
 
 test("Every Reading is assessed by the next Quiz, and the Module ends on a Quiz", () => {
@@ -103,9 +139,9 @@ test("Quizzes follow the Learner's Quiz cadence", () => {
   assert.ok(blueprintCodeFailures(alternating, "every_2_to_3_readings").some((failure) => failure.includes("asks for 2–3")));
   assert.ok(blueprintCodeFailures(alternating, "module_end").some((failure) => failure.includes("has 2 Quizzes")));
 
-  assert.ok(blueprintCodeFailures(valid(), "every_reading").some((failure) => failure.includes("follows 2 Readings; the Quiz cadence asks for 1")));
+  assert.ok(blueprintCodeFailures(valid(), "every_reading").some((failure) => failure.includes("follows 2 Chapters; the Quiz cadence asks for 1")));
   const fourReadings = course(reading(1), reading(2), reading(3), reading(4), quiz(5, [1, 2, 3, 4]));
-  assert.ok(failures(fourReadings).some((failure) => failure.includes("follows 4 Readings")));
+  assert.ok(failures(fourReadings).some((failure) => failure.includes("follows 4 Chapters")));
   assert.deepEqual(blueprintCodeFailures(fourReadings, "module_end"), []);
 });
 

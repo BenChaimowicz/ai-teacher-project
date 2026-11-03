@@ -1,5 +1,5 @@
 import { Home, Menu, PanelLeftClose, Plus, SlidersHorizontal } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { CompanionCard } from "@/components/companion/companion-card.tsx";
@@ -75,6 +75,9 @@ function defaultTitle(pathname: string) {
  * open the account menu (after the actions slot, so screens' actions still sit to its left).
  *
  * On narrow screens the sidebar is an overlay drawer; Esc and the backdrop close it.
+ *
+ * Every screen opens at the top (decision 2026-11-03): the content area, not the window, is what scrolls, so the
+ * browser does not reset it between routes on its own, and a new Lesson used to open where the last one ended.
  */
 export function AppShell({ variant }: { variant: ShellVariant }) {
   const { pathname } = useLocation();
@@ -85,6 +88,12 @@ export function AppShell({ variant }: { variant: ShellVariant }) {
   const [titleEl, setTitleEl] = useState<HTMLElement | null>(null);
   const [actionsEl, setActionsEl] = useState<HTMLElement | null>(null);
   const [outlineEl, setOutlineEl] = useState<HTMLElement | null>(null);
+  const main = useRef<HTMLElement>(null);
+
+  // A layout effect, so it runs before a screen's own scroll handlers (passive effects) read the position.
+  useLayoutEffect(() => {
+    main.current?.scrollTo({ top: 0, behavior: "instant" });
+  }, [pathname]);
 
   useEffect(() => {
     const query = matchMedia(NARROW);
@@ -205,7 +214,7 @@ export function AppShell({ variant }: { variant: ShellVariant }) {
               <div className="read-prog" style={{ width: `${Math.round(readingProgress * 100)}%` }} aria-hidden="true" />
             ) : null}
           </header>
-          <main id="main" className="k-content" tabIndex={-1}>
+          <main id="main" className="k-content" tabIndex={-1} ref={main}>
             <div className="k-page">
               <Outlet />
             </div>

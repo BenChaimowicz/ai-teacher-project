@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseReadingBody } from "./reading-lesson.ts";
+import { MAX_GLOSSARY_TERMS, mentionsTerm, parseGlossary, parseReadingBody, readingWordCount } from "./reading-lesson.ts";
 
 /** A stored public-domain still, as a media block's descriptor snapshot holds it. */
 const DESCRIPTOR = {
@@ -49,4 +49,33 @@ test("A media block whose snapshot breaks the catalog rules is dropped, never sh
     }],
   });
   assert.deepEqual(body?.sections[0]?.blocks.map((block) => block.kind), ["prose"]);
+});
+
+test("A reading body keeps a well-formed glossary, each term once, and drops it when empty (SEN-48)", () => {
+  const sections = [{ heading: "Walls", blocks: [{ kind: "prose", text: "Peptidoglycan is a mesh [1]." }] }];
+  assert.deepEqual(parseReadingBody({ sections, glossary: [
+    { term: " Peptidoglycan ", definition: "The mesh that makes up a bacterial wall." },
+    { term: "peptidoglycan", definition: "A repeat." },
+    { term: "", definition: "No term." },
+    { term: "mordant", definition: 3 },
+  ] })?.glossary, [{ term: "Peptidoglycan", definition: "The mesh that makes up a bacterial wall." }]);
+  assert.equal(parseReadingBody({ sections, glossary: [] })?.glossary, undefined);
+  assert.equal(parseGlossary(Array.from({ length: 20 }, (_, n) => ({ term: `t${n}`, definition: "d" }))).length, MAX_GLOSSARY_TERMS);
+});
+
+test("A glossary term is found as a whole word or phrase, ignoring case", () => {
+  assert.equal(mentionsTerm("The Cell Wall lies outside [1].", "cell wall"), true);
+  assert.equal(mentionsTerm("Crystal violet (a dye) stains it.", "crystal violet"), true);
+  assert.equal(mentionsTerm("A membranes list.", "membrane"), false);
+  assert.equal(mentionsTerm("Gram-positive cells.", "Gram"), true);
+  assert.equal(mentionsTerm("Anything.", "  "), false);
+});
+
+test("A Reading's word count skips Citation markers and media, in a stored body and in a draft alike", () => {
+  const body = parseReadingBody({ sections: [
+    { heading: "Walls", blocks: [{ kind: "prose", text: "Peptidoglycan is a mesh [1]. It is thick [1][2]." }, { kind: "media", descriptor: DESCRIPTOR, caption: "c", alt: "a" }] },
+    { heading: "Dyes", blocks: [{ kind: "prose", text: "Crystal violet  stains  it [src_0123456789]." }] },
+  ] });
+  assert.equal(readingWordCount(body!), 11);
+  assert.equal(readingWordCount({ sections: [] }), 0);
 });

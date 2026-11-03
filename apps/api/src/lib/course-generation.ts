@@ -1,5 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
-import { blueprintSlots, type ApprovedBlueprint, type BlueprintSlot, type JudgeResult } from "@senoy/db/blueprint";
+import { blueprintChapters, blueprintSlots, chapterKey, type ApprovedBlueprint, type BlueprintChapter, type BlueprintSlot, type JudgeResult } from "@senoy/db/blueprint";
 import type { GoalScope, ResearchTier } from "@senoy/db/course-request";
 import {
   courseBlueprints,
@@ -42,6 +42,7 @@ import {
   type CheckedReading,
   type PriorLesson,
   type ReadingGenerator,
+  type ChapterDraft,
 } from "./reading-generation.ts";
 import { createResearchTierRater, type ResearchTierRater } from "./research-tier.ts";
 import { createTrackedTransport, trackResearchRun, withPipelineEvent, type PipelineEventScope } from "./usage-tracking.ts";
@@ -195,6 +196,24 @@ export function researchQueries(subject: string, slot: BlueprintSlot, scope: Goa
     `${slot.title} (${subject}). ${slot.lessonGoal}${focus}`,
     `${slot.title} (${subject})`,
   ];
+}
+
+/**
+ * The slot a Chapter is researched as (decision 2026-11-03): its title, with every Lesson goal and objective of the
+ * Readings still to research, so one search serves them all. A Chapter of one Reading is researched exactly as that
+ * Reading was before Chapters existed.
+ * @param chapter - The Chapter, holding only the Readings still to research
+ */
+export function chapterResearchSlot(chapter: BlueprintChapter): BlueprintSlot {
+  const [first] = chapter.slots;
+  if (!first) throw new Error(`[course-generation: chapterResearchSlot] A Chapter has no Readings || chapter=${chapter.title}`);
+  return {
+    ...first,
+    title: chapter.title,
+    lessonGoal: chapter.slots.map((slot) => slot.lessonGoal).join(" "),
+    objectives: [...new Set(chapter.slots.flatMap((slot) => slot.objectives))],
+    topicTags: [...new Set(chapter.slots.flatMap((slot) => slot.topicTags))],
+  };
 }
 
 /** A vendor that timed out or failed said nothing about the topic: not evidence that it is hard to research (spec §5.9). */
@@ -357,6 +376,17 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       const profile = writeTimeProfile(readingPlugin, resolved);
       const readerProfile = readingProfile(profile)!;
       const scope = request.focus?.scope ?? null;
+      // What the Learner typed in their own words while focusing the goal (decision 2026-11-03), for the Readings to speak to.
+      const learnerAsked = (request.focus?.rounds ?? [])
+        .flatMap((round) => round.answers ?? [])
+        .filter((answer) => answer.ownWords)
+        .map((answer) => answer.answer.trim())
+        .filter(Boolean)
+        .join(" ");
+      // Readings are written for where this Learner starts (SEN-48); publish needs it too, and checks it is there.
+      const [diagnostic] = await db.select({ startingLevel: startingLevelDiagnostics.startingLevel }).from(startingLevelDiagnostics)
+        .where(eq(startingLevelDiagnostics.courseRequestId, courseRequestId))
+        .orderBy(desc(startingLevelDiagnostics.createdAt)).limit(1);
       // Every model and research call of this run stops the moment the worker learns it lost the job (SEN-93).
       const transport = createTrackedTransport({ signal: control.signal });
       /** Runs one write only while this run still holds the job. */
@@ -396,6 +426,22 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
        */
       const researchSlot = (slot: BlueprintSlot) => withPipelineEvent("research", { label: slot.title, detail: { slotId: slot.id } }, async (step) => {
         const found = await searchForEvidence(research, researchQueries(request.subject, slot, scope));
+        step.setDetail({
+          queries: found.queries, interrupted: found.interrupted,
+          packs: found.packs.map((pack) => ({ adapter: pack.adapter, status: pack.status, sources: pack.sources.length })),
+        });
+        return found;
+      });
+
+      /**
+       * Searches one Chapter's evidence under its own `research` Pipeline Event, as the one slot its Readings add up to
+       * (decision 2026-11-03).
+       * @param chapter - The Chapter, holding only the Readings still to research
+       */
+      const researchChapter = (chapter: BlueprintChapter) => withPipelineEvent("research", {
+        label: chapter.title, detail: { chapter: chapter.title, slotIds: chapter.slots.map((slot) => slot.id) },
+      }, async (step) => {
+        const found = await searchForEvidence(research, researchQueries(request.subject, chapterResearchSlot(chapter), scope));
         step.setDetail({
           queries: found.queries, interrupted: found.interrupted,
           packs: found.packs.map((pack) => ({ adapter: pack.adapter, status: pack.status, sources: pack.sources.length })),
@@ -448,15 +494,23 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         // Reuse is decided on objectives before research, so a slot that reuses a Lesson is never researched (spec §5.8).
         await chooseReuse(unresearched);
         // Every call runs to the end, even after one fails, so each finished slot is stored and Resume skips it.
-        const outcomes = await Promise.allSettled(unresearched.filter((slot) => !packsBySlot.has(slot.id)).map(async (slot) => {
-          const search = await researchSlot(slot);
+        // One search per Chapter (decision 2026-11-03): its Readings share the packs, each stored in its own row so a
+        // Retry resumes slot by slot as before. A Reading that reuses a Lesson already has its packs and is left out.
+        const open = new Set(unresearched.filter((slot) => !packsBySlot.has(slot.id)).map((slot) => slot.id));
+        const chapters = blueprintChapters(approved.blueprint)
+          .map((chapter) => ({ ...chapter, slots: chapter.slots.filter((slot) => open.has(slot.id)) }))
+          .filter((chapter) => chapter.slots.length > 0);
+        const outcomes = await Promise.allSettled(chapters.map(async (chapter) => {
+          const search = await researchChapter(chapter);
           // Packs with nothing to cite are not stored, so a Retry searches again instead of resuming from them.
           if (lessonEvidence(search.packs).size === 0) {
-            empty.set(slot.id, search.interrupted);
+            for (const slot of chapter.slots) empty.set(slot.id, search.interrupted);
             return;
           }
-          await holding((transaction) => transaction.insert(lessonResearch).values({ courseRequestId, slotId: slot.id, sourcePacks: search.packs }));
-          packsBySlot.set(slot.id, search.packs);
+          for (const slot of chapter.slots) {
+            await holding((transaction) => transaction.insert(lessonResearch).values({ courseRequestId, slotId: slot.id, sourcePacks: search.packs }));
+            packsBySlot.set(slot.id, search.packs);
+          }
         }));
         const failed = outcomes.find((outcome) => outcome.status === "rejected");
         if (failed) {
@@ -477,6 +531,48 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         throw new LessonUnresearchableError(unresearchable.id);
       }
 
+      /** Chapter drafts by slot id: a Lesson drafted with its Chapter is finished from that draft, never written again. */
+      const chapterDrafts = new Map<string, ChapterDraft>();
+
+      /**
+       * When the Reading at `position` opens a run of two or more Lessons of one Chapter still to write, drafts them all
+       * in one author call under a `chapter` Pipeline Event (decision 2026-11-03), so short Lessons cost what long ones
+       * did. A reused Lesson is fitted on its own and ends the run; a single remaining Lesson is written on its own, as
+       * before; a generator without `draftChapter` (a fixture) writes every Lesson on its own.
+       * @param position - The Reading's place in the Blueprint
+       */
+      async function draftChapterFrom(position: number): Promise<void> {
+        const slot = slots[position]!;
+        if (!generator.draftChapter || chapterDrafts.has(slot.id) || reusedBySlot.has(slot.id)) return;
+        const key = chapterKey(slot);
+        const run: BlueprintSlot[] = [];
+        for (const next of slots.slice(position)) {
+          if (next.method !== readingPlugin.id || chapterKey(next) !== key || finishedSlotIds.has(next.id) || reusedBySlot.has(next.id)) break;
+          run.push(next);
+        }
+        if (run.length < 2) return;
+        const packs = packsBySlot.get(slot.id);
+        if (!packs) throw new Error(`[course-generation: chapter] Chapter has no stored research || slotId=${slot.id}`);
+        const chapter = slot.chapter?.trim() || slot.title;
+        const draft = await withPipelineEvent("chapter", { label: chapter, detail: { chapter, slotIds: run.map(({ id }) => id) } }, async (step) => {
+          const drafted = await generator.draftChapter!({
+            courseTitle: approved.blueprint.courseTitle,
+            learningGoal: request.learningGoal,
+            scope,
+            ...(learnerAsked ? { learnerAsked } : {}),
+            chapter,
+            slots: run,
+            priorLessons: [...priorLessons],
+            profile,
+            ...(diagnostic?.startingLevel ? { startingLevel: diagnostic.startingLevel } : {}),
+            packs,
+          });
+          step.setDetail({ modelId: drafted.modelId, rejectedSources: drafted.rejectedSources.length, lessons: drafted.lessons });
+          return drafted;
+        });
+        for (const member of run) chapterDrafts.set(member.id, draft);
+      }
+
       /**
        * Writes one Reading from its stored packs under its own `reading` Pipeline Event, fitting the published Lesson it
        * reuses when it has one.
@@ -495,13 +591,17 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
           try {
             const reused = reusedLessonId ? (await reusePool()).find((candidate) => candidate.lessonId === reusedLessonId) : undefined;
             if (reusedLessonId && !reused) throw new ReuseUnfitError(slot.id, "The reused Lesson is no longer a reuse candidate.");
-            checked = await generator.generate({
+            // A Lesson drafted with its Chapter is finished from that draft; any other is written here on its own.
+            const chapterDraft = chapterDrafts.get(slot.id);
+            checked = chapterDraft ? await chapterDraft.finish(slot.id, [...priorLessons]) : await generator.generate({
               courseTitle: approved.blueprint.courseTitle,
               learningGoal: request.learningGoal,
               scope,
+              ...(learnerAsked ? { learnerAsked } : {}),
               slot,
               priorLessons: [...priorLessons],
               profile,
+              ...(diagnostic?.startingLevel ? { startingLevel: diagnostic.startingLevel } : {}),
               packs,
               ...(reused ? { reuse: reuseSeed(reused, readerProfile) } : {}),
             });
@@ -517,6 +617,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
             repairs: checked.repairs, judgePass: checked.judge.pass, rejectedSources: checked.rejectedSources.length,
             authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
             grounding: checked.grounding, rounds: checked.rounds, lineage: checked.lesson.lineage, media: checked.media,
+            glossary: checked.glossary,
           });
           return checked;
         });
@@ -552,6 +653,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
             lessonGoal: saved.lessonGoal,
             objectives: saved.objectives,
             headings: (saved.body as ReadingBody).sections.map((section) => section.heading),
+            terms: (saved.body as ReadingBody).glossary ?? [],
           });
         }
         if (saved) continue;
@@ -559,6 +661,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
         await control.progress("lesson", slot.id);
 
         if (slot.method === readingPlugin.id) {
+          await draftChapterFrom(position);
           // A reused Lesson that cannot be made to fit is researched now and written like any other (spec §5.8).
           const { lesson, judge, rejectedSources, authorModelIds, judgeModelId } = await writeReading(slot, position).catch(async (error: unknown) => {
             if (!(error instanceof ReuseUnfitError)) throw error;
@@ -573,6 +676,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
             lessonGoal: lesson.lessonGoal,
             objectives: lesson.objectives,
             headings: lesson.body.sections.map((section) => section.heading),
+            terms: lesson.body.glossary ?? [],
           });
           continue;
         }
@@ -618,9 +722,6 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       const checkpoints = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
       const codeFailures = courseCodeFailures(approved, checkpoints, { requireMedia: media !== undefined });
       if (codeFailures.length) throw new CourseFailedError(codeFailures, null);
-      const [diagnostic] = await db.select({ startingLevel: startingLevelDiagnostics.startingLevel }).from(startingLevelDiagnostics)
-        .where(eq(startingLevelDiagnostics.courseRequestId, courseRequestId))
-        .orderBy(desc(startingLevelDiagnostics.createdAt)).limit(1);
       if (!diagnostic?.startingLevel) throw new Error(`[course-generation: publish] Request has no Starting Level || requestId=${courseRequestId}`);
       const courseJudge = options.courseJudge ?? createCourseJudge({ transport });
       // A checkpoint from before SEN-57 names no author; the primary Generator wrote it.

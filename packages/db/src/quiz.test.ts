@@ -11,6 +11,7 @@ import {
   publicQuizBody,
   scoreQuiz,
   type QuizAnswers,
+  optionNotes,
 } from "./quiz.ts";
 
 /** Answers every fixture item, getting the first `correct` items right. */
@@ -41,11 +42,16 @@ test("Quiz body is rejected outside 5–10 items, without four options, a valid 
   assert.equal(parseQuizBody(null), null);
 });
 
-test("Public Quiz body carries no answer key and no explanation", () => {
-  const json = JSON.stringify(publicQuizBody(SEEDED_QUIZ_BODY));
+test("Public Quiz body carries no answer key, no explanation, and no option why; the whys travel as option notes with feedback", () => {
+  const withWhy = { items: SEEDED_QUIZ_BODY.items.map((item) => ({ ...item, options: item.options.map((option) => ({ ...option, why: `Because ${option.id}.` })) })) };
+  const json = JSON.stringify(publicQuizBody(withWhy));
   assert.ok(!json.includes("correctOptionId"));
   assert.ok(!json.includes("explanations"));
   assert.ok(!json.includes(SEEDED_QUIZ_BODY.items[0]!.explanations.standard));
+  assert.ok(!json.includes("Because a."), "An option's why would give the key away before feedback.");
+  assert.deepEqual(optionNotes(withWhy.items[0]!), { a: "Because a.", b: "Because b.", c: "Because c.", d: "Because d." });
+  assert.equal(optionNotes(SEEDED_QUIZ_BODY.items[0]!), undefined, "A Quiz written without whys has no notes.");
+  assert.equal(parseQuizBody(withWhy)?.items[0]!.options[0]!.why, "Because a.", "A stored why is kept.");
 });
 
 test("Score is the raw count of correct items; pass is correct / n ≥ 0.70", () => {

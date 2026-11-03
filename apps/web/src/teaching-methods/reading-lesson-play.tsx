@@ -1,4 +1,5 @@
-import { parseReadingBody } from "@senoy/db/reading-lesson";
+import { useCallback, useMemo } from "react";
+import { parseReadingBody, type GlossaryEntry } from "@senoy/db/reading-lesson";
 import { ReadingView } from "@/components/learn/reading-view.tsx";
 import type { StudyPayload } from "@/lib/study-types.ts";
 import type { LessonPlayProps } from "@/teaching-methods/register.ts";
@@ -17,10 +18,25 @@ function asStudyPayload(raw: unknown): StudyPayload | null {
 
 /**
  * Reading-plugin `render` and client `complete`. The screen lives in `components/learn/reading-view.tsx`.
- * Completion is the end-of-lesson "I've read it". Progress never drops; it does not leave this Lesson.
+ * Completion is the end-of-lesson "I've read it", which also opens `next` in the same click. Progress never drops.
  */
-export function ReadingLessonPlay({ courseId, lesson, sectionAdvance, onPayload, lessonNumber, finish }: LessonPlayProps) {
-  const body = parseReadingBody(lesson.body);
+export function ReadingLessonPlay({ courseId, lesson, sectionAdvance, onPayload, lessonNumber, finish, next }: LessonPlayProps) {
+  const body = useMemo(() => parseReadingBody(lesson.body), [lesson.body]);
+
+  /**
+   * Records that the Learner opened a glossary word's definition. Fire and forget: a failure never reaches the Learner.
+   * @param entry - The opened glossary entry
+   */
+  const recordGlossaryOpen = useCallback(
+    (entry: GlossaryEntry) => {
+      void apiFetch(`/api/courses/${courseId}/lessons/${lesson.id}/glossary-opens`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ term: entry.term }),
+      }).catch(() => undefined);
+    },
+    [courseId, lesson.id],
+  );
 
   /**
    * Calls reading-plugin complete and applies the new Study payload.
@@ -45,6 +61,7 @@ export function ReadingLessonPlay({ courseId, lesson, sectionAdvance, onPayload,
   return (
     <ReadingView
       lessonId={lesson.id}
+      courseId={courseId}
       title={lesson.title}
       lessonGoal={lesson.lessonGoal}
       lessonNumber={lessonNumber}
@@ -54,6 +71,8 @@ export function ReadingLessonPlay({ courseId, lesson, sectionAdvance, onPayload,
       paused={sectionAdvance === "manual"}
       onComplete={markComplete}
       finish={finish}
+      next={next ?? null}
+      onGlossaryOpen={recordGlossaryOpen}
     />
   );
 }

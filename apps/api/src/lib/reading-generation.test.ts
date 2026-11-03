@@ -12,7 +12,7 @@ import { rankCandidates, type MediaLibrary } from "./media-library.ts";
 import { ModelError } from "./openrouter.ts";
 import {
   applyRepairEdits, authoredSections, createReadingGenerator, LessonUnresearchableError, numberCitations, READING_JUDGE_CHECKS, ReadingFailedError,
-  ReuseUnfitError, UNRELIABLE_SOURCE, lessonEvidence, mediaProposalsOf, MAX_REPAIRS, MEDIA_VISION_CHECKS, type ReadingInput, type ReuseSeed,
+  ReuseUnfitError, UNRELIABLE_SOURCE, lessonEvidence, mediaProposalsOf, MAX_REPAIRS, MEDIA_VISION_CHECKS, type ChapterInput, type ReadingInput, type ReuseSeed,
 } from "./reading-generation.ts";
 import { ILLUSTRATION_RULE, READING_STYLE, TEACHING_VOICE } from "./teaching-style.ts";
 
@@ -67,18 +67,27 @@ function edits(...pairs: [find: string, replace: string][]) {
 /** A repair edit that matches the default draft on every attempt and leaves it as it was. */
 const TOUCH = edits(["Roots again", "Roots again"]);
 
-/** Scripted Generator: one output per call, repeating the last; records what it was shown and asked for. */
+/**
+ * Scripted Generator: one output per call, repeating the last; records what it was shown and asked for. Word-list calls
+ * are recorded apart in `glossaries` and answered with `terms`, empty unless a test fills it.
+ */
 function scriptedGenerator(output: unknown, modelId = "fixture/author", ...later: unknown[]) {
   const outputs = [output, ...later];
   const calls: { input: unknown; schemaName: string; systemPrompt: string }[] = [];
+  const glossaries: { input: unknown; systemPrompt: string }[] = [];
+  const terms: { term: string; definition: string }[] = [];
   const generator: Generator = {
     modelId,
     async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
+      if (request.schemaName === "reading_glossary") {
+        glossaries.push({ input: request.input, systemPrompt: request.systemPrompt });
+        return { value: request.parse({ terms }), modelId };
+      }
       calls.push({ input: request.input, schemaName: request.schemaName, systemPrompt: request.systemPrompt });
       return { value: request.parse(outputs[Math.min(calls.length, outputs.length) - 1]), modelId: modelId };
     },
   };
-  return { generator, calls };
+  return { generator, calls, glossaries, terms };
 }
 
 const PASS = { pass: true, failedChecks: [], reasons: [] };
@@ -89,7 +98,8 @@ type Grounded = { verdict: string; text?: string; reason?: string };
 /**
  * Scripted Judge: one Lesson verdict per call, repeating the last; records what it was shown and who it was told wrote
  * it. Source vetting and objective grounding calls are recorded apart: vetting rejects the Source IDs in `rejected`,
- * and grounding supports every objective unless `grounded` holds another verdict for it.
+ * and grounding supports every objective unless `grounded` holds another verdict for it. Word-list reviews are recorded
+ * in `glossaryReviews` and reject the terms in `rejectedTerms`.
  */
 function scriptedJudge(verdict: unknown = PASS, modelId = "fixture/judge", ...later: unknown[]) {
   const verdicts = [verdict, ...later];
@@ -98,9 +108,15 @@ function scriptedJudge(verdict: unknown = PASS, modelId = "fixture/judge", ...la
   const groundings: { input: unknown; authorModelIds: readonly string[]; systemPrompt: string }[] = [];
   const rejected: string[] = [];
   const grounded = new Map<string, Grounded>();
+  const glossaryReviews: { input: unknown; authorModelIds: readonly string[] }[] = [];
+  const rejectedTerms: string[] = [];
   const judge: Judge = {
     modelId,
     async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
+      if (request.schemaName === "reading_glossary_review") {
+        glossaryReviews.push({ input: request.input, authorModelIds: request.authorModelIds });
+        return { value: request.parse({ rejected: rejectedTerms.map((term) => ({ term, reason: "Says more than the excerpts." })) }), modelId };
+      }
       if (request.schemaName === "source_vetting") {
         vettings.push({ input: request.input, systemPrompt: request.systemPrompt });
         return { value: request.parse({ rejected: rejected.map((sourceId) => ({ sourceId, reason: "A shop's blog." })) }), modelId: modelId };
@@ -121,7 +137,7 @@ function scriptedJudge(verdict: unknown = PASS, modelId = "fixture/judge", ...la
       return { value: request.parse(verdicts[Math.min(calls.length, verdicts.length) - 1]), modelId: modelId };
     },
   };
-  return { judge, calls, vettings, groundings, rejected, grounded };
+  return { judge, calls, vettings, groundings, rejected, grounded, glossaryReviews, rejectedTerms };
 }
 
 test("A cited reading becomes numbered Citations in order of first use, with the source list behind them", async () => {
@@ -1142,4 +1158,212 @@ test("With no media library (READING_MEDIA=off) a slot's required images are not
   assert.equal((author.input as { slot: { requiredMedia?: unknown } }).slot.requiredMedia, undefined);
   assert.equal((author.schema as { properties: Record<string, unknown> }).properties.requiredMedia, undefined);
   assert.deepEqual(checked.media, []);
+});
+
+test("A passing Reading gets a word list: a word not in the prose and one the glossary Judge rejects are dropped (SEN-48)", async () => {
+  const { generator, glossaries, terms } = scriptedGenerator(authored());
+  terms.push(
+    { term: "world tree", definition: "The great tree that holds up the Norse worlds." },
+    { term: "roots", definition: "The parts of the tree that reach down." },
+    { term: "Bifrost", definition: "A rainbow bridge." },
+  );
+  const { judge, glossaryReviews, rejectedTerms } = scriptedJudge();
+  rejectedTerms.push("roots");
+  const checked = await createReadingGenerator({ generator, judge }).generate(INPUT);
+
+  assert.deepEqual(checked.lesson.body.glossary, [{ term: "world tree", definition: "The great tree that holds up the Norse worlds." }]);
+  assert.deepEqual(checked.glossary.rejected, [
+    { term: "Bifrost", reason: "Not in the Lesson's prose as written." },
+    { term: "roots", reason: "Says more than the excerpts." },
+  ]);
+  assert.equal(glossaries.length, 1);
+  // The writer and the Judge see the finished Lesson with its excerpts; the Judge only the words found in the prose.
+  const shown = glossaryReviews[0]!.input as { glossary: { term: string }[]; lesson: { sources: { n: number; excerpts: string[] }[] } };
+  assert.deepEqual(shown.glossary.map(({ term }) => term), ["world tree", "roots"]);
+  assert.deepEqual(shown.lesson.sources[1], { n: 2, excerpts: ["It has three roots."] });
+  assert.deepEqual(glossaryReviews[0]!.authorModelIds, ["fixture/author"]);
+});
+
+test("The Course keeps one meaning per word: a word a prior Lesson defined keeps that definition by code, the writer sees priorTerms, and the author sees what the Learner asked (decision 2026-11-03)", async () => {
+  const { generator, glossaries, terms, calls } = scriptedGenerator(authored());
+  terms.push({ term: "world tree", definition: "A tree the writer defined differently this time." }, { term: "roots", definition: "The parts of a tree under the ground." });
+  const { judge } = scriptedJudge();
+  const priorLessons = [{
+    title: "Before", lessonGoal: "Know the tree.", objectives: ["Name it"], headings: ["Tree"],
+    terms: [{ term: "World Tree", definition: "The great tree that holds up the Norse worlds." }],
+  }];
+  const checked = await createReadingGenerator({ generator, judge }).generate({ ...INPUT, priorLessons, learnerAsked: "what is the tree and why does it matter" });
+
+  assert.deepEqual(checked.lesson.body.glossary, [
+    { term: "world tree", definition: "The great tree that holds up the Norse worlds." },
+    { term: "roots", definition: "The parts of a tree under the ground." },
+  ], "The prior definition wins, under the term as this Lesson writes it; a new word keeps the writer's definition.");
+  const shown = glossaries[0]!.input as { priorTerms?: { term: string; definition: string }[] };
+  assert.deepEqual(shown.priorTerms, [{ term: "World Tree", definition: "The great tree that holds up the Norse worlds." }]);
+  assert.match(glossaries[0]!.systemPrompt, /one meaning per word/);
+  assert.equal((calls[0]!.input as { learnerAsked?: string }).learnerAsked, "what is the tree and why does it matter");
+  assert.match(calls[0]!.systemPrompt, /"learnerAsked" is present, it is what the Learner said they want/);
+  assert.match(calls[0]!.systemPrompt, /at most three words the Learner does not know yet/);
+});
+
+test("No word list when the writer finds no hard words, and a provider failure leaves the Lesson without one rather than failing it", async () => {
+  const { generator } = scriptedGenerator(authored());
+  const { judge, glossaryReviews } = scriptedJudge();
+  const plain = await createReadingGenerator({ generator, judge }).generate(INPUT);
+  assert.equal(plain.lesson.body.glossary, undefined);
+  assert.equal(glossaryReviews.length, 0, "Nothing to check, so the Judge is not asked.");
+
+  const scripted = scriptedGenerator(authored());
+  const failing: Generator = {
+    modelId: scripted.generator.modelId,
+    async generateStructured(request) {
+      if (request.schemaName === "reading_glossary") throw new ModelError("timeout");
+      return scripted.generator.generateStructured(request);
+    },
+  };
+  const checked = await createReadingGenerator({ generator: failing, judge: scriptedJudge().judge }).generate(INPUT);
+  assert.equal(checked.lesson.body.glossary, undefined);
+  assert.equal(checked.judge.pass, true);
+  assert.ok(checked.glossary.error);
+});
+
+test("The Starting Level reaches the author, repair, Judge, and word list, each prompt with the level rule; without one, nothing changes", async () => {
+  const startingLevel = {
+    extremity: "floor" as const, coverageNote: "", learningGoal: INPUT.learningGoal, selfReportedNew: true as const,
+    probedCapabilities: [], remainingGapStatement: "You're new to this.",
+  };
+  const { generator, calls, glossaries } = scriptedGenerator(authored(), "fixture/author", TOUCH);
+  const { judge, calls: judgeCalls } = scriptedJudge(UNSUPPORTED, "fixture/judge", PASS);
+  await createReadingGenerator({ generator, judge }).generate({ ...INPUT, startingLevel });
+
+  const expected = { extremity: "floor", inPlace: [], remainingGap: [], newToSubject: true };
+  for (const call of [...calls, ...judgeCalls, ...glossaries]) assert.deepEqual((call.input as { learnerLevel: unknown }).learnerLevel, expected);
+  for (const call of [...calls, ...judgeCalls]) assert.match(call.systemPrompt, /"learnerLevel" is where this Learner starts/);
+
+  const bare = scriptedGenerator(authored(), "fixture/author", TOUCH);
+  const bareJudge = scriptedJudge(UNSUPPORTED, "fixture/judge", PASS);
+  await createReadingGenerator({ generator: bare.generator, judge: bareJudge.judge }).generate(INPUT);
+  for (const call of [...bare.calls, ...bareJudge.calls]) {
+    assert.ok(!("learnerLevel" in (call.input as object)));
+    assert.doesNotMatch(call.systemPrompt, /"learnerLevel" is where this Learner starts/);
+  }
+});
+
+test("A question to the Learner fails the Code checks, and the repair rewrites it as a statement, in a heading too", async () => {
+  const asking = { sections: [
+    { heading: "Why a tree?", paragraphs: ["Yggdrasil is the world tree [src_aaaaaaaaaa]. Can you say what it holds?"] },
+    { heading: "Roots", paragraphs: ["It has three roots [src_bbbbbbbbbb]."] },
+  ] };
+  const fix = edits(["Why a tree?", "The tree at the centre"], ["Can you say what it holds?", "It holds the worlds together."]);
+  const { generator, calls } = scriptedGenerator(asking, "fixture/author", fix);
+  const { lesson, repairs } = await createReadingGenerator({ generator, judge: scriptedJudge().judge }).generate(INPUT);
+
+  assert.equal(repairs, 1);
+  const problems = (calls[1]!.input as { problems: string[] }).problems;
+  assert.match(problems[0]!, /A Reading asks the Learner no questions.*"Why a tree\?".*"Can you say what it holds\?"/);
+  assert.equal(lesson.body.sections[0]!.heading, "The tree at the centre");
+  assert.equal((lesson.body.sections[0]!.blocks[0]! as ProseBlock).text, "Yggdrasil is the world tree [1]. It holds the worlds together.");
+});
+
+test("A repair edit matches a heading only when no paragraph has the passage, and never empties it", () => {
+  const draft = [{ heading: "Roots", paragraphs: ["Roots again."] }, { heading: "Branches?", paragraphs: ["Up high."] }];
+  const { sections, applied, skipped } = applyRepairEdits(draft, [
+    { find: "Roots", replace: "Stems" },
+    { find: "Branches?", replace: "Branches" },
+    { find: "Branches", replace: "" },
+  ]);
+  assert.deepEqual(sections.map(({ heading }) => heading), ["Roots", "Branches"], "The paragraph that has the passage is edited, not the heading.");
+  assert.equal((sections[0]!.paragraphs[0]), "Stems again.");
+  assert.equal(applied, 2);
+  assert.deepEqual(skipped, ["Branches"]);
+});
+
+/** A second Reading of the World Tree's Chapter: the roots, with their own objective. */
+const SLOT2: BlueprintSlot = {
+  id: "slot2", method: "reading", title: "The Roots", lessonGoal: "Name the three roots and where they reach.",
+  objectives: ["Name its roots"], topicTags: ["yggdrasil", "roots"], assessesSlotIds: [], chapter: "The tree",
+};
+
+/**
+ * A Chapter of the given slots, drafted from INPUT's Course and packs.
+ * @param slots - Its Readings, in order
+ */
+function chapterInput(...slots: BlueprintSlot[]): ChapterInput {
+  const { slot: single, ...shared } = INPUT;
+  void single;
+  return { ...shared, chapter: "The tree", slots };
+}
+
+test("A Chapter is drafted in one author call, vetted once, grounded per slot, and each Lesson is finished on its own (decision 2026-11-03)", async () => {
+  const { generator, calls, glossaries } = scriptedGenerator({ lessons: { slot1: authored(), slot2: authored("The roots reach three places [src_bbbbbbbbbb].") } });
+  const { judge, calls: judgeCalls, vettings, groundings } = scriptedJudge();
+  const reading = createReadingGenerator({ generator, judge });
+  const draft = await reading.draftChapter!(chapterInput({ ...SLOT, chapter: "The tree" }, SLOT2));
+
+  assert.deepEqual(calls.map((call) => call.schemaName), ["cited_chapter"]);
+  assert.equal(vettings.length, 1, "The Chapter's Lessons share their packs, so vetting runs once.");
+  assert.equal(groundings.length, 2, "Each Lesson is grounded against its own objectives.");
+  const told = calls[0]!.input as { chapter: { title: string; slots: { slotId: string; objectives: string[] }[] }; sources: unknown[]; slot?: unknown };
+  assert.equal(told.chapter.title, "The tree");
+  assert.deepEqual(told.chapter.slots.map((slot) => slot.slotId), ["slot1", "slot2"]);
+  assert.deepEqual(told.chapter.slots[1]!.objectives, SLOT2.objectives);
+  assert.equal(told.slot, undefined);
+  assert.equal(told.sources.length, 2, "The Sources are sent once for the whole Chapter.");
+  assert.ok(calls[0]!.systemPrompt.includes(READING_STYLE));
+  assert.match(calls[0]!.systemPrompt, /under its slotId in "lessons"/);
+  assert.deepEqual(draft.lessons.map((lesson) => lesson.slotId), ["slot1", "slot2"]);
+  assert.equal(judgeCalls.length, 0, "Nothing is judged until a Lesson is finished.");
+
+  const first = await draft.finish("slot1", []);
+  assert.equal(first.lesson.slotId, "slot1");
+  assert.equal(first.lesson.title, SLOT.title);
+  assert.equal((first.lesson.body.sections[0]!.blocks[0]! as ProseBlock).text, "Yggdrasil is the world tree [1]. It has three roots [2][1].");
+  assert.deepEqual(first.authorModelIds, ["fixture/author"]);
+  assert.equal(first.repairs, 0);
+  assert.equal(first.lesson.lineage, null);
+  assert.equal(calls.length, 1, "A Chapter Lesson that passes costs no author call of its own.");
+  assert.equal(glossaries.length, 1, "The word list stays per Lesson.");
+
+  const prior = { title: first.lesson.title, lessonGoal: first.lesson.lessonGoal, objectives: first.lesson.objectives, headings: ["The tree", "Roots"] };
+  const second = await draft.finish("slot2", [prior]);
+  assert.equal(second.lesson.slotId, "slot2");
+  assert.equal(second.lesson.title, SLOT2.title);
+  assert.equal((second.lesson.body.sections[0]!.blocks[0]! as ProseBlock).text, "The roots reach three places [1].");
+  assert.deepEqual((judgeCalls[1]!.input as { priorLessons: unknown[] }).priorLessons, [prior], "A later Lesson of the Chapter is judged against the earlier one.");
+  assert.equal(glossaries.length, 2);
+  await assert.rejects(draft.finish("slot2", [prior]), /finished already/);
+  await assert.rejects(reading.draftChapter!(chapterInput(SLOT)), /at least two Lessons/);
+});
+
+test("A Chapter Lesson the Judge fails is repaired alone, from its own share of the draft, with its own slot in the brief", async () => {
+  const cut = edits(["It has three roots [src_bbbbbbbbbb, src_aaaaaaaaaa].", ""]);
+  const { generator, calls } = scriptedGenerator({ lessons: { slot1: authored(), slot2: authored() } }, "fixture/author", cut);
+  const { judge, calls: judgeCalls } = scriptedJudge(PASS, "fixture/judge", UNSUPPORTED, PASS);
+  const draft = await createReadingGenerator({ generator, judge }).draftChapter!(chapterInput({ ...SLOT, chapter: "The tree" }, SLOT2));
+  const first = await draft.finish("slot1", []);
+  assert.equal(first.repairs, 0);
+  const second = await draft.finish("slot2", []);
+  assert.equal(second.repairs, 1);
+  assert.deepEqual(calls.map((call) => call.schemaName), ["cited_chapter", "cited_reading_repair"]);
+  const revision = calls[1]!.input as { previousDraft: unknown; slot: { title: string }; chapter?: unknown };
+  assert.deepEqual(revision.previousDraft, authored().sections);
+  assert.equal(revision.slot.title, SLOT2.title, "The repair is briefed on its own slot, not the Chapter.");
+  assert.equal(revision.chapter, undefined);
+  assert.equal((second.lesson.body.sections[0]!.blocks[0]! as ProseBlock).text, "Yggdrasil is the world tree [1].");
+  assert.equal(judgeCalls.length, 3);
+});
+
+test("When a Chapter Lesson's repairs run out, the fallback author rewrites that Lesson alone; the other Lesson keeps its draft", async () => {
+  const { generator, calls } = scriptedGenerator({ lessons: { slot1: authored(), slot2: authored() } }, "fixture/author", TOUCH);
+  const { generator: fallbackGenerator, calls: fallbackCalls } = scriptedGenerator(authored("Written afresh [src_aaaaaaaaaa]."), "fixture/fallback");
+  // slot1 passes; slot2's draft and both repairs fail, which spends its budget; the fallback's fresh draft passes.
+  const { judge } = scriptedJudge(PASS, "fixture/judge", UNSUPPORTED, UNSUPPORTED, UNSUPPORTED, PASS);
+  const draft = await createReadingGenerator({ generator, fallbackGenerator, judge }).draftChapter!(chapterInput({ ...SLOT, chapter: "The tree" }, SLOT2));
+  const first = await draft.finish("slot1", []);
+  assert.deepEqual(first.authorModelIds, ["fixture/author"]);
+  const second = await draft.finish("slot2", []);
+  assert.deepEqual(calls.map((call) => call.schemaName), ["cited_chapter", "cited_reading_repair", "cited_reading_repair"]);
+  assert.deepEqual(fallbackCalls.map((call) => call.schemaName), ["cited_reading"], "The fallback writes one Lesson, from scratch.");
+  assert.deepEqual(second.authorModelIds, ["fixture/fallback"]);
+  assert.equal((second.lesson.body.sections[0]!.blocks[0]! as ProseBlock).text, "Written afresh [1].");
 });

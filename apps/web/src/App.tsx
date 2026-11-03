@@ -11,6 +11,7 @@ import { SignInPage } from "@/pages/auth/sign-in.tsx";
 import { SignUpPage } from "@/pages/auth/sign-up.tsx";
 import { ComponentsPage } from "@/pages/dev-components.tsx";
 import { CourseCompletePage } from "@/pages/course-complete.tsx";
+import { CourseWordsPage } from "@/pages/course-words.tsx";
 import { HomePage } from "@/pages/home.tsx";
 import { CourseRequestPage } from "@/pages/course-request.tsx";
 import { NewCourseRequestPage } from "@/pages/new-course-request.tsx";
@@ -58,6 +59,7 @@ export function App() {
             </Route>
             <Route element={<AppShell variant="study" />}>
               <Route path="/study/:courseId/lessons/:lessonId" element={<StudyPage />} />
+              <Route path="/study/:courseId/words" element={<CourseWordsPage />} />
               <Route path="/study/:courseId" element={<StudyIndexPage />} />
             </Route>
           </Route>

@@ -10,10 +10,15 @@ export const QUIZ_OPTION_COUNT = 4;
 /** A Quiz completes when best `correct / n` reaches this ratio. */
 export const QUIZ_PASS_RATIO = 0.7;
 
-/** One answer choice on a Quiz item. */
+/**
+ * One answer choice on a Quiz item. `why` is one sentence the Learner reads under the option once the item has
+ * feedback (decision 2026-11-03): for the key, the Lesson statement that makes it right; for a distractor, the Lesson
+ * statement it contradicts. Absent on a Quiz written before that decision; never sent before feedback.
+ */
 export type QuizOption = {
   id: string;
   text: string;
+  why?: string;
 };
 
 /**
@@ -82,9 +87,9 @@ function isNonEmptyString(value: unknown): value is string {
  */
 function parseOption(raw: unknown): QuizOption | null {
   if (!raw || typeof raw !== "object") return null;
-  const row = raw as { id?: unknown; text?: unknown };
+  const row = raw as { id?: unknown; text?: unknown; why?: unknown };
   if (!isNonEmptyString(row.id) || !isNonEmptyString(row.text)) return null;
-  return { id: row.id, text: row.text.trim() };
+  return { id: row.id, text: row.text.trim(), ...(isNonEmptyString(row.why) ? { why: row.why.trim() } : {}) };
 }
 
 /**
@@ -146,7 +151,8 @@ export function parseQuizBody(raw: unknown): QuizBody | null {
 }
 
 /**
- * Strips the answer key and explanations so the body is safe to send to the browser.
+ * Strips the answer key, the explanations, and each option's `why` (which would give the key away) so the body is safe
+ * to send to the browser.
  * @param body - Parsed Quiz body
  */
 export function publicQuizBody(body: QuizBody): PublicQuizBody {
@@ -154,9 +160,18 @@ export function publicQuizBody(body: QuizBody): PublicQuizBody {
     items: body.items.map((item) => ({
       id: item.id,
       prompt: item.prompt,
-      options: item.options.map((option) => ({ ...option })),
+      options: item.options.map(({ id, text }) => ({ id, text })),
     })),
   };
+}
+
+/**
+ * Each option's `why`, keyed by option id, for an item that has feedback; undefined on a Quiz written without them.
+ * @param item - Quiz item with its key
+ */
+export function optionNotes(item: QuizItem): Record<string, string> | undefined {
+  const notes = Object.fromEntries(item.options.flatMap((option) => option.why ? [[option.id, option.why]] : []));
+  return Object.keys(notes).length ? notes : undefined;
 }
 
 /**

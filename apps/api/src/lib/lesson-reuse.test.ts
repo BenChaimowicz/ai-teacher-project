@@ -81,7 +81,9 @@ test("A reuse seed carries the body back in Source ID markers, and verbatim only
   assert.deepEqual(seed.sections, [{ heading: "The tree", paragraphs: ["It is a tree [src_aaaaaaaaaa]. It has roots [src_bbbbbbbbbb][src_aaaaaaaaaa]."] }]);
   assert.equal(seed.originLessonId, "lesson1");
   assert.equal(seed.verbatimAllowed, true);
-  assert.equal(reuseSeed(candidate(), { ...profile, contentScope: "compact" }).verbatimAllowed, false);
+  assert.equal(reuseSeed(candidate(), { ...profile, explanationOrder: "example_first" }).verbatimAllowed, false);
+  // contentScope sizes the Course, not the Lesson (decision 2026-11-03), so it does not block a verbatim copy.
+  assert.equal(reuseSeed(candidate(), { ...profile, contentScope: "compact" }).verbatimAllowed, true);
 });
 
 test("A reused Lesson from before SEN-57 names no author, so the primary Generator is its author", () => {

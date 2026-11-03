@@ -27,7 +27,7 @@ const INPUT: BlueprintInput = {
   scope: null,
   startingLevel,
   confirmation: "looks_right",
-  profile: { instructionLanguage: "en", quizCadence: "every_reading", explanationOrder: "topic_appropriate" },
+  profile: { instructionLanguage: "en", quizCadence: "every_reading", explanationOrder: "topic_appropriate", contentScope: "standard" },
 };
 
 /** A clean authored Blueprint for the every-reading cadence: Reading, Quiz, Reading, Quiz. */
@@ -37,20 +37,20 @@ function authored(overrides: { quiz?: Record<string, unknown> } = {}) {
     moduleTitle: "Counting in six",
     lessons: [
       {
-        method: "reading", title: "Feeling 6/8", lessonGoal: "Count a 6/8 bar in two groups of three.",
+        method: "reading", chapter: "Counting 6/8", title: "Feeling 6/8", lessonGoal: "Count a 6/8 bar in two groups of three.",
         objectives: ["Explain compound meter", "Count 6/8 aloud"], topicTags: ["Compound-Meter", "6-8-time"], assessesLessonNumbers: [],
       },
       {
-        method: "quiz", title: "Check: 6/8", lessonGoal: "Show you can recognise and count 6/8.",
+        method: "quiz", chapter: "", title: "Check: 6/8", lessonGoal: "Show you can recognise and count 6/8.",
         objectives: ["Explain compound meter"], topicTags: ["compound-meter", "counting"], assessesLessonNumbers: [1],
         ...overrides.quiz,
       },
       {
-        method: "reading", title: "The Iris groove", lessonGoal: "Play the Iris verse groove at a slow tempo.",
+        method: "reading", chapter: "The groove", title: "The Iris groove", lessonGoal: "Play the Iris verse groove at a slow tempo.",
         objectives: ["Play the verse groove"], topicTags: ["groove", "6-8-time"], assessesLessonNumbers: [],
       },
       {
-        method: "quiz", title: "Check: the groove", lessonGoal: "Name the parts of the Iris verse groove.",
+        method: "quiz", chapter: "", title: "Check: the groove", lessonGoal: "Name the parts of the Iris verse groove.",
         objectives: ["Play the verse groove"], topicTags: ["groove", "counting"], assessesLessonNumbers: [3],
       },
     ],
@@ -96,10 +96,11 @@ test("A Blueprint passing Code checks and the Judge comes back with each Quiz as
   assert.equal(judgeCalls.length, 1);
   assert.deepEqual(judgeCalls[0]!.authorModelIds, ["fixture/author"]);
 
-  const told = calls[0]!.input as { inPlace: string[]; remainingGap: string[]; quizCadence: string };
+  const told = calls[0]!.input as { inPlace: string[]; remainingGap: string[]; quizCadence: string; contentScope: string };
   assert.deepEqual(told.inPlace, ["Capability 2", "Capability 3"], "Too easy moved Capability 1 into the gap.");
   assert.deepEqual(told.remainingGap, ["Capability 1", "Capability 4", "Capability 5", "Capability 6", "Capability 7", "Capability 8"]);
   assert.equal(told.quizCadence, "every_reading");
+  assert.equal(told.contentScope, "standard", "contentScope sizes the Course, so the Blueprint author sees it (decision 2026-11-03).");
 });
 
 test("A Code check failure stops before the Judge is called", async () => {
@@ -305,7 +306,8 @@ test("Without a scope, no author or Judge input carries one and no author prompt
   const verdicts = queuedJudge(COVERAGE_FAIL, PASS);
   await createBlueprintBuilder({ generator, judge: verdicts.judge }).build(INPUT);
   for (const input of [...calls.map((call) => call.input), ...verdicts.inputs]) assert.ok(!("scope" in input), "Left out, not sent as null.");
-  for (const call of calls) assert.doesNotMatch(call.systemPrompt, /scope/i);
+  // The word alone: "contentScope" (the profile field that sizes the Course) is always in the prompt.
+  for (const call of calls) assert.doesNotMatch(call.systemPrompt, /\bscope\b/i);
   assert.match(verdicts.prompts[0]!, /out_of_scope: only when "scope" is present.*Never fail it when there is no scope\./);
 });
 

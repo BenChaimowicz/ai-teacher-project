@@ -212,12 +212,20 @@ _Avoid_: Diagnosis, assistive technology name, accessibility baseline (those are
 How a reading Lesson orders an example and its explanation: example first, principle first, or topic-appropriate. Topic-appropriate is the Evidence default; the Generator picks per topic. Not scaffolding dosage, not Starting Level.
 _Avoid_: Worked-example amount, difficulty, learning style
 
+**Word list**:
+The few words (asked for up to six, stored up to twelve) of one reading Lesson a Learner at its Starting Level may not know, each with a one-sentence plain-words definition of what the thing is, in the word's ordinary meaning, not what it does in that Lesson. The Course keeps one meaning per word: a word an earlier Lesson defined keeps that definition in every later Lesson, by code (decision 2026-11-03). Study highlights each word in the text and opens its definition as a small speech bubble from Jongi on hover, focus, or tap; nothing sits beside the text. Written and checked after the prose passes; a definition that contradicts the Lesson or its excerpts is dropped, never repaired. The Course's **Words page** (`/study/:courseId/words`) lists every word its Readings defined, grouped by the Lesson that introduced it; words of a locked Lesson wait. Not Sources. In code it is the body's `glossary`.
+_Avoid_: dictionary, vocabulary quiz, sidebar
+
 **Instructional language**:
 The language of generated reading Lessons, Quiz questions, and Quiz feedback. It is a declared Teaching Profile need; this prototype supports English only.
 _Avoid_: App language, locale, UI language, translation (when meaning this field)
 
 **Module**:
 A named grouping of lessons inside a Course.
+
+**Chapter**:
+A run of one to four consecutive reading Lessons on one topic. Research runs once per Chapter and one author call drafts all its Lessons, so a Course of short Lessons costs about what a Course of long ones did; the Judge, repairs, images, and word list stay per Lesson. Quizzes fall between Chapters, and the Quiz cadence counts Chapters. The Learner does not see Chapters yet. In code it is the Reading slot's `chapter`.
+_Avoid_: topic (that means a Topic tag), unit, section, module
 
 **Lesson**:
 A single teaching unit that uses one teaching method. Each Lesson belongs to one Course; reuse copies it from any Learner's Course into another rather than sharing the original.
@@ -247,11 +255,11 @@ The recorded origin of a copied Lesson: which Lesson it came from, and whether t
 _Avoid_: parent, source (when meaning the origin Lesson), fork
 
 **Quiz**:
-A Lesson that uses the quiz teaching method, placed after the instructional Lessons it assesses. It is completed for Progress when the Learner's best score is at least 70% of questions correct, equal weight per question; retakes are unlimited on the same items. Each item stores its explanation at all three Feedback detail levels, so Study shows the Learner's current one. A Quiz is always generated for its Course; it is not copied from another Course.
+A Lesson that uses the quiz teaching method, placed after the instructional Lessons it assesses. It is completed for Progress when the Learner's best score is at least 70% of questions correct, equal weight per question; retakes are unlimited on the same items. Each item stores its explanation at all three Feedback detail levels, so Study shows the Learner's current one, and each option carries a one-sentence `why` (the Lesson statement that makes it right, or the one it contradicts) that Study shows under the option once the item has feedback (decision 2026-11-03). A Quiz is always generated for its Course; it is not copied from another Course.
 _Avoid_: checkpoint (as a separate object), test, exam, assessment (when meaning this Lesson), Starting Level diagnostic
 
 **Source**:
-A published web page the generator used as evidence for a Lesson.
+A published web page the generator used as evidence for a Lesson. Study lists a Reading's Sources at its end and opens the list with the one the Lesson cites most, under a "start here" ribbon, as the one thing to read after the Lesson (decision 2026-11-03).
 _Avoid_: Hit, result, URL (when meaning the page), reference (when meaning the page)
 
 **Source pack**:
@@ -307,8 +315,8 @@ A chunk inside a reading section: prose and, when needed, Demonstrative media. Q
 _Avoid_: reading section (when meaning this chunk), paragraph (when meaning this unit), page
 
 **Reading section**:
-A headed stretch of a reading Lesson, containing Content blocks. Section pacing pauses between these, not between Lessons.
-_Avoid_: Module, Lesson, Content block (when meaning the whole stretch), page
+A headed stretch of a reading Lesson, containing Content blocks; Study shows each one as a paper note. A Reading is about one screen, a little scrolling with its images is fine: two to four sections and about 150–250 words in all, capped in code, so an idea that needs more gets another Lesson. Section pacing pauses between these, not between Lessons.
+_Avoid_: Module, Lesson, Content block (when meaning the whole stretch), page, card
 
 **Demonstrative media**:
 A product-hosted image, animation, or audio clip inside a reading Lesson that illustrates a technique. Prefer the best existing original, licensed, or Commons file; if none is good enough, generate a simple SVG diagram or pictorial still. Photomicrographs and named-work copies are never generated. Not from Search, not from an off-app video as the teaching clip, and not a separate teaching method.

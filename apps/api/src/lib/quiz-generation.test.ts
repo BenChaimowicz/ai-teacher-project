@@ -37,8 +37,8 @@ function item(n: number, objective = n % 2 ? "Describe Yggdrasil" : "Name its ro
     objective,
     prompt: `Question ${n} about Yggdrasil?`,
     options: [
-      { id: "opt1", text: `Right ${n}`, correct: true },
-      ...["a", "b", "c"].map((letter, index) => ({ id: `opt${index + 2}`, text: `Wrong ${n}${letter}`, correct: false })),
+      { id: "opt1", text: `Right ${n}`, correct: true, why: `The Lesson states right ${n}.` },
+      ...["a", "b", "c"].map((letter, index) => ({ id: `opt${index + 2}`, text: `Wrong ${n}${letter}`, correct: false, why: `The Lesson rules out ${n}${letter}.` })),
     ],
     explanations: { brief: `Brief ${n}.`, standard: `Standard ${n}.`, detailed: `Detailed ${n}.` },
   };
@@ -133,10 +133,10 @@ test("The author and Judge read the assessed Lesson without Citation markers; th
   assert.deepEqual((calls[0]!.schema as { properties: { items: { items: { properties: { objective: { enum: string[] } } } } } })
     .properties.items.items.properties.objective.enum, QUIZ_SLOT.objectives);
 
-  const shown = judgeCalls[0]!.input as { lessons: unknown; items: { n: number; key: string; options: Record<string, string> }[] };
+  const shown = judgeCalls[0]!.input as { lessons: unknown; items: { n: number; key: string; options: Record<string, { text: string; why: string }> }[] };
   assert.deepEqual(shown.lessons, told.lessons);
   assert.equal(shown.items.length, 6);
-  assert.equal(shown.items[0]!.options[shown.items[0]!.key], "Right 1");
+  assert.deepEqual(shown.items[0]!.options[shown.items[0]!.key], { text: "Right 1", why: "The Lesson states right 1." }, "The Judge reads each option's why with its text.");
 });
 
 test("The author writes to the style guide, and the Judge accepts an invented situation the Lessons answer", async () => {

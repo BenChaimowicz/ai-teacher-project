@@ -325,8 +325,8 @@ test("A generated Quiz plays through the Quiz plugin: attempts, best score, and 
         items: [1, 2, 3, 4, 5, 6].map((n) => ({
           objective: "Name the Nine Worlds", prompt: `Which world is number ${n}?`,
           options: [
-            { id: "opt1", text: `World ${n}`, correct: true },
-            ...["a", "b", "c"].map((letter, index) => ({ id: `opt${index + 2}`, text: `Not ${n}${letter}`, correct: false })),
+            { id: "opt1", text: `World ${n}`, correct: true, why: `The Lesson names world ${n}.` },
+            ...["a", "b", "c"].map((letter, index) => ({ id: `opt${index + 2}`, text: `Not ${n}${letter}`, correct: false, why: `The Lesson does not name ${n}${letter}.` })),
           ],
           explanations: { brief: `Brief ${n}.`, standard: `Standard ${n}.`, detailed: `Detailed ${n}.` },
         })),
@@ -444,5 +444,46 @@ test("Another Learner gets 404 for the Course, its Progress, its summary, and it
     assert.equal((await t.quiz()).status, 200);
   } finally {
     await t.app.close();
+  }
+});
+
+test("Opening a glossary word answers 200 only for a word in that Reading's glossary, and 400 without a term (SEN-48)", async () => {
+  const base = memoryStore(SEEDED_QUIZ_BODY);
+  const store: StudyStore = {
+    ...base,
+    async listLessons(courseId) {
+      return (await base.listLessons(courseId)).map((lesson) => lesson.id === SEEDED_READING_LESSON_ID
+        ? { ...lesson, body: { ...(lesson.body as object), glossary: [{ term: "Yggdrasil", definition: "The tree at the centre of the Norse worlds." }] } }
+        : lesson);
+    },
+  };
+  const app = Fastify();
+  app.decorate("db", {} as Database);
+  app.addHook("onRequest", async (request) => {
+    request.currentLearner = learnerWith();
+  });
+  await app.register(studyRoutes, { store });
+  const open = (lessonId: string, payload: object) =>
+    app.inject({ method: "POST", url: `/api/courses/${SEEDED_COURSE_ID}/lessons/${lessonId}/glossary-opens`, payload });
+
+  assert.equal((await open(SEEDED_READING_LESSON_ID, { term: "yggdrasil" })).statusCode, 200, "Case does not matter.");
+  assert.equal((await open(SEEDED_READING_LESSON_ID, { term: "Bifrost" })).statusCode, 404);
+  assert.equal((await open(SEEDED_QUIZ_LESSON_ID, { term: "Yggdrasil" })).statusCode, 404, "Another Lesson's glossary does not count.");
+  assert.equal((await open(SEEDED_READING_LESSON_ID, {})).statusCode, 400);
+  assert.equal((await open(randomUUID(), { term: "Yggdrasil" })).statusCode, 404);
+});
+
+test("Opening the Course's Words page answers 200 for the Learner's Course and 404 for another (decision 2026-11-03)", async () => {
+  const app = Fastify();
+  app.decorate("db", {} as Database);
+  app.addHook("onRequest", async (request) => {
+    request.currentLearner = learnerWith();
+  });
+  await app.register(studyRoutes, { store: memoryStore(SEEDED_QUIZ_BODY) });
+  try {
+    assert.equal((await app.inject({ method: "POST", url: `/api/courses/${SEEDED_COURSE_ID}/words-opens` })).statusCode, 200);
+    assert.equal((await app.inject({ method: "POST", url: `/api/courses/${randomUUID()}/words-opens` })).statusCode, 404);
+  } finally {
+    await app.close();
   }
 });
