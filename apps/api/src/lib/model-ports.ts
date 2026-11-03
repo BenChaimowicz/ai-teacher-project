@@ -36,8 +36,8 @@ export type ModelPortsOptions = {
   config?: ModelConfig;
   transport?: StructuredTransport;
   log?: ModelPortsLog;
-  /** Which models write: the Generator pair, or the Lesson pair for Readings and Quizzes (ADR 0018). */
-  authors?: "generator" | "lesson";
+  /** Which models write: the Generator pair, the Lesson pair for Readings and Quizzes (ADR 0018), or the illustrator pair (SEN-121). */
+  authors?: "generator" | "lesson" | "illustrator";
   /** Waits before a rate-limited call is retried; tests pass a fake. */
   sleep?: (ms: number) => Promise<void>;
 };
@@ -120,8 +120,8 @@ function attempts(primary: Attempt, fallback: Attempt | null, excluded: readonly
 /**
  * Creates the domain ports backed by one transport, without making provider calls. `fallbackGenerator` is the
  * configured second author, for steps the spec repeats with another model after a failed check. With
- * `authors: "lesson"`, the two authors are the Lesson pair (ADR 0018). `triage` answers the subject check and the
- * research-tier rating (SEN-124).
+ * `authors: "lesson"`, the two authors are the Lesson pair (ADR 0018); with `authors: "illustrator"`, the illustrator
+ * pair (SEN-121). `triage` answers the subject check and the research-tier rating (SEN-124).
  */
 export function createModelPorts(options: ModelPortsOptions = {}): { generator: Generator; fallbackGenerator: Generator; judge: Judge; triage: Triage } {
   const config = options.config ?? loadModelConfig();
@@ -130,6 +130,8 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
   const attempt = attemptWith(options.sleep ?? defaultSleep);
   const [primaryModel, fallbackModel] = options.authors === "lesson"
     ? [config.lessonGeneratorModel, config.lessonGeneratorFallbackModel]
+    : options.authors === "illustrator"
+    ? [config.illustratorModel, config.illustratorFallbackModel]
     : [config.generatorModel, config.generatorFallbackModel];
   // No host is pinned since ADR 0028: every author gets OpenRouter's default routing.
   return {

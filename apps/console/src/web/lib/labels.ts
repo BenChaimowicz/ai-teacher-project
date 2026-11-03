@@ -57,6 +57,7 @@ export const KIND_LABEL: Record<PipelineEventKind, string> = {
   course_judge: "Final review",
   publish: "Publishing",
   media_search: "Commons image search",
+  illustration: "Illustration",
   live_check: "Live check",
 };
 

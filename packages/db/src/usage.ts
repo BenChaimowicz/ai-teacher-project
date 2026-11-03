@@ -82,6 +82,7 @@ export const PIPELINE_EVENT_KINDS = [
   "course_judge",
   "publish",
   "media_search",
+  "illustration",
   "live_check",
 ] as const;
 export type PipelineEventKind = (typeof PIPELINE_EVENT_KINDS)[number];
