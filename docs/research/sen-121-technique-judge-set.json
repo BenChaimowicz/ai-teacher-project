@@ -1,5 +1,6 @@
 {
-  "about": "The technique-Judge test set (SEN-121): drum grip images judged against a Visual brief by pnpm check:technique-judge:live. Correct pairs must pass; deliberately wrong pairs, an image judged against a brief it does not show, must fail. Catalog images are the seed catalog's; the Commons file is the SEN-129 French grip find (CC BY 2.5, Uryah), fetched live. No fist-grip image is in the set yet: none is in the catalog, and one should be added from Commons when found.",
+  "about": "The technique-Judge test set (SEN-121): drum grip images judged against a Visual brief by pnpm check:technique-judge:live. Correct pairs must pass; deliberately wrong pairs, an image judged against a brief it does not show, must fail. Catalog images are the seed catalog's; the Commons file is the SEN-129 French grip find (CC BY 2.5, Uryah), fetched live. No fist-grip image is in the set yet: none is in the catalog, and one should be added from Commons when found. Rewritten 2026-11-04 after the first eval (sen-121-technique-judge-eval.json), where both Luna models refused 3-4 of 5 correct images because the briefs asked for the thumb-index contact point, which the hand itself covers in a real photograph: every brief now lists only what a normal photograph of the position visibly shows from a usual angle (which way the hand faces, where it sits along the stick, which way the thumb points, how the fingers sit), never a label, a contact point, or anything only a diagram could show, and a wrong case fails on an item that is visibly false in its image.",
+  "checkedByEye": "2026-11-04: the four catalog photographs (matched-grip-both-hands, german-grip, traditional-grip-left-hand, traditional-and-matched-grip) and the Thor plate were looked at, and the two catalog SVGs were rasterised and looked at. Every item of a correct case is visible in its photograph as written, and every wrong case names in 'failsOn' the item that is visibly false in its image. The Commons French grip file was not looked at: there is no local copy, and fetching it is a live Commons call. Its two cases rest on the file's title and the first eval's reasons (the thumb reads on top; the palm's orientation was 'not clearly visible'), so a fail on 'French grip from Commons, correct' may still be the file, not the Judge.",
   "cases": [
     {
       "name": "matched grip in both hands, correct",
@@ -7,16 +8,16 @@
       "image": { "catalog": "drums/matched-grip-both-hands.jpg" },
       "brief": {
         "kind": "technique",
-        "subject": "Both hands holding drumsticks in matched grip, seen from above",
+        "subject": "Both hands holding drumsticks in matched grip, seen from the front and slightly above",
         "mustShow": [
-          "both hands hold their stick the same way, palms down",
-          "each stick is pinched between the pad of the thumb and the first joint of the index finger",
-          "the remaining fingers curl loosely around the stick"
+          "both hands hold their stick the same way, the backs of the hands up and the palms down",
+          "each thumb lies along its stick, pointing down the stick toward the tip",
+          "each index finger curls around its stick, with the other fingers closed around the stick beneath it"
         ],
-        "caption": "Matched grip in both hands: each stick is pinched between the thumb and the first joint of the index finger, with the other fingers curled loosely around it.",
-        "alt": "Close-up of two hands side by side holding drumsticks from above, thumbs along the sticks and index fingers hooked under them.",
+        "caption": "Matched grip in both hands: backs of the hands up, each thumb along its stick, the fingers closed around the stick.",
+        "alt": "Two hands side by side seen from the front, each holding a drumstick with the back of the hand up, the thumb along the stick and the fingers curled around it.",
         "mediaCategory": "drum-grip",
-        "topicTags": ["matched-grip", "fulcrum", "both-hands"]
+        "topicTags": ["matched-grip", "both-hands"]
       }
     },
     {
@@ -27,14 +28,14 @@
         "kind": "technique",
         "subject": "One hand holding a drumstick in German matched grip over a snare drum, seen from above",
         "mustShow": [
-          "the palm faces down, knuckles up",
-          "the stick is held between the thumb and the index finger",
-          "the other fingers wrap under the stick"
+          "the back of the hand faces up, palm down, over the drum head",
+          "the fingers close over the stick from above, knuckles up",
+          "the hand holds the stick near its back end, so the stick runs out from the fist and the tip reaches far across the drum head"
         ],
-        "caption": "German matched grip on a snare: palm down, the stick between thumb and index finger, the other fingers wrapped underneath.",
-        "alt": "Top-down photograph of one hand holding a drumstick over a snare drum head, palm down and knuckles up, the stick angled across the head.",
+        "caption": "German matched grip over a snare drum: the back of the hand up, the fingers closed over the stick from above, the stick angled across the head.",
+        "alt": "Top-down photograph of one hand over a snare drum head, the back of the hand up, holding a drumstick near its back end so the stick runs diagonally across the head.",
         "mediaCategory": "drum-grip",
-        "topicTags": ["matched-grip", "german-grip", "fulcrum"]
+        "topicTags": ["matched-grip", "german-grip"]
       }
     },
     {
@@ -43,14 +44,14 @@
       "image": { "catalog": "drums/traditional-grip-left-hand.jpg" },
       "brief": {
         "kind": "technique",
-        "subject": "A left hand holding a drumstick in traditional grip",
+        "subject": "A left hand holding a drumstick in traditional grip, on a yellow towel",
         "mustShow": [
-          "the stick rests in the web between the thumb and the index finger",
-          "the hand is turned palm up",
-          "the stick passes over the ring finger"
+          "the hand is turned palm up, the palm facing the camera",
+          "the stick rests in the web between the thumb and the index finger and points up and to the right",
+          "the index finger curls over the top of the stick while the ring and little fingers lie beneath it"
         ],
-        "caption": "Traditional grip, left hand: the stick rests in the web between thumb and index finger, passes over the ring finger, and the hand turns palm up.",
-        "alt": "One hand holding a drumstick underhand; the stick sits in the thumb's web and crosses the fingers, tip pointing up and to the right.",
+        "caption": "Traditional grip, left hand: the palm turns up, the stick rests in the web of the thumb, the index finger curls over it and the last fingers lie beneath.",
+        "alt": "One hand palm up on a yellow towel holding a drumstick underhand; the stick sits in the thumb's web and points up and to the right.",
         "mediaCategory": "drum-grip",
         "topicTags": ["traditional-grip", "left-hand"]
       }
@@ -61,14 +62,14 @@
       "image": { "catalog": "drums/traditional-and-matched-grip.jpg" },
       "brief": {
         "kind": "technique",
-        "subject": "Traditional grip in the left hand beside matched grip in the right hand",
+        "subject": "Traditional grip in the left hand beside matched grip in the right hand, on a yellow towel",
         "mustShow": [
-          "two hands, each holding one stick",
-          "the left hand is palm up with the stick cradled between thumb and fingers: traditional grip",
-          "the right hand is palm down over its stick: matched grip"
+          "two hands, each holding one stick, both sticks pointing up",
+          "the left hand is turned palm up with the stick lying across the open palm: traditional grip",
+          "the right hand is turned palm down with the fingers closed over the stick from above: matched grip"
         ],
-        "caption": "Traditional grip in the left hand (the stick rests in the web of the thumb and the palm turns up) beside matched grip in the right hand (palm down).",
-        "alt": "Two hands on a yellow towel, each holding a drumstick: the left hand palm up with the stick cradled between thumb and fingers, the right hand palm down over its stick.",
+        "caption": "Traditional grip in the left hand (palm up, the stick across the open palm) beside matched grip in the right hand (palm down, the fingers closed over the stick).",
+        "alt": "Two hands on a yellow towel, each holding a drumstick that points up: the left hand palm up with the stick across the open palm, the right hand palm down with the fingers closed over its stick.",
         "mediaCategory": "drum-grip",
         "topicTags": ["traditional-grip", "matched-grip", "comparison"]
       }
@@ -82,12 +83,12 @@
         "kind": "technique",
         "subject": "A right hand holding a drumstick in French grip, the thumb on top",
         "mustShow": [
-          "the thumb sits on top of the stick",
-          "the palm faces inward, sideways, not down",
-          "the stick is held between the thumb and the index finger"
+          "the thumb lies on top of the stick, its nail facing up",
+          "the hand is turned on its side, so the back of the hand faces sideways rather than up",
+          "the fingers curl beneath the stick"
         ],
-        "caption": "French grip: the thumb sits on top of the stick and the palm faces inward, so the fingers do the work.",
-        "alt": "A right hand holding a drumstick with the thumb on top and the palm turned sideways.",
+        "caption": "French grip: the thumb lies on top of the stick with the hand turned on its side, and the fingers curl beneath the stick.",
+        "alt": "A right hand holding a drumstick with the thumb on top of the stick, the hand turned on its side and the fingers curled beneath.",
         "mediaCategory": "drum-grip",
         "topicTags": ["french-grip", "right-hand"]
       }
@@ -95,35 +96,37 @@
     {
       "name": "traditional grip judged as matched grip",
       "expected": "fail",
+      "failsOn": "The photograph shows the palm facing the camera and the stick lying across the open hand; the brief says the back of the hand is up with the fingers closed over the stick.",
       "image": { "catalog": "drums/traditional-grip-left-hand.jpg" },
       "brief": {
         "kind": "technique",
         "subject": "A hand holding a drumstick in matched grip, seen from above",
         "mustShow": [
-          "the palm faces down, knuckles up",
-          "the stick is pinched between the pad of the thumb and the first joint of the index finger",
-          "the other fingers wrap under the stick"
+          "the back of the hand faces up, palm down, so no palm is visible",
+          "the fingers close over the stick from above, knuckles up",
+          "the thumb lies along the top of the stick"
         ],
-        "caption": "Matched grip: palm down, the stick pinched between thumb and index finger.",
-        "alt": "A hand seen from above holding a drumstick palm down, thumb along the stick.",
+        "caption": "Matched grip: the back of the hand up, the fingers closed over the stick from above, the thumb along the top of the stick.",
+        "alt": "A hand seen from above holding a drumstick palm down, knuckles up, the thumb along the stick.",
         "mediaCategory": "drum-grip",
-        "topicTags": ["matched-grip", "fulcrum"]
+        "topicTags": ["matched-grip"]
       }
     },
     {
       "name": "traditional beside matched judged as both matched",
       "expected": "fail",
+      "failsOn": "The left hand is palm up with the stick across the open palm; the brief says both hands are palm down with the fingers closed over the sticks and no palm visible.",
       "image": { "catalog": "drums/traditional-and-matched-grip.jpg" },
       "brief": {
         "kind": "technique",
-        "subject": "Both hands holding drumsticks in matched grip",
+        "subject": "Both hands holding drumsticks in matched grip, on a yellow towel",
         "mustShow": [
           "both hands hold their stick the same way",
-          "both palms face down",
-          "each stick is pinched between thumb and index finger"
+          "both hands are turned palm down with the fingers closed over the sticks from above",
+          "no palm is visible"
         ],
-        "caption": "Matched grip in both hands, palms down.",
-        "alt": "Two hands side by side, each holding a drumstick palm down.",
+        "caption": "Matched grip in both hands: both palms down, the fingers closed over the sticks.",
+        "alt": "Two hands side by side on a yellow towel, each holding a drumstick palm down with the fingers closed over it.",
         "mediaCategory": "drum-grip",
         "topicTags": ["matched-grip", "both-hands"]
       }
@@ -131,17 +134,18 @@
     {
       "name": "German grip judged as French grip",
       "expected": "fail",
+      "failsOn": "The back of the hand faces the camera, knuckles up, and the thumb is out of sight; the brief says the hand is on its side with the back of the hand sideways and the thumb on top in full view.",
       "image": { "catalog": "drums/german-grip.jpg" },
       "brief": {
         "kind": "technique",
-        "subject": "A hand holding a drumstick in French grip",
+        "subject": "A hand holding a drumstick in French grip over a snare drum",
         "mustShow": [
-          "the thumb sits on top of the stick",
-          "the palm faces inward, sideways, not down",
-          "the fingers are under the stick"
+          "the hand is turned on its side, so the back of the hand faces sideways rather than up",
+          "the thumb lies on top of the stick, nail up, in full view",
+          "the fingers curl beneath the stick"
         ],
-        "caption": "French grip: the thumb on top of the stick and the palm facing inward.",
-        "alt": "A hand holding a drumstick with the thumb on top and the palm turned sideways.",
+        "caption": "French grip: the hand on its side with the thumb on top of the stick and the fingers beneath it.",
+        "alt": "A hand over a snare drum holding a drumstick with the thumb on top and the hand turned sideways.",
         "mediaCategory": "drum-grip",
         "topicTags": ["french-grip"]
       }
@@ -149,52 +153,56 @@
     {
       "name": "French grip from Commons judged as German grip",
       "expected": "fail",
+      "failsOn": "A French grip photograph shows the hand on its side with the thumb on top; the brief says the back of the hand faces up with the knuckles on top and the thumb tucked out of sight at the side of the stick.",
       "image": { "commons": { "query": "french grip right hand", "title": "File:French grip right hand 01.jpg" } },
       "brief": {
         "kind": "technique",
         "subject": "A hand holding a drumstick in German grip, seen from above",
         "mustShow": [
-          "the palm faces down, knuckles up",
-          "the back of the hand is seen from above",
-          "the thumb lies along the side of the stick, not on top"
+          "the back of the hand faces up with the knuckles on top, palm down",
+          "the thumb is tucked at the side of the stick below the knuckles, out of sight from above",
+          "the fingers close over the stick from above"
         ],
-        "caption": "German grip: palm down, knuckles up, the thumb along the side of the stick.",
-        "alt": "A hand seen from above holding a drumstick palm down.",
+        "caption": "German grip: the back of the hand up, knuckles on top, the thumb tucked at the side of the stick.",
+        "alt": "A hand seen from above holding a drumstick palm down, knuckles up.",
         "mediaCategory": "drum-grip",
         "topicTags": ["german-grip"]
       }
     },
     {
-      "name": "fulcrum at the butt end, a subtle wrong brief",
+      "name": "index fingers straight along the sticks, a subtle wrong brief",
       "expected": "fail",
-      "note": "The photo pinches the sticks a third of the way from the back, with stick showing behind the hand; the brief claims the hand is at the very end.",
+      "note": "Was 'fulcrum at the butt end' in the first set; that brief claimed where the hands sat along sticks whose ends the hands cover, which no photograph can settle.",
+      "failsOn": "Both index fingers visibly curl around their sticks; the brief says each lies straight out along the top of its stick, not curled.",
       "image": { "catalog": "drums/matched-grip-both-hands.jpg" },
       "brief": {
         "kind": "technique",
-        "subject": "Both hands holding drumsticks at the very end of each stick",
+        "subject": "Both hands holding drumsticks with the index fingers extended straight along the sticks",
         "mustShow": [
-          "each hand grips its stick at the butt, the very back end, so no stick extends behind the hand",
-          "the thumb and index finger pinch the stick right at its end"
+          "both hands hold their stick with the backs of the hands up",
+          "each index finger lies straight out along the top of its stick, pointing toward the tip, not curled around it",
+          "the other fingers close around the stick beneath the straight index finger"
         ],
-        "caption": "Matched grip with the fulcrum at the butt end of the stick.",
-        "alt": "Two hands holding drumsticks by their very ends, with no stick showing behind the hands.",
+        "caption": "Matched grip with the index fingers pointing straight down the sticks.",
+        "alt": "Two hands holding drumsticks, each index finger extended straight along the top of its stick.",
         "mediaCategory": "drum-grip",
-        "topicTags": ["matched-grip", "fulcrum"]
+        "topicTags": ["matched-grip", "both-hands"]
       }
     },
     {
       "name": "a drum kit drawing judged as a grip",
       "expected": "fail",
+      "failsOn": "The image is a numbered line drawing of a drum kit with no hand and no drumstick in it.",
       "image": { "catalog": "drums/drum-kit.svg" },
       "brief": {
         "kind": "technique",
         "subject": "A hand holding a drumstick in matched grip, seen from above",
         "mustShow": [
-          "a hand holding a drumstick",
-          "the palm faces down",
-          "the stick is pinched between thumb and index finger"
+          "a real hand holding a drumstick, photographed",
+          "the back of the hand faces up, palm down",
+          "the fingers close over the stick from above"
         ],
-        "caption": "Matched grip: palm down, the stick pinched between thumb and index finger.",
+        "caption": "Matched grip: the back of the hand up, the fingers closed over the stick from above.",
         "alt": "A hand seen from above holding a drumstick palm down.",
         "mediaCategory": "drum-grip",
         "topicTags": ["matched-grip"]
@@ -203,16 +211,17 @@
     {
       "name": "the rebound-stroke strip judged as a grip",
       "expected": "fail",
+      "failsOn": "The image is the product-owned four-still strip of a stick above a drum pad, with no hand in it.",
       "image": { "catalog": "drums/rebound-stroke.svg" },
       "brief": {
         "kind": "technique",
         "subject": "A hand holding a drumstick in matched grip, seen from above",
         "mustShow": [
-          "a real hand holding a drumstick",
-          "the palm faces down",
-          "the stick is pinched between thumb and index finger"
+          "a real hand holding a drumstick, photographed",
+          "the back of the hand faces up, palm down",
+          "the fingers close over the stick from above"
         ],
-        "caption": "Matched grip: palm down, the stick pinched between thumb and index finger.",
+        "caption": "Matched grip: the back of the hand up, the fingers closed over the stick from above.",
         "alt": "A hand seen from above holding a drumstick palm down.",
         "mediaCategory": "drum-grip",
         "topicTags": ["matched-grip"]
@@ -221,16 +230,17 @@
     {
       "name": "a Thor plate judged as a grip",
       "expected": "fail",
+      "failsOn": "The image is a Frølich engraving of a seated bearded figure gripping a hammer handle; there is no drumstick and it is not a photograph.",
       "image": { "catalog": "norse/thor-frolich.jpg" },
       "brief": {
         "kind": "technique",
         "subject": "A hand holding a drumstick in matched grip, seen from above",
         "mustShow": [
-          "a real hand holding a drumstick",
-          "the palm faces down",
-          "the stick is pinched between thumb and index finger"
+          "a real hand holding a drumstick, photographed",
+          "the back of the hand faces up, palm down",
+          "the fingers close over the stick from above"
         ],
-        "caption": "Matched grip: palm down, the stick pinched between thumb and index finger.",
+        "caption": "Matched grip: the back of the hand up, the fingers closed over the stick from above.",
         "alt": "A hand seen from above holding a drumstick palm down.",
         "mediaCategory": "drum-grip",
         "topicTags": ["matched-grip"]

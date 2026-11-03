@@ -1,0 +1,661 @@
+{
+  "startedAt": "2026-11-03T21:56:03.557Z",
+  "latencyMs": 185732,
+  "sourcePacks": "docs\\research\\sen-115-drum-stroke-source-packs.json",
+  "slot": {
+    "id": "slot2",
+    "method": "reading",
+    "title": "Matched grip and the full stroke",
+    "lessonGoal": "Hold the sticks in matched grip and play a relaxed full stroke that rebounds to its starting height.",
+    "objectives": [
+      "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "Explain why letting the stick rebound keeps the hands relaxed"
+    ],
+    "topicTags": [
+      "matched-grip",
+      "full-stroke",
+      "rebound"
+    ],
+    "assessesSlotIds": [],
+    "visuals": [
+      {
+        "kind": "technique",
+        "intent": "A hand holding a drumstick in matched grip, seen so the fulcrum between the thumb and the index finger is plain, for the Learner to copy."
+      },
+      {
+        "kind": "diagram",
+        "intent": "The four moments of a full stroke in order, raised, striking, rebounding, and back at the starting height, so the Learner sees the stick come back up on its own."
+      }
+    ]
+  },
+  "profile": {
+    "instructionLanguage": "en",
+    "requiredReadingSupports": [],
+    "contentScope": "standard",
+    "explanationOrder": "topic_appropriate"
+  },
+  "status": "checkpoint",
+  "lesson": {
+    "slotId": "slot2",
+    "teachingMethod": "reading",
+    "title": "Matched grip and the full stroke",
+    "lessonGoal": "Hold the sticks in matched grip and play a relaxed full stroke that rebounds to its starting height.",
+    "objectives": [
+      "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "Explain that letting the stick rebound naturally back up goes along with keeping the hands relaxed"
+    ],
+    "topicTags": [
+      "matched-grip",
+      "full-stroke",
+      "rebound"
+    ],
+    "lineage": null,
+    "body": {
+      "sections": [
+        {
+          "heading": "A loose hold around a pivot",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "For your goal of playing the song, this lesson focuses on a relaxed hold and a stick that bounces back up."
+            },
+            {
+              "kind": "prose",
+              "text": "The fulcrum is the pivot point where your thumb and index finger hold the stick [1]. In matched grip, your thumb lies along the stick, opposite the first knuckle of your index finger at the fulcrum [2]. Your other fingers wrap loosely around the stick rather than squeezing it [2]."
+            }
+          ]
+        },
+        {
+          "heading": "Down and back to the starting height",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "A full stroke is a hit that starts high and bounces back to the same height [2][3]. Your wrist raises the stick tip eight inches above the drum [2]. The stick goes down to strike the drum, then bounces back up naturally [3]."
+            },
+            {
+              "kind": "prose",
+              "text": "Your thumb and index finger stay in contact with the stick while your wrist and fingers stay relaxed [3]. The stick follows a smooth path down and up, without stopping along the way [3]. A relaxed full stroke lets the stick bounce back to its starting height while your hand keeps a loose hold [2][3]."
+            },
+            {
+              "kind": "media",
+              "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+              "alt": "Four panels show a stick raised above a drum, striking its surface, bouncing upward, and ending at its original height. Arrows show the downward and upward movement.",
+              "descriptor": {
+                "id": "347160e7-19b9-8a4c-85d7-c2cef625816b",
+                "kind": "image",
+                "origin": "generated",
+                "license": "product_owned",
+                "licenseUrl": null,
+                "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+                "alt": "Four panels show a stick raised above a drum, striking its surface, bouncing upward, and ending at its original height. Arrows show the downward and upward movement.",
+                "source": null,
+                "storageKey": "generated/347160e719b9ea4c05d7c2cef625816b1bac2a51ecccd8f7302b830ca387f262.png",
+                "mimeType": "image/png",
+                "byteSize": 967152,
+                "sha256": "347160e719b9ea4c05d7c2cef625816b1bac2a51ecccd8f7302b830ca387f262",
+                "width": 1200,
+                "height": 800,
+                "mediaCategory": "drum-stroke",
+                "topicTags": [
+                  "full-stroke",
+                  "rebound",
+                  "stick-height"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "glossary": [
+        {
+          "term": "fulcrum",
+          "definition": "A point around which something turns or pivots."
+        },
+        {
+          "term": "matched grip",
+          "definition": "A way of holding drumsticks with both hands using the same kind of hold."
+        },
+        {
+          "term": "full stroke",
+          "definition": "A drum hit that begins with the stick raised and ends with it back at the same height."
+        }
+      ]
+    },
+    "sources": [
+      {
+        "n": 1,
+        "sourceId": "src_7eefe0ae9c",
+        "url": "https://www.midwestclinic.org/user_files_1/pdfs/clinicianmaterials/2007/bret_kuhn.pdf",
+        "title": "Microsoft Word - Stroke Fundamentals.doc",
+        "publisher": "midwestclinic.org",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 2,
+        "sourceId": "src_498b43255b",
+        "url": "https://pas.org/wp-content/uploads/2024/04/ECV0803-035.pdf",
+        "title": "Building A Strong Foundation Of The Snare Drum Fulcrum",
+        "publisher": "pas.org",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 3,
+        "sourceId": "src_a8e38c4812",
+        "url": "https://ae.vicfirth.com/wp-content/uploads/FA-Drumset-Lessons-1-2.pdf",
+        "title": "FA Drumset 2014 changes2",
+        "publisher": "ae.vicfirth.com",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      }
+    ],
+    "citations": [
+      {
+        "n": 1,
+        "title": "Microsoft Word - Stroke Fundamentals.doc",
+        "url": "https://www.midwestclinic.org/user_files_1/pdfs/clinicianmaterials/2007/bret_kuhn.pdf"
+      },
+      {
+        "n": 2,
+        "title": "Building A Strong Foundation Of The Snare Drum Fulcrum",
+        "url": "https://pas.org/wp-content/uploads/2024/04/ECV0803-035.pdf"
+      },
+      {
+        "n": 3,
+        "title": "FA Drumset 2014 changes2",
+        "url": "https://ae.vicfirth.com/wp-content/uploads/FA-Drumset-Lessons-1-2.pdf"
+      }
+    ]
+  },
+  "visuals": [
+    {
+      "placement": {
+        "section": "A loose hold around a pivot",
+        "brief": {
+          "kind": "technique",
+          "subject": "A close-up photograph shows a hand holding a drumstick in matched grip.",
+          "mustShow": [
+            "The thumb lies along the length of the drumstick.",
+            "The thumb faces the first knuckle of the index finger across the stick.",
+            "The thumb–index finger contact point is labelled “Fulcrum.”",
+            "The other fingers curl loosely around the stick rather than forming a clenched fist."
+          ],
+          "caption": "This photograph shows the thumb and index finger holding the stick at the fulcrum.",
+          "alt": "A hand holds a drumstick with the thumb along its length and the index finger opposite it. The other fingers curl loosely around the stick. The thumb–index finger contact point is labelled “Fulcrum.”",
+          "mediaCategory": "drum-grip",
+          "topicTags": [
+            "matched-grip",
+            "fulcrum"
+          ]
+        }
+      },
+      "status": "none",
+      "library": [
+        {
+          "descriptorId": "d0a1e047-0000-4000-8000-000000000011",
+          "storageKey": "library/drums/german-grip.jpg",
+          "judge": {
+            "pass": false,
+            "failedChecks": [
+              "must_show",
+              "caption_fit",
+              "alt_fit",
+              "unreadable"
+            ],
+            "reasons": [
+              "“The thumb lies along the length of the drumstick.” The thumb is not visible clearly enough to verify its position.",
+              "“The thumb faces the first knuckle of the index finger across the stick.” The thumb–index relationship is hidden from view.",
+              "“The thumb–index finger contact point is labelled “Fulcrum.”” No “Fulcrum” label is visible.",
+              "“The other fingers curl loosely around the stick rather than forming a clenched fist.” The hand appears clenched around the stick.",
+              "The caption phrase “holding the stick at the fulcrum” claims a contact point the image does not show.",
+              "The alt says the thumb is along the stick and opposite the index finger, and that the contact point is labelled “Fulcrum”; none of those details is visible.",
+              "The required “Fulcrum” label is absent, so it cannot be read."
+            ]
+          },
+          "judgeModelId": "openai/gpt-6-luna"
+        },
+        {
+          "descriptorId": "d0a1e047-0000-4000-8000-000000000012",
+          "storageKey": "library/drums/matched-grip-both-hands.jpg",
+          "judge": {
+            "pass": false,
+            "failedChecks": [
+              "must_show",
+              "caption_fit",
+              "alt_fit"
+            ],
+            "reasons": [
+              "“The thumb–index finger contact point is labelled “Fulcrum.”” — no label is visible.",
+              "“The thumb faces the first knuckle of the index finger across the stick.” — the contact and finger positions are obscured, so this relation cannot be confirmed.",
+              "“The other fingers curl loosely around the stick rather than forming a clenched fist.” — the fingers are closed around the sticks, and looseness is not clear.",
+              "“This photograph shows the thumb and index finger holding the stick at the fulcrum.” — the image does not show or identify a fulcrum.",
+              "The alt says “A hand” and describes a “Fulcrum” label, but the image shows two hands and no label."
+            ]
+          },
+          "judgeModelId": "openai/gpt-6-luna"
+        }
+      ],
+      "commons": {
+        "descriptor": null,
+        "outcome": "miss",
+        "queries": [
+          "hand holding drumstick matched grip filetype:bitmap",
+          "matched grip fulcrum filetype:bitmap"
+        ],
+        "searchErrors": [],
+        "tried": [
+          {
+            "title": "File:Copper-alloy lid (FindID 979964).jpg",
+            "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Copper-alloy_lid_(FindID_979964).jpg",
+            "query": "matched grip fulcrum filetype:bitmap",
+            "rank": 1,
+            "license": "cc_by",
+            "status": "judge_failed",
+            "reasons": [
+              "“The thumb lies along the length of the drumstick.” No hand or drumstick is visible.",
+              "“The thumb faces the first knuckle of the index finger across the stick.” No hand or drumstick is visible.",
+              "“The thumb–index finger contact point is labelled ‘Fulcrum.’” The image shows no such contact point or label.",
+              "“The other fingers curl loosely around the stick rather than forming a clenched fist.” No hand or drumstick is visible.",
+              "Caption phrase “the thumb and index finger holding the stick at the fulcrum” describes something not shown.",
+              "The alt describes a hand holding a drumstick, but the image shows an artifact on a measurement scale."
+            ]
+          },
+          {
+            "title": "File:Post Medieval Mount (FindID 462735).jpg",
+            "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Post_Medieval_Mount_(FindID_462735).jpg",
+            "query": "matched grip fulcrum filetype:bitmap",
+            "rank": 2,
+            "license": "cc_by_sa",
+            "status": "judge_failed",
+            "reasons": [
+              "“The thumb lies along the length of the drumstick.” No hand or drumstick is visible.",
+              "“The thumb faces the first knuckle of the index finger across the stick.” No hand or drumstick is visible.",
+              "“The thumb–index finger contact point is labelled ‘Fulcrum.’” No hand, drumstick, or “Fulcrum” label is visible.",
+              "“The other fingers curl loosely around the stick rather than forming a clenched fist.” No hand or drumstick is visible.",
+              "Caption phrase “the thumb and index finger holding the stick at the fulcrum” does not match the pictured object.",
+              "The alt text describes a hand holding a drumstick, but the image shows a small metal object."
+            ]
+          }
+        ],
+        "rejected": []
+      }
+    },
+    {
+      "placement": {
+        "section": "Down and back to the starting height",
+        "brief": {
+          "kind": "diagram",
+          "subject": "The Course’s own schematic shows four moments of a full stroke above a drum.",
+          "mustShow": [
+            "Four panels run left to right in this order: raised, striking, bouncing back up, back at starting height.",
+            "The first panel shows the stick tip raised above the drum surface.",
+            "The second panel shows the stick tip touching the drum surface, with an arrow pointing down.",
+            "The third panel shows the stick moving away from the drum surface, with an arrow pointing up.",
+            "The first and fourth panels show the stick tip at the same height above the drum surface."
+          ],
+          "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+          "alt": "Four panels show a stick raised above a drum, striking its surface, bouncing upward, and ending at its original height. Arrows show the downward and upward movement.",
+          "mediaCategory": "drum-stroke",
+          "topicTags": [
+            "full-stroke",
+            "rebound",
+            "stick-height"
+          ]
+        }
+      },
+      "status": "illustrated",
+      "library": [],
+      "illustration": {
+        "outcome": "illustrated",
+        "attempts": [
+          {
+            "modelId": "openai/gpt-6.1-sol",
+            "judge": {
+              "pass": true,
+              "failedChecks": [],
+              "reasons": []
+            },
+            "judgeModelId": "openai/gpt-6-luna"
+          }
+        ]
+      },
+      "descriptorId": "347160e7-19b9-8a4c-85d7-c2cef625816b"
+    }
+  ],
+  "judge": {
+    "pass": true,
+    "failedChecks": [],
+    "reasons": []
+  },
+  "repairs": 2,
+  "grounding": [
+    {
+      "objective": "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "verdict": "supported",
+      "text": "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "reason": ""
+    },
+    {
+      "objective": "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "verdict": "supported",
+      "text": "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "reason": ""
+    },
+    {
+      "objective": "Explain why letting the stick rebound keeps the hands relaxed",
+      "verdict": "rewritten",
+      "text": "Explain that letting the stick rebound naturally back up goes along with keeping the hands relaxed",
+      "reason": "The material recommends natural rebound and relaxed, tension-free hands, but does not say rebound causes the hands to relax."
+    }
+  ],
+  "rejectedSources": [
+    {
+      "sourceId": "src_50ed1531b2",
+      "url": "https://hub.yamaha.com/music-educators/instruments/perc/a-guide-to-proper-stick-grips",
+      "reason": "Yamaha is an instrument manufacturer; this is company-produced instructional content."
+    },
+    {
+      "sourceId": "src_aa45b3c3db",
+      "url": "https://pearldrum.com/sites/default/files/2019-10/basic-snare-drum-technique.pdf",
+      "reason": "Pearl is a drum manufacturer; this instructional PDF is company-produced."
+    },
+    {
+      "sourceId": "src_3578a5990c",
+      "url": "https://www.drumbarossa.com/teaching-guide/basic-strokes",
+      "reason": "This appears to be a drum-instruction business’s teaching content, rather than an independent reference."
+    },
+    {
+      "sourceId": "src_73457824aa",
+      "url": "https://rhythmnotes.net/drum-techniques-and-rudiments/",
+      "reason": "This is a personal-style instructional blog, not a sufficiently established reference source."
+    },
+    {
+      "sourceId": "src_2de311406d",
+      "url": "https://drummagazine.com/drum-technique/",
+      "reason": "This is a commercial magazine article, not an independent educational or scholarly reference."
+    },
+    {
+      "sourceId": "src_ca07de2348",
+      "url": "https://upbeat.studio/blog/essential-drumming-techniques-for-beginners/",
+      "reason": "Upbeat Studio appears to be a commercial music-learning business; this is promotional blog content."
+    },
+    {
+      "sourceId": "src_e26d0d852e",
+      "url": "https://drumbeatsonline.com/blog/how-to-do-a-drum-roll-a-step-by-step-guide-for-beginners",
+      "reason": "Drum Beats Online sells drum-learning content; this is a business blog article."
+    }
+  ],
+  "authorModelIds": [
+    "openai/gpt-6.1-sol"
+  ],
+  "judgeModelId": "openai/gpt-6-luna",
+  "rounds": [
+    {
+      "modelId": "openai/gpt-6.1-sol",
+      "draft": [
+        {
+          "heading": "A loose hold around a pivot",
+          "paragraphs": [
+            "Imagine holding two sticks above a drum, ready to begin “Iris.” For your goal of playing the song, this lesson focuses on a relaxed hold and a stick that bounces back up. Matched grip means holding both sticks the same way [src_498b43255b].",
+            "The fulcrum is the pivot point where your thumb and index finger hold the stick [src_7eefe0ae9c]. In matched grip, your thumb lies along the stick, opposite the first knuckle of your index finger at the fulcrum [src_498b43255b]. Your other fingers wrap loosely around the stick rather than squeezing it [src_498b43255b]."
+          ]
+        },
+        {
+          "heading": "Down and back to the starting height",
+          "paragraphs": [
+            "A full stroke is a hit that starts high and bounces back to the same height [src_498b43255b, src_a8e38c4812]. Your wrist raises the stick tip eight inches above the drum [src_498b43255b]. The stick goes down to strike the drum, then bounces back up naturally [src_a8e38c4812].",
+            "Your thumb and index finger stay in contact with the stick while your wrist and fingers stay relaxed [src_a8e38c4812]. The stick follows a smooth path down and up, without stopping along the way [src_a8e38c4812]. A relaxed full stroke lets the stick bounce back to its starting height while your hand keeps a loose hold [src_498b43255b, src_a8e38c4812]."
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "section": "A loose hold around a pivot",
+          "brief": {
+            "kind": "technique",
+            "subject": "A close-up photograph shows a hand holding a drumstick in matched grip.",
+            "mustShow": [
+              "The thumb lies along the length of the drumstick.",
+              "The thumb faces the first knuckle of the index finger across the stick.",
+              "The thumb–index finger contact point is labelled “Fulcrum.”",
+              "The other fingers curl loosely around the stick rather than forming a clenched fist."
+            ],
+            "caption": "This photograph shows the thumb and index finger holding the stick at the fulcrum.",
+            "alt": "A hand holds a drumstick with the thumb along its length and the index finger opposite it. The other fingers curl loosely around the stick. The thumb–index finger contact point is labelled “Fulcrum.”",
+            "mediaCategory": "drum-grip",
+            "topicTags": [
+              "matched-grip",
+              "fulcrum"
+            ]
+          }
+        },
+        {
+          "section": "Down and back to the starting height",
+          "brief": {
+            "kind": "diagram",
+            "subject": "The Course’s own schematic shows four moments of a full stroke above a drum.",
+            "mustShow": [
+              "Four panels run left to right in this order: raised, striking, bouncing back up, back at starting height.",
+              "The first panel shows the stick tip raised above the drum surface.",
+              "The second panel shows the stick tip touching the drum surface, with an arrow pointing down.",
+              "The third panel shows the stick moving away from the drum surface, with an arrow pointing up.",
+              "The first and fourth panels show the stick tip at the same height above the drum surface."
+            ],
+            "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+            "alt": "Four panels show a stick raised above a drum, striking its surface, bouncing upward, and ending at its original height. Arrows show the downward and upward movement.",
+            "mediaCategory": "drum-stroke",
+            "topicTags": [
+              "full-stroke",
+              "rebound",
+              "stick-height"
+            ]
+          }
+        }
+      ],
+      "problems": [
+        "In “A loose hold around a pivot,” the claim that matched grip means holding both sticks the same way is not supported by the cited excerpts."
+      ]
+    },
+    {
+      "modelId": "openai/gpt-6.1-sol",
+      "edits": [
+        {
+          "find": "Matched grip means holding both sticks the same way [src_498b43255b].",
+          "replace": ""
+        }
+      ],
+      "skipped": [],
+      "problems": [
+        "“A loose hold around a pivot”: “Imagine holding two sticks above a drum, ready to begin ‘Iris.’” tells the Learner what to imagine instead of explaining the subject."
+      ]
+    },
+    {
+      "modelId": "openai/gpt-6.1-sol",
+      "edits": [
+        {
+          "find": "Imagine holding two sticks above a drum, ready to begin “Iris.”",
+          "replace": ""
+        }
+      ],
+      "skipped": [],
+      "problems": [],
+      "attached": [
+        {
+          "placement": {
+            "section": "A loose hold around a pivot",
+            "brief": {
+              "kind": "technique",
+              "subject": "A close-up photograph shows a hand holding a drumstick in matched grip.",
+              "mustShow": [
+                "The thumb lies along the length of the drumstick.",
+                "The thumb faces the first knuckle of the index finger across the stick.",
+                "The thumb–index finger contact point is labelled “Fulcrum.”",
+                "The other fingers curl loosely around the stick rather than forming a clenched fist."
+              ],
+              "caption": "This photograph shows the thumb and index finger holding the stick at the fulcrum.",
+              "alt": "A hand holds a drumstick with the thumb along its length and the index finger opposite it. The other fingers curl loosely around the stick. The thumb–index finger contact point is labelled “Fulcrum.”",
+              "mediaCategory": "drum-grip",
+              "topicTags": [
+                "matched-grip",
+                "fulcrum"
+              ]
+            }
+          },
+          "status": "none",
+          "library": [
+            {
+              "descriptorId": "d0a1e047-0000-4000-8000-000000000011",
+              "storageKey": "library/drums/german-grip.jpg",
+              "judge": {
+                "pass": false,
+                "failedChecks": [
+                  "must_show",
+                  "caption_fit",
+                  "alt_fit",
+                  "unreadable"
+                ],
+                "reasons": [
+                  "“The thumb lies along the length of the drumstick.” The thumb is not visible clearly enough to verify its position.",
+                  "“The thumb faces the first knuckle of the index finger across the stick.” The thumb–index relationship is hidden from view.",
+                  "“The thumb–index finger contact point is labelled “Fulcrum.”” No “Fulcrum” label is visible.",
+                  "“The other fingers curl loosely around the stick rather than forming a clenched fist.” The hand appears clenched around the stick.",
+                  "The caption phrase “holding the stick at the fulcrum” claims a contact point the image does not show.",
+                  "The alt says the thumb is along the stick and opposite the index finger, and that the contact point is labelled “Fulcrum”; none of those details is visible.",
+                  "The required “Fulcrum” label is absent, so it cannot be read."
+                ]
+              },
+              "judgeModelId": "openai/gpt-6-luna"
+            },
+            {
+              "descriptorId": "d0a1e047-0000-4000-8000-000000000012",
+              "storageKey": "library/drums/matched-grip-both-hands.jpg",
+              "judge": {
+                "pass": false,
+                "failedChecks": [
+                  "must_show",
+                  "caption_fit",
+                  "alt_fit"
+                ],
+                "reasons": [
+                  "“The thumb–index finger contact point is labelled “Fulcrum.”” — no label is visible.",
+                  "“The thumb faces the first knuckle of the index finger across the stick.” — the contact and finger positions are obscured, so this relation cannot be confirmed.",
+                  "“The other fingers curl loosely around the stick rather than forming a clenched fist.” — the fingers are closed around the sticks, and looseness is not clear.",
+                  "“This photograph shows the thumb and index finger holding the stick at the fulcrum.” — the image does not show or identify a fulcrum.",
+                  "The alt says “A hand” and describes a “Fulcrum” label, but the image shows two hands and no label."
+                ]
+              },
+              "judgeModelId": "openai/gpt-6-luna"
+            }
+          ],
+          "commons": {
+            "descriptor": null,
+            "outcome": "miss",
+            "queries": [
+              "hand holding drumstick matched grip filetype:bitmap",
+              "matched grip fulcrum filetype:bitmap"
+            ],
+            "searchErrors": [],
+            "tried": [
+              {
+                "title": "File:Copper-alloy lid (FindID 979964).jpg",
+                "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Copper-alloy_lid_(FindID_979964).jpg",
+                "query": "matched grip fulcrum filetype:bitmap",
+                "rank": 1,
+                "license": "cc_by",
+                "status": "judge_failed",
+                "reasons": [
+                  "“The thumb lies along the length of the drumstick.” No hand or drumstick is visible.",
+                  "“The thumb faces the first knuckle of the index finger across the stick.” No hand or drumstick is visible.",
+                  "“The thumb–index finger contact point is labelled ‘Fulcrum.’” The image shows no such contact point or label.",
+                  "“The other fingers curl loosely around the stick rather than forming a clenched fist.” No hand or drumstick is visible.",
+                  "Caption phrase “the thumb and index finger holding the stick at the fulcrum” describes something not shown.",
+                  "The alt describes a hand holding a drumstick, but the image shows an artifact on a measurement scale."
+                ]
+              },
+              {
+                "title": "File:Post Medieval Mount (FindID 462735).jpg",
+                "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Post_Medieval_Mount_(FindID_462735).jpg",
+                "query": "matched grip fulcrum filetype:bitmap",
+                "rank": 2,
+                "license": "cc_by_sa",
+                "status": "judge_failed",
+                "reasons": [
+                  "“The thumb lies along the length of the drumstick.” No hand or drumstick is visible.",
+                  "“The thumb faces the first knuckle of the index finger across the stick.” No hand or drumstick is visible.",
+                  "“The thumb–index finger contact point is labelled ‘Fulcrum.’” No hand, drumstick, or “Fulcrum” label is visible.",
+                  "“The other fingers curl loosely around the stick rather than forming a clenched fist.” No hand or drumstick is visible.",
+                  "Caption phrase “the thumb and index finger holding the stick at the fulcrum” does not match the pictured object.",
+                  "The alt text describes a hand holding a drumstick, but the image shows a small metal object."
+                ]
+              }
+            ],
+            "rejected": []
+          }
+        },
+        {
+          "placement": {
+            "section": "Down and back to the starting height",
+            "brief": {
+              "kind": "diagram",
+              "subject": "The Course’s own schematic shows four moments of a full stroke above a drum.",
+              "mustShow": [
+                "Four panels run left to right in this order: raised, striking, bouncing back up, back at starting height.",
+                "The first panel shows the stick tip raised above the drum surface.",
+                "The second panel shows the stick tip touching the drum surface, with an arrow pointing down.",
+                "The third panel shows the stick moving away from the drum surface, with an arrow pointing up.",
+                "The first and fourth panels show the stick tip at the same height above the drum surface."
+              ],
+              "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+              "alt": "Four panels show a stick raised above a drum, striking its surface, bouncing upward, and ending at its original height. Arrows show the downward and upward movement.",
+              "mediaCategory": "drum-stroke",
+              "topicTags": [
+                "full-stroke",
+                "rebound",
+                "stick-height"
+              ]
+            }
+          },
+          "status": "illustrated",
+          "library": [],
+          "illustration": {
+            "outcome": "illustrated",
+            "attempts": [
+              {
+                "modelId": "openai/gpt-6.1-sol",
+                "judge": {
+                  "pass": true,
+                  "failedChecks": [],
+                  "reasons": []
+                },
+                "judgeModelId": "openai/gpt-6-luna"
+              }
+            ]
+          },
+          "descriptorId": "347160e7-19b9-8a4c-85d7-c2cef625816b"
+        }
+      ]
+    }
+  ],
+  "glossary": {
+    "proposed": [
+      {
+        "term": "fulcrum",
+        "definition": "A point around which something turns or pivots."
+      },
+      {
+        "term": "matched grip",
+        "definition": "A way of holding drumsticks with both hands using the same kind of hold."
+      },
+      {
+        "term": "full stroke",
+        "definition": "A drum hit that begins with the stick raised and ends with it back at the same height."
+      }
+    ],
+    "rejected": [],
+    "modelId": "openai/gpt-6.1-sol",
+    "judgeModelId": "openai/gpt-6-luna"
+  }
+}

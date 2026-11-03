@@ -1,0 +1,405 @@
+{
+  "startedAt": "2026-11-03T21:51:31.354Z",
+  "latencyMs": 229620,
+  "sourcePacks": "docs\\research\\sen-36-norse-source-packs.json",
+  "slot": {
+    "id": "slot1",
+    "method": "reading",
+    "title": "Yggdrasil and the Nine Worlds",
+    "lessonGoal": "Describe how Norse sources picture Yggdrasil connecting the Nine Worlds.",
+    "objectives": [
+      "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "Explain why accounts of Yggdrasil's roots differ between Norse sources"
+    ],
+    "topicTags": [
+      "yggdrasil",
+      "nine-worlds",
+      "norse-cosmology"
+    ],
+    "assessesSlotIds": [],
+    "visuals": [
+      {
+        "kind": "depiction",
+        "intent": "Yggdrasil, the world ash, with its roots and the beings the sources place around it, so the Learner sees how one tree holds the worlds together."
+      }
+    ]
+  },
+  "profile": {
+    "instructionLanguage": "en",
+    "requiredReadingSupports": [],
+    "contentScope": "standard",
+    "explanationOrder": "topic_appropriate"
+  },
+  "status": "checkpoint",
+  "lesson": {
+    "slotId": "slot1",
+    "teachingMethod": "reading",
+    "title": "Yggdrasil and the Nine Worlds",
+    "lessonGoal": "Describe how Norse sources picture Yggdrasil connecting the Nine Worlds.",
+    "objectives": [
+      "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "Explain how accounts of Yggdrasil's roots differ between Norse sources"
+    ],
+    "topicTags": [
+      "yggdrasil",
+      "nine-worlds",
+      "norse-cosmology"
+    ],
+    "lineage": null,
+    "body": {
+      "sections": [
+        {
+          "heading": "One tree at the centre",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Imagine an ash tree whose branches spread across the whole world [1]. Yggdrasil, the Norse world tree, stands at the centre of the universe [2]. The Nine Worlds surround Yggdrasil, making the tree a way to picture how the Norse universe fits together [3]. A squirrel carries an eagle’s words down the tree, while a dragon gnaws at the roots below [4][5]."
+            },
+            {
+              "kind": "media",
+              "caption": "The Course’s own illustration shows Yggdrasil with nine surrounding worlds and creatures above and below.",
+              "alt": "A spreading ash tree labelled Yggdrasil stands among nine softly outlined areas labelled collectively Nine Worlds. Three main roots extend below it. An eagle sits above a squirrel on the trunk, and a dragon gnaws a root beneath the tree.",
+              "descriptor": {
+                "id": "7b9271b7-6d98-80bd-b956-00e690654669",
+                "kind": "image",
+                "origin": "generated",
+                "license": "product_owned",
+                "licenseUrl": null,
+                "caption": "The Course’s own illustration shows Yggdrasil with nine surrounding worlds and creatures above and below.",
+                "alt": "A spreading ash tree labelled Yggdrasil stands among nine softly outlined areas labelled collectively Nine Worlds. Three main roots extend below it. An eagle sits above a squirrel on the trunk, and a dragon gnaws a root beneath the tree.",
+                "source": null,
+                "storageKey": "generated/7b9271b76d9870bdf95600e6906546693af4a728245b616b9c8c26fed88ed4aa.png",
+                "mimeType": "image/png",
+                "byteSize": 1066120,
+                "sha256": "7b9271b76d9870bdf95600e6906546693af4a728245b616b9c8c26fed88ed4aa",
+                "width": 1200,
+                "height": 800,
+                "mediaCategory": "norse-mythic-depiction",
+                "topicTags": [
+                  "yggdrasil",
+                  "world-tree",
+                  "cosmology"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "heading": "Worlds for gods, humans, and the dead",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Asgard is a realm, or world, of the gods [5]. Midgard is the realm of humans [2]. A rainbow bridge joins Asgard and Midgard [2]. Hel is a realm of the dead, initially associated with those who died of illness or old age [2]. The sources leave uncertainty about exactly who goes to Hel [2]."
+            }
+          ]
+        },
+        {
+          "heading": "Three roots, different places",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "A poem places Hel beneath one root, giants beneath another, and humans beneath the third [4]. Another account places one root among the gods, another among giants, and the third above a world of ice and mist [1][2]. Yggdrasil connects the Nine Worlds, but the sources give its roots different settings [2][4][1]."
+            }
+          ]
+        }
+      ],
+      "glossary": [
+        {
+          "term": "ash tree",
+          "definition": "A type of tree with strong wood and seeds shaped like little wings."
+        },
+        {
+          "term": "Norse",
+          "definition": "Related to the people, culture, and beliefs of Scandinavia during the Viking Age."
+        },
+        {
+          "term": "realm",
+          "definition": "A world or region, especially one belonging to a particular group or ruler."
+        }
+      ]
+    },
+    "sources": [
+      {
+        "n": 1,
+        "sourceId": "src_238610fc85",
+        "url": "https://www.sacred-texts.com/neu/pre/pre04.htm",
+        "title": "Gylfaginning | Internet Sacred Text Archive",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 2,
+        "sourceId": "src_2b9c51c172",
+        "url": "https://www.worldhistory.org/article/1305/nine-realms-of-norse-cosmology",
+        "title": "Nine Realms of Norse Cosmology",
+        "publisher": "worldhistory.org",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 3,
+        "sourceId": "src_8c1061af65",
+        "url": "https://en.wikipedia.org/w/index.php?title=Norse_cosmology&oldid=1357244099",
+        "title": "Norse cosmology",
+        "publisher": "en.wikipedia.org",
+        "retrievedAt": "2026-10-08T17:41:28.581Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 4,
+        "sourceId": "src_7d9e9ae17d",
+        "url": "https://sacred-texts.com/neu/poe/poe06.htm",
+        "title": "Grimnismol – The Poetic Edda | Internet Sacred Text Archive",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 5,
+        "sourceId": "src_b6cf1c25b8",
+        "url": "https://sacred-texts.com/neu/poe/poe03.htm",
+        "title": "Völuspá (Voluspo) – Poetic Edda, Vol. I | Bellows Translation",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      }
+    ],
+    "citations": [
+      {
+        "n": 1,
+        "title": "Gylfaginning | Internet Sacred Text Archive",
+        "url": "https://www.sacred-texts.com/neu/pre/pre04.htm"
+      },
+      {
+        "n": 2,
+        "title": "Nine Realms of Norse Cosmology",
+        "url": "https://www.worldhistory.org/article/1305/nine-realms-of-norse-cosmology"
+      },
+      {
+        "n": 3,
+        "title": "Norse cosmology",
+        "url": "https://en.wikipedia.org/w/index.php?title=Norse_cosmology&oldid=1357244099"
+      },
+      {
+        "n": 4,
+        "title": "Grimnismol – The Poetic Edda | Internet Sacred Text Archive",
+        "url": "https://sacred-texts.com/neu/poe/poe06.htm"
+      },
+      {
+        "n": 5,
+        "title": "Völuspá (Voluspo) – Poetic Edda, Vol. I | Bellows Translation",
+        "url": "https://sacred-texts.com/neu/poe/poe03.htm"
+      }
+    ]
+  },
+  "visuals": [
+    {
+      "placement": {
+        "section": "One tree at the centre",
+        "brief": {
+          "kind": "depiction",
+          "subject": "The Course’s own illustration shows the world ash Yggdrasil surrounded by nine symbolic worlds, with three roots and creatures above and below.",
+          "mustShow": [
+            "A central ash tree labelled Yggdrasil.",
+            "Exactly three main roots spreading beneath the tree.",
+            "Nine symbolic areas surrounding the tree, labelled collectively Nine Worlds without assigning individual realm locations.",
+            "An eagle above a squirrel positioned along the tree’s trunk.",
+            "A dragon beneath the tree gnawing a root."
+          ],
+          "caption": "The Course’s own illustration shows Yggdrasil with nine surrounding worlds and creatures above and below.",
+          "alt": "A spreading ash tree labelled Yggdrasil stands among nine softly outlined areas labelled collectively Nine Worlds. Three main roots extend below it. An eagle sits above a squirrel on the trunk, and a dragon gnaws a root beneath the tree.",
+          "mediaCategory": "norse-mythic-depiction",
+          "topicTags": [
+            "yggdrasil",
+            "world-tree",
+            "cosmology"
+          ]
+        }
+      },
+      "status": "illustrated",
+      "library": [],
+      "illustration": {
+        "outcome": "illustrated",
+        "attempts": [
+          {
+            "modelId": "openai/gpt-6.1-sol",
+            "judge": {
+              "pass": true,
+              "failedChecks": [],
+              "reasons": []
+            },
+            "judgeModelId": "openai/gpt-6-luna"
+          }
+        ]
+      },
+      "descriptorId": "7b9271b7-6d98-80bd-b956-00e690654669"
+    }
+  ],
+  "judge": {
+    "pass": true,
+    "failedChecks": [],
+    "reasons": []
+  },
+  "repairs": 0,
+  "grounding": [
+    {
+      "objective": "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "verdict": "supported",
+      "text": "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "reason": ""
+    },
+    {
+      "objective": "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "verdict": "supported",
+      "text": "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "reason": ""
+    },
+    {
+      "objective": "Explain why accounts of Yggdrasil's roots differ between Norse sources",
+      "verdict": "rewritten",
+      "text": "Explain how accounts of Yggdrasil's roots differ between Norse sources",
+      "reason": "The sources give different placements for the roots but do not explain why the accounts differ."
+    }
+  ],
+  "rejectedSources": [
+    {
+      "sourceId": "src_f41bf8c22d",
+      "url": "https://wevikings.com/library/poetry/voluspa/olive-bray/",
+      "reason": "Hosted on a commercial Viking-themed site rather than an established text archive or educational publisher."
+    },
+    {
+      "sourceId": "src_39d3dea075",
+      "url": "https://www.glanzundgravur.de/en/blog-yggdrasil.html",
+      "reason": "This is a blog on a commercial engraving business’s website, so it is not a suitable evidence source."
+    },
+    {
+      "sourceId": "src_afdad0e405",
+      "url": "https://www.mythic-harmonies.com/norse-mythology/yggdrasil-world-tree-nine-realms/",
+      "reason": "An independent mythology article without clear scholarly or institutional credentials; not a source a careful teacher should cite as evidence."
+    },
+    {
+      "sourceId": "src_6feffb6846",
+      "url": "https://norse-mythology.org/cosmology/yggdrasil-and-the-well-of-urd/",
+      "reason": "An independent mythology site rather than a scholarly or institutional reference source; its claims are not clearly vetted."
+    }
+  ],
+  "authorModelIds": [
+    "openai/gpt-6.1-sol"
+  ],
+  "judgeModelId": "openai/gpt-6-luna",
+  "rounds": [
+    {
+      "modelId": "openai/gpt-6.1-sol",
+      "draft": [
+        {
+          "heading": "One tree at the centre",
+          "paragraphs": [
+            "Imagine an ash tree whose branches spread across the whole world [src_238610fc85]. Yggdrasil, the Norse world tree, stands at the centre of the universe [src_2b9c51c172]. The Nine Worlds surround Yggdrasil, making the tree a way to picture how the Norse universe fits together [src_8c1061af65]. A squirrel carries an eagle’s words down the tree, while a dragon gnaws at the roots below [src_7d9e9ae17d, src_b6cf1c25b8]."
+          ]
+        },
+        {
+          "heading": "Worlds for gods, humans, and the dead",
+          "paragraphs": [
+            "Asgard is a realm, or world, of the gods [src_b6cf1c25b8]. Midgard is the realm of humans [src_2b9c51c172]. A rainbow bridge joins Asgard and Midgard [src_2b9c51c172]. Hel is a realm of the dead, initially associated with those who died of illness or old age [src_2b9c51c172]. The sources leave uncertainty about exactly who goes to Hel [src_2b9c51c172]."
+          ]
+        },
+        {
+          "heading": "Three roots, different places",
+          "paragraphs": [
+            "A poem places Hel beneath one root, giants beneath another, and humans beneath the third [src_7d9e9ae17d]. Another account places one root among the gods, another among giants, and the third above a world of ice and mist [src_238610fc85, src_2b9c51c172]. Yggdrasil connects the Nine Worlds, but the sources give its roots different settings [src_2b9c51c172, src_7d9e9ae17d, src_238610fc85]."
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "section": "One tree at the centre",
+          "brief": {
+            "kind": "depiction",
+            "subject": "The Course’s own illustration shows the world ash Yggdrasil surrounded by nine symbolic worlds, with three roots and creatures above and below.",
+            "mustShow": [
+              "A central ash tree labelled Yggdrasil.",
+              "Exactly three main roots spreading beneath the tree.",
+              "Nine symbolic areas surrounding the tree, labelled collectively Nine Worlds without assigning individual realm locations.",
+              "An eagle above a squirrel positioned along the tree’s trunk.",
+              "A dragon beneath the tree gnawing a root."
+            ],
+            "caption": "The Course’s own illustration shows Yggdrasil with nine surrounding worlds and creatures above and below.",
+            "alt": "A spreading ash tree labelled Yggdrasil stands among nine softly outlined areas labelled collectively Nine Worlds. Three main roots extend below it. An eagle sits above a squirrel on the trunk, and a dragon gnaws a root beneath the tree.",
+            "mediaCategory": "norse-mythic-depiction",
+            "topicTags": [
+              "yggdrasil",
+              "world-tree",
+              "cosmology"
+            ]
+          }
+        }
+      ],
+      "problems": [],
+      "attached": [
+        {
+          "placement": {
+            "section": "One tree at the centre",
+            "brief": {
+              "kind": "depiction",
+              "subject": "The Course’s own illustration shows the world ash Yggdrasil surrounded by nine symbolic worlds, with three roots and creatures above and below.",
+              "mustShow": [
+                "A central ash tree labelled Yggdrasil.",
+                "Exactly three main roots spreading beneath the tree.",
+                "Nine symbolic areas surrounding the tree, labelled collectively Nine Worlds without assigning individual realm locations.",
+                "An eagle above a squirrel positioned along the tree’s trunk.",
+                "A dragon beneath the tree gnawing a root."
+              ],
+              "caption": "The Course’s own illustration shows Yggdrasil with nine surrounding worlds and creatures above and below.",
+              "alt": "A spreading ash tree labelled Yggdrasil stands among nine softly outlined areas labelled collectively Nine Worlds. Three main roots extend below it. An eagle sits above a squirrel on the trunk, and a dragon gnaws a root beneath the tree.",
+              "mediaCategory": "norse-mythic-depiction",
+              "topicTags": [
+                "yggdrasil",
+                "world-tree",
+                "cosmology"
+              ]
+            }
+          },
+          "status": "illustrated",
+          "library": [],
+          "illustration": {
+            "outcome": "illustrated",
+            "attempts": [
+              {
+                "modelId": "openai/gpt-6.1-sol",
+                "judge": {
+                  "pass": true,
+                  "failedChecks": [],
+                  "reasons": []
+                },
+                "judgeModelId": "openai/gpt-6-luna"
+              }
+            ]
+          },
+          "descriptorId": "7b9271b7-6d98-80bd-b956-00e690654669"
+        }
+      ]
+    }
+  ],
+  "glossary": {
+    "proposed": [
+      {
+        "term": "ash tree",
+        "definition": "A type of tree with strong wood and seeds shaped like little wings."
+      },
+      {
+        "term": "Norse",
+        "definition": "Related to the people, culture, and beliefs of Scandinavia during the Viking Age."
+      },
+      {
+        "term": "realm",
+        "definition": "A world or region, especially one belonging to a particular group or ruler."
+      }
+    ],
+    "rejected": [],
+    "modelId": "openai/gpt-6.1-sol",
+    "judgeModelId": "openai/gpt-6-luna"
+  }
+}

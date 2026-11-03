@@ -95,7 +95,7 @@ const VISUAL_RULE = `Plan the visuals the way a good teacher plans what to draw 
 Each visual has a kind and an intent:
 - kind "depiction": a picture of a thing, a being, a place, or a moment in a story, drawn in the Course's own illustration style.
 - kind "diagram": a picture that explains, with its parts labelled: the steps of a process in order, the inside of a structure, two results side by side, or a specimen or result the Learner must learn to recognise, drawn as a plain schematic and never made to look like a photograph or a microscope field.
-- kind "technique": a real photograph of a position or movement the Learner copies with their own body, such as a grip or a stance, never a drawing. Only for the body: a specimen or a result to recognise is a diagram.
+- kind "technique": a real photograph of a position or movement the Learner copies with their own body, such as a grip or a stance, never a drawing. Only for the body: a specimen or a result to recognise is a diagram. Its intent asks for what a photograph of the position shows from a usual angle (which way the hand faces, where it sits, how the fingers lie), never a point the hand itself covers.
 - intent: one sentence, in plain words, saying what the visual is for and what it must get across, so the reading's writer can describe it fully: the subject, the parts or moments that matter, and what the Learner should be able to tell from it. Not a caption, and not a list of objectives.
 A visual is a teaching aid, never a decoration: its intent serves an objective of the reading. The reading is written to stand without it, and a visual that cannot be made or found is simply left out, so plan generously.`;
 
