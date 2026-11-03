@@ -86,6 +86,17 @@ export type VisualBrief = {
 };
 
 /**
+ * Whether a person has looked at a library file (SEN-129). Seeded files were checked by a person before they were
+ * committed, so they start `reviewed`. A file found on Wikimedia Commons is used straight away as `unreviewed` until
+ * someone approves it in the Usage Console or removes it. A `removed` file is never offered to a new Reading, but its
+ * row and bytes stay, so a Lesson that already shows it keeps working, and the same file is never ingested again.
+ */
+export const MEDIA_REVIEWS = ["reviewed", "unreviewed", "removed"] as const;
+
+/** One of {@link MEDIA_REVIEWS}. */
+export type MediaReview = (typeof MEDIA_REVIEWS)[number];
+
+/**
  * Whether a file fills a request the way lookup finds it: the same Media category and at least one shared Topic tag.
  * @param descriptor - The file's category and tags
  * @param request - What was asked for

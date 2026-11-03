@@ -10,6 +10,7 @@ import { CourseRequests } from "@/views/CourseRequests";
 import { Decisions } from "@/views/Decisions";
 import { Failures } from "@/views/Failures";
 import { LearnerActivity } from "@/views/LearnerActivity";
+import { MediaReview } from "@/views/MediaReview";
 import { OpenRouterHistory } from "@/views/OpenRouterHistory";
 import { Overview } from "@/views/Overview";
 import { PipelineSteps } from "@/views/PipelineSteps";
@@ -32,6 +33,7 @@ export function App() {
             <Route path="failures" element={<Failures />} />
             <Route path="activity" element={<LearnerActivity />} />
             <Route path="api" element={<ApiTraffic />} />
+            <Route path="media-review" element={<MediaReview />} />
             <Route path="decisions" element={<Decisions />} />
             <Route path="setup" element={<SetupChecklist />} />
             <Route path="*" element={<EmptyState title="No such view" hint="Pick one from the left." />} />

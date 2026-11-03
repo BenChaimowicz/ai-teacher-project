@@ -56,6 +56,7 @@ export const KIND_LABEL: Record<PipelineEventKind, string> = {
   quiz: "Quiz",
   course_judge: "Final review",
   publish: "Publishing",
+  media_search: "Commons image search",
   live_check: "Live check",
 };
 
@@ -67,10 +68,13 @@ export const ROLE_LABEL: Record<UsageRole, string> = {
   triage: "Triage",
   research_primary: "Research (primary)",
   research_secondary: "Research (secondary)",
+  media_search: "Image search",
 };
 
 /** Paid service names. */
-export const VENDOR_LABEL: Record<UsageVendor, string> = { openrouter: "OpenRouter", parallel: "Parallel", you: "You.com" };
+export const VENDOR_LABEL: Record<UsageVendor, string> = {
+  openrouter: "OpenRouter", parallel: "Parallel", you: "You.com", wikimedia: "Wikimedia Commons",
+};
 
 /** Billing check status names. */
 export const BILLING_STATUS_LABEL = { ok: "OK", not_configured: "Needs login", error: "Error" } as const;
