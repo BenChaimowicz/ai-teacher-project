@@ -94,12 +94,33 @@ test("The author line is the Artist without HTML, hidden text, or entities, else
   assert.equal(commonsAuthor({ Artist: { value: "<span></span>" } }, "cc_by_sa"), null, "CC BY-SA needs a named author.");
 });
 
-test("Searches use the subject's content words, then the Topic tags, each limited to still images", () => {
+test("Searches lead with the first tag and the subject's object words, then every tag, then the subject, each limited to still images", () => {
   assert.deepEqual(commonsQueries({ kind: "technique", subject: "French grip on a drumstick: the right hand with the thumb on top", topicTags: ["french-grip", "right-hand"] }), [
-    "french grip drumstick right hand filetype:bitmap",
+    "french grip drumstick thumb filetype:bitmap",
     "french grip right hand filetype:bitmap",
+    "french grip drumstick right filetype:bitmap",
   ]);
   assert.deepEqual(commonsQueries({ kind: "depiction", subject: "Yggdrasil", topicTags: ["yggdrasil"] }), ["yggdrasil filetype:bitmap|drawing"]);
+});
+
+test("Words about the picture itself never reach a query: the 2026-11-03 drum grip and Norse briefs", () => {
+  // The live run searched "matched grip fulcrum" and got a copper-alloy lid and a mount; "fulcrum" now comes second, behind the drumstick.
+  assert.deepEqual(commonsQueries({ kind: "technique", subject: "A close-up photograph shows a hand holding a drumstick in matched grip.", topicTags: ["matched-grip", "fulcrum"] }), [
+    "matched grip hand drumstick filetype:bitmap",
+    "matched grip fulcrum filetype:bitmap",
+  ], "The subject's own words repeat the lead query's, so they are dropped.");
+  assert.deepEqual(commonsQueries({
+    kind: "depiction",
+    subject: "The Course’s own illustration shows the world ash Yggdrasil surrounded by nine symbolic worlds, with three roots and creatures above and below.",
+    topicTags: ["yggdrasil", "world-tree", "cosmology"],
+  }), [
+    "yggdrasil ash symbolic worlds filetype:bitmap|drawing",
+    "yggdrasil world tree cosmology filetype:bitmap|drawing",
+    "world ash yggdrasil symbolic filetype:bitmap|drawing",
+  ]);
+  for (const query of [...commonsQueries({ kind: "technique", subject: "A close-up photograph shows a hand holding a drumstick in matched grip.", topicTags: ["matched-grip"] }), ...commonsQueries({ kind: "diagram", subject: "The Course's own schematic shows four moments of a full stroke above a drum.", topicTags: ["full-stroke"] })]) {
+    assert.doesNotMatch(query, /\b(photograph|shows|close|up|course|courses|own|schematic|holding|above|four)\b/, query);
+  }
 });
 
 test("A recorded search keeps hostable stills in relevance order and says why it turned the rest down", () => {

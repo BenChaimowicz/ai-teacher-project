@@ -221,12 +221,30 @@ export function commonsAuthor(meta: CommonsExtmetadata, license: CommonsLicence[
 /** Words a Commons search gains nothing from: CirrusSearch ANDs every term, so each extra word only loses matches. */
 const STOPWORDS = new Set([
   "a", "an", "the", "of", "on", "in", "at", "to", "for", "with", "and", "or", "by", "from", "its", "their", "his", "her",
-  "is", "are", "be", "being", "as", "that", "this", "these", "those", "how", "what", "which", "who", "one", "two", "both",
-  "showing", "shows", "shown", "seen", "view", "close", "up", "image", "photo", "photograph", "picture", "diagram",
+  "is", "are", "be", "being", "as", "that", "this", "these", "those", "how", "what", "which", "who", "so", "not", "no",
+  "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "both", "each", "every", "all", "some", "several",
 ]);
 
-/** The most words one query carries; past this a Commons search almost never matches anything. */
-const MAX_QUERY_WORDS = 5;
+/**
+ * Words about the picture rather than about what is in it: how it was made, how it is framed, and how the things in
+ * it are arranged. A brief's subject is written for a reader ("A close-up photograph shows a hand holding a stick");
+ * a File page's text names its object, so none of these ever reaches a query.
+ */
+const META_WORDS = new Set([
+  // What the picture is.
+  "photograph", "photographed", "photo", "picture", "pictured", "image", "illustration", "illustrated", "drawing", "drawn", "sketch",
+  "schematic", "diagram", "figure", "scene", "still", "stills", "panel", "panels", "course", "courses", "own", "real",
+  // How it is framed.
+  "close", "closeup", "up", "view", "viewed", "shows", "showing", "shown", "show", "seen", "see", "depicts", "depicted", "depicting",
+  "labelled", "labeled", "label", "labels", "angle", "detail",
+  // How things in it are arranged.
+  "holding", "held", "hold", "holds", "standing", "stands", "sitting", "sits", "lying", "lies", "resting", "rests", "surrounded",
+  "surrounding", "placed", "positioned", "above", "below", "beside", "between", "around", "across", "along", "under", "over",
+  "against", "inside", "outside", "front", "behind", "top", "bottom", "side", "sideways", "together",
+]);
+
+/** The most words one query carries: CirrusSearch ANDs them, and past four a search almost never matches anything. */
+const MAX_QUERY_WORDS = 4;
 
 /**
  * CirrusSearch's file-type filter for a visual kind. Without one, a File: search is mostly scanned books (PDF, DjVu)
@@ -238,19 +256,35 @@ function fileTypeFilter(kind: VisualBrief["kind"]): string {
 }
 
 /**
- * The searches to run for a brief, in order: the content words of its subject sentence, which name the object as well
- * as the detail ("matched grip drumstick"), then its Topic tags as words, which alone often match the wrong domain
- * ("french grip right hand" also finds pistols). Each is limited to still-image file types. Duplicates are dropped.
+ * The searches to run for a brief, most specific first, each limited to still-image file types:
+ * 1. the tag phrase: the first Topic tag as words, then the object words of the subject it does not already say
+ *    ("matched grip hand drumstick");
+ * 2. every Topic tag as words ("matched grip fulcrum"), which alone often match the wrong domain ("french grip right
+ *    hand" also finds pistols, "fulcrum" finds brooches), so they come second;
+ * 3. the subject's object words on their own.
+ * Object words are what is in the picture: function words, counting words and every word about the picture itself
+ * (photograph, shows, close-up, the Course's own, holding, above) are dropped, since a File page names its object, not
+ * its framing. A query that repeats an earlier one's words is dropped.
  * @param brief - What the visual must show
- * @returns One or two search strings
+ * @returns One to three search strings
  */
 export function commonsQueries(brief: Pick<VisualBrief, "kind" | "subject" | "topicTags">): string[] {
   const unique = (list: string[]) => [...new Set(list)];
-  const fromSubject = unique(brief.subject.toLowerCase().replace(/[^\p{L}\p{N}\s'-]+/gu, " ").split(/[\s-]+/))
-    .filter((word) => word.length > 1 && !STOPWORDS.has(word));
-  const fromTags = unique(brief.topicTags.flatMap((tag) => tag.split("-"))).filter((word) => word && !STOPWORDS.has(word));
-  const queries = [fromSubject, fromTags].map((words) => words.slice(0, MAX_QUERY_WORDS).join(" ")).filter(Boolean);
-  return unique(queries).map((query) => `${query} ${fileTypeFilter(brief.kind)}`);
+  const content = (word: string) => word.length > 1 && !STOPWORDS.has(word) && !META_WORDS.has(word);
+  const subjectWords = unique(brief.subject.toLowerCase().replace(/[’']/g, "").replace(/[^\p{L}\p{N}\s-]+/gu, " ").split(/[\s-]+/)).filter(content);
+  const tags = brief.topicTags.map((tag) => unique(tag.toLowerCase().split("-")).filter(content));
+  const tagWords = unique(tags.flat());
+  const objectWords = subjectWords.filter((word) => !tagWords.includes(word));
+  const seen = new Set<string>();
+  return [[...(tags[0] ?? []), ...objectWords], tagWords, subjectWords]
+    .map((words) => words.slice(0, MAX_QUERY_WORDS))
+    .filter((words) => {
+      const key = [...words].sort().join(" ");
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((words) => `${words.join(" ")} ${fileTypeFilter(brief.kind)}`);
 }
 
 /**
