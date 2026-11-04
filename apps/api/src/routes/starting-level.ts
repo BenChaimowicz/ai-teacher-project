@@ -19,8 +19,11 @@ import { createDiagnosticBuilder, DiagnosticFailedError, type DiagnosticBuilder 
 import { recordProductEvent, withPipelineEvent } from "../lib/usage-tracking.ts";
 import { requestFields } from "../lib/course-request-fields.ts";
 
-/** Injectable diagnostic builder; persistence and HTTP semantics stay in these routes. */
-type StartingLevelOptions = { diagnosticBuilder?: DiagnosticBuilder };
+/**
+ * Injectable diagnostic builder; persistence and HTTP semantics stay in these routes. `onPreparationEnd` is called once
+ * a detached preparation has written its last word, so tests and live checks can wait for it instead of guessing.
+ */
+type StartingLevelOptions = { diagnosticBuilder?: DiagnosticBuilder; onPreparationEnd?: (requestId: string) => void };
 
 /** Route parameters for one Request. */
 type RequestParams = { Params: { requestId: string } };
@@ -125,15 +128,15 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
    * @param requestId - The Request
    * @param learnerId - Its Learner
    * @param from - The status the Learner started the check from
-   * @returns The claim token every later write checks, or null when something else moved the Request first
+   * @returns The leased Request and the claim token every later write checks, or null when something else moved it first
    */
   async function claimPreparation(requestId: string, learnerId: string, from: CourseRequestStatus) {
-    const preparingToken = randomUUID();
+    const token = randomUUID();
     const [claimed] = await app.db.update(courseRequests)
-      .set({ status: "assessment_preparing", failureReason: null, preparingToken, preparingUntil: leaseEnd() })
+      .set({ status: "assessment_preparing", failureReason: null, preparingToken: token, preparingUntil: leaseEnd() })
       .where(and(eq(courseRequests.id, requestId), eq(courseRequests.learnerId, learnerId), eq(courseRequests.status, from)))
-      .returning({ id: courseRequests.id });
-    return claimed ? preparingToken : null;
+      .returning(requestFields);
+    return claimed ? { claimed, token } : null;
   }
 
   /**
@@ -218,20 +221,21 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
     }
   });
 
-  app.post<RequestParams>("/api/course-requests/:requestId/diagnostic", async (request, reply) => {
+  /**
+   * Builds the item set and saves it, after the prepare request has already answered (SEN-131). Nothing waits on this
+   * promise: every outcome is written to the Request, where the browser's next GET finds it, and logged. It never throws.
+   * @param row - The leased Request
+   * @param learnerId - Its Learner
+   * @param token - This preparation's claim token
+   * @param from - The status the Learner started the check from, where a provider failure returns it
+   */
+  async function runPreparation(row: Pick<typeof courseRequests.$inferSelect, "id" | "subject" | "learningGoal" | "focus">, learnerId: string, token: string, from: CourseRequestStatus) {
+    const stopHeartbeat = heartbeat(row.id, learnerId, token);
     try {
-      const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
-      if (!row) return reply;
-      // The check starts once the Learning Goal is settled (SEN-90); Assessment-failed offers only Retry diagnostic, which starts here too.
-      const from = row.status;
-      if (from !== "goal_focused" && from !== "assessment_failed") return reply.code(409).send({ error: "This Request is not ready for a Starting Level check." });
-      const token = await claimPreparation(row.id, request.currentLearner.id, from);
-      if (!token) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
-      const stopHeartbeat = heartbeat(row.id, request.currentLearner.id, token);
       let draft;
       try {
         draft = await withPipelineEvent("diagnostic", {
-          label: "Item set", courseRequestId: row.id, learnerId: request.currentLearner.id,
+          label: "Item set", courseRequestId: row.id, learnerId,
         }, async (event) => {
           const built = await builder.build({ subject: row.subject, learningGoal: row.learningGoal, scope: row.focus?.scope ?? null });
           event.setDetail({
@@ -245,31 +249,55 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        request.log.error(`[starting-level.ts: prepare] Diagnostic preparation failed || requestId=${row.id} || ${message}`);
+        app.log.error(`[starting-level.ts: runPreparation] Diagnostic preparation failed || requestId=${row.id} || ${message}`);
         // The failure is saved on the Request with its next step, so it reads the same after a reload.
         const failed = error instanceof DiagnosticFailedError
-          ? await releasePreparation(row.id, request.currentLearner.id, token, "assessment_failed", ASSESSMENT_FAILED_REASON)
-          : await releasePreparation(row.id, request.currentLearner.id, token, from, PREPARE_FAILED_REASON);
-        if (!failed) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
-        return { courseRequest: failed, diagnostic: null };
-      } finally {
-        stopHeartbeat();
+          ? await releasePreparation(row.id, learnerId, token, "assessment_failed", ASSESSMENT_FAILED_REASON)
+          : await releasePreparation(row.id, learnerId, token, from, PREPARE_FAILED_REASON);
+        if (!failed) app.log.warn(`[starting-level.ts: runPreparation] A failed preparation had already lost its lease || requestId=${row.id}`);
+        return;
       }
       // The attempt is saved only if this preparation still holds the Request, so a check whose lease was handed back
       // leaves no attempt behind instead of one the Learner can never reach.
       const ready = await app.db.transaction(async (transaction) => {
         const [moved] = await transaction.update(courseRequests)
           .set({ status: "assessment_ready", failureReason: null, preparingToken: null, preparingUntil: null })
-          .where(held(row.id, request.currentLearner.id, token)).returning(requestFields);
+          .where(held(row.id, learnerId, token)).returning({ id: courseRequests.id });
         if (!moved) return null;
         const [attempt] = await transaction.insert(startingLevelDiagnostics).values({
-          courseRequestId: row.id, learnerId: request.currentLearner.id, ...draft, readyAt: new Date(),
-        }).returning();
+          courseRequestId: row.id, learnerId, ...draft, readyAt: new Date(),
+        }).returning({ id: startingLevelDiagnostics.id });
         if (!attempt) throw new Error("Diagnostic attempt was not saved.");
-        return { courseRequest: moved, attempt };
+        return attempt;
       });
-      if (!ready) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
-      return { courseRequest: ready.courseRequest, diagnostic: learnerView(ready.attempt) };
+      if (!ready) app.log.warn(`[starting-level.ts: runPreparation] A finished preparation had lost its lease, so its set was dropped || requestId=${row.id}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      app.log.error(`[starting-level.ts: runPreparation] Could not save the Starting Level check || requestId=${row.id} || ${message}`);
+      // Without this the Learner would wait out the whole lease before Try again is offered.
+      await releasePreparation(row.id, learnerId, token, from, PREPARE_FAILED_REASON).catch((releaseError: unknown) => {
+        const detail = releaseError instanceof Error ? releaseError.message : String(releaseError);
+        app.log.error(`[starting-level.ts: runPreparation] Could not release the lease after a failure || requestId=${row.id} || ${detail}`);
+      });
+    } finally {
+      stopHeartbeat();
+      options.onPreparationEnd?.(row.id);
+    }
+  }
+
+  app.post<RequestParams>("/api/course-requests/:requestId/diagnostic", async (request, reply) => {
+    try {
+      const row = await ownedRequest(request.params.requestId, request.currentLearner.id, reply);
+      if (!row) return reply;
+      // The check starts once the Learning Goal is settled (SEN-90); Assessment-failed offers only Retry diagnostic, which starts here too.
+      const from = row.status;
+      if (from !== "goal_focused" && from !== "assessment_failed") return reply.code(409).send({ error: "This Request is not ready for a Starting Level check." });
+      const claim = await claimPreparation(row.id, request.currentLearner.id, from);
+      if (!claim) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+      // The build runs on past this reply (SEN-131): a request silent for minutes is closed by the host, so the browser
+      // polls GET while the Request is `assessment_preparing` and the lease (ADR 0023) says whether anyone is still building.
+      void runPreparation(row, request.currentLearner.id, claim.token, from);
+      return { courseRequest: claim.claimed, diagnostic: null };
     } catch (error) {
       return fail(reply, request.log, "prepare", request.params.requestId, error, "Failed to prepare the Starting Level check.");
     }
