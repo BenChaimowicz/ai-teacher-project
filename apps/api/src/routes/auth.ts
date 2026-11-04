@@ -1,8 +1,11 @@
 import rateLimit, { normalizeIP } from "@fastify/rate-limit";
+import { eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { learners, type ProductEventKind } from "@senoy/db";
 import { clearSessionCookies, readSessionCookies, setSessionCookies } from "../lib/session-cookies.ts";
 import { SIGN_IN_ERROR } from "../plugins/current-learner.ts";
 import { AuthServiceError, LINK_TYPES, type AuthService, type LinkType, type SignOutScope } from "../lib/supabase-auth.ts";
+import { recordProductEvent } from "../lib/usage-tracking.ts";
 
 /** Options for the auth routes. */
 export type AuthRoutesOptions = {
@@ -114,6 +117,16 @@ function ownOrigin(request: FastifyRequest) {
 }
 
 /**
+ * What a failed Supabase call says, for a product event's `detail`: `unavailable` when Supabase could not answer,
+ * otherwise Supabase's own error code (for example `invalid_credentials`). Never the email or the message.
+ * @param error - What the call threw
+ */
+function outcomeOf(error: unknown): string {
+  if (!(error instanceof AuthServiceError) || error.unavailable) return "unavailable";
+  return error.code ?? "refused";
+}
+
+/**
  * Answers a failed Supabase call whose route must not say whether the email exists: Supabase being down or a rate
  * limit gets an error, anything else the same 204 as success.
  * @param request - The request
@@ -172,6 +185,34 @@ function failureReply(request: FastifyRequest, reply: FastifyReply, error: unkno
  */
 export async function authRoutes(app: FastifyInstance, options: AuthRoutesOptions) {
   const { auth } = options;
+
+  /**
+   * The Learner a Supabase user already has. Null when there is none yet (it is made on the first signed-in call) or
+   * the lookup failed: a product event is never worth failing a sign-in over.
+   * @param userId - The Supabase user id, or null when unknown
+   */
+  async function learnerIdOf(userId: string | null): Promise<string | null> {
+    if (!userId) return null;
+    try {
+      const [row] = await app.db.select({ id: learners.id }).from(learners).where(eq(learners.authUserId, userId)).limit(1);
+      return row?.id ?? null;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      app.log.warn(`[auth.ts: learnerIdOf] Could not find the Learner for a product event || userId=${userId} || ${message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Records an account product event (decision 2026-11-04): the Learner only when the action worked for a known
+   * account, otherwise null. `detail` never holds an email address, password, code or token.
+   * @param kind - The account event
+   * @param detail - What happened, e.g. `{ outcome: "ok" }`
+   * @param userId - The Supabase user the action worked for, when it did
+   */
+  function recordAccountEvent(kind: ProductEventKind, detail: Record<string, unknown>, userId: string | null = null) {
+    void learnerIdOf(userId).then((learnerId) => recordProductEvent(kind, { learnerId, detail }));
+  }
   // Registered inside this plugin, so it is scoped to these routes: nothing else in the API is limited.
   await app.register(rateLimit, { global: false });
 
@@ -206,8 +247,10 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
     if (!password) return reply.code(400).send({ error: WEAK_PASSWORD_ERROR });
     try {
       await auth.signUp(email, password, `${ownOrigin(request)}/api/auth/confirm?next=/`);
+      recordAccountEvent("account_signed_up", { outcome: "ok" });
       return reply.code(204).send();
     } catch (error) {
+      recordAccountEvent("account_signed_up", { outcome: outcomeOf(error) });
       // A weak password says nothing about the email; everything else stays neutral.
       if (error instanceof AuthServiceError && error.code === "weak_password") {
         return reply.code(400).send({ error: WEAK_PASSWORD_ERROR });
@@ -221,8 +264,10 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
     if (!email) return reply.code(400).send({ error: EMAIL_ERROR });
     try {
       await auth.resendConfirmation(email, `${ownOrigin(request)}/api/auth/confirm?next=/`);
+      recordAccountEvent("account_verification_resent", { outcome: "ok" });
       return reply.code(204).send();
     } catch (error) {
+      recordAccountEvent("account_verification_resent", { outcome: outcomeOf(error) });
       return neutralReply(request, reply, error);
     }
   });
@@ -232,9 +277,12 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
     const password = field(request.body, "password");
     if (!email || !password) return reply.code(401).send({ error: WRONG_PASSWORD_ERROR });
     try {
-      setSessionCookies(request, reply, await auth.signIn(email, password));
+      const session = await auth.signIn(email, password);
+      setSessionCookies(request, reply, session);
+      recordAccountEvent("account_signed_in", { method: "password", outcome: "ok" }, session.userId);
       return reply.code(204).send();
     } catch (error) {
+      recordAccountEvent("account_signed_in", { method: "password", outcome: outcomeOf(error) });
       if (error instanceof AuthServiceError && error.code === "email_not_confirmed") {
         return reply.code(403).send({ error: NOT_CONFIRMED_ERROR, code: "email_not_confirmed" });
       }
@@ -247,8 +295,10 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
     if (!email) return reply.code(400).send({ error: EMAIL_ERROR });
     try {
       await auth.sendCode(email);
+      recordAccountEvent("account_sign_in_code_requested", { outcome: "ok" });
       return reply.code(204).send();
     } catch (error) {
+      recordAccountEvent("account_sign_in_code_requested", { outcome: outcomeOf(error) });
       // An email with no account is refused here (no user is ever created), and must look like success.
       return neutralReply(request, reply, error);
     }
@@ -259,9 +309,12 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
     const code = field(request.body, "code")?.trim();
     if (!email || !code) return reply.code(401).send({ error: WRONG_CODE_ERROR });
     try {
-      setSessionCookies(request, reply, await auth.verifyCode(email, code));
+      const session = await auth.verifyCode(email, code);
+      setSessionCookies(request, reply, session);
+      recordAccountEvent("account_signed_in", { method: "code", outcome: "ok" }, session.userId);
       return reply.code(204).send();
     } catch (error) {
+      recordAccountEvent("account_signed_in", { method: "code", outcome: outcomeOf(error) });
       return failureReply(request, reply, error, { status: 401, error: WRONG_CODE_ERROR });
     }
   });
@@ -271,8 +324,10 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
     if (!email) return reply.code(400).send({ error: EMAIL_ERROR });
     try {
       await auth.sendPasswordReset(email, `${ownOrigin(request)}/api/auth/confirm?next=/reset-password`);
+      recordAccountEvent("account_password_reset_requested", { outcome: "ok" });
       return reply.code(204).send();
     } catch (error) {
+      recordAccountEvent("account_password_reset_requested", { outcome: outcomeOf(error) });
       return neutralReply(request, reply, error);
     }
   });
@@ -284,9 +339,12 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
     const next = safeNextPath(query.next);
     if (!tokenHash || !type) return reply.redirect(EXPIRED_LINK_PATH, 303);
     try {
-      setSessionCookies(request, reply, await auth.verifyLink(tokenHash, type satisfies LinkType));
+      const session = await auth.verifyLink(tokenHash, type satisfies LinkType);
+      setSessionCookies(request, reply, session);
+      recordAccountEvent("account_signed_in", { method: "email_link", linkType: type, outcome: "ok" }, session.userId);
       return reply.redirect(next, 303);
     } catch (error) {
+      recordAccountEvent("account_signed_in", { method: "email_link", linkType: type, outcome: outcomeOf(error) });
       const message = error instanceof Error ? error.message : String(error);
       request.log.info(`[auth.ts: authRoutes] Refused an email link || type=${type} || ${message}`);
       return reply.redirect(EXPIRED_LINK_PATH, 303);
@@ -300,6 +358,7 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
     if (!refreshToken) return reply.code(401).send({ error: SIGN_IN_ERROR });
     try {
       await auth.changePassword({ accessToken, refreshToken }, password);
+      void recordProductEvent("account_password_set", { learnerId: request.currentLearner.id });
       return reply.code(204).send();
     } catch (error) {
       return failureReply(request, reply, error, { status: 400, error: "Couldn't change your password. Try again." });
@@ -313,9 +372,11 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
     }
     const scope: SignOutScope = scopeField;
     const { accessToken, refreshToken } = readSessionCookies(request);
+    // Whose session it was is known only from Supabase accepting it; a bare cookie could name anyone.
+    let userId: string | null = null;
     if (accessToken && refreshToken) {
       try {
-        await auth.signOut({ accessToken, refreshToken }, scope);
+        ({ userId } = await auth.signOut({ accessToken, refreshToken }, scope));
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         // Signing out everywhere must not look done when it wasn't: keep this session so the Learner can try again.
@@ -328,6 +389,7 @@ export async function authRoutes(app: FastifyInstance, options: AuthRoutesOption
       }
     }
     clearSessionCookies(request, reply);
+    recordAccountEvent("account_signed_out", { scope }, userId);
     return reply.code(204).send();
   });
 }

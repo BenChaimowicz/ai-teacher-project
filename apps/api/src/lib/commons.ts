@@ -3,8 +3,10 @@ import { recordUsage, type UsageRecordRow } from "./usage-tracking.ts";
 
 /**
  * Wikimedia Commons search for a visual the media library lacks (spec §5.6 step 2, SEN-129): the Action API's
- * `generator=search` over File: pages with `imageinfo`, and the licence line the product may host. Every call to
- * Commons, the search and each file download, is a Usage Record (vendor `wikimedia`, role `media_search`, cost 0).
+ * `generator=search` over File: pages with `imageinfo`, and the licence line the product may host. A file found another
+ * way, by an Openverse search or in a Commons category (SEN-132), is read from the same API by page id or category, so
+ * every file passes the same licence filter on its own page. Every call to Commons, each search, lookup, and file
+ * download, is a Usage Record (vendor `wikimedia`, role `media_search`, cost 0).
  */
 
 /** The Commons Action API endpoint. */
@@ -28,9 +30,10 @@ export const MIN_SHORT_SIDE_PX = 300;
  */
 export const COMMONS_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"] as const;
 
-/** The `extmetadata` fields the licence filter and the source line read. */
+/** The `extmetadata` fields the licence filter and the source line read, and the description the librarian reads. */
 const EXTMETADATA_FIELDS = [
   "LicenseShortName", "License", "LicenseUrl", "UsageTerms", "AttributionRequired", "Artist", "Credit", "ObjectName", "Restrictions",
+  "ImageDescription",
 ] as const;
 
 /** One `extmetadata` field name. */
@@ -257,6 +260,15 @@ function fileTypeFilter(kind: VisualBrief["kind"]): string {
 }
 
 /**
+ * A keyword search as Commons runs it: the words, limited to the still-image file types of the brief's kind.
+ * @param words - The keywords, such as a search the librarian wrote
+ * @param kind - The brief's visual kind
+ */
+export function commonsSearchString(words: string, kind: VisualBrief["kind"]): string {
+  return `${words.trim()} ${fileTypeFilter(kind)}`;
+}
+
+/**
  * The searches to run for a brief, most specific first, each limited to still-image file types:
  * 1. the tag phrase: the first Topic tag as words, then the object words of the subject it does not already say
  *    ("matched grip hand drumstick");
@@ -285,33 +297,60 @@ export function commonsQueries(brief: Pick<VisualBrief, "kind" | "subject" | "to
       seen.add(key);
       return true;
     })
-    .map((words) => `${words.join(" ")} ${fileTypeFilter(brief.kind)}`);
+    .map((words) => commonsSearchString(words.join(" "), brief.kind));
 }
 
+/** Most page ids one lookup asks for: the Action API's limit for a client without bot rights. */
+export const MAX_LOOKUP_PAGE_IDS = 50;
+
 /**
- * The Action API query for one search: File: pages (namespace 6) with their URL, size, MIME type, the licence and
- * credit fields, and a thumbnail at {@link COMMONS_THUMB_WIDTH}. `maxlag` asks Commons to refuse rather than queue when
- * its replicas lag, as Wikimedia's API etiquette asks of bots.
- * @param query - The search string
+ * An Action API query for File: pages, picked by `pages` (a search, a category, or page ids), with each page's URL,
+ * size, MIME type, the licence and credit fields, its description, a thumbnail at {@link COMMONS_THUMB_WIDTH}, and the
+ * categories a person can see (hidden maintenance categories left out). `maxlag` asks Commons to refuse rather than
+ * queue when its replicas lag, as Wikimedia's API etiquette asks of bots.
+ * @param pages - The parameters that pick the pages
  */
-export function commonsSearchUrl(query: string): string {
+function fileInfoUrl(pages: Record<string, string>): string {
   const params = new URLSearchParams({
     action: "query",
     format: "json",
     formatversion: "2",
     maxlag: "5",
     uselang: "en",
-    generator: "search",
-    gsrnamespace: "6",
-    gsrsearch: query,
-    gsrlimit: String(COMMONS_SEARCH_LIMIT),
-    prop: "imageinfo",
+    ...pages,
+    prop: "imageinfo|categories",
     iiprop: "url|extmetadata|size|mime",
     iiurlwidth: String(COMMONS_THUMB_WIDTH),
     iiextmetadatafilter: EXTMETADATA_FIELDS.join("|"),
     iiextmetadatalanguage: "en",
+    clshow: "!hidden",
+    cllimit: "max",
   });
   return `${COMMONS_API_URL}?${params}`;
+}
+
+/**
+ * The Action API query for one search: File: pages (namespace 6) in Commons' relevance order.
+ * @param query - The search string
+ */
+export function commonsSearchUrl(query: string): string {
+  return fileInfoUrl({ generator: "search", gsrnamespace: "6", gsrsearch: query, gsrlimit: String(COMMONS_SEARCH_LIMIT) });
+}
+
+/**
+ * The Action API query for the files of one category (SEN-132), in the category's own sort order.
+ * @param category - The category title, such as `Category:Drumsticks`
+ */
+export function commonsCategoryUrl(category: string): string {
+  return fileInfoUrl({ generator: "categorymembers", gcmtitle: category, gcmtype: "file", gcmlimit: String(COMMONS_SEARCH_LIMIT) });
+}
+
+/**
+ * The Action API query for File: pages by page id (SEN-132), such as the Commons files an Openverse search found.
+ * @param pageIds - At most {@link MAX_LOOKUP_PAGE_IDS} ids
+ */
+export function commonsPagesUrl(pageIds: readonly number[]): string {
+  return fileInfoUrl({ pageids: pageIds.join("|") });
 }
 
 /** One File page a search returned and the filters kept, ready to download and judge. */
@@ -327,17 +366,24 @@ export type CommonsCandidate = {
   mimeType: string;
   width: number;
   height: number;
-  /** Position in Commons' relevance order, from 1. */
+  /** Position in the reply's order, from 1: Commons' relevance order for a search. */
   rank: number;
   licence: CommonsLicence;
   author: string;
+  /** The page's description as plain text, cut to {@link MAX_DESCRIPTION_CHARS}; "" when it has none. */
+  description: string;
+  /** The categories a person can see on the page, such as `Category:Drumsticks`. */
+  categories: string[];
 };
 
 /** A File page a filter turned down, and why. */
 export type CommonsRejection = { title: string; reason: string };
 
-/** What one search kept and turned down. */
+/** What one search kept and turned down. `query` names the search: its string, category, or page ids. */
 export type CommonsSearchResult = { query: string; candidates: CommonsCandidate[]; rejected: CommonsRejection[] };
+
+/** The longest description kept on a candidate: enough for the librarian to tell a drum grip from a pistol grip. */
+export const MAX_DESCRIPTION_CHARS = 300;
 
 /** One File page in a `formatversion=2` reply, as far as this module reads it. */
 type CommonsPage = {
@@ -347,6 +393,7 @@ type CommonsPage = {
   imageinfo?: {
     mime?: string; width?: number; height?: number; thumburl?: string; descriptionurl?: string; extmetadata?: CommonsExtmetadata;
   }[];
+  categories?: { title?: string }[];
 };
 
 /**
@@ -376,6 +423,7 @@ export function parseCommonsSearch(query: string, body: unknown): CommonsSearchR
     if (!verdict.ok) { reject(verdict.reason); continue; }
     const author = commonsAuthor(extmetadata ?? {}, verdict.license);
     if (!author) { reject(`A ${verdict.license} file must name its author, and this one names none.`); continue; }
+    const description = stripHtml(field(extmetadata ?? {}, "ImageDescription"));
     candidates.push({
       pageId: page.pageid,
       title,
@@ -387,6 +435,8 @@ export function parseCommonsSearch(query: string, body: unknown): CommonsSearchR
       rank: position + 1,
       licence: { license: verdict.license, licenseUrl: verdict.licenseUrl },
       author,
+      description: description.length > MAX_DESCRIPTION_CHARS ? `${description.slice(0, MAX_DESCRIPTION_CHARS - 1).trimEnd()}…` : description,
+      categories: (page.categories ?? []).flatMap(({ title: category }) => category ? [category] : []),
     });
   }
   return { query, candidates, rejected };
@@ -419,6 +469,9 @@ function failureOutcome(error: unknown): "timeout" | "network" {
   return name === "TimeoutError" || name === "AbortError" ? "timeout" : "network";
 }
 
+/** A Commons query's result, with the error when the call failed. */
+export type CommonsQueryResult = CommonsSearchResult & { error: string | null };
+
 /**
  * Runs one Commons search and records it. A failed call returns no candidates rather than throwing, so a Commons outage
  * means "no image found", as the decision of 2026-11-03 orders; the failure is on the Usage Record and in the result.
@@ -426,11 +479,49 @@ function failureOutcome(error: unknown): "timeout" | "network" {
  * @param query - The search string
  * @returns What the search kept and turned down, and the error when it failed
  */
-export async function searchCommons(client: CommonsClient, query: string): Promise<CommonsSearchResult & { error: string | null }> {
-  const url = commonsSearchUrl(query);
+export function searchCommons(client: CommonsClient, query: string): Promise<CommonsQueryResult> {
+  return queryCommons(client, "searchCommons", "commons-search", query, commonsSearchUrl(query));
+}
+
+/**
+ * Reads the files of one Commons category and records the call, as {@link searchCommons} does (SEN-132).
+ * @param client - fetch and User-Agent
+ * @param category - The category title, such as `Category:Drumsticks`
+ */
+export function browseCommonsCategory(client: CommonsClient, category: string): Promise<CommonsQueryResult> {
+  return queryCommons(client, "browseCommonsCategory", "commons-category", category, commonsCategoryUrl(category));
+}
+
+/**
+ * Reads File: pages by page id and records the call, as {@link searchCommons} does (SEN-132): how a Commons file another
+ * index found gets its licence read off its own page. Candidates come back in the order of `pageIds`.
+ * @param client - fetch and User-Agent
+ * @param pageIds - At most {@link MAX_LOOKUP_PAGE_IDS} ids; any more are not looked up
+ */
+export async function lookupCommonsPages(client: CommonsClient, pageIds: readonly number[]): Promise<CommonsQueryResult> {
+  const ids = [...new Set(pageIds)].slice(0, MAX_LOOKUP_PAGE_IDS);
+  const label = `pageids:${ids.join("|")}`;
+  if (ids.length === 0) return { query: label, candidates: [], rejected: [], error: null };
+  const result = await queryCommons(client, "lookupCommonsPages", "commons-pages", label, commonsPagesUrl(ids));
+  const order = (pageId: number) => ids.indexOf(pageId);
+  const candidates = result.candidates.filter(({ pageId }) => ids.includes(pageId))
+    .sort((a, b) => order(a.pageId) - order(b.pageId))
+    .map((candidate, index) => ({ ...candidate, rank: index + 1 }));
+  return { ...result, candidates };
+}
+
+/**
+ * Runs one Action API query for File: pages and records it; never throws.
+ * @param client - fetch and User-Agent
+ * @param where - The calling function, for error messages
+ * @param modelId - The Usage Record's `modelId`: which kind of Commons call this is
+ * @param query - What the call asked for, for the result and the record
+ * @param url - The query URL
+ */
+async function queryCommons(client: CommonsClient, where: string, modelId: string, query: string, url: string): Promise<CommonsQueryResult> {
   const startedAt = performance.now();
   const record = (row: Pick<UsageRecordRow, "outcome" | "httpStatus" | "error" | "response">) => recordUsage({
-    ...COMMONS_USAGE, ...row, modelId: "commons-search", responseId: null,
+    ...COMMONS_USAGE, ...row, modelId, responseId: null,
     request: { query, url }, durationMs: Math.round(performance.now() - startedAt),
   });
 
@@ -438,7 +529,7 @@ export async function searchCommons(client: CommonsClient, query: string): Promi
   try {
     response = await client.fetch(url, { headers: { "User-Agent": client.userAgent, accept: "application/json" }, signal: AbortSignal.timeout(COMMONS_TIMEOUT_MS) });
   } catch (error) {
-    const message = `[commons.ts: searchCommons] Commons search failed || query=${query} || ${error instanceof Error ? error.message : String(error)}`;
+    const message = `[commons.ts: ${where}] Commons call failed || query=${query} || ${error instanceof Error ? error.message : String(error)}`;
     await record({ outcome: failureOutcome(error), httpStatus: null, error: message, response: null });
     return { query, candidates: [], rejected: [], error: message };
   }
@@ -453,7 +544,7 @@ export async function searchCommons(client: CommonsClient, query: string): Promi
   const apiError = (body as { error?: { code?: string; info?: string } } | null)?.error;
   if (!response.ok || body === null || apiError) {
     const why = apiError ? `${apiError.code}: ${apiError.info}` : `status ${response.status}: ${text.slice(0, 200)}`;
-    const message = `[commons.ts: searchCommons] Commons refused the search || query=${query} || ${why}`;
+    const message = `[commons.ts: ${where}] Commons refused the call || query=${query} || ${why}`;
     await record({ outcome: response.ok ? "error" : "http", httpStatus: response.status, error: message, response: body ?? text.slice(0, 2000) });
     return { query, candidates: [], rejected: [], error: message };
   }

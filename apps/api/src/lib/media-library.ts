@@ -71,11 +71,11 @@ export function libraryFiles(rows: readonly MediaDescriptorRow[]): MediaDescript
 }
 
 /**
- * The descriptor fields of one row: everything but its review state and timestamps.
+ * The descriptor fields of one row: everything but its review state, the search that found it, and timestamps.
  * @param row - A `media_descriptors` row
  */
 export function descriptorOf(row: MediaDescriptorRow): MediaDescriptorFields {
-  const { createdAt: _created, updatedAt: _updated, review: _review, ...fields } = row;
+  const { createdAt: _created, updatedAt: _updated, review: _review, foundBy: _foundBy, ...fields } = row;
   return fields;
 }
 

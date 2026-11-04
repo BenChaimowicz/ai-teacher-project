@@ -173,7 +173,11 @@ async function checkReadingMedia() {
       for (const file of visual.library) {
         process.stdout.write(`    library ${file.storageKey}: ${file.failures ? `skipped: ${file.failures.join("; ")}` : file.error ? `error: ${file.error}` : file.judge?.pass ? "pass" : `fail: ${file.judge?.reasons.join(" ")}`}\n`);
       }
-      if (visual.commons) process.stdout.write(`    commons: ${visual.commons.outcome}; tried ${visual.commons.tried.map(({ title, status }) => `${title} (${status})`).join(", ") || "nothing"}\n`);
+      if (visual.commons) {
+        const { outcome, foundBy, searches, tried, librarianErrors } = visual.commons;
+        process.stdout.write(`    commons: ${outcome}${foundBy ? ` via ${foundBy.index} "${foundBy.query}"` : ""} after ${searches.length} search(es); tried ${tried.map(({ title, status }) => `${title} (${status})`).join(", ") || "nothing"}\n`);
+        for (const error of librarianErrors) process.stdout.write(`    librarian error: ${error}\n`);
+      }
       if (visual.commonsError) process.stdout.write(`    commons error: ${visual.commonsError}\n`);
     }
     const blocks = outcome.lesson ? mediaBlocksOf(outcome.lesson.body) : [];

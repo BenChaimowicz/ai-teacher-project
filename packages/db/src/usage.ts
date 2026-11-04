@@ -7,8 +7,11 @@ import type { ResearchTier, ResearchTierRating } from "./course-request.ts";
 import type { GenerationJobKind, GenerationJobStatus, GenerationStage } from "./generation-job.ts";
 import type { MediaReview } from "./media.ts";
 
-/** The external service a Usage Record called. Wikimedia Commons is free; its calls are recorded at a cost of 0 (SEN-129). */
-export const USAGE_VENDORS = ["openrouter", "parallel", "you", "wikimedia"] as const;
+/**
+ * The external service a Usage Record called. Wikimedia Commons (SEN-129) and Openverse (SEN-132) are free; their calls
+ * are recorded at a cost of 0.
+ */
+export const USAGE_VENDORS = ["openrouter", "parallel", "you", "wikimedia", "openverse"] as const;
 export type UsageVendor = (typeof USAGE_VENDORS)[number];
 
 /** Which vendor bills each research adapter. */
@@ -94,23 +97,43 @@ export type PipelineEventStatus = (typeof PIPELINE_EVENT_STATUSES)[number];
 
 /** Things a Learner did. */
 export const PRODUCT_EVENT_KINDS = [
+  "account_signed_up",
+  "account_verification_resent",
+  "account_signed_in",
+  "account_sign_in_code_requested",
+  "account_password_reset_requested",
+  "account_password_set",
+  "account_signed_out",
+  "account_renamed",
   "course_request_created",
+  "course_request_edited",
   "course_request_subject_chosen",
   "course_request_clarified",
+  "course_request_focus_answered",
+  "course_request_focus_not_quite",
   "course_request_focused",
+  "diagnostic_started",
   "diagnostic_submitted",
+  "starting_level_too_easy",
   "starting_level_confirmed",
   "starting_level_self_reported_new",
+  "blueprint_sequence_mode_chosen",
   "blueprint_approved",
   "blueprint_rejected",
   "generation_cancelled",
   "generation_retried",
+  "library_item_opened",
+  "library_item_hidden",
   "lesson_completed",
   "glossary_term_opened",
   "course_words_opened",
+  "course_sequence_mode_changed",
+  "quiz_answer_checked",
   "quiz_submitted",
+  "quiz_retaken",
   "course_completed",
   "teaching_profile_saved",
+  "teaching_profile_reset",
 ] as const;
 export type ProductEventKind = (typeof PRODUCT_EVENT_KINDS)[number];
 

@@ -1,0 +1,1012 @@
+{
+  "startedAt": "2026-11-04T08:26:10.337Z",
+  "latencyMs": 239926,
+  "sourcePacks": "docs\\research\\sen-115-drum-stroke-source-packs.json",
+  "slot": {
+    "id": "slot2",
+    "method": "reading",
+    "title": "Matched grip and the full stroke",
+    "lessonGoal": "Hold the sticks in matched grip and play a relaxed full stroke that rebounds to its starting height.",
+    "objectives": [
+      "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "Explain why letting the stick rebound keeps the hands relaxed"
+    ],
+    "topicTags": [
+      "matched-grip",
+      "full-stroke",
+      "rebound"
+    ],
+    "assessesSlotIds": [],
+    "visuals": [
+      {
+        "kind": "technique",
+        "intent": "A hand holding a drumstick in matched grip, seen so the fulcrum between the thumb and the index finger is plain, for the Learner to copy."
+      },
+      {
+        "kind": "diagram",
+        "intent": "The four moments of a full stroke in order, raised, striking, rebounding, and back at the starting height, so the Learner sees the stick come back up on its own."
+      }
+    ]
+  },
+  "profile": {
+    "instructionLanguage": "en",
+    "requiredReadingSupports": [],
+    "contentScope": "standard",
+    "explanationOrder": "topic_appropriate"
+  },
+  "status": "checkpoint",
+  "lesson": {
+    "slotId": "slot2",
+    "teachingMethod": "reading",
+    "title": "Matched grip and the full stroke",
+    "lessonGoal": "Hold the sticks in matched grip and play a relaxed full stroke that rebounds to its starting height.",
+    "objectives": [
+      "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "Explain how letting the stick rebound and keeping the hands relaxed go together"
+    ],
+    "topicTags": [
+      "matched-grip",
+      "full-stroke",
+      "rebound"
+    ],
+    "lineage": null,
+    "body": {
+      "sections": [
+        {
+          "heading": "A relaxed matched grip",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Imagine holding a drumstick in each hand in matched grip: both hands hold their sticks the same way. Keeping your hands relaxed matters because tension can disrupt the flow of the music [1]."
+            },
+            {
+              "kind": "prose",
+              "text": "In this matched grip, the fulcrum—the point where the stick pivots—is between your thumb and index finger [1]. At the fulcrum, your thumb runs along the stick opposite the first knuckle of your index finger [2]. Your other fingers curl loosely around the stick rather than squeezing it [2]."
+            },
+            {
+              "kind": "media",
+              "caption": "A photograph of palm-down matched grip, with the thumb along the stick and the other fingers curled around it.",
+              "alt": "A hand holds a drumstick with the palm facing down, the thumb running along the stick, and the other fingers curled around it.",
+              "descriptor": {
+                "id": "279c8fbe-414d-44d6-8751-e2e3c6c28e38",
+                "kind": "image",
+                "origin": "library",
+                "license": "cc_by_sa",
+                "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+                "caption": "A hand holds a drumstick with the palm down, the thumb along the stick, and the fingers curved around it.",
+                "alt": "A hand holding a drumstick, palm down. The thumb points along the stick, while the index finger and remaining fingers curve around it.",
+                "source": {
+                  "url": "https://commons.wikimedia.org/wiki/File:Matched_Grip.jpg",
+                  "title": "File:Matched Grip.jpg",
+                  "author": "Anonymous"
+                },
+                "storageKey": "library/commons/cce30952b4e6977eacbfff3d3a9f6ebe8f21d15bcd2e44e69f24d5a70b943635.jpg",
+                "mimeType": "image/jpeg",
+                "byteSize": 253272,
+                "sha256": "cce30952b4e6977eacbfff3d3a9f6ebe8f21d15bcd2e44e69f24d5a70b943635",
+                "width": 1280,
+                "height": 1142,
+                "mediaCategory": "drum-grip",
+                "topicTags": [
+                  "matched-grip",
+                  "german-grip"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "heading": "A full stroke starts and finishes high",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Starting with the stick raised, you send it down to strike the drum, then let it bounce back to where it started [3][2]. This is a full stroke: one hit that begins and ends at the same height [2][4]. The full stroke moves smoothly down and up, with no stopping point along the way [3]."
+            },
+            {
+              "kind": "media",
+              "caption": "The Course’s own schematic shows a full stroke: raised, striking, bouncing up, and back at the starting height.",
+              "alt": "Four moments run from left to right above a drum surface. Raised shows the stick high; Striking shows its tip touching the surface; Bouncing up shows it moving upward; Back at starting height shows it as high as it began. Arrows connect the downward and upward movement.",
+              "descriptor": {
+                "id": "0055d533-463d-8838-9a02-0bd4b16f9503",
+                "kind": "image",
+                "origin": "generated",
+                "license": "product_owned",
+                "licenseUrl": null,
+                "caption": "The Course’s own schematic shows a full stroke: raised, striking, bouncing up, and back at the starting height.",
+                "alt": "Four moments run from left to right above a drum surface. Raised shows the stick high; Striking shows its tip touching the surface; Bouncing up shows it moving upward; Back at starting height shows it as high as it began. Arrows connect the downward and upward movement.",
+                "source": null,
+                "storageKey": "generated/0055d533463dc8385a020bd4b16f950326bc72904e06276cb224ee09dc9ae659.png",
+                "mimeType": "image/png",
+                "byteSize": 843432,
+                "sha256": "0055d533463dc8385a020bd4b16f950326bc72904e06276cb224ee09dc9ae659",
+                "width": 1200,
+                "height": 800,
+                "mediaCategory": "drum-stroke",
+                "topicTags": [
+                  "full-stroke",
+                  "rebound",
+                  "stick-height"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "heading": "Relaxed does not mean letting go",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Your thumb and index finger keep contact with the stick while your fingers and wrist stay relaxed [3]. You allow the drum’s bounce to carry the stick upward rather than holding it back [1]. A full stroke combines a relaxed hold with a return to the starting height [2]."
+            }
+          ]
+        }
+      ],
+      "glossary": [
+        {
+          "term": "matched grip",
+          "definition": "A way of holding drumsticks with both hands using the same hold."
+        },
+        {
+          "term": "fulcrum",
+          "definition": "The support point around which something turns or tilts."
+        },
+        {
+          "term": "full stroke",
+          "definition": "A drum hit in which the stick starts and finishes at the same raised height."
+        }
+      ]
+    },
+    "sources": [
+      {
+        "n": 1,
+        "sourceId": "src_7eefe0ae9c",
+        "url": "https://www.midwestclinic.org/user_files_1/pdfs/clinicianmaterials/2007/bret_kuhn.pdf",
+        "title": "Microsoft Word - Stroke Fundamentals.doc",
+        "publisher": "midwestclinic.org",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 2,
+        "sourceId": "src_498b43255b",
+        "url": "https://pas.org/wp-content/uploads/2024/04/ECV0803-035.pdf",
+        "title": "Building A Strong Foundation Of The Snare Drum Fulcrum",
+        "publisher": "pas.org",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 3,
+        "sourceId": "src_a8e38c4812",
+        "url": "https://ae.vicfirth.com/wp-content/uploads/FA-Drumset-Lessons-1-2.pdf",
+        "title": "FA Drumset 2014 changes2",
+        "publisher": "ae.vicfirth.com",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 4,
+        "sourceId": "src_2de311406d",
+        "url": "https://drummagazine.com/drum-technique/",
+        "title": "Drum technique 101 - Ultimate Guide - DRUM! Magazine",
+        "publisher": "drummagazine.com",
+        "retrievedAt": "2026-11-01T10:13:51.347Z",
+        "usedAs": "paraphrase"
+      }
+    ],
+    "citations": [
+      {
+        "n": 1,
+        "title": "Microsoft Word - Stroke Fundamentals.doc",
+        "url": "https://www.midwestclinic.org/user_files_1/pdfs/clinicianmaterials/2007/bret_kuhn.pdf"
+      },
+      {
+        "n": 2,
+        "title": "Building A Strong Foundation Of The Snare Drum Fulcrum",
+        "url": "https://pas.org/wp-content/uploads/2024/04/ECV0803-035.pdf"
+      },
+      {
+        "n": 3,
+        "title": "FA Drumset 2014 changes2",
+        "url": "https://ae.vicfirth.com/wp-content/uploads/FA-Drumset-Lessons-1-2.pdf"
+      },
+      {
+        "n": 4,
+        "title": "Drum technique 101 - Ultimate Guide - DRUM! Magazine",
+        "url": "https://drummagazine.com/drum-technique/"
+      }
+    ]
+  },
+  "visuals": [
+    {
+      "placement": {
+        "section": "A relaxed matched grip",
+        "brief": {
+          "kind": "technique",
+          "subject": "A hand holding a drumstick in matched grip with the palm facing down, viewed from above at a slight angle.",
+          "mustShow": [
+            "The palm faces down.",
+            "The thumb runs lengthwise along the drumstick.",
+            "The other fingers curl around the drumstick."
+          ],
+          "caption": "A photograph of palm-down matched grip, with the thumb along the stick and the other fingers curled around it.",
+          "alt": "A hand holds a drumstick with the palm facing down, the thumb running along the stick, and the other fingers curled around it.",
+          "mediaCategory": "drum-grip",
+          "topicTags": [
+            "matched-grip"
+          ]
+        }
+      },
+      "status": "library",
+      "library": [
+        {
+          "descriptorId": "279c8fbe-414d-44d6-8751-e2e3c6c28e38",
+          "storageKey": "library/commons/cce30952b4e6977eacbfff3d3a9f6ebe8f21d15bcd2e44e69f24d5a70b943635.jpg",
+          "judge": {
+            "pass": true,
+            "failedChecks": [],
+            "reasons": []
+          },
+          "judgeModelId": "openai/gpt-5.6-luna"
+        }
+      ],
+      "descriptorId": "279c8fbe-414d-44d6-8751-e2e3c6c28e38"
+    },
+    {
+      "placement": {
+        "section": "A full stroke starts and finishes high",
+        "brief": {
+          "kind": "diagram",
+          "subject": "One drumstick moving through four moments of a full stroke above the same drum surface.",
+          "mustShow": [
+            "Four moments appear in order from left to right: Raised, Striking, Bouncing up, and Back at starting height.",
+            "The stick begins raised high above the drum surface.",
+            "The stick tip touches the drum surface in the Striking moment.",
+            "An upward arrow shows the stick moving away from the drum surface in the Bouncing up moment.",
+            "The final stick position matches the starting height.",
+            "Arrows show movement down toward the drum and then back up."
+          ],
+          "caption": "The Course’s own schematic shows a full stroke: raised, striking, bouncing up, and back at the starting height.",
+          "alt": "Four moments run from left to right above a drum surface. Raised shows the stick high; Striking shows its tip touching the surface; Bouncing up shows it moving upward; Back at starting height shows it as high as it began. Arrows connect the downward and upward movement.",
+          "mediaCategory": "drum-stroke",
+          "topicTags": [
+            "full-stroke",
+            "rebound",
+            "stick-height"
+          ]
+        }
+      },
+      "status": "illustrated",
+      "library": [],
+      "illustration": {
+        "outcome": "illustrated",
+        "attempts": [
+          {
+            "modelId": "openai/gpt-6.1-sol",
+            "judge": {
+              "pass": true,
+              "failedChecks": [],
+              "reasons": []
+            },
+            "judgeModelId": "openai/gpt-6-luna"
+          }
+        ]
+      },
+      "descriptorId": "0055d533-463d-8838-9a02-0bd4b16f9503"
+    }
+  ],
+  "judge": {
+    "pass": true,
+    "failedChecks": [],
+    "reasons": []
+  },
+  "repairs": 0,
+  "grounding": [
+    {
+      "objective": "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "verdict": "supported",
+      "text": "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "reason": ""
+    },
+    {
+      "objective": "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "verdict": "supported",
+      "text": "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "reason": ""
+    },
+    {
+      "objective": "Explain why letting the stick rebound keeps the hands relaxed",
+      "verdict": "rewritten",
+      "text": "Explain how letting the stick rebound and keeping the hands relaxed go together",
+      "reason": "The material recommends natural rebound and relaxed hands but does not state that rebound causes relaxation."
+    }
+  ],
+  "rejectedSources": [
+    {
+      "sourceId": "src_50ed1531b2",
+      "url": "https://hub.yamaha.com/music-educators/instruments/perc/a-guide-to-proper-stick-grips",
+      "reason": "Instructional content from a drum-instrument manufacturer, so it has a commercial interest and is not an independent evidence source."
+    },
+    {
+      "sourceId": "src_aa45b3c3db",
+      "url": "https://pearldrum.com/sites/default/files/2019-10/basic-snare-drum-technique.pdf",
+      "reason": "Manufacturer-hosted instructional material with a commercial interest; prefer an independent educational or subject authority."
+    },
+    {
+      "sourceId": "src_89a76645aa",
+      "url": "https://hub.yamaha.com/music-educators/instruments/perc/snare-drum-basics-pedagogy/",
+      "reason": "A music-instrument company’s educational blog, rather than an independent source."
+    },
+    {
+      "sourceId": "src_3578a5990c",
+      "url": "https://www.drumbarossa.com/teaching-guide/basic-strokes",
+      "reason": "The page appears to be a drum-teaching resource without clear independent editorial or institutional authority."
+    },
+    {
+      "sourceId": "src_73457824aa",
+      "url": "https://rhythmnotes.net/drum-techniques-and-rudiments/",
+      "reason": "A personal-style instructional blog with no clear editorial or institutional authority to support its claims."
+    },
+    {
+      "sourceId": "src_ca07de2348",
+      "url": "https://upbeat.studio/blog/essential-drumming-techniques-for-beginners/",
+      "reason": "A studio-branded blog with promotional framing, rather than an independent evidence source."
+    },
+    {
+      "sourceId": "src_e26d0d852e",
+      "url": "https://drumbeatsonline.com/blog/how-to-do-a-drum-roll-a-step-by-step-guide-for-beginners",
+      "reason": "A blog for an online drumming business, so its instructional content is commercially interested."
+    }
+  ],
+  "authorModelIds": [
+    "openai/gpt-6.1-sol"
+  ],
+  "judgeModelId": "openai/gpt-6-luna",
+  "rounds": [
+    {
+      "modelId": "openai/gpt-6.1-sol",
+      "draft": [
+        {
+          "heading": "A relaxed matched grip",
+          "paragraphs": [
+            "Imagine holding a drumstick in each hand in matched grip: both hands hold their sticks the same way. Keeping your hands relaxed matters because tension can disrupt the flow of the music [src_7eefe0ae9c].",
+            "In this matched grip, the fulcrum—the point where the stick pivots—is between your thumb and index finger [src_7eefe0ae9c]. At the fulcrum, your thumb runs along the stick opposite the first knuckle of your index finger [src_498b43255b]. Your other fingers curl loosely around the stick rather than squeezing it [src_498b43255b]."
+          ]
+        },
+        {
+          "heading": "A full stroke starts and finishes high",
+          "paragraphs": [
+            "Starting with the stick raised, you send it down to strike the drum, then let it bounce back to where it started [src_a8e38c4812, src_498b43255b]. This is a full stroke: one hit that begins and ends at the same height [src_498b43255b, src_2de311406d]. The full stroke moves smoothly down and up, with no stopping point along the way [src_a8e38c4812]."
+          ]
+        },
+        {
+          "heading": "Relaxed does not mean letting go",
+          "paragraphs": [
+            "Your thumb and index finger keep contact with the stick while your fingers and wrist stay relaxed [src_a8e38c4812]. You allow the drum’s bounce to carry the stick upward rather than holding it back [src_7eefe0ae9c]. A full stroke combines a relaxed hold with a return to the starting height [src_498b43255b]."
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "section": "A relaxed matched grip",
+          "brief": {
+            "kind": "technique",
+            "subject": "A hand holding a drumstick in matched grip with the palm facing down, viewed from above at a slight angle.",
+            "mustShow": [
+              "The palm faces down.",
+              "The thumb runs lengthwise along the drumstick.",
+              "The other fingers curl around the drumstick."
+            ],
+            "caption": "A photograph of palm-down matched grip, with the thumb along the stick and the other fingers curled around it.",
+            "alt": "A hand holds a drumstick with the palm facing down, the thumb running along the stick, and the other fingers curled around it.",
+            "mediaCategory": "drum-grip",
+            "topicTags": [
+              "matched-grip"
+            ]
+          }
+        },
+        {
+          "section": "A full stroke starts and finishes high",
+          "brief": {
+            "kind": "diagram",
+            "subject": "One drumstick moving through four moments of a full stroke above the same drum surface.",
+            "mustShow": [
+              "Four moments appear in order from left to right: Raised, Striking, Bouncing up, and Back at starting height.",
+              "The stick begins raised high above the drum surface.",
+              "The stick tip touches the drum surface in the Striking moment.",
+              "An upward arrow shows the stick moving away from the drum surface in the Bouncing up moment.",
+              "The final stick position matches the starting height.",
+              "Arrows show movement down toward the drum and then back up."
+            ],
+            "caption": "The Course’s own schematic shows a full stroke: raised, striking, bouncing up, and back at the starting height.",
+            "alt": "Four moments run from left to right above a drum surface. Raised shows the stick high; Striking shows its tip touching the surface; Bouncing up shows it moving upward; Back at starting height shows it as high as it began. Arrows connect the downward and upward movement.",
+            "mediaCategory": "drum-stroke",
+            "topicTags": [
+              "full-stroke",
+              "rebound",
+              "stick-height"
+            ]
+          }
+        }
+      ],
+      "problems": [],
+      "attached": [
+        {
+          "placement": {
+            "section": "A relaxed matched grip",
+            "brief": {
+              "kind": "technique",
+              "subject": "A hand holding a drumstick in matched grip with the palm facing down, viewed from above at a slight angle.",
+              "mustShow": [
+                "The palm faces down.",
+                "The thumb runs lengthwise along the drumstick.",
+                "The other fingers curl around the drumstick."
+              ],
+              "caption": "A photograph of palm-down matched grip, with the thumb along the stick and the other fingers curled around it.",
+              "alt": "A hand holds a drumstick with the palm facing down, the thumb running along the stick, and the other fingers curled around it.",
+              "mediaCategory": "drum-grip",
+              "topicTags": [
+                "matched-grip"
+              ]
+            }
+          },
+          "status": "library",
+          "library": [
+            {
+              "descriptorId": "279c8fbe-414d-44d6-8751-e2e3c6c28e38",
+              "storageKey": "library/commons/cce30952b4e6977eacbfff3d3a9f6ebe8f21d15bcd2e44e69f24d5a70b943635.jpg",
+              "judge": {
+                "pass": true,
+                "failedChecks": [],
+                "reasons": []
+              },
+              "judgeModelId": "openai/gpt-5.6-luna"
+            }
+          ],
+          "descriptorId": "279c8fbe-414d-44d6-8751-e2e3c6c28e38"
+        },
+        {
+          "placement": {
+            "section": "A full stroke starts and finishes high",
+            "brief": {
+              "kind": "diagram",
+              "subject": "One drumstick moving through four moments of a full stroke above the same drum surface.",
+              "mustShow": [
+                "Four moments appear in order from left to right: Raised, Striking, Bouncing up, and Back at starting height.",
+                "The stick begins raised high above the drum surface.",
+                "The stick tip touches the drum surface in the Striking moment.",
+                "An upward arrow shows the stick moving away from the drum surface in the Bouncing up moment.",
+                "The final stick position matches the starting height.",
+                "Arrows show movement down toward the drum and then back up."
+              ],
+              "caption": "The Course’s own schematic shows a full stroke: raised, striking, bouncing up, and back at the starting height.",
+              "alt": "Four moments run from left to right above a drum surface. Raised shows the stick high; Striking shows its tip touching the surface; Bouncing up shows it moving upward; Back at starting height shows it as high as it began. Arrows connect the downward and upward movement.",
+              "mediaCategory": "drum-stroke",
+              "topicTags": [
+                "full-stroke",
+                "rebound",
+                "stick-height"
+              ]
+            }
+          },
+          "status": "illustrated",
+          "library": [],
+          "illustration": {
+            "outcome": "illustrated",
+            "attempts": [
+              {
+                "modelId": "openai/gpt-6.1-sol",
+                "judge": {
+                  "pass": true,
+                  "failedChecks": [],
+                  "reasons": []
+                },
+                "judgeModelId": "openai/gpt-6-luna"
+              }
+            ]
+          },
+          "descriptorId": "0055d533-463d-8838-9a02-0bd4b16f9503"
+        }
+      ]
+    }
+  ],
+  "glossary": {
+    "proposed": [
+      {
+        "term": "matched grip",
+        "definition": "A way of holding drumsticks with both hands using the same hold."
+      },
+      {
+        "term": "fulcrum",
+        "definition": "The support point around which something turns or tilts."
+      },
+      {
+        "term": "full stroke",
+        "definition": "A drum hit in which the stick starts and finishes at the same raised height."
+      }
+    ],
+    "rejected": [],
+    "modelId": "openai/gpt-6.1-sol",
+    "judgeModelId": "openai/gpt-6-luna"
+  },
+  "illustrations": [
+    {
+      "subject": "One drumstick moving through four moments of a full stroke above the same drum surface.",
+      "attempts": [
+        {
+          "modelId": "openai/gpt-6.1-sol",
+          "pass": true,
+          "error": null,
+          "plan": {
+            "title": "A full drum stroke",
+            "items": [
+              {
+                "type": "shape",
+                "shape": "rounded",
+                "box": {
+                  "x": 70,
+                  "y": 570,
+                  "w": 1060,
+                  "h": 138
+                },
+                "colour": "red",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "rounded",
+                "box": {
+                  "x": 70,
+                  "y": 688,
+                  "w": 1060,
+                  "h": 22
+                },
+                "colour": "stone",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "rounded",
+                "box": {
+                  "x": 62,
+                  "y": 562,
+                  "w": 1076,
+                  "h": 24
+                },
+                "colour": "cream",
+                "depth": "raised"
+              },
+              {
+                "type": "shape",
+                "shape": "rect",
+                "box": {
+                  "x": 220,
+                  "y": 269,
+                  "w": 860,
+                  "h": 2
+                },
+                "colour": "plum-light",
+                "depth": "flat"
+              },
+              {
+                "type": "text",
+                "x": 600,
+                "y": 247,
+                "text": "Starting height",
+                "size": "small",
+                "colour": "cream-deep",
+                "align": "middle"
+              },
+              {
+                "type": "disc",
+                "x": 180,
+                "y": 136,
+                "number": 1,
+                "colour": "plum"
+              },
+              {
+                "type": "disc",
+                "x": 455,
+                "y": 136,
+                "number": 2,
+                "colour": "plum"
+              },
+              {
+                "type": "disc",
+                "x": 730,
+                "y": 136,
+                "number": 3,
+                "colour": "plum"
+              },
+              {
+                "type": "disc",
+                "x": 1005,
+                "y": 136,
+                "number": 4,
+                "colour": "plum"
+              },
+              {
+                "type": "arrow",
+                "from": {
+                  "x": 222,
+                  "y": 136
+                },
+                "to": {
+                  "x": 413,
+                  "y": 136
+                },
+                "colour": "cream-deep"
+              },
+              {
+                "type": "arrow",
+                "from": {
+                  "x": 497,
+                  "y": 136
+                },
+                "to": {
+                  "x": 688,
+                  "y": 136
+                },
+                "colour": "cream-deep"
+              },
+              {
+                "type": "arrow",
+                "from": {
+                  "x": 772,
+                  "y": 136
+                },
+                "to": {
+                  "x": 963,
+                  "y": 136
+                },
+                "colour": "cream-deep"
+              },
+              {
+                "type": "text",
+                "x": 180,
+                "y": 191,
+                "text": "Raised",
+                "size": "medium",
+                "colour": "text",
+                "align": "middle"
+              },
+              {
+                "type": "text",
+                "x": 455,
+                "y": 191,
+                "text": "Striking",
+                "size": "medium",
+                "colour": "text",
+                "align": "middle"
+              },
+              {
+                "type": "text",
+                "x": 730,
+                "y": 191,
+                "text": "Bouncing up",
+                "size": "medium",
+                "colour": "text",
+                "align": "middle"
+              },
+              {
+                "type": "text",
+                "x": 1005,
+                "y": 191,
+                "text": "Back at starting height",
+                "size": "medium",
+                "colour": "text",
+                "align": "middle"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 108,
+                    "y": 435
+                  },
+                  {
+                    "x": 110,
+                    "y": 444
+                  },
+                  {
+                    "x": 118,
+                    "y": 448
+                  },
+                  {
+                    "x": 125,
+                    "y": 442
+                  },
+                  {
+                    "x": 230,
+                    "y": 300
+                  },
+                  {
+                    "x": 237,
+                    "y": 296
+                  },
+                  {
+                    "x": 244,
+                    "y": 284
+                  },
+                  {
+                    "x": 244,
+                    "y": 276
+                  },
+                  {
+                    "x": 238,
+                    "y": 269
+                  },
+                  {
+                    "x": 231,
+                    "y": 270
+                  },
+                  {
+                    "x": 224,
+                    "y": 278
+                  },
+                  {
+                    "x": 220,
+                    "y": 289
+                  },
+                  {
+                    "x": 223,
+                    "y": 294
+                  },
+                  {
+                    "x": 113,
+                    "y": 430
+                  }
+                ],
+                "colour": "wood-light",
+                "depth": "raised"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 383,
+                    "y": 440
+                  },
+                  {
+                    "x": 387,
+                    "y": 431
+                  },
+                  {
+                    "x": 394,
+                    "y": 432
+                  },
+                  {
+                    "x": 535,
+                    "y": 535
+                  },
+                  {
+                    "x": 541,
+                    "y": 535
+                  },
+                  {
+                    "x": 554,
+                    "y": 545
+                  },
+                  {
+                    "x": 558,
+                    "y": 553
+                  },
+                  {
+                    "x": 554,
+                    "y": 560
+                  },
+                  {
+                    "x": 547,
+                    "y": 562
+                  },
+                  {
+                    "x": 536,
+                    "y": 556
+                  },
+                  {
+                    "x": 530,
+                    "y": 547
+                  },
+                  {
+                    "x": 386,
+                    "y": 445
+                  }
+                ],
+                "colour": "wood-light",
+                "depth": "raised"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 658,
+                    "y": 433
+                  },
+                  {
+                    "x": 657,
+                    "y": 441
+                  },
+                  {
+                    "x": 662,
+                    "y": 448
+                  },
+                  {
+                    "x": 670,
+                    "y": 446
+                  },
+                  {
+                    "x": 821,
+                    "y": 352
+                  },
+                  {
+                    "x": 828,
+                    "y": 351
+                  },
+                  {
+                    "x": 840,
+                    "y": 343
+                  },
+                  {
+                    "x": 844,
+                    "y": 336
+                  },
+                  {
+                    "x": 841,
+                    "y": 329
+                  },
+                  {
+                    "x": 834,
+                    "y": 325
+                  },
+                  {
+                    "x": 826,
+                    "y": 328
+                  },
+                  {
+                    "x": 818,
+                    "y": 335
+                  },
+                  {
+                    "x": 818,
+                    "y": 340
+                  },
+                  {
+                    "x": 662,
+                    "y": 432
+                  }
+                ],
+                "colour": "wood-light",
+                "depth": "raised"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 933,
+                    "y": 435
+                  },
+                  {
+                    "x": 935,
+                    "y": 444
+                  },
+                  {
+                    "x": 943,
+                    "y": 448
+                  },
+                  {
+                    "x": 950,
+                    "y": 442
+                  },
+                  {
+                    "x": 1055,
+                    "y": 300
+                  },
+                  {
+                    "x": 1062,
+                    "y": 296
+                  },
+                  {
+                    "x": 1069,
+                    "y": 284
+                  },
+                  {
+                    "x": 1069,
+                    "y": 276
+                  },
+                  {
+                    "x": 1063,
+                    "y": 269
+                  },
+                  {
+                    "x": 1056,
+                    "y": 270
+                  },
+                  {
+                    "x": 1049,
+                    "y": 278
+                  },
+                  {
+                    "x": 1045,
+                    "y": 289
+                  },
+                  {
+                    "x": 1048,
+                    "y": 294
+                  },
+                  {
+                    "x": 938,
+                    "y": 430
+                  }
+                ],
+                "colour": "wood-light",
+                "depth": "raised"
+              },
+              {
+                "type": "arrow",
+                "from": {
+                  "x": 578,
+                  "y": 348
+                },
+                "to": {
+                  "x": 578,
+                  "y": 536
+                },
+                "colour": "gold"
+              },
+              {
+                "type": "arrow",
+                "from": {
+                  "x": 866,
+                  "y": 530
+                },
+                "to": {
+                  "x": 866,
+                  "y": 354
+                },
+                "colour": "gold"
+              },
+              {
+                "type": "text",
+                "x": 578,
+                "y": 320,
+                "text": "Down",
+                "size": "small",
+                "colour": "cream-deep",
+                "align": "middle"
+              },
+              {
+                "type": "text",
+                "x": 866,
+                "y": 320,
+                "text": "Up",
+                "size": "small",
+                "colour": "cream-deep",
+                "align": "middle"
+              }
+            ],
+            "labels": [
+              {
+                "text": "Drumstick",
+                "target": {
+                  "x": 174,
+                  "y": 360
+                },
+                "side": "left"
+              },
+              {
+                "text": "Same drum surface",
+                "target": {
+                  "x": 680,
+                  "y": 564
+                },
+                "side": "below"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

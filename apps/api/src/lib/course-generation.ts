@@ -335,7 +335,8 @@ function lazyMediaStorage(): MediaStorage {
  * Everything a run's Readings get their visuals from (SEN-121, decision 2026-11-03): the library over the bucket, the
  * illustrator that draws depictions and diagrams into the same bucket, and the Commons search when `WIKIMEDIA_CONTACT`
  * names a contact for its User-Agent (SEN-129); without one, Commons is left out and the library is the last source.
- * Every Judge call goes through one Vision Judge over the run's transport, so it stops with the run.
+ * Every Judge call goes through one Vision Judge over the run's transport, and the Commons search's librarian (SEN-132)
+ * runs on the triage model over the same transport, so both stop with the run.
  * @param db - Database, for the library and the Commons ingest
  * @param transport - The run's tracked transport
  * @param env - Usually `process.env`
@@ -343,7 +344,8 @@ function lazyMediaStorage(): MediaStorage {
 function visualSources(db: Database, transport: StructuredTransport, env: NodeJS.ProcessEnv = process.env): Pick<ReadingGeneratorOptions, "media" | "illustrator" | "commons" | "judgeVisual"> {
   const storage = lazyMediaStorage();
   const judgeVisual = createVisualJudge({ transport });
-  const commons: ReadingGeneratorOptions["commons"] = (brief, judge) => findVisualOnCommons({ brief, judge, db, storage });
+  const triage = createModelPorts({ transport }).triage;
+  const commons: ReadingGeneratorOptions["commons"] = (brief, judge) => findVisualOnCommons({ brief, judge, db, storage, triage });
   return {
     media: createMediaLibrary(db, storage),
     judgeVisual,

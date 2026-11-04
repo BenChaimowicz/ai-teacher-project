@@ -21,6 +21,7 @@ import {
 import type { Generator, Judge } from "../lib/model-ports.ts";
 import { createQuizGenerator } from "../lib/quiz-generation.ts";
 import type { QuizAttemptRow, StudyStore } from "../lib/study-store.ts";
+import { recordProductEvents, settled } from "./recording-sink.ts";
 import { studyRoutes } from "./study.ts";
 
 /**
@@ -255,6 +256,43 @@ test("Fail, retake, pass: best score is kept, Progress never drops, and the next
     assert.equal(worse.body.quiz.passed, true);
     assert.deepEqual(worse.body.study.progress, { completed: 1, total: 3 });
   } finally {
+    await t.app.close();
+  }
+});
+
+test("Check, Retake and switching to free jump each record a product event; saving a pick records none (SEN-127)", async () => {
+  const t = await testApp();
+  const recorded = recordProductEvents();
+  try {
+    const [first, ...others] = SEEDED_QUIZ_BODY.items;
+    assert.ok(first);
+    await t.answer(first.id, first.correctOptionId);
+    await t.answer(first.id, first.correctOptionId);
+    assert.equal((await t.check(first.id)).status, 200);
+    assert.equal((await t.check(first.id)).status, 200, "Checking a locked answer again is a no-op.");
+    for (const item of others) {
+      await t.answer(item.id, item.options.find((option) => option.id !== item.correctOptionId)!.id);
+      await t.check(item.id);
+    }
+    assert.equal((await t.submit()).status, 200);
+    await t.retake();
+    await t.retake();
+    await t.sequenceMode("free_jump");
+    await t.sequenceMode("free_jump");
+    await settled();
+
+    const where = { courseId: SEEDED_COURSE_ID, lessonId: SEEDED_QUIZ_LESSON_ID };
+    const checked = recorded.of("quiz_answer_checked");
+    assert.deepEqual(checked.map((event) => (event.detail as { itemId: string }).itemId), SEEDED_QUIZ_BODY.items.map((item) => item.id), "One event per item; checking again records nothing.");
+    assert.deepEqual(checked.map((event) => (event.detail as { correct: boolean }).correct), [true, ...others.map(() => false)]);
+    assert.deepEqual(checked[0]?.detail, { ...where, itemId: first.id, correct: true });
+    assert.deepEqual(recorded.of("quiz_retaken").map((event) => event.detail), [{ ...where, lastCorrect: 1, lastTotal: SEEDED_QUIZ_BODY.items.length }]);
+    assert.deepEqual(recorded.of("course_sequence_mode_changed").map((event) => event.detail), [{ courseId: SEEDED_COURSE_ID, from: "linear", to: "free_jump" }]);
+    assert.ok(recorded.events.every((event) => event.learnerId === t.state.learner.id));
+    assert.deepEqual([...new Set(recorded.events.map((event) => event.kind))].sort(),
+      ["course_sequence_mode_changed", "quiz_answer_checked", "quiz_retaken", "quiz_submitted"], "Saving a pick is not an event (decision 2026-11-04).");
+  } finally {
+    recorded.uninstall();
     await t.app.close();
   }
 });

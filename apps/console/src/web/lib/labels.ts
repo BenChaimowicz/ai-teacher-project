@@ -74,7 +74,7 @@ export const ROLE_LABEL: Record<UsageRole, string> = {
 
 /** Paid service names. */
 export const VENDOR_LABEL: Record<UsageVendor, string> = {
-  openrouter: "OpenRouter", parallel: "Parallel", you: "You.com", wikimedia: "Wikimedia Commons",
+  openrouter: "OpenRouter", parallel: "Parallel", you: "You.com", wikimedia: "Wikimedia Commons", openverse: "Openverse",
 };
 
 /** Billing check status names. */

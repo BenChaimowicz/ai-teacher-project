@@ -206,6 +206,12 @@ export async function goalFocusRoutes(app: FastifyInstance, options: GoalFocusOp
       if (!next) return reply.code(502).send({ error: FOCUS_FAILED_MESSAGE });
       const updated = await save(row, learnerId, next);
       if (!updated) return reply.code(409).send({ error: CHANGED_MESSAGE });
+      // Opening focusing (no answers yet) is the app's own step once the Request passes; answering a round is the Learner's.
+      if (answers !== undefined) {
+        void recordProductEvent("course_request_focus_answered", {
+          learnerId, courseRequestId: row.id, detail: { round: focus.rounds.length, next: next.status },
+        });
+      }
       if (next.status === "goal_focused") recordFocused(learnerId, row.id, next.focus);
       return { courseRequest: updated };
     } catch (error) {
@@ -251,6 +257,9 @@ export async function goalFocusRoutes(app: FastifyInstance, options: GoalFocusOp
       if (!next) return reply.code(502).send({ error: FOCUS_FAILED_MESSAGE });
       const updated = await save(row, request.currentLearner.id, next);
       if (!updated) return reply.code(409).send({ error: CHANGED_MESSAGE });
+      void recordProductEvent("course_request_focus_not_quite", {
+        learnerId: request.currentLearner.id, courseRequestId: row.id, detail: { rounds: row.focus.rounds.length },
+      });
       return { courseRequest: updated };
     } catch (error) {
       return fail(reply, request.log, "not-quite", request.params.requestId, error, "Could not reopen focusing. Reload the Request before trying again.");

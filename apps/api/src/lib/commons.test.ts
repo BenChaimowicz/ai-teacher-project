@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { commonsAuthor, commonsLicence, commonsQueries, parseCommonsSearch, stripHtml, type CommonsExtmetadata } from "./commons.ts";
+import {
+  commonsAuthor, commonsCategoryUrl, commonsLicence, commonsQueries, commonsSearchUrl, lookupCommonsPages, parseCommonsSearch, stripHtml, type CommonsExtmetadata,
+} from "./commons.ts";
+
+/** Live Commons replies for a matched-grip search, recorded 2026-11-04 (SEN-132). */
+const DRUMS = JSON.parse(readFileSync(new URL("./fixtures/media-search-drum-grip.json", import.meta.url), "utf8")) as {
+  commons: Record<string, unknown>; pages: { ids: number[]; reply: unknown };
+};
 
 /** Live Commons replies for the French grip brief, recorded 2026-11-03. */
 const FIXTURE = JSON.parse(readFileSync(new URL("./fixtures/commons-french-grip.json", import.meta.url), "utf8")) as { replies: Record<string, unknown> };
@@ -148,4 +155,34 @@ test("A recorded search keeps hostable stills in relevance order and says why it
   ] } });
   assert.equal(scans.candidates.length, 0);
   assert.deepEqual(scans.rejected.map(({ title }) => title), ["File:Book.pdf", "File:Icon.png", "File:NC.jpg"]);
+});
+
+test("A candidate carries its description and the categories a person can see, for the librarian to read", () => {
+  const search = new URL(commonsSearchUrl("drumstick grip filetype:bitmap")).searchParams;
+  assert.equal(search.get("prop"), "imageinfo|categories");
+  assert.equal(search.get("clshow"), "!hidden", "Hidden maintenance categories are never offered for browsing.");
+  assert.match(search.get("iiextmetadatafilter")!, /ImageDescription/);
+  const category = new URL(commonsCategoryUrl("Category:Matched grip")).searchParams;
+  assert.deepEqual([category.get("generator"), category.get("gcmtitle"), category.get("gcmtype")], ["categorymembers", "Category:Matched grip", "file"]);
+
+  const { candidates } = parseCommonsSearch("q", DRUMS.commons["matched grip drumstick filetype:bitmap"]);
+  const matched = candidates.find(({ title }) => title === "File:Matched Grip.jpg")!;
+  assert.deepEqual(matched.categories, ["Category:Drumsticks", "Category:Matched grip"]);
+  assert.equal(typeof matched.description, "string");
+  assert.doesNotMatch(matched.description, /<[a-z]/i, "The description is plain text.");
+});
+
+test("A page lookup reads each file's licence off its own page and keeps the order the ids were asked in", async () => {
+  const asked = [124405087, 513833];
+  const urls: string[] = [];
+  const fetch: typeof globalThis.fetch = async (input) => {
+    urls.push(String(input));
+    return new Response(JSON.stringify(DRUMS.pages.reply), { status: 200 });
+  };
+  const result = await lookupCommonsPages({ fetch, userAgent: "Knibbler/1.0 (test)" }, [...asked, 513833]);
+  assert.equal(new URL(urls[0]!).searchParams.get("pageids"), "124405087|513833", "Each id is asked for once.");
+  assert.deepEqual(result.candidates.map(({ pageId, rank }) => [pageId, rank]), [[124405087, 1], [513833, 2]], "A page the lookup did not ask for is never kept.");
+  assert.equal(result.candidates[1]!.licence.license, "cc_by");
+  assert.deepEqual(await lookupCommonsPages({ fetch, userAgent: "x" }, []), { query: "pageids:", candidates: [], rejected: [], error: null });
+  assert.equal(urls.length, 1, "No ids, no call.");
 });

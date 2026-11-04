@@ -14,7 +14,7 @@ import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from
 import type { LessonSource } from "./lesson-checkpoint.ts";
 import type { LessonLineage } from "./lesson-reuse.ts";
 import { LOG_COMPONENTS, LOG_LEVELS } from "./logs.ts";
-import { MEDIA_KINDS, MEDIA_LICENSES, MEDIA_ORIGINS, MEDIA_REVIEWS, type MediaCategory, type MediaSource } from "./media.ts";
+import { MEDIA_KINDS, MEDIA_LICENSES, MEDIA_ORIGINS, MEDIA_REVIEWS, type MediaCategory, type MediaSearchRoute, type MediaSource } from "./media.ts";
 import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
@@ -657,6 +657,11 @@ export const mediaDescriptors = pgTable(
     topicTags: jsonb("topic_tags").$type<string[]>().notNull(),
     /** Whether a person has looked at the file (SEN-129); seeded files default to `reviewed`. Not part of the descriptor. */
     review: mediaReview("review").notNull().default("reviewed"),
+    /**
+     * The search that first found a file ingested from Commons (SEN-132); null on seeded files. Not part of the
+     * descriptor: the next search for the file's Media category starts from these routes (decision 2026-11-04).
+     */
+    foundBy: jsonb("found_by").$type<MediaSearchRoute>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

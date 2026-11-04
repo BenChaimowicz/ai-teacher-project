@@ -1,5 +1,5 @@
 {
-  "id": "5a192fe7-63aa-4a8a-acd5-5c3373166e4b",
+  "id": "d39d3892-a445-4db7-b45a-707e5a4b9e02",
   "prevId": "ff5d293c-bb23-471d-8573-8ead51908309",
   "version": "7",
   "dialect": "postgresql",
@@ -57,12 +57,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "request_id": {
-          "name": "request_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -104,22 +98,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "api_requests_request": {
-          "name": "api_requests_request",
-          "columns": [
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"api_requests\".\"request_id\" is not null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -527,12 +505,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "request_id": {
-          "name": "request_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "claim_token": {
           "name": "claim_token",
           "type": "uuid",
@@ -858,257 +830,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.log_entries": {
-      "name": "log_entries",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "logged_at": {
-          "name": "logged_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "component": {
-          "name": "component",
-          "type": "log_component",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "level": {
-          "name": "level",
-          "type": "log_level",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "message": {
-          "name": "message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "context": {
-          "name": "context",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "request_id": {
-          "name": "request_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "generation_job_id": {
-          "name": "generation_job_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "course_request_id": {
-          "name": "course_request_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "learner_id": {
-          "name": "learner_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pipeline_event_id": {
-          "name": "pipeline_event_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "log_entries_logged": {
-          "name": "log_entries_logged",
-          "columns": [
-            {
-              "expression": "logged_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "log_entries_level": {
-          "name": "log_entries_level",
-          "columns": [
-            {
-              "expression": "level",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "logged_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "log_entries_component": {
-          "name": "log_entries_component",
-          "columns": [
-            {
-              "expression": "component",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "logged_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "log_entries_request": {
-          "name": "log_entries_request",
-          "columns": [
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "logged_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"log_entries\".\"request_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "log_entries_job": {
-          "name": "log_entries_job",
-          "columns": [
-            {
-              "expression": "generation_job_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "logged_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"log_entries\".\"generation_job_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "log_entries_course_request": {
-          "name": "log_entries_course_request",
-          "columns": [
-            {
-              "expression": "course_request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "logged_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"log_entries\".\"course_request_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "log_entries_learner": {
-          "name": "log_entries_learner",
-          "columns": [
-            {
-              "expression": "learner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "logged_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"log_entries\".\"learner_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "log_entries_pipeline_event": {
-          "name": "log_entries_pipeline_event",
-          "columns": [
-            {
-              "expression": "pipeline_event_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "logged_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"log_entries\".\"pipeline_event_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.media_descriptors": {
       "name": "media_descriptors",
       "schema": "",
@@ -1220,6 +941,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'reviewed'"
+        },
+        "found_by": {
+          "name": "found_by",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2919,26 +2646,6 @@
         "research",
         "lesson",
         "publish"
-      ]
-    },
-    "public.log_component": {
-      "name": "log_component",
-      "schema": "public",
-      "values": [
-        "api",
-        "worker",
-        "web",
-        "console"
-      ]
-    },
-    "public.log_level": {
-      "name": "log_level",
-      "schema": "public",
-      "values": [
-        "info",
-        "warn",
-        "error",
-        "fatal"
       ]
     },
     "public.media_kind": {

@@ -281,7 +281,10 @@ export async function courseRequestRoutes(app: FastifyInstance, options: CourseR
       const [updated] = await app.db.update(courseRequests).set({ ...fields, status: "awaiting_subject_check" }).where(and(
         eq(courseRequests.id, requestId), eq(courseRequests.learnerId, request.currentLearner.id), eq(courseRequests.status, "draft"),
       )).returning(requestFields);
-      if (updated) return { courseRequest: updated };
+      if (updated) {
+        void recordProductEvent("course_request_edited", { learnerId: request.currentLearner.id, courseRequestId: updated.id });
+        return { courseRequest: updated };
+      }
       const row = await ownedRequest(requestId, request.currentLearner.id, reply);
       if (!row) return reply;
       return reply.code(409).send({ error: row.status !== "draft" ? "Only a draft Request can be edited." : "This Request changed. Reload it before continuing." });
