@@ -80,10 +80,10 @@ export type PipelineEventFilter = ResolvedRange &
 export type CourseRequestFilter = ResolvedRange & PageWindow;
 
 /** Checked `GET /product-events` filters. */
-export type ProductEventFilter = ResolvedRange & PageWindow & { kind?: ProductEventKind };
+export type ProductEventFilter = ResolvedRange & PageWindow & { kind?: ProductEventKind; learnerId?: string };
 
 /** Checked `GET /api-requests` filters. */
-export type ApiRequestFilter = ResolvedRange & PageWindow & { route?: string; errorsOnly: boolean };
+export type ApiRequestFilter = ResolvedRange & PageWindow & { route?: string; requestId?: string; errorsOnly: boolean };
 
 /** Checked `GET /logs` filters (`OpsLogQuery`). */
 export type LogFilter = ResolvedRange &
@@ -310,7 +310,12 @@ export function parseCourseRequestQuery(raw: RawQuery, now?: Date): CourseReques
  * @throws QueryError on any bad parameter
  */
 export function parseProductEventQuery(raw: RawQuery, now?: Date): ProductEventFilter {
-  return { ...parseRange(raw, now), ...parsePage(raw), kind: readEnum(raw, "kind", PRODUCT_EVENT_KINDS) };
+  return {
+    ...parseRange(raw, now),
+    ...parsePage(raw),
+    kind: readEnum(raw, "kind", PRODUCT_EVENT_KINDS),
+    learnerId: readUuid(raw, "learnerId"),
+  };
 }
 
 /**
@@ -325,6 +330,7 @@ export function parseApiRequestQuery(raw: RawQuery, now?: Date): ApiRequestFilte
     ...parseRange(raw, now),
     ...parsePage(raw),
     route: readString(raw, "route"),
+    requestId: readUuid(raw, "requestId"),
     errorsOnly: readFlag(raw, "errorsOnly"),
   };
 }

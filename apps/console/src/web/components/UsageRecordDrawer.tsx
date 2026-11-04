@@ -138,9 +138,14 @@ function UsageRecordBody({ record: r }: { record: OpsUsageRecordDetail }) {
         title="Payloads"
         actions={
           r.pipelineEventId ? (
-            <Link to={href("/calls", { pipelineEventId: r.pipelineEventId })} className="text-xs text-muted-foreground hover:text-foreground">
-              All calls in this step <ArrowRight className="inline size-3" />
-            </Link>
+            <span className="flex items-center gap-3 text-xs">
+              <Link to={href("/calls", { pipelineEventId: r.pipelineEventId })} className="text-muted-foreground hover:text-foreground">
+                All calls in this step <ArrowRight className="inline size-3" />
+              </Link>
+              <Link to={href("/logs", { pipelineEventId: r.pipelineEventId })} className="text-muted-foreground hover:text-foreground">
+                Logs for this step <ArrowRight className="inline size-3" />
+              </Link>
+            </span>
           ) : undefined
         }
       >

@@ -6,6 +6,7 @@ import type {
   OpsBreakdownRow,
   OpsCourseRequestRow,
   OpsFailureGroup,
+  OpsGenerationJobRow,
   OpsPipelineEventRow,
   OpsProductEventRow,
   OpsUsageRecordRow,
@@ -224,6 +225,24 @@ export function toBreakdownRow(row: SqlRow): OpsBreakdownRow {
 }
 
 /**
+ * Maps one Generation job row.
+ * @param row - Row from the generation-jobs select
+ * @returns The contract row
+ */
+export function toGenerationJobRow(row: SqlRow): OpsGenerationJobRow {
+  return {
+    id: String(row.id),
+    kind: String(row.kind) as OpsGenerationJobRow["kind"],
+    status: String(row.status) as OpsGenerationJobRow["status"],
+    stage: toText(row.stage) as OpsGenerationJobRow["stage"],
+    requestId: toText(row.requestId),
+    claims: toNumber(row.claims),
+    createdAt: toIso(row.createdAt),
+    updatedAt: toIso(row.updatedAt),
+  };
+}
+
+/**
  * Maps one Product Event.
  * @param row - Row from the product-event select
  * @returns The contract row
@@ -254,6 +273,7 @@ export function toApiRequestRow(row: SqlRow): OpsApiRequestRow {
     statusCode: toNumber(row.statusCode),
     durationMs: toNumber(row.durationMs),
     error: toText(row.error),
+    requestId: toText(row.requestId),
   };
 }
 

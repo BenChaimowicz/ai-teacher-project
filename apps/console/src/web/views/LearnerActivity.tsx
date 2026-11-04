@@ -6,7 +6,7 @@ import { CodeBlock } from "@/components/CodeBlock";
 import { Async, CAPTURE_HINT, EmptyState, Spinner } from "@/components/States";
 import { Pager, Table, Td, Th, Tr } from "@/components/Table";
 import { Tip, TipBody } from "@/components/Tip";
-import { Card, Mono, Select } from "@/components/ui";
+import { ActiveFilters, Card, Mono, Select } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { PRODUCT_EVENT_HELP } from "@/lib/glossary";
 import { formatAgo, formatDateTime, formatInt, humanize } from "@/lib/format";
@@ -38,12 +38,14 @@ export function LearnerActivity() {
   const setParams = useSetParams();
   const href = useHref();
   const kind = search.get("kind") ?? "";
+  const learnerId = search.get("learnerId") ?? "";
   const page = Math.max(0, Number(search.get("page") ?? 0) || 0);
   const [open, setOpen] = useState<string | null>(null);
   const state = useOps<OpsPage<OpsProductEventRow>>("product-events", {
     from: range.from,
     to: range.to,
     kind,
+    learnerId,
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   });
@@ -66,10 +68,18 @@ export function LearnerActivity() {
             {state.data && `${formatInt(state.data.total)} events`}
           </span>
         </div>
+        {learnerId && (
+          <div className="border-b px-3 py-2">
+            <ActiveFilters
+              chips={[{ key: "learnerId", label: `Learner: ${learnerId.slice(0, 8)}`, onRemove: () => setParams({ learnerId: undefined }) }]}
+              onClear={() => setParams({ learnerId: undefined })}
+            />
+          </div>
+        )}
         <Async state={state} rows={10}>
           {(data) =>
             data.rows.length === 0 ? (
-              <EmptyState title={kind ? "No events of this kind in this range." : "No Product Events in this range."} hint={kind ? undefined : CAPTURE_HINT} />
+              <EmptyState title={kind || learnerId ? "No events match in this range." : "No Product Events in this range."} hint={kind || learnerId ? undefined : CAPTURE_HINT} />
             ) : (
               <>
                 <Table>

@@ -1,6 +1,6 @@
 import type { OpsApiRequestRow, OpsApiRouteRow, OpsPage } from "@senoy/db/usage";
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { HttpBadge } from "@/components/Badges";
 import { Async, CAPTURE_HINT, EmptyState, Spinner } from "@/components/States";
 import { Pager, Table, Td, Th, Tr } from "@/components/Table";
@@ -8,7 +8,7 @@ import { ActiveFilters, Card } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { METRIC_HELP } from "@/lib/glossary";
 import { formatDateTime, formatDuration, formatInt, formatPct, ratio } from "@/lib/format";
-import { useSetParams } from "@/lib/nav";
+import { useHref, useSetParams } from "@/lib/nav";
 import { useTimeRange } from "@/lib/range";
 import { useOps } from "@/lib/useOps";
 import { cn } from "@/lib/cn";
@@ -27,7 +27,9 @@ export function ApiTraffic() {
   const range = useTimeRange();
   const [search] = useSearchParams();
   const setParams = useSetParams();
+  const href = useHref();
   const route = search.get("route") ?? "";
+  const requestId = search.get("requestId") ?? "";
   const errorsOnly = search.get("errorsOnly") === "1" || search.get("errorsOnly") === "true";
   const page = Math.max(0, Number(search.get("page") ?? 0) || 0);
   const [sort, setSort] = useState<RouteSort>("count");
@@ -37,6 +39,7 @@ export function ApiTraffic() {
     from: range.from,
     to: range.to,
     route,
+    requestId,
     errorsOnly: errorsOnly || undefined,
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
@@ -44,6 +47,7 @@ export function ApiTraffic() {
 
   const chips = [
     ...(route ? [{ key: "route", label: `route: ${route}`, onRemove: () => setParams({ route: undefined }) }] : []),
+    ...(requestId ? [{ key: "requestId", label: `request: ${requestId.slice(0, 8)}`, onRemove: () => setParams({ requestId: undefined }) }] : []),
     ...(errorsOnly ? [{ key: "err", label: "errors only", onRemove: () => setParams({ errorsOnly: undefined }) }] : []),
   ];
 
@@ -125,7 +129,7 @@ export function ApiTraffic() {
         >
           {chips.length > 0 && (
             <div className="border-b px-3 py-2">
-              <ActiveFilters chips={chips} onClear={() => setParams({ route: undefined, errorsOnly: undefined })} />
+              <ActiveFilters chips={chips} onClear={() => setParams({ route: undefined, requestId: undefined, errorsOnly: undefined })} />
             </div>
           )}
           <Async state={requests} rows={8}>
@@ -143,6 +147,7 @@ export function ApiTraffic() {
                         <Th>URL</Th>
                         <Th numeric>Duration</Th>
                         <Th>Error</Th>
+                        <Th>Logs</Th>
                       </tr>
                     </thead>
                     <tbody>
@@ -159,6 +164,15 @@ export function ApiTraffic() {
                           <Td numeric>{formatDuration(r.durationMs)}</Td>
                           <Td className="max-w-[24rem] truncate text-bad" title={r.error ?? undefined}>
                             {r.error ?? ""}
+                          </Td>
+                          <Td>
+                            {r.requestId ? (
+                              <Link to={href("/logs", { requestId: r.requestId })} className="text-muted-foreground hover:text-ice">
+                                Logs
+                              </Link>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </Td>
                         </Tr>
                       ))}

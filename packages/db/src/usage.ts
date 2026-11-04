@@ -4,6 +4,7 @@
  */
 
 import type { ResearchTier, ResearchTierRating } from "./course-request.ts";
+import type { GenerationJobKind, GenerationJobStatus, GenerationStage } from "./generation-job.ts";
 import type { MediaReview } from "./media.ts";
 
 /** The external service a Usage Record called. Wikimedia Commons is free; its calls are recorded at a cost of 0 (SEN-129). */
@@ -298,8 +299,24 @@ export type OpsCourseRequestRow = CostSplit & {
   researchTierRating: ResearchTierRating | null;
 };
 
+/** One Generation job of a Course Request, for the links to its Log Entries (SEN-116). */
+export type OpsGenerationJobRow = {
+  id: string;
+  kind: GenerationJobKind;
+  status: GenerationJobStatus;
+  stage: GenerationStage | null;
+  /** The API request that last queued it; null before SEN-116. */
+  requestId: string | null;
+  /** How many times a worker has claimed it. */
+  claims: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 /** `GET /api/ops/course-requests/:id` — the timeline: every Pipeline Event (flat, with parents) and Usage Record. */
 export type OpsCourseRequestDetail = OpsCourseRequestRow & {
+  /** Its Generation jobs, oldest first. */
+  jobs: OpsGenerationJobRow[];
   events: OpsPipelineEventRow[];
   usageRecords: OpsUsageRecordRow[];
   productEvents: OpsProductEventRow[];
@@ -329,7 +346,7 @@ export type OpsProductEventRow = {
 };
 
 /** `GET /api/ops/product-events` query. */
-export type OpsProductEventQuery = OpsRangeQuery & { kind?: ProductEventKind; limit?: number; offset?: number };
+export type OpsProductEventQuery = OpsRangeQuery & { kind?: ProductEventKind; learnerId?: string; limit?: number; offset?: number };
 
 /** One API Request. */
 export type OpsApiRequestRow = {
@@ -341,10 +358,12 @@ export type OpsApiRequestRow = {
   statusCode: number;
   durationMs: number;
   error: string | null;
+  /** The request id its Log Entries carry (ADR 0029); null before SEN-116. */
+  requestId: string | null;
 };
 
 /** `GET /api/ops/api-requests` query. */
-export type OpsApiRequestQuery = OpsRangeQuery & { route?: string; errorsOnly?: boolean; limit?: number; offset?: number };
+export type OpsApiRequestQuery = OpsRangeQuery & { route?: string; requestId?: string; errorsOnly?: boolean; limit?: number; offset?: number };
 
 /** `GET /api/ops/api-routes` — traffic per route. */
 export type OpsApiRouteRow = {

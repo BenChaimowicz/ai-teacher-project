@@ -27,6 +27,7 @@ import {
   toBreakdownRow,
   toCostSplit,
   toCourseRequestRow,
+  toGenerationJobRow,
   toIso,
   toLatencyHistogram,
   toMs,
@@ -488,8 +489,11 @@ export function createOpsStore(run: SqlRunner): OpsStore {
     },
 
     async getCourseRequest(id) {
-      const [[found], events, usageRecords, productEvents] = await Promise.all([
+      const [[found], jobs, events, usageRecords, productEvents] = await Promise.all([
         run(courseRequestRowsQuery(sql`cr.id = ${id}::uuid`, sql`cr.id`)),
+        run(sql`select j.id, j.kind, j.status, j.stage, j.request_id as "requestId", j.claims,
+            j.created_at as "createdAt", j.updated_at as "updatedAt"
+          from generation_jobs j where j.course_request_id = ${id}::uuid order by j.created_at, j.id`),
         pipelineEventRows(sql`select pe.id, row_number() over (order by pe.started_at, pe.id) as ord
           from pipeline_events pe where pe.course_request_id = ${id}::uuid`),
         usageRecordRows(sql`pe.course_request_id = ${id}::uuid`, sql`u.created_at, u.id`),
@@ -498,7 +502,7 @@ export function createOpsStore(run: SqlRunner): OpsStore {
           from product_events p where p.course_request_id = ${id}::uuid order by p.created_at, p.id`),
       ]);
       if (!found) return null;
-      return { ...toCourseRequestRow(found), events, usageRecords, productEvents: productEvents.map(toProductEventRow) };
+      return { ...toCourseRequestRow(found), jobs: jobs.map(toGenerationJobRow), events, usageRecords, productEvents: productEvents.map(toProductEventRow) };
     },
 
     async listFailures(range) {
@@ -557,6 +561,7 @@ export function createOpsStore(run: SqlRunner): OpsStore {
     async listProductEvents(filter) {
       const conditions: SQL[] = [inRange("p.created_at", filter)];
       if (filter.kind) conditions.push(sql`p.kind = ${filter.kind}`);
+      if (filter.learnerId) conditions.push(sql`p.learner_id = ${filter.learnerId}::uuid`);
       const where = allOf(conditions);
       const [rows, total] = await Promise.all([
         run(sql`select p.id, p.created_at as "createdAt", p.kind, p.learner_id as "learnerId",
@@ -571,11 +576,13 @@ export function createOpsStore(run: SqlRunner): OpsStore {
     async listApiRequests(filter) {
       const conditions: SQL[] = [inRange("a.created_at", filter)];
       if (filter.route) conditions.push(sql`a.route = ${filter.route}`);
+      if (filter.requestId) conditions.push(sql`a.request_id = ${filter.requestId}::uuid`);
       if (filter.errorsOnly) conditions.push(sql`a.status_code >= 500`);
       const where = allOf(conditions);
       const [rows, total] = await Promise.all([
         run(sql`select a.id, a.created_at as "createdAt", a.method, a.route, a.url, a.status_code as "statusCode",
-            a.duration_ms as "durationMs", a.error
+            a.duration_ms as "durationMs", a.error,
+            a.request_id as "requestId"
           from api_requests a where ${where}
           order by a.created_at desc, a.id desc limit ${filter.limit} offset ${filter.offset}`),
         countOf(run, sql`select count(*) as total from api_requests a where ${where}`),
