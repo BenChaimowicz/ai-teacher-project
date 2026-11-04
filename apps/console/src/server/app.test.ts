@@ -245,3 +245,57 @@ describe("Setup checklist", () => {
     assert.equal((await app.inject({ method: "PUT", url, headers: json, payload: { done: true } })).statusCode, 404);
   });
 });
+
+describe("Client logs (the console screens' own browser errors)", () => {
+  const json = { "content-type": "application/json", host: "127.0.0.1:3100" };
+  /** An ingest that records every body it was handed. */
+  const recordingIngest = () => {
+    const bodies: unknown[] = [];
+    return { bodies, ingest: { accept: (body: unknown) => { bodies.push(body); return { accepted: 0, dropped: 0 }; } } };
+  };
+
+  it("hands a JSON batch from this machine to the ingest and answers 204", async () => {
+    const { bodies, ingest } = recordingIngest();
+    const app = buildConsoleApp(fakeStore().store, { clientLogs: ingest });
+    const batch = { events: [{ kind: "uncaught_error", message: "boom", time: NOW.toISOString(), page: "/logs" }] };
+    const response = await app.inject({ method: "POST", url: "/api/ops/client-logs", headers: json, payload: batch });
+    assert.equal(response.statusCode, 204);
+    assert.deepEqual(bodies, [batch]);
+  });
+
+  it("refuses another host and a non-JSON body without reaching the ingest, and is 404 when not set up", async () => {
+    const { bodies, ingest } = recordingIngest();
+    const app = buildConsoleApp(fakeStore().store, { clientLogs: ingest });
+    const foreign = await app.inject({ method: "POST", url: "/api/ops/client-logs", headers: { ...json, host: "evil.example:3100" }, payload: { events: [] } });
+    assert.equal(foreign.statusCode, 403);
+    const text = await app.inject({ method: "POST", url: "/api/ops/client-logs", headers: { "content-type": "text/plain", host: "127.0.0.1:3100" }, payload: "{}" });
+    assert.equal(text.statusCode, 415);
+    assert.deepEqual(bodies, []);
+    const none = await buildConsoleApp(fakeStore().store).inject({ method: "POST", url: "/api/ops/client-logs", headers: json, payload: { events: [] } });
+    assert.equal(none.statusCode, 404);
+  });
+
+  it("still answers 204 when the ingest throws", async () => {
+    const app = buildConsoleApp(fakeStore().store, { clientLogs: { accept: () => { throw new Error("broken"); } } });
+    const response = await app.inject({ method: "POST", url: "/api/ops/client-logs", headers: json, payload: { events: [] } });
+    assert.equal(response.statusCode, 204);
+  });
+});
+
+describe("Logs", () => {
+  it("passes checked filters to the store and refuses bad ones", async () => {
+    const calls: unknown[] = [];
+    const logs = { list: async (filter: unknown) => { calls.push(filter); return { rows: [], total: 0 }; } };
+    const app = buildConsoleApp(fakeStore().store, { now: () => NOW, logs });
+    const ok = await app.inject({ method: "GET", url: `/api/ops/logs?component=worker&level=warn&jobId=${ID}&q=lease` });
+    assert.equal(ok.statusCode, 200);
+    assert.deepEqual(ok.json(), { rows: [], total: 0 });
+    assert.equal((calls[0] as { component: string }).component, "worker");
+    assert.equal((calls[0] as { level: string }).level, "warn");
+    assert.equal((calls[0] as { jobId: string }).jobId, ID);
+    for (const url of ["/api/ops/logs?level=debug", "/api/ops/logs?component=railway", "/api/ops/logs?requestId=abc", `/api/ops/logs?q=${"x".repeat(201)}`]) {
+      assert.equal((await app.inject({ method: "GET", url })).statusCode, 400, url);
+    }
+    assert.equal((await buildConsoleApp(fakeStore().store).inject({ method: "GET", url: "/api/ops/logs" })).statusCode, 404);
+  });
+});

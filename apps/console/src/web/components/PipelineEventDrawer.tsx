@@ -67,6 +67,9 @@ function StepBody({ event: e }: { event: OpsPipelineEventDetail }) {
         <Link to={href("/calls", { pipelineEventId: e.id })} className="text-muted-foreground hover:text-foreground">
           Calls in Calls view <ArrowRight className="inline size-3" />
         </Link>
+        <Link to={href("/logs", { pipelineEventId: e.id })} className="text-muted-foreground hover:text-foreground">
+          Logs for this step <ArrowRight className="inline size-3" />
+        </Link>
       </div>
 
       <dl className="mb-5 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">

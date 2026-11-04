@@ -18,6 +18,13 @@ export default defineConfig({
   server: {
     host: "127.0.0.1",
     port: 5174,
-    proxy: { "/api": consoleApiUrl },
+    // The "API traffic" screen lives at /api too (Logs links deep-link to /api?requestId=…), so a page load of it, which
+    // asks for HTML, is served by Vite; the screens' own fetches (JSON) go to the console server.
+    proxy: {
+      "/api": {
+        target: consoleApiUrl,
+        bypass: (request) => (request.headers.accept?.includes("text/html") ? request.url : undefined),
+      },
+    },
   },
 });

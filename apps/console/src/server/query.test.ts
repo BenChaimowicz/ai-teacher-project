@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import {
   chooseBucket,
   parseApiRequestQuery,
+  parseLogQuery,
+  parseProductEventQuery,
   parsePage,
   parseRange,
   previousRange,
@@ -68,5 +70,27 @@ describe("parseApiRequestQuery", () => {
     assert.equal(parseApiRequestQuery({ errorsOnly: "true" }, NOW).errorsOnly, true);
     assert.equal(parseApiRequestQuery({ errorsOnly: "0" }, NOW).errorsOnly, false);
     assert.equal(parseApiRequestQuery({}, NOW).errorsOnly, false);
+  });
+});
+
+const UUID = "0b8c2a52-7a52-4c3e-9a3c-2f1e5b0d9a11";
+
+describe("request id and Learner filters", () => {
+  it("reads requestId on API traffic and learnerId on Product Events", () => {
+    assert.equal(parseApiRequestQuery({ requestId: UUID }, NOW).requestId, UUID);
+    assert.equal(parseProductEventQuery({ learnerId: UUID }, NOW).learnerId, UUID);
+    assert.throws(() => parseApiRequestQuery({ requestId: "abc" }, NOW), QueryError);
+    assert.throws(() => parseProductEventQuery({ learnerId: "abc" }, NOW), QueryError);
+  });
+});
+
+describe("parseLogQuery", () => {
+  it("reads every Logs filter", () => {
+    const filter = parseLogQuery({ component: "web", level: "error", pipelineEventId: UUID, q: " lease " }, NOW);
+    assert.equal(filter.component, "web");
+    assert.equal(filter.level, "error");
+    assert.equal(filter.pipelineEventId, UUID);
+    assert.equal(filter.q, "lease");
+    assert.equal(filter.limit, 50);
   });
 });

@@ -9,6 +9,7 @@
   "dependencies": {
     "@senoy/api": "workspace:*",
     "@senoy/db": "workspace:*",
+    "@senoy/logging": "workspace:*",
     "drizzle-orm": "^0.44.5",
     "pino": "^9.9.4"
   },

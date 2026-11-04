@@ -1,0 +1,19 @@
+{
+  "name": "@senoy/logging",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
+  "dependencies": {
+    "@senoy/db": "workspace:*",
+    "drizzle-orm": "^0.44.5",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

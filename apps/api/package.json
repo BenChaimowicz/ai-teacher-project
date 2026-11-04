@@ -24,6 +24,7 @@
     "@fastify/static": "^8.2.0",
     "@senoy/db": "workspace:*",
     "@senoy/illustration": "workspace:*",
+    "@senoy/logging": "workspace:*",
     "@senoy/media": "workspace:*",
     "@senoy/research": "workspace:*",
     "@supabase/supabase-js": "^2.118.0",

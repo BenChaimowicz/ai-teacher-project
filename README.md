@@ -48,6 +48,16 @@ draws the committed fixture plans in `packages/illustration/fixtures/` (Yggdrasi
 
 Every mid-sized or bigger decision the team makes about a ticket is one Markdown file in [`docs/decisions/`](docs/decisions/README.md): what we decided, why, and when. The Usage Console reads that folder off disk and shows it under **Decisions**, so an entry written now appears on the next refresh — there is no database and nothing to migrate. Architectural choices still get a full ADR in [`docs/adr/`](docs/adr).
 
+## Logging
+
+Everything the api, the worker, the web app and the Usage Console log is kept in one Postgres table, `log_entries` (ADR [0029](docs/adr/0029-logs-are-stored-in-our-own-postgres-and-kept-7-or-30-days-by-level.md)). Terminal output still works as before.
+
+- **Where logs go.** The api, the worker and the console's server log through `createLogger` in `packages/logging`: Pino to the terminal, plus a batched, non-blocking writer to `log_entries` on a connection of its own, so logging never slows or breaks a request or a job. Browsers send errors to the api (`POST /api/client-logs`, component `web`) and, for the console's screens, to the console's server (component `console`).
+- **What is stored.** `info`, `warn`, `error` and `fatal`. `debug` and `trace` and Fastify's per-request lines (`api_requests` already records every request) stay on the terminal. Secrets and emails are redacted, a message is cut at 2 KB and its context at 8 KB. `LOG_LEVEL` (in `.env`) sets the lowest level printed to the terminal only.
+- **Finding a log.** Open the Usage Console's **Logs**: filter by component, level (a minimum), time range, and request, job, Course Request or Learner id, and search the message text. Each line links to its entity, and a Course Request's jobs, a Pipeline Step, a model call and an API traffic row link to their logs. One `request_id` follows an api request into the Generation Job it queued (`generation_jobs.request_id`) and into that job's worker lines. It is also in the `x-request-id` response header.
+- **Retention.** `info` is kept 7 days and `warn`, `error` and `fatal` 30. The worker prunes hourly, in batches, starting a minute after it starts. A prune that deletes rows writes one `info` line saying how many.
+- **On a deploy.** The api and the worker write their last lines on SIGTERM. Railway sends SIGKILL right after SIGTERM unless `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` is set (see [`docs/deploy.md`](docs/deploy.md)), so set it on the api as well as the worker, or the final second of lines can be lost.
+
 ## Migrations
 
 `pnpm db:generate --name <what_it_does>` writes `<number>_<UTC timestamp>_<name>.sql` (for example `0016_20261024140056_usage_console.sql`) and its journal entry. The number is drizzle's order; the timestamp says when it was made. Drizzle applies only migrations whose journal `when` is later than the last one applied to the shared database, so when another branch's migration was applied first, re-stamp yours (raise its `when` and its file timestamp) before `pnpm db:migrate`.

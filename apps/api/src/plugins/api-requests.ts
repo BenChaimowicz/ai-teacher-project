@@ -6,14 +6,14 @@ import { recordApiRequest } from "../lib/usage-tracking.ts";
 const failures = new WeakMap<FastifyRequest, string>();
 
 /**
- * True when the request is one of the platform's own `/api/*` hits worth recording. The Usage Console's own routes and
- * the health check are not.
+ * True when the request is one of the platform's own `/api/*` hits worth recording. The Usage Console's own routes, the
+ * health check, and the browser's client logs (telemetry, not platform traffic) are not.
  * @param url - Raw request URL
  */
 export function isRecordedApiPath(url: string) {
   const path = url.split("?")[0] ?? "";
   if (!path.startsWith("/api/")) return false;
-  return path !== "/api/health" && path !== "/api/ops" && !path.startsWith("/api/ops/");
+  return path !== "/api/health" && path !== "/api/client-logs" && path !== "/api/ops" && !path.startsWith("/api/ops/");
 }
 
 /**
@@ -41,8 +41,8 @@ function errorText(payload: unknown): string | null {
 }
 
 /**
- * Records every finished `/api/*` request as an API Request (method, route pattern, URL, status, duration, Learner,
- * and error). Recording is fire-and-forget and never affects the reply; it is a no-op until usage tracking is installed.
+ * Records every finished `/api/*` request as an API Request (request id, method, route pattern, URL, status, duration,
+ * Learner, and error). Recording is fire-and-forget and never affects the reply; it is a no-op until usage tracking is installed.
  * @param app - Fastify app
  */
 async function apiRequestsPlugin(app: FastifyInstance) {
@@ -62,6 +62,7 @@ async function apiRequestsPlugin(app: FastifyInstance) {
     try {
       if (!isRecordedApiPath(request.url)) return;
       void recordApiRequest({
+        requestId: request.id,
         method: request.method,
         route: request.routeOptions.url ?? request.url.split("?")[0] ?? request.url,
         url: recordedUrl(request.url),
