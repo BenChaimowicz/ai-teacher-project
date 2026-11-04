@@ -1,0 +1,1 @@
+ALTER TABLE "media_descriptors" ADD COLUMN "found_by" jsonb;
