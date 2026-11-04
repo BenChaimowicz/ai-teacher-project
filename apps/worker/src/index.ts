@@ -9,6 +9,9 @@ import { createGenerationWorker } from "@senoy/api/generation-worker";
 import { balanceProbeFromEnv, createResearchMeter } from "@senoy/api/research-measurement";
 import { currentLogCorrelation, installUsageTracking } from "@senoy/api/usage-tracking";
 
+// Loaded before the logger is built, so `LOG_LEVEL` in the root `.env` applies to the worker's stdout too.
+const root = loadRootEnv(import.meta.url, 3);
+
 // The worker's one Log Entry sink (ADR 0029). Lines logged before the database is known wait in it.
 const logSink = createBatchedLogSink();
 // Every line of a run carries its job, the request that queued it, its Course Request, Learner and current Pipeline Event.
@@ -56,7 +59,6 @@ function schedulePruning(db: Database) {
  */
 async function startWorker() {
   try {
-    const root = loadRootEnv(import.meta.url, 3);
 
     const url = process.env.DATABASE_URL;
     if (!url) {

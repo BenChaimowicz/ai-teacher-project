@@ -4,7 +4,7 @@ import { pinoRedactPaths, REDACTED } from "./redact.ts";
 import type { LogCorrelation, LogSink } from "./types.ts";
 
 /**
- * The one logger setup the api and the worker share (ADR 0029). Every line goes to stdout as Pino JSON, as before;
+ * The one logger setup the api, the worker and the Usage Console's server share (ADR 0029). Every line goes to stdout as Pino JSON, as before;
  * lines at `info` and above also go to the sink as Log Entries, carrying the component and the ids of the code running
  * now. `debug` and `trace` reach stdout only, and only when `LOG_LEVEL` asks for them.
  */

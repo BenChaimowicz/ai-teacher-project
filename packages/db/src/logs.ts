@@ -109,8 +109,13 @@ export const CLIENT_LOG_LIMITS = {
   maxBodyBytes: 65_536,
   /** Events beyond this many in one batch are dropped by the server; the browser never sends more. */
   maxEventsPerBatch: 20,
-  /** Longest stack (and component stack) kept, in UTF-8 bytes. */
-  maxStackBytes: 4_096,
+  /**
+   * Longest stack kept, in UTF-8 bytes. With the component stack and the user agent, a stored client event's context
+   * stays under 4 KB (ADR 0029, decided 2026-11-04).
+   */
+  maxStackBytes: 2_048,
+  /** Longest React component stack kept, in UTF-8 bytes. */
+  maxComponentStackBytes: 1_536,
   /** Events one page load sends at most; the browser drops the rest. */
   maxEventsPerPageLoad: 50,
   /** The browser waits this long after the first queued event before sending, so a burst goes as one batch. */
@@ -119,6 +124,11 @@ export const CLIENT_LOG_LIMITS = {
   apiBatchesPerIpPerMinute: 12,
   /** Web events the API stores per minute across every client; the rest are dropped and counted. */
   apiEventsPerMinute: 60,
+  /**
+   * Web events one API process stores per UTC day across every client; the rest are dropped and counted. With the
+   * 4 KB context it bounds web rows to a few MB a day, whoever posts them (ADR 0029, decided 2026-11-04).
+   */
+  apiEventsPerDay: 500,
   /** Console events the console's server stores per minute; the rest are dropped and counted. */
   consoleEventsPerMinute: 120,
 } as const;

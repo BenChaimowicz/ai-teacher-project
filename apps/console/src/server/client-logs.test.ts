@@ -48,7 +48,7 @@ test("accept never throws, whatever the body", () => {
   assert.equal(rows.length, 0);
 });
 
-test("Past consoleEventsPerMinute stored events the rest are dropped, and one console warn row a minute says how many", () => {
+test("Past consoleEventsPerMinute stored events the rest are dropped, and one console warn row an hour says how many", () => {
   const { rows, sink } = fakeSink();
   let now = NOW;
   const ingest = createConsoleClientLogIngest({ sink, now: () => now });
@@ -60,10 +60,14 @@ test("Past consoleEventsPerMinute stored events the rest are dropped, and one co
   assert.deepEqual(ingest.accept(batch), { accepted: 0, dropped: CLIENT_LOG_LIMITS.maxEventsPerBatch });
   const warns = rows.filter((row) => row.level === "warn");
   assert.deepEqual(warns.map((row) => [row.component, row.message]), [
-    ["console", `[client-logs: accept] Dropped ${CLIENT_LOG_LIMITS.maxEventsPerBatch} console client log events || reason=over the per-minute cap`],
+    ["console", `[client-logs: accept] Dropped ${CLIENT_LOG_LIMITS.maxEventsPerBatch} console client log events || reason=over the per-minute or daily cap`],
   ]);
 
   now = new Date(NOW.getTime() + 60_000);
   assert.deepEqual(ingest.accept({ events: [event()] }), { accepted: 1, dropped: 0 });
-  assert.equal(rows.filter((row) => row.level === "warn").length, 2, "The drops held back last minute are reported now.");
+  assert.equal(rows.filter((row) => row.level === "warn").length, 1, "A new minute stores again, but reports wait for the hour.");
+
+  now = new Date(NOW.getTime() + 3_600_000);
+  ingest.accept({ events: [event()] });
+  assert.equal(rows.filter((row) => row.level === "warn").length, 2, "The drops held back are reported an hour later.");
 });

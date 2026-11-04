@@ -140,7 +140,7 @@ test("Only the first maxEventsPerBatch events of a batch are kept", async () => 
   }
 });
 
-test("Past apiEventsPerMinute stored events, the rest are dropped and one warn line a minute says how many", async () => {
+test("Past apiEventsPerMinute stored events, the rest are dropped and one warn line an hour says how many", async () => {
   let now = NOW;
   const { app, rows, lines, post } = await testApp(() => now);
   try {
@@ -149,7 +149,7 @@ test("Past apiEventsPerMinute stored events, the rest are dropped and one warn l
     assert.equal(rows.length, CLIENT_LOG_LIMITS.apiEventsPerMinute);
     const warns = lines.filter((line) => line.level === 40);
     assert.deepEqual(warns.map((line) => line.msg), [
-      "[client-logs: POST /api/client-logs] Dropped 20 web client log events || reason=over the per-minute cap",
+      "[client-logs: POST /api/client-logs] Dropped 20 web client log events || reason=over the per-minute or daily cap",
     ]);
 
     now = new Date(NOW.getTime() + 60_000);

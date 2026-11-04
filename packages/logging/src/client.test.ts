@@ -70,16 +70,17 @@ test("Messages and stacks are capped in the browser, and a queue larger than max
   const { calls, fetch } = recordingFetch();
   const shipper = createClientLogShipper({ endpoint: "/e", fetch });
   const huge = "é".repeat(50_000);
-  for (let i = 0; i < 10; i += 1) {
+  for (let i = 0; i < 15; i += 1) {
     shipper.report({ kind: "error_boundary", message: `${i}${huge}`, stack: huge, componentStack: huge, page: "/" });
   }
   shipper.flush();
-  assert.ok(calls.length > 1, "Ten events of about 10 KB each cannot go in one 64 KB body.");
+  assert.ok(calls.length > 1, "Fifteen events of about 5.5 KB each cannot go in one 64 KB body.");
   const encoder = new TextEncoder();
   for (const call of calls) assert.ok(encoder.encode(String(call.init.body)).length <= CLIENT_LOG_LIMITS.maxBodyBytes);
   const events = calls.flatMap((call) => call.batch.events);
-  assert.equal(events.length, 10);
+  assert.equal(events.length, 15);
   assert.ok(encoder.encode(events[0]!.stack!).length <= CLIENT_LOG_LIMITS.maxStackBytes);
+  assert.ok(encoder.encode(events[0]!.componentStack!).length <= CLIENT_LOG_LIMITS.maxComponentStackBytes);
   assert.ok(events[0]!.message.endsWith(TRUNCATION_MARKER));
 });
 
@@ -162,14 +163,26 @@ test("capUtf8, pathOnly and errorDetails", () => {
   assert.equal(errorDetails(cyclic).message, "(unreadable error)");
 });
 
-test("The minute cap allows perMinute events a minute, and reports drops at most once a minute", () => {
+test("The minute cap allows perMinute events a minute, and reports drops at most once an hour", () => {
   const cap = createClientLogMinuteCap(2);
   const at = (seconds: number) => new Date(Date.UTC(2026, 10, 4, 10, 0, seconds));
   assert.equal(cap.dropsToReport(at(0)), 0);
   assert.deepEqual([cap.allow(at(0)), cap.allow(at(1)), cap.allow(at(2)), cap.allow(at(3))], [true, true, false, false]);
   assert.equal(cap.dropsToReport(at(3)), 2);
   assert.equal(cap.allow(at(4)), false);
-  assert.equal(cap.dropsToReport(at(4)), 0, "A second report in the same minute waits.");
+  assert.equal(cap.dropsToReport(at(4)), 0, "A second report in the same hour waits.");
   assert.equal(cap.allow(at(60)), true, "A new minute starts afresh.");
-  assert.equal(cap.dropsToReport(at(63)), 1);
+  assert.equal(cap.allow(at(61)), true);
+  assert.equal(cap.allow(at(62)), false);
+  assert.equal(cap.dropsToReport(at(63)), 0, "Still inside the hour.");
+  assert.equal(cap.dropsToReport(at(3 + 3600)), 2, "The next hour reports everything dropped since.");
+});
+
+test("The daily cap stops storing for the rest of the UTC day, and a new day starts afresh", () => {
+  const cap = createClientLogMinuteCap(100, 3);
+  const at = (hour: number, minute = 0) => new Date(Date.UTC(2026, 10, 4, hour, minute));
+  assert.deepEqual([cap.allow(at(1)), cap.allow(at(2)), cap.allow(at(3)), cap.allow(at(4))], [true, true, true, false]);
+  assert.equal(cap.allow(at(23, 59)), false, "A new minute does not reset the day.");
+  assert.equal(cap.dropsToReport(at(23, 59)), 2);
+  assert.equal(cap.allow(new Date(Date.UTC(2026, 10, 5, 0, 1))), true, "A new UTC day stores again.");
 });

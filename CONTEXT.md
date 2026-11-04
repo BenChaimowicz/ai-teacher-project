@@ -399,5 +399,5 @@ The uuid the API gives every request it receives. The reply's `x-request-id` hea
 _Avoid_: trace id, correlation id, reqId
 
 **Component**:
-Which part of the platform wrote a Log Entry: `api`, `worker`, `web` (the Learner's browser, sent through the API) or `console` (the Usage Console's own screens, sent through the console's own server).
+Which part of the platform wrote a Log Entry: `api`, `worker`, `web` (the Learner's browser, sent through the API) or `console` (the Usage Console's server, and its screens' errors, which are sent through that server).
 _Avoid_: service, app, source

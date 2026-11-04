@@ -141,3 +141,21 @@ test("Pino's redact paths hide the same keys on stdout", () => {
   assert.equal(line.err.code, "ECONNRESET");
   assert.equal(line.err.details.password, REDACTED);
 });
+
+test("toStorableRow removes NUL characters from the message, context strings and keys, so Postgres takes the batch", () => {
+  const row = toStorableRow({
+    loggedAt: new Date(),
+    component: "web",
+    level: "error",
+    message: "boom\u0000",
+    context: { "ke\u0000y": "va\u0000lue", nested: ["a\u0000"] },
+    requestId: null,
+    generationJobId: null,
+    courseRequestId: null,
+    learnerId: null,
+    pipelineEventId: null,
+  } as LogEntryRow);
+  assert.equal(row.message, "boom");
+  assert.deepEqual(row.context, { key: "value", nested: ["a"] });
+  assert.equal(JSON.stringify(row).includes("\\u0000"), false);
+});

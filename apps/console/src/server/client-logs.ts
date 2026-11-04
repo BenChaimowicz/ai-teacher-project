@@ -33,7 +33,7 @@ export type ClientLogIngestOptions = {
  * The ingest for the console's own screens: the same validation and rows as `POST /api/client-logs`, but component
  * `console`, no Learner, no user agent (the route hands over the body only), no per-IP limit (the route is loopback
  * only), and a process-wide cap of `consoleEventsPerMinute` stored events. Past the cap, events are dropped and, at
- * most once a minute, one `warn` row from component `console` says how many.
+ * most once an hour, one `warn` row from component `console` says how many.
  * @param options - The sink and the clock
  * @returns The ingest
  */
@@ -51,7 +51,7 @@ export function createConsoleClientLogIngest(options: ClientLogIngestOptions): C
             loggedAt: at,
             component: "console",
             level: "warn",
-            message: `[client-logs: accept] Dropped ${dropped} console client log events || reason=over the per-minute cap`,
+            message: `[client-logs: accept] Dropped ${dropped} console client log events || reason=over the per-minute or daily cap`,
             context: null,
             requestId: null,
             generationJobId: null,

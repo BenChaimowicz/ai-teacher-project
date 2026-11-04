@@ -88,7 +88,16 @@ const CIRCULAR = "[Circular]";
  * @returns The text without email addresses
  */
 export function scrubEmails(text: string): string {
-  return text.replace(EMAIL, EMAIL_REPLACEMENT);
+  return stripNul(text).replace(EMAIL, EMAIL_REPLACEMENT);
+}
+
+/**
+ * Removes NUL characters. Postgres refuses `\u0000` in `text` and `jsonb`, and one such row would fail the whole
+ * batch it is written in, so no stored string or key may carry one.
+ * @param text - Any text bound for a Log Entry
+ */
+export function stripNul(text: string): string {
+  return text.includes("\u0000") ? text.replaceAll("\u0000", "") : text;
 }
 
 /**
@@ -135,7 +144,7 @@ function redactValue(value: unknown, parentKey: string | null, depth: number, se
         continue;
       }
       const redacted = redactValue(inner, lower, depth + 1, seen);
-      if (redacted !== undefined) copy[key] = redacted;
+      if (redacted !== undefined) copy[stripNul(key)] = redacted;
     }
     return copy;
   } finally {

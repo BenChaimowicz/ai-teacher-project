@@ -146,7 +146,7 @@ function toSendable(event: ClientLogReport): ClientLogEvent {
   };
   if (typeof event.stack === "string") sendable.stack = capUtf8(event.stack, CLIENT_LOG_LIMITS.maxStackBytes);
   if (typeof event.componentStack === "string") {
-    sendable.componentStack = capUtf8(event.componentStack, CLIENT_LOG_LIMITS.maxStackBytes);
+    sendable.componentStack = capUtf8(event.componentStack, CLIENT_LOG_LIMITS.maxComponentStackBytes);
   }
   if (event.api) sendable.api = { ...event.api, path: pathOnly(event.api.path) };
   return sendable;
@@ -302,9 +302,9 @@ export type ClientLogMinuteCap = {
    */
   allow(now: Date): boolean;
   /**
-   * The events dropped since the last report, at most once a minute, then zero again.
+   * The events dropped since the last report, at most once an hour, then zero again.
    * @param now - The current instant
-   * @returns How many to report, or 0 when there are none or the last report was less than a minute ago
+   * @returns How many to report, or 0 when there are none or the last report was less than an hour ago
    */
   dropsToReport(now: Date): number;
 };
@@ -312,14 +312,21 @@ export type ClientLogMinuteCap = {
 /** One minute, the window of every client-log cap. */
 const MINUTE_MS = 60_000;
 
+/** One hour: drops are reported at most this often, so a flood writes one `warn` row an hour, not one a minute. */
+const REPORT_INTERVAL_MS = 60 * MINUTE_MS;
+
 /**
- * A process-wide per-minute cap on stored client-log events (`apiEventsPerMinute`, `consoleEventsPerMinute`).
+ * A process-wide cap on stored client-log events: per minute (`apiEventsPerMinute`, `consoleEventsPerMinute`) and,
+ * when given, per UTC day (`apiEventsPerDay`).
  * @param perMinute - Events stored per minute at most
+ * @param perDay - Events stored per UTC day at most; no daily cap when left out
  * @returns The cap
  */
-export function createClientLogMinuteCap(perMinute: number): ClientLogMinuteCap {
+export function createClientLogMinuteCap(perMinute: number, perDay = Number.POSITIVE_INFINITY): ClientLogMinuteCap {
   let windowStart = Number.NEGATIVE_INFINITY;
   let used = 0;
+  let day = "";
+  let usedToday = 0;
   let unreported = 0;
   let lastReport = Number.NEGATIVE_INFINITY;
   return {
@@ -329,8 +336,14 @@ export function createClientLogMinuteCap(perMinute: number): ClientLogMinuteCap 
         windowStart = at;
         used = 0;
       }
-      if (used < perMinute) {
+      const today = now.toISOString().slice(0, 10);
+      if (today !== day) {
+        day = today;
+        usedToday = 0;
+      }
+      if (used < perMinute && usedToday < perDay) {
         used += 1;
+        usedToday += 1;
         return true;
       }
       unreported += 1;
@@ -338,7 +351,7 @@ export function createClientLogMinuteCap(perMinute: number): ClientLogMinuteCap 
     },
     dropsToReport(now) {
       const at = now.getTime();
-      if (unreported === 0 || at - lastReport < MINUTE_MS) return 0;
+      if (unreported === 0 || at - lastReport < REPORT_INTERVAL_MS) return 0;
       const dropped = unreported;
       unreported = 0;
       lastReport = at;
@@ -362,7 +375,7 @@ export type AcceptClientLogBatchOptions = {
   learnerId: string | null;
   /** The request's `User-Agent`, when the route has it; cut to 256 characters. */
   userAgent?: string | null;
-  /** The route's process-wide per-minute cap. */
+  /** The route's process-wide per-minute (and, for the API, daily) cap. */
   cap: ClientLogMinuteCap;
 };
 
@@ -417,7 +430,7 @@ function readEvent(value: unknown, options: AcceptClientLogBatchOptions): LogEnt
   const context: Record<string, unknown> = { kind, page: pathOnly(page), clientTime: new Date(time).toISOString() };
   if (typeof event.stack === "string") context.stack = capUtf8(event.stack, CLIENT_LOG_LIMITS.maxStackBytes);
   if (typeof event.componentStack === "string") {
-    context.componentStack = capUtf8(event.componentStack, CLIENT_LOG_LIMITS.maxStackBytes);
+    context.componentStack = capUtf8(event.componentStack, CLIENT_LOG_LIMITS.maxComponentStackBytes);
   }
   if (api) context.api = { method: api.method, path: api.path, status: api.status };
   if (typeof event.count === "number" && Number.isInteger(event.count) && event.count >= 1) context.count = event.count;
@@ -439,7 +452,7 @@ function readEvent(value: unknown, options: AcceptClientLogBatchOptions): LogEnt
 
 /**
  * Validates and caps one `ClientLogBatch` from a browser and pushes one row per kept event to the sink. Events past
- * `maxEventsPerBatch`, events that fail validation, and events over the per-minute cap are dropped and counted. The
+ * `maxEventsPerBatch`, events that fail validation, and events over the per-minute or daily cap are dropped and counted. The
  * component, level and time are the server's. Synchronous; never throws.
  * @param body - The parsed JSON body, unchecked
  * @param options - Sink, component, time, Learner, user agent and cap

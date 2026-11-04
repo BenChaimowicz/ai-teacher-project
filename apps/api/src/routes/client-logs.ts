@@ -39,7 +39,7 @@ function isJson(contentType: string | undefined): boolean {
  */
 export async function clientLogRoutes(app: FastifyInstance, options: ClientLogRouteOptions) {
   const now = options.now ?? (() => new Date());
-  const cap = createClientLogMinuteCap(CLIENT_LOG_LIMITS.apiEventsPerMinute);
+  const cap = createClientLogMinuteCap(CLIENT_LOG_LIMITS.apiEventsPerMinute, CLIENT_LOG_LIMITS.apiEventsPerDay);
   await app.register(rateLimit, { global: false });
 
   app.post(
@@ -69,7 +69,7 @@ export async function clientLogRoutes(app: FastifyInstance, options: ClientLogRo
         });
         const dropped = cap.dropsToReport(at);
         if (dropped > 0) {
-          request.log.warn(`[client-logs: POST /api/client-logs] Dropped ${dropped} web client log events || reason=over the per-minute cap`);
+          request.log.warn(`[client-logs: POST /api/client-logs] Dropped ${dropped} web client log events || reason=over the per-minute or daily cap`);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
