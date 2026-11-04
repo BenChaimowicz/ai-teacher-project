@@ -71,6 +71,8 @@ async function checkStartingLevel() {
           assert.notEqual(attempt.authorModelId, attempt.judgeModelId, "Author and Judge must be different models.");
           const rounds = Math.max(...attempt.reviews.map((review) => review.round)) + 1;
           process.stdout.write(`Prepared in ${Math.round((Date.now() - started) / 1000)} s, ${rounds} review round(s)\n`);
+          const firstRound = attempt.reviews.filter((review) => review.round === 0);
+          process.stdout.write(`First round: ${firstRound.filter((review) => review.passed).length} of ${firstRound.length} items passed\n`);
           process.stdout.write(`Author: ${attempt.authorModelId}\nJudge: ${attempt.judgeModelId}\nFact-check: ${attempt.factCheckVendor ?? "not needed"}\n`);
           process.stdout.write(`Rejected item versions: ${attempt.reviews.filter((review) => !review.passed).length}\n`);
           for (const [index, capability] of attempt.capabilities.entries()) {
