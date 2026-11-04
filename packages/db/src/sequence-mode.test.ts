@@ -5,19 +5,31 @@ import { canSwitchSequenceMode, lockedLessonIds, parseSequenceMode } from "./seq
 const lessons = [
   { id: "r1", teachingMethod: "reading" },
   { id: "r2", teachingMethod: "reading" },
-  { id: "quiz1", teachingMethod: "quiz" },
+  { id: "quiz1", teachingMethod: "quiz", assessedLessonIds: ["r1", "r2"] },
   { id: "r3", teachingMethod: "reading" },
-  { id: "quiz2", teachingMethod: "quiz" },
+  { id: "quiz2", teachingMethod: "quiz", assessedLessonIds: ["r3"] },
   { id: "r4", teachingMethod: "reading" },
+  { id: "goal", teachingMethod: "goal_check" },
 ];
 
-test("Linear: everything after the first Quiz not passed is locked; readings before it stay open", () => {
-  assert.deepEqual([...lockedLessonIds(lessons, new Set(), "linear")], ["r3", "quiz2", "r4"]);
-  assert.deepEqual([...lockedLessonIds(lessons, new Set(["quiz1"]), "linear")], ["r4"]);
-  assert.deepEqual([...lockedLessonIds(lessons, new Set(["quiz1", "quiz2"]), "linear")], []);
+test("Linear: Readings open in order; nothing after the first unread one opens yet", () => {
+  assert.deepEqual([...lockedLessonIds(lessons, new Set(), "linear")], ["r2", "quiz1", "r3", "quiz2", "r4", "goal"]);
+  assert.deepEqual([...lockedLessonIds(lessons, new Set(["r1"]), "linear")], ["quiz1", "r3", "quiz2", "r4", "goal"]);
 });
 
-test("Free jump locks nothing, whether or not Quizzes are passed", () => {
+test("Linear: a Quiz never gates; untaken Quizzes leave every later Reading and the Goal Check open", () => {
+  assert.deepEqual([...lockedLessonIds(lessons, new Set(["r1", "r2", "r3", "r4"]), "linear")], []);
+});
+
+test("Linear: a Quiz opens once the Readings it covers are read, or the Readings before it when it lists none", () => {
+  assert.equal(lockedLessonIds(lessons, new Set(["r1", "r2"]), "linear").has("quiz1"), false);
+  assert.equal(lockedLessonIds(lessons, new Set(["r1", "r2"]), "linear").has("quiz2"), true);
+  const unlisted = [{ id: "r1", teachingMethod: "reading" }, { id: "q", teachingMethod: "quiz" }];
+  assert.equal(lockedLessonIds(unlisted, new Set(), "linear").has("q"), true);
+  assert.equal(lockedLessonIds(unlisted, new Set(["r1"]), "linear").has("q"), false);
+});
+
+test("Free jump locks nothing", () => {
   assert.deepEqual([...lockedLessonIds(lessons, new Set(), "free_jump")], []);
 });
 

@@ -153,11 +153,11 @@ The coarse shape of a Starting Level after any Too easy: floor (at most one evid
 _Avoid_: band, tier, difficulty, novice/intermediate/advanced
 
 **Progress**:
-The Learner's position through a published Course, shown as completed Lessons over total Lessons, not counting the Goal Check. It accumulates by completing Lessons, not by opening them; it is not a re-estimated Starting Level. Completions are Learner runtime on that Course; they do not edit the published snapshot.
+The Learner's position through a published Course, shown as completed Readings over total Readings: Quizzes are optional and the Goal Check sits outside it (SEN-133, decisions 2026-11-04). Quiz best scores are shown on their own. It accumulates by completing Lessons, not by opening them; it is not a re-estimated Starting Level. Completions are Learner runtime on that Course; they do not edit the published snapshot.
 _Avoid_: Starting Level (when meaning the bar), level, capability score, percent (when meaning the n / total label)
 
 **Sequence mode**:
-The Course-level choice of whether Lessons unlock in Blueprint order (linear) or are all openable (free jump). Default is linear: every Lesson after a Quiz that is not passed yet is locked; Lessons before it stay open, completed or not. Switching to free jump is one-way. It is a setting on the published Course, not part of the snapshot, so the one-way switch may change it (ADR 0004).
+The Course-level choice of whether Lessons unlock in Blueprint order (linear) or are all openable (free jump). Default is linear, which means "Readings in order": a Reading or the Goal Check opens once every Reading before it is read, so the Learner moves forward only from the end of the Reading they are on. A Quiz never gates anything; in linear it opens once the Readings it covers are read (SEN-133). Switching to free jump is one-way. It is a setting on the published Course, not part of the snapshot, so the one-way switch may change it (ADR 0004).
 _Avoid_: Navigation mode, path lock, difficulty
 
 **Teaching Profile**:
@@ -224,18 +224,18 @@ _Avoid_: App language, locale, UI language, translation (when meaning this field
 A named grouping of lessons inside a Course.
 
 **Chapter**:
-A run of one to four consecutive reading Lessons on one topic. Research runs once per Chapter and one author call drafts all its Lessons, so a Course of short Lessons costs about what a Course of long ones did; the Judge, repairs, images, and word list stay per Lesson. Quizzes fall between Chapters, and the Quiz cadence counts Chapters. The Learner does not see Chapters yet. In code it is the Reading slot's `chapter`.
+A run of one to four consecutive reading Lessons on one topic. Research runs once per Chapter and one author call drafts all its Lessons, so a Course of short Lessons costs about what a Course of long ones did; the Judge, repairs, images, and word list stay per Lesson. Quizzes fall between Chapters in Course order, and the Quiz cadence counts Chapters, but Study's reading flow skips them: a Chapter's Quiz is offered at the end of its last Reading (SEN-133). The Learner does not see Chapters yet. In code it is the Reading slot's `chapter`.
 _Avoid_: topic (that means a Topic tag), unit, section, module
 
 **Lesson**:
 A single teaching unit that uses one teaching method. Each Lesson belongs to one Course; reuse copies it from any Learner's Course into another rather than sharing the original.
 
 **Current Lesson**:
-The Lesson Study opens when the Learner enters from Workspace: the first incomplete Lesson in Course order, or the last Lesson if every Lesson is complete. Opening a Lesson from the Lessons list does not change Current Lesson and does not complete it.
+The Lesson Study opens when the Learner enters from Workspace: the first incomplete Lesson of the reading flow (every Lesson but the Quizzes), or its last Lesson if every one is complete. Opening a Lesson from the Lessons list does not change Current Lesson and does not complete it.
 _Avoid_: Course overview, resume pointer, active lesson
 
 **Lesson completion**:
-The event that counts a Lesson toward Progress. A reading Lesson completes when the Learner reaches the end and marks it complete; opening or partial reading does not count. A Quiz completes when the Learner's best score is at least 70%. A Goal Check completes on its first scored attempt, whatever the score.
+The event that marks a Lesson done. A reading Lesson completes when the Learner reaches the end and marks it complete; opening or partial reading does not count, and only Readings count toward Progress. A Quiz completes when the Learner's best score is at least 70%; that shows as passed, and nothing waits on it. A Goal Check completes on its first scored attempt, whatever the score. A Course completes once every Reading and its Goal Check are complete; Quizzes are not required (SEN-133).
 _Avoid_: opened, viewed, started
 
 **Teaching method**:
@@ -255,7 +255,7 @@ The recorded origin of a copied Lesson: which Lesson it came from, and whether t
 _Avoid_: parent, source (when meaning the origin Lesson), fork
 
 **Quiz**:
-A Lesson that uses the quiz teaching method, placed after the instructional Lessons it assesses. It is completed for Progress when the Learner's best score is at least 70% of questions correct, equal weight per question; retakes are unlimited on the same items. Each item stores its explanation at all three Feedback detail levels, so Study shows the Learner's current one, and each option carries a one-sentence `why` (the Lesson statement that makes it right, or the one it contradicts) that Study shows under the option once the item has feedback (decision 2026-11-03). A Quiz is always generated for its Course; it is not copied from another Course.
+A Lesson that uses the quiz teaching method, placed after the instructional Lessons it assesses. It is optional and never a stop in the reading flow: Next skips it, and the Learner opens it from "Take quiz" (its sidebar row, or the offer at the end of the last Reading it covers) as a screen of its own, which "Back to reading" closes (SEN-133). It is passed when the Learner's best score is at least 70% of questions correct, equal weight per question, and does not count toward Progress; retakes are unlimited on the same items. Each item stores its explanation at all three Feedback detail levels, so Study shows the Learner's current one, and each option carries a one-sentence `why` (the Lesson statement that makes it right, or the one it contradicts) that Study shows under the option once the item has feedback (decision 2026-11-03). A Quiz is always generated for its Course; it is not copied from another Course.
 _Avoid_: checkpoint (as a separate object), test, exam, assessment (when meaning this Lesson), Starting Level diagnostic
 
 **Goal Check**:
@@ -391,7 +391,7 @@ One step of the platform's own work (a validity check, diagnostic attempt, rewri
 _Avoid_: Job, task, trace (when meaning this record)
 
 **Product Event**:
-Something a Learner did, such as creating a Course Request, answering a Diagnostic item, completing a Lesson, or attempting a Quiz. Signing up and a failed sign-in are Product Events too; they name no Learner, because none is known yet.
+Something a Learner did, such as creating a Course Request, answering a Diagnostic item, completing a Lesson, opening or closing a Quiz, or attempting one. Signing up and a failed sign-in are Product Events too; they name no Learner, because none is known yet.
 _Avoid_: Analytics event, Pipeline Event (when the Learner, not the platform, acted)
 
 **API Request**:

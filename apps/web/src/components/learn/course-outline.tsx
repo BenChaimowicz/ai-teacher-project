@@ -3,6 +3,8 @@ import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
 import { QUIZ_METHOD_ID } from "@senoy/db/reading-lesson";
 import { BookA, Check, Flag, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
+import { recordQuizOpen } from "@/components/learn/take-quiz-card.tsx";
+import { quizStatusText, type QuizReturnState } from "@/components/learn/take-quiz.ts";
 import { collectCourseWords } from "@/components/learn/words.ts";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
 import { SegmentedProgress, type SegmentState } from "@/components/ui/progress.tsx";
@@ -55,9 +57,15 @@ export function CourseOutline({ payload, activeLessonId, sections = [], sections
   const wordCount = useMemo(() => collectCourseWords(payload).count, [payload]);
   const quizzes = lessons.filter((lesson) => lesson.teachingMethod === QUIZ_METHOD_ID);
   const quizzesPassed = quizzes.filter((lesson) => lesson.completed).length;
-  const segments: SegmentState[] = lessons.map((lesson) =>
-    lesson.completed ? "done" : lesson.id === activeLessonId ? "now" : "todo",
-  );
+  // One segment per Reading: Progress counts Readings only (SEN-133).
+  const segments: SegmentState[] = lessons
+    .filter((lesson) => lesson.teachingMethod !== QUIZ_METHOD_ID)
+    .map((lesson) => (lesson.completed ? "done" : lesson.id === activeLessonId ? "now" : "todo"));
+  // Opening a Quiz from here returns to the Lesson on screen, unless that is a Quiz itself.
+  const activeIsQuiz = lessons.some((lesson) => lesson.id === activeLessonId && lesson.teachingMethod === QUIZ_METHOD_ID);
+  const quizReturn: QuizReturnState | undefined = activeLessonId && !activeIsQuiz
+    ? { returnTo: `/study/${payload.course.id}/lessons/${activeLessonId}` }
+    : undefined;
   const showModules = modules.length > 1;
   let number = 0;
 
@@ -107,13 +115,17 @@ export function CourseOutline({ payload, activeLessonId, sections = [], sections
                   </span>
                   <span className="ic">{icon}</span>
                   {lesson.locked ? (
-                    <span className="t" aria-disabled="true" title="Locked until you pass the Quiz before it">
+                    <span className="t" aria-disabled="true" title={quiz ? "Opens once you've read what it covers" : "Opens once you've read the lessons before it"}>
                       {lesson.title}
                     </span>
                   ) : (
                     <span className="t">{lesson.title}</span>
                   )}
-                  {quiz ? <span className="tag quiz">quiz</span> : null}
+                  {quiz ? (
+                    <span className="tag quiz" title={lesson.quizBest ? "Your best score" : "Optional. Take it whenever you like."}>
+                      {lesson.quizBest ? `quiz · ${quizStatusText(lesson.quizBest)}` : "quiz · optional"}
+                    </span>
+                  ) : null}
                 </>
               );
               return (
@@ -123,6 +135,8 @@ export function CourseOutline({ payload, activeLessonId, sections = [], sections
                   ) : (
                     <Link
                       to={`/study/${payload.course.id}/lessons/${lesson.id}`}
+                      state={quiz ? quizReturn : undefined}
+                      onClick={quiz && lesson.id !== activeLessonId ? () => recordQuizOpen(payload.course.id, lesson.id, "sidebar") : undefined}
                       className="row"
                       aria-current={lesson.id === activeLessonId ? "page" : undefined}
                     >
@@ -165,7 +179,7 @@ export function CourseOutline({ payload, activeLessonId, sections = [], sections
             return (
               <li key={lesson.id} className={state}>
                 {lesson.locked ? (
-                  <div className="row" title="Locked until you pass the Quiz before it">
+                  <div className="row" title="Opens once you've read every lesson">
                     {inner}
                   </div>
                 ) : (

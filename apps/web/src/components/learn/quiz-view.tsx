@@ -256,6 +256,10 @@ type QuizViewProps = {
   finish?: ReactNode;
   /** Replaces the score card and the companion's line under it after Submit. */
   result?: (slot: QuizResultSlot) => ReactNode;
+  /** A Quiz's way back to reading (SEN-133): above the questions until Submit, then under the result. */
+  close?: ReactNode;
+  /** Called after each Submit lands. */
+  onSubmitted?: () => void;
 };
 
 /**
@@ -265,7 +269,7 @@ type QuizViewProps = {
  * The server grades and keeps the answer key; it reaches the browser only through Show answer.
  * The Goal Check plays here too (`mode="goal_check"`): same questions and endpoints, its own words, and its own result.
  */
-export function QuizView({ mode = "quiz", courseId, lessonId, title, lessonGoal, lessonNumber, body, onPayload, finish, result }: QuizViewProps) {
+export function QuizView({ mode = "quiz", courseId, lessonId, title, lessonGoal, lessonNumber, body, onPayload, finish, result, close, onSubmitted }: QuizViewProps) {
   const goalMode = mode === "goal_check";
   const [view, setView] = useState<QuizState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -354,6 +358,7 @@ export function QuizView({ mode = "quiz", courseId, lessonId, title, lessonGoal,
       setView(json.quiz);
       setJustSubmitted(true);
       onPayload(json.study);
+      onSubmitted?.();
       const score = json.quiz.attempt?.score;
       if (goalMode) {
         const outcome = json.quiz.goal?.outcome;
@@ -435,7 +440,8 @@ export function QuizView({ mode = "quiz", courseId, lessonId, title, lessonGoal,
   return (
     <div className="l-quiz">
       <header className="l-lhead">
-        <p className="l-kicker">{goalMode ? "goal check · the whole course" : lessonNumber ? `lesson ${pad(lessonNumber)} · quiz` : "quiz"}</p>
+        {!submitted ? close : null}
+        <p className="l-kicker">{goalMode ? "goal check · the whole course" : lessonNumber ? `lesson ${pad(lessonNumber)} · quiz · optional` : "quiz · optional"}</p>
         <h1>{title}</h1>
         <p className="learn">{lessonGoal}</p>
         <p className="l-meta">
@@ -553,6 +559,7 @@ export function QuizView({ mode = "quiz", courseId, lessonId, title, lessonGoal,
       ) : null}
 
       {view?.passed && submitted ? finish : null}
+      {submitted ? close : null}
     </div>
   );
 }

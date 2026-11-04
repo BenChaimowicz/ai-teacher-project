@@ -12,6 +12,8 @@ import { useToast } from "@/components/ui/toast.tsx";
 import { GlossaryLayer, MarkedText } from "@/components/learn/glossary.tsx";
 import { citationNumber, createGlossaryMatcher, markProse, proseParts, termKey, type TermSegment } from "@/components/learn/glossary-marks.ts";
 import type { NextStep } from "@/components/learn/next-step.ts";
+import { recordQuizOpen, TakeQuizTile } from "@/components/learn/take-quiz-card.tsx";
+import type { QuizOffer, QuizReturnState } from "@/components/learn/take-quiz.ts";
 import { isLightSurface, readingStyle } from "@/components/learn/reading-settings.ts";
 import { mostCitedSource } from "@/components/learn/sources.ts";
 import { useStudyChrome } from "@/components/learn/study-chrome.tsx";
@@ -161,17 +163,25 @@ type ReadingViewProps = {
   next?: NextStep | null;
   /** Called the first time each glossary term's definition opens on this page (records the product event). */
   onGlossaryOpen?: (entry: GlossaryEntry) => void;
+  /**
+   * The optional Quiz whose covered Readings end here (SEN-133). The end prompt offers it beside "I've read it", with
+   * one nudge from the companion while it is not taken; after completion it stays as a "Take quiz" tile.
+   */
+  quizOffer?: QuizOffer | null;
+  /** This Reading's own path: where closing the Quiz returns the Learner. */
+  selfPath?: string;
 };
+
+type EndChoice = "read" | "quiz" | "stay";
 
 /** The second half of the "I've read it" tile, by where it leads. */
 const NEXT_LABEL: Record<NextStep["kind"], string> = {
   reading: "next lesson",
-  quiz: "start the quiz",
   goal_check: "start the goal check",
   finish: "finish the course",
 };
 
-const STAY_OPTION: OptionTile<"read" | "stay"> = { id: "stay", label: "Not yet, stay here", description: "Keep reading. No rush.", tone: "quiet", value: "stay" };
+const STAY_OPTION: OptionTile<EndChoice> = { id: "stay", label: "Not yet, stay here", description: "Keep reading. No rush.", tone: "quiet", value: "stay" };
 
 /** How long the "lesson read" cheer plays on the tile before the next screen opens. */
 const NEXT_HOLD_MS = 600;
@@ -184,7 +194,7 @@ const NEXT_HOLD_MS = 600;
  * Ends with the companion's "I've read it" prompt, which is the completion action and, given `next`, opens the next
  * Lesson (or the Course-complete screen) in the same click (decision 2026-11-03).
  */
-export function ReadingView({ lessonId, courseId, title, lessonGoal, lessonNumber, body, citations, completed, paused, onComplete, finish, next, onGlossaryOpen }: ReadingViewProps) {
+export function ReadingView({ lessonId, courseId, title, lessonGoal, lessonNumber, body, citations, completed, paused, onComplete, finish, next, onGlossaryOpen, quizOffer = null, selfPath }: ReadingViewProps) {
   const { settings, setSectionsRead } = useStudyChrome();
   const { setReadingProgress, sidebarOpen } = useShell();
   const { say } = useCompanion();
@@ -210,7 +220,7 @@ export function ReadingView({ lessonId, courseId, title, lessonGoal, lessonNumbe
   const mounted = useRef(true);
 
   const sources = useMemo(() => new Map(citations.map((row) => [row.n, row])), [citations]);
-  const endOptions = useMemo<OptionTile<"read" | "stay">[]>(
+  const endOptions = useMemo<OptionTile<EndChoice>[]>(
     () => [
       {
         id: "read",
@@ -219,9 +229,12 @@ export function ReadingView({ lessonId, courseId, title, lessonGoal, lessonNumbe
         tone: "primary",
         value: "read",
       },
+      ...(quizOffer
+        ? [{ id: "quiz", label: "I've read it, take the quiz", description: `${quizOffer.title} · optional`, value: "quiz" as const }]
+        : []),
       STAY_OPTION,
     ],
-    [next],
+    [next, quizOffer],
   );
   const minutes = Math.max(1, Math.round(wordCount(body) / 200));
   const allShown = revealed >= total;
@@ -434,7 +447,7 @@ export function ReadingView({ lessonId, courseId, title, lessonGoal, lessonNumbe
    * the prompt for later. A failed completion shows its message and stays, so nothing moves on unrecorded.
    * @param option - Picked tile
    */
-  async function onEnd(option: OptionTile<"read" | "stay">) {
+  async function onEnd(option: OptionTile<EndChoice>) {
     if (option.value === "stay") {
       say("No rush. I'll be here when you're ready.");
       window.setTimeout(() => setEndKey((key) => key + 1), 600);
@@ -448,6 +461,13 @@ export function ReadingView({ lessonId, courseId, title, lessonGoal, lessonNumbe
       cheer(tile, "lesson read");
       toast({ title: "Lesson read", body: `${title}${lessonNumber ? ` · lesson ${pad(lessonNumber)} done` : ""}`, tone: "celebrate" });
       say("Done reading. Nice pace.", "cheer");
+      if (option.value === "quiz" && quizOffer && courseId) {
+        recordQuizOpen(courseId, quizOffer.lessonId, "card");
+        await holdCheer(NEXT_HOLD_MS);
+        const state: QuizReturnState = { returnTo: selfPath ?? next?.to ?? "/" };
+        if (mounted.current) navigate(quizOffer.to, { state });
+        return;
+      }
       if (!next) return;
       await holdCheer(NEXT_HOLD_MS);
       if (mounted.current) navigate(next.to);
@@ -469,6 +489,11 @@ export function ReadingView({ lessonId, courseId, title, lessonGoal, lessonNumbe
         ) : (
           <>
             <CompanionLine key="ask">That's the lesson. Did it make sense?</CompanionLine>
+            {quizOffer && !quizOffer.best ? (
+              <CompanionLine key="quiz" continued>
+                There's a short quiz on this part if you want to check it stuck. It's optional, so skip it if you like.
+              </CompanionLine>
+            ) : null}
             <OptionTiles options={endOptions} onPick={onEnd} label="End of lesson" resetKey={endKey} />
           </>
         )}
@@ -479,6 +504,7 @@ export function ReadingView({ lessonId, courseId, title, lessonGoal, lessonNumbe
         </p>
       ) : null}
       {completed ? finish : null}
+      {completed && quizOffer && courseId ? <TakeQuizTile courseId={courseId} offer={quizOffer} returnTo={selfPath ?? "/"} /> : null}
     </div>
   ) : null;
 

@@ -3,6 +3,7 @@ import {
   courseRequests,
   createDb,
   learners,
+  lessonCompletions,
   SEEDED_LEARNER_ID,
   SEEDED_QUIZ_BODY,
   startingLevelDiagnostics,
@@ -20,8 +21,9 @@ const db = createDb(process.env.DATABASE_URL!, { max: 1 });
 /**
  * Wipes the throwaway database and seeds a fresh fixture Course plus a saved Teaching Profile, owned by test account `a`.
  * @param answers - Teaching Profile answers; unset items are skipped
+ * @param read - Lessons to start already completed, e.g. the Reading a Quiz covers, so the Quiz opens in linear order
  */
-export async function resetFixture(answers: Record<string, unknown> = {}) {
+export async function resetFixture(answers: Record<string, unknown> = {}, read: readonly string[] = []) {
   await db.execute(
     sql`truncate generation_jobs, unpublished_lessons, course_blueprints, starting_level_diagnostics, quiz_attempts, goal_check_feedback, lesson_completions, course_completions, published_lessons, published_modules, published_courses, course_requests, learners cascade`,
   );
@@ -36,6 +38,7 @@ export async function resetFixture(answers: Record<string, unknown> = {}) {
       teachingProfileUpdatedAt: new Date(),
     })
     .where(sql`${learners.id} = ${learner.id}`);
+  if (read.length) await db.insert(lessonCompletions).values(read.map((lessonId) => ({ learnerId: learner.id, lessonId })));
 }
 
 /** Capabilities 1–3 evidenced; the gap starts at Fixture capability 4. */

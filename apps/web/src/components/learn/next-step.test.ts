@@ -7,32 +7,31 @@ const lesson = (id: string, teachingMethod: "reading" | "quiz" | "goal_check", c
   id, title: `Lesson ${id}`, teachingMethod, position: 0, lessonGoal: "", completed, locked: false, citations: [], body: {},
 });
 
-test("nextStep: a reading next, a quiz next, nothing yet, and the Course-complete screen", () => {
+test("nextStep: a reading next, nothing yet, and the Course-complete screen", () => {
   assert.deepEqual(nextStep("c", lesson("r2", "reading", false), false), { to: "/study/c/lessons/r2", kind: "reading", description: "Lesson r2 · reading" });
-  assert.deepEqual(nextStep("c", lesson("q1", "quiz", false), false), { to: "/study/c/lessons/q1", kind: "quiz", description: "Lesson q1 · quiz" });
   assert.equal(nextStep("c", null, false), null);
   assert.deepEqual(nextStep("c", null, true), { to: "/study/c/complete", kind: "finish", description: "See what you covered" });
 });
 
 test("nextStep: a complete Course revisited mid-way still points at the following Lesson", () => {
-  assert.equal(nextStep("c", lesson("q1", "quiz", true), true)?.kind, "quiz");
+  assert.equal(nextStep("c", lesson("r2", "reading", true), true)?.kind, "reading");
 });
 
-test("stepAfter: the first Reading leads to the quiz after it, before the payload says it is complete", () => {
+test("stepAfter: the last Reading of a Chapter leads to the next Reading, not the Quiz after it (SEN-133)", () => {
   const lessons = [lesson("r1", "reading", false), lesson("q1", "quiz", false), lesson("r2", "reading", false)];
-  assert.deepEqual(stepAfter("c", lessons, "r1"), { to: "/study/c/lessons/q1", kind: "quiz", description: "Lesson q1 · quiz" });
+  assert.deepEqual(stepAfter("c", lessons, "r1"), { to: "/study/c/lessons/r2", kind: "reading", description: "Lesson r2 · reading" });
 });
 
-test("stepAfter: the last Lesson leads to Finish Course only once every other Lesson is complete", () => {
-  const open = [lesson("r1", "reading", true), lesson("q1", "quiz", false), lesson("r2", "reading", false)];
-  assert.deepEqual(stepAfter("c", open, "r2"), { to: "/study/c/lessons/q1", kind: "quiz", description: "Lesson q1 · quiz" });
-  const done = [lesson("r1", "reading", true), lesson("q1", "quiz", true), lesson("r2", "reading", false)];
-  assert.deepEqual(stepAfter("c", done, "r2"), { to: "/study/c/complete", kind: "finish", description: "See what you covered" });
+test("stepAfter: the last Reading leads to Finish Course once every Reading is read, Quizzes taken or not", () => {
+  const open = [lesson("r1", "reading", false), lesson("q1", "quiz", false), lesson("r2", "reading", false)];
+  assert.deepEqual(stepAfter("c", open, "r2"), { to: "/study/c/lessons/r1", kind: "reading", description: "Lesson r1 · reading" });
+  const read = [lesson("r1", "reading", true), lesson("q1", "quiz", false), lesson("r2", "reading", false)];
+  assert.deepEqual(stepAfter("c", read, "r2"), { to: "/study/c/complete", kind: "finish", description: "See what you covered" });
 });
 
 test("stepAfter: a Lesson already complete gives the same step the finish line shows", () => {
-  const lessons = [lesson("r1", "reading", true), lesson("q1", "quiz", false)];
-  assert.equal(stepAfter("c", lessons, "r1")?.to, "/study/c/lessons/q1");
+  const lessons = [lesson("r1", "reading", true), lesson("q1", "quiz", false), lesson("r2", "reading", false)];
+  assert.equal(stepAfter("c", lessons, "r1")?.to, "/study/c/lessons/r2");
 });
 
 test("stepAfter: a Lesson not in the Course gives null", () => {

@@ -22,8 +22,13 @@ export type LessonPlayProps = {
    * completion action can take them there in the same click. Null when there is nowhere to go yet.
    */
   next?: NextStep | null;
-  /** Every Lesson of the Course, in Course order: the Goal Check links its missed objectives back to their Lessons. */
+  /**
+   * Every Lesson of the Course, in Course order: the Goal Check links its missed objectives back to their Lessons, and
+   * a Reading finds the optional Quiz offered at its end.
+   */
   lessons?: StudyLesson[];
+  /** A Quiz: where closing it returns the Learner (the Reading they came from, else the Current Lesson). SEN-133. */
+  returnTo?: string;
   /** The Course's Learning Goal, which the Goal Check's result is set against. */
   learningGoal?: string;
 };

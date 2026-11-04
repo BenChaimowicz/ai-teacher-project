@@ -24,21 +24,32 @@ export function canSwitchSequenceMode(from: SequenceMode, to: SequenceMode): boo
 }
 
 /**
- * Lessons the Learner cannot open yet. In linear mode, every Lesson after the first Quiz that is not passed is locked.
- * Readings before that Quiz stay open, finished or not. Free jump locks nothing.
- * @param lessons - Lessons in Course order
- * @param completedIds - Completed Lessons (a Quiz is complete once passed)
+ * Lessons the Learner cannot open yet. Free jump locks nothing. Linear means "Readings in order" (SEN-133): a Lesson
+ * in the reading flow opens once every flow Lesson before it is complete, so the Goal Check opens once every Reading
+ * is. A Quiz never gates anything; it opens once the Readings it covers are complete (the flow Lessons before it when
+ * it lists none).
+ * @param lessons - Lessons in Course order; a Quiz may carry the Lessons it assesses
+ * @param completedIds - Completed Lessons
  * @param mode - Course Sequence mode
  */
 export function lockedLessonIds(
-  lessons: { id: string; teachingMethod: string }[],
+  lessons: readonly { id: string; teachingMethod: string; assessedLessonIds?: readonly string[] }[],
   completedIds: ReadonlySet<string>,
   mode: SequenceMode,
 ): Set<string> {
   const locked = new Set<string>();
   if (mode === "free_jump") return locked;
-  const gate = lessons.findIndex((lesson) => lesson.teachingMethod === QUIZ_METHOD_ID && !completedIds.has(lesson.id));
-  if (gate === -1) return locked;
-  for (const lesson of lessons.slice(gate + 1)) locked.add(lesson.id);
+  const flowBefore: string[] = [];
+  let reached = true;
+  for (const lesson of lessons) {
+    if (lesson.teachingMethod === QUIZ_METHOD_ID) {
+      const covered = lesson.assessedLessonIds?.length ? lesson.assessedLessonIds : flowBefore;
+      if (!covered.every((id) => completedIds.has(id))) locked.add(lesson.id);
+      continue;
+    }
+    if (!reached) locked.add(lesson.id);
+    if (!completedIds.has(lesson.id)) reached = false;
+    flowBefore.push(lesson.id);
+  }
   return locked;
 }

@@ -1,13 +1,26 @@
 import { GOAL_CHECK_METHOD_ID } from "./goal-check.ts";
+import { QUIZ_METHOD_ID } from "./reading-lesson.ts";
 
 /**
- * The Lessons Progress counts: every Lesson but the Goal Check, which sits outside Progress (decision 2026-11-04).
- * `isCourseComplete` still takes every Lesson: a Course completes once its Goal Check has one scored attempt.
+ * The reading flow: every Lesson but the Quizzes, in Course order. Next, the Current Lesson and Course completion walk
+ * it; a Quiz is opened from "Take quiz" and is never a stop in it (SEN-133). The Goal Check stays in it, last.
+ * @param lessons - Lessons of the Course, in Course order
+ * @returns Their ids, in the order given, without the Quizzes
+ */
+export function flowLessonIds(lessons: readonly { id: string; teachingMethod: string }[]): string[] {
+  return lessons.filter((lesson) => lesson.teachingMethod !== QUIZ_METHOD_ID).map((lesson) => lesson.id);
+}
+
+/**
+ * The Lessons Progress counts: the Readings. Quizzes are optional (SEN-133) and the Goal Check sits outside Progress
+ * (decision 2026-11-04), so neither counts; Quiz scores are shown on their own.
  * @param lessons - Lessons of the Course
- * @returns Their ids, in the order given, without the Goal Check
+ * @returns Their ids, in the order given, without Quizzes and the Goal Check
  */
 export function progressLessonIds(lessons: readonly { id: string; teachingMethod: string }[]): string[] {
-  return lessons.filter((lesson) => lesson.teachingMethod !== GOAL_CHECK_METHOD_ID).map((lesson) => lesson.id);
+  return lessons
+    .filter((lesson) => lesson.teachingMethod !== QUIZ_METHOD_ID && lesson.teachingMethod !== GOAL_CHECK_METHOD_ID)
+    .map((lesson) => lesson.id);
 }
 
 /**

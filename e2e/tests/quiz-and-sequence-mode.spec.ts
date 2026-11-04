@@ -10,6 +10,8 @@ import {
 import { answerAll, pickOption, quizItem, resetFixture } from "./fixture.ts";
 
 const lessonUrl = (lessonId: string) => `/study/${SEEDED_COURSE_ID}/lessons/${lessonId}`;
+const READING_TITLE = "How a square knot holds";
+const QUIZ_TITLE = "Square knot check";
 const FOLLOW_UP_TITLE = "When not to use a square knot";
 
 /**
@@ -32,8 +34,49 @@ async function openLessons(page: Page) {
   return page.getByRole("navigation", { name: "Lessons" });
 }
 
-test("Per-item feedback: Check reveals the right answer, and a failing Submit keeps the next Lesson locked", async ({ page }) => {
+test("Linear: Readings open in order, Next skips the Quiz, and Take quiz opens it and comes back (SEN-133)", async ({ page }) => {
   await resetFixture();
+  await page.goto(lessonUrl(SEEDED_READING_LESSON_ID));
+
+  // Nothing ahead of the unread Reading opens yet, the Quiz included.
+  const lessons = await openLessons(page);
+  await expect(lessons.getByText(QUIZ_TITLE)).toHaveAttribute("aria-disabled", "true");
+  await expect(lessons.getByText(FOLLOW_UP_TITLE)).toHaveAttribute("aria-disabled", "true");
+  await page.goto(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
+  await expect(page).toHaveURL(lessonUrl(SEEDED_READING_LESSON_ID));
+
+  // The end of the Chapter's last Reading offers the Quiz beside Next, with one nudge, and Next goes to the next Reading.
+  await expect(page.getByText("There's a short quiz on this part if you want to check it stuck.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "I've read it, take the quiz" })).toBeVisible();
+  await page.getByRole("button", { name: "I've read it, next lesson" }).click();
+  await expect(page).toHaveURL(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
+  await expect(page.getByText("The square knot · 1 / 2")).toBeVisible();
+
+  // Untaken, the Quiz holds nothing back: its row opens, marked optional.
+  const after = await openLessons(page);
+  await expect(after.getByRole("link", { name: QUIZ_TITLE })).toContainText("quiz · optional");
+
+  // Back on the finished Reading, the Take quiz tile opens the Quiz, and Back to reading returns there.
+  await after.getByRole("link", { name: READING_TITLE }).click();
+  await page.getByRole("navigation", { name: "Take quiz" }).getByRole("link", { name: /Take quiz/ }).click();
+  await expect(page).toHaveURL(lessonUrl(SEEDED_QUIZ_LESSON_ID));
+  await page.getByRole("button", { name: "Back to reading" }).click();
+  await expect(page).toHaveURL(lessonUrl(SEEDED_READING_LESSON_ID));
+});
+
+test("I've read it, take the quiz: completes the Reading, opens the Quiz, and Back to reading returns to the Reading", async ({ page }) => {
+  await resetFixture();
+  await page.goto(lessonUrl(SEEDED_READING_LESSON_ID));
+  await page.getByRole("button", { name: "I've read it, take the quiz" }).click();
+  await expect(page).toHaveURL(lessonUrl(SEEDED_QUIZ_LESSON_ID));
+  await expect(page.getByText("The square knot · 1 / 2")).toBeVisible();
+  await page.getByRole("button", { name: "Back to reading" }).click();
+  await expect(page).toHaveURL(lessonUrl(SEEDED_READING_LESSON_ID));
+  await expect(page.getByRole("link", { name: "Next Lesson" })).toBeVisible();
+});
+
+test("Per-item feedback: Check reveals the right answer, and a failing Submit locks nothing", async ({ page }) => {
+  await resetFixture({}, [SEEDED_READING_LESSON_ID]);
   await page.goto(lessonUrl(SEEDED_QUIZ_LESSON_ID));
 
   const first = quizItem(page, 0);
@@ -61,18 +104,16 @@ test("Per-item feedback: Check reveals the right answer, and a failing Submit ke
   await page.getByRole("button", { name: "Submit" }).click();
   await expect(page.getByRole("status")).toContainText("You scored 2 / 5");
   await expect(page.getByRole("status")).toContainText("You need 70% to pass.");
-  await expect(page.getByText("The square knot · 0 / 3")).toBeVisible();
+  await expect(page.getByText("The square knot · 1 / 2")).toBeVisible();
 
   const lessons = await openLessons(page);
-  await expect(lessons.getByText(FOLLOW_UP_TITLE)).toHaveAttribute("aria-disabled", "true");
-  await expect(lessons.getByRole("link", { name: FOLLOW_UP_TITLE })).toHaveCount(0);
-
-  await page.goto(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
-  await expect(page).toHaveURL(lessonUrl(SEEDED_READING_LESSON_ID));
+  await expect(lessons.getByRole("link", { name: QUIZ_TITLE })).toContainText("quiz · best 2/5");
+  await lessons.getByRole("link", { name: FOLLOW_UP_TITLE }).click();
+  await expect(page).toHaveURL(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
 });
 
-test("Retake and pass: Progress rises, the next Lesson unlocks, and a worse retake changes nothing", async ({ page }) => {
-  await resetFixture();
+test("Retake and pass: the best score is kept on the Quiz's row, and Progress never counts the Quiz", async ({ page }) => {
+  await resetFixture({}, [SEEDED_READING_LESSON_ID]);
   await page.goto(lessonUrl(SEEDED_QUIZ_LESSON_ID));
 
   await answerAll(page, 3, true);
@@ -84,21 +125,21 @@ test("Retake and pass: Progress rises, the next Lesson unlocks, and a worse reta
   await answerAll(page, 4, true);
   await page.getByRole("button", { name: "Submit" }).click();
   await expect(page.getByRole("status")).toContainText("Quiz passed.");
-  await expect(page.getByText("The square knot · 1 / 3")).toBeVisible();
-
-  const lessons = await openLessons(page);
-  await expect(lessons.getByRole("link", { name: FOLLOW_UP_TITLE })).toBeVisible();
+  await expect(page.getByText("The square knot · 1 / 2")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Next Lesson" }), "A Quiz has no finish line.").toHaveCount(0);
 
   await retake(page);
   await answerAll(page, 1, true);
   await page.getByRole("button", { name: "Submit" }).click();
   await expect(page.getByRole("status")).toContainText("You scored 1 / 5");
   await expect(page.getByText("Best score: 4 / 5 · Passed")).toBeVisible();
-  await expect(page.getByText("The square knot · 1 / 3")).toBeVisible();
+  const lessons = await openLessons(page);
+  await expect(lessons.getByRole("link", { name: QUIZ_TITLE })).toContainText("quiz · best 4/5");
+  await expect(page.getByText("The square knot · 1 / 2")).toBeVisible();
 });
 
 test("End-of-quiz feedback: no Check buttons; every item is marked after Submit", async ({ page }) => {
-  await resetFixture({ feedbackTiming: { status: "selected", value: "end_of_quiz" } });
+  await resetFixture({ feedbackTiming: { status: "selected", value: "end_of_quiz" } }, [SEEDED_READING_LESSON_ID]);
   await page.goto(lessonUrl(SEEDED_QUIZ_LESSON_ID));
 
   await answerAll(page, 4, false);
@@ -112,16 +153,16 @@ test("End-of-quiz feedback: no Check buttons; every item is marked after Submit"
 });
 
 test("Open-book: leaving the Quiz for a Lesson and coming back keeps the draft", async ({ page }) => {
-  await resetFixture({ feedbackTiming: { status: "selected", value: "end_of_quiz" } });
+  await resetFixture({ feedbackTiming: { status: "selected", value: "end_of_quiz" } }, [SEEDED_READING_LESSON_ID]);
   await page.goto(lessonUrl(SEEDED_QUIZ_LESSON_ID));
 
   const first = await pickOption(page, 0, true);
   const second = await pickOption(page, 1, false);
 
   const lessons = await openLessons(page);
-  await lessons.getByRole("link", { name: "How a square knot holds" }).click();
+  await lessons.getByRole("link", { name: READING_TITLE }).click();
   await expect(page.getByRole("heading", { name: "Two overhand knots" })).toBeVisible();
-  await lessons.getByRole("link", { name: "Square knot check" }).click();
+  await lessons.getByRole("link", { name: QUIZ_TITLE }).click();
 
   await expect(quizItem(page, 0).getByRole("radio", { name: first.text })).toBeChecked();
   await expect(quizItem(page, 1).getByRole("radio", { name: second.text })).toBeChecked();
@@ -130,7 +171,7 @@ test("Open-book: leaving the Quiz for a Lesson and coming back keeps the draft",
   await expect(quizItem(page, 0).getByRole("radio", { name: first.text })).toBeChecked();
 });
 
-test("Free jump: disclaimer, later Lessons open before a pass, no way back to linear", async ({ page }) => {
+test("Free jump: disclaimer, every Lesson opens before it is reached, no way back to linear", async ({ page }) => {
   await resetFixture();
   await page.goto(lessonUrl(SEEDED_READING_LESSON_ID));
 
@@ -142,11 +183,12 @@ test("Free jump: disclaimer, later Lessons open before a pass, no way back to li
   await expect(dialog).toHaveCount(0);
 
   const lessons = await openLessons(page);
+  await expect(lessons.getByRole("link", { name: QUIZ_TITLE }), "The Quiz opens before its Reading is read.").toBeVisible();
   await lessons.getByRole("link", { name: FOLLOW_UP_TITLE }).click();
   await expect(page).toHaveURL(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
   // After the last Reading, "I've read it" opens the Goal Check after it, in the same click; it is open in free jump.
   await page.getByRole("button", { name: "I've read it, start the goal check" }).click();
-  await expect(page.getByText("The square knot · 1 / 3")).toBeVisible();
+  await expect(page.getByText("The square knot · 1 / 2")).toBeVisible();
   await expect(page).toHaveURL(lessonUrl(SEEDED_GOAL_CHECK_LESSON_ID));
 
   await page.getByRole("button", { name: "Course menu" }).click();
