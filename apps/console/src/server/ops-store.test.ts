@@ -4,7 +4,7 @@ import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SqlRow } from "./format.ts";
 import { createOpsStore, usageRecordListQuery } from "./ops-store.ts";
-import { parseUsageRecordQuery } from "./query.ts";
+import { parseApiRequestQuery, parseProductEventQuery, parseUsageRecordQuery } from "./query.ts";
 
 const dialect = new PgDialect();
 const NOW = new Date("2026-10-24T12:00:00.000Z");
@@ -130,5 +130,39 @@ describe("failures", () => {
       ["api_request", "http 502", 1],
     ]);
     assert.deepEqual(groups[2]!.sampleIds, ["e"]);
+  });
+});
+
+describe("Logs links", () => {
+  it("filters API Requests by request id and returns it on each row", async () => {
+    const { run, queries } = fakeRunner((text) => (text.includes("count(*) as total") ? [{ total: "1" }] : [{
+      id: ID, createdAt: "2026-10-24 10:00:00+00", method: "GET", route: "/x", url: "/x", statusCode: 200, durationMs: 5, error: null, requestId: ID,
+    }]));
+    const page = await createOpsStore(run).listApiRequests(parseApiRequestQuery({ requestId: ID }, NOW));
+    assert.equal(page.rows[0].requestId, ID);
+    assert.match(queries[0].sql, /a\.request_id = \$\d+::uuid/);
+    assert.ok(queries[0].params.includes(ID));
+  });
+
+  it("filters Product Events by Learner", async () => {
+    const { run, queries } = fakeRunner((text) => (text.includes("count(*) as total") ? [{ total: "0" }] : []));
+    await createOpsStore(run).listProductEvents(parseProductEventQuery({ learnerId: ID }, NOW));
+    assert.match(queries[0].sql, /p\.learner_id = \$\d+::uuid/);
+  });
+
+  it("returns the Generation jobs of a Course Request, oldest first", async () => {
+    const { run, queries } = fakeRunner((text) => {
+      if (text.includes("from generation_jobs")) {
+        return [{ id: "j1", kind: "course", status: "failed", stage: "lesson", requestId: ID, claims: "2", createdAt: "2026-10-24 10:00:00+00", updatedAt: "2026-10-24 11:00:00+00" }];
+      }
+      if (text.includes("from course_requests")) return [{ id: ID, subject: "s", createdAt: "2026-10-24 10:00:00+00" }];
+      return [];
+    });
+    const detail = await createOpsStore(run).getCourseRequest(ID);
+    assert.deepEqual(detail?.jobs, [{
+      id: "j1", kind: "course", status: "failed", stage: "lesson", requestId: ID, claims: 2,
+      createdAt: "2026-10-24T10:00:00.000Z", updatedAt: "2026-10-24T11:00:00.000Z",
+    }]);
+    assert.ok(queries.some((q) => /order by j\.created_at/.test(q.sql)));
   });
 });

@@ -1,6 +1,6 @@
 import type { ResearchTierRating } from "@senoy/db/course-request";
 import type { CostSplit, OpsCourseRequestDetail, OpsUsageRecordRow } from "@senoy/db/usage";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ScrollText } from "lucide-react";
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { CostLegend, CostSplitCell } from "@/components/Cost";
@@ -83,6 +83,70 @@ function ResearchTierLine({ cr }: { cr: OpsCourseRequestDetail }) {
 }
 
 /**
+ * The Course Request's Generation jobs, each with a link to its Log Entries, and one to the whole Request's.
+ * @param props.cr - The Course Request detail
+ */
+function JobsCard({ cr }: { cr: OpsCourseRequestDetail }) {
+  const href = useHref();
+  return (
+    <Card
+      title={`Generation jobs (${cr.jobs.length})`}
+      subtitle="Each job's worker Log Entries carry its id."
+      className="mb-4"
+      actions={
+        <Link to={href("/logs", { courseRequestId: cr.id })} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-ice">
+          <ScrollText className="size-3" /> Logs for this Course Request
+        </Link>
+      }
+    >
+      {cr.jobs.length === 0 ? (
+        <EmptyState title="No Generation jobs for this Course Request." className="py-5" />
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <Th>Job</Th>
+              <Th>Kind</Th>
+              <Th>Status</Th>
+              <Th>Stage</Th>
+              <Th numeric>Claims</Th>
+              <Th>Updated</Th>
+              <Th>Logs</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {cr.jobs.map((j) => (
+              <Tr key={j.id}>
+                <Td>
+                  <Mono id={j.id} />
+                </Td>
+                <Td>{humanize(j.kind)}</Td>
+                <Td>{humanize(j.status)}</Td>
+                <Td className="text-muted-foreground">{j.stage ? humanize(j.stage) : "—"}</Td>
+                <Td numeric>{j.claims}</Td>
+                <Td className="tabular-nums text-muted-foreground">{formatDateTime(j.updatedAt)}</Td>
+                <Td>
+                  <span className="flex gap-3">
+                    <Link to={href("/logs", { jobId: j.id })} className="hover:text-ice">
+                      Job logs
+                    </Link>
+                    {j.requestId && (
+                      <Link to={href("/logs", { requestId: j.requestId })} className="text-muted-foreground hover:text-ice" title="Everything from the request that queued it">
+                        Request logs
+                      </Link>
+                    )}
+                  </span>
+                </Td>
+              </Tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+    </Card>
+  );
+}
+
+/**
  * One Course Request: its totals, its research tier, a Gantt timeline of Pipeline Events with calls and Learner actions, the cost per
  * step, and every call.
  */
@@ -146,6 +210,7 @@ function Body({ cr }: { cr: OpsCourseRequestDetail }) {
         </Field>
       </div>
       <ResearchTierLine cr={cr} />
+      <JobsCard cr={cr} />
 
       <Card title="Timeline" subtitle="Pipeline Events nested by parent. Click a bar for the step, a tick for the call." className="mb-4">
         {cr.events.length === 0 && cr.usageRecords.length === 0 ? (

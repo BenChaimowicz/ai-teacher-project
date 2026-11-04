@@ -10,6 +10,7 @@ import {
   type GenerationStage,
   type Transaction,
 } from "@senoy/db";
+import { currentTrackingContext } from "./usage-tracking.ts";
 
 /** One worker's hold on one running job; every write the job makes is checked against `claimToken`. */
 export type JobLease = {
@@ -76,22 +77,35 @@ export function jobOwner(env: NodeJS.ProcessEnv = process.env): string {
 }
 
 /**
+ * The request id a job queued now is stamped with (ADR 0029): the API request being served, or, when a worker's run
+ * queues a job (a Blueprint after a failed sequence), the request that queued that run, so the chain continues.
+ * @returns The request id, or null outside any request or run
+ */
+export function queueingRequestId(): string | null {
+  return currentTrackingContext()?.requestId ?? null;
+}
+
+/**
  * Queues a Request's job of one kind: a fresh row, or its finished row again (Try again after a failed Blueprint).
  * Call it in the transaction that moves the Request to `blueprint_preparing` or `generating`, so the two never disagree.
- * The job belongs to this stack's `jobOwner()`, even when another stack queued it before. One upsert on the
- * (Request, kind) unique key, so it costs one round trip either way (SEN-102).
+ * The job belongs to this stack's `jobOwner()`, even when another stack queued it before, and names the request that
+ * queued it this time (`queueingRequestId()`). One upsert on the (Request, kind) unique key, so it costs one round trip
+ * either way (SEN-102).
  * @param transaction - The transaction moving the Request
  * @param job - The Request, its Learner, and what the job produces
  */
 export async function enqueueJob(transaction: Transaction, job: { courseRequestId: string; learnerId: string; kind: GenerationJobKind }) {
-  await transaction.insert(generationJobs).values({ ...job, status: "queued", owner: jobOwner() }).onConflictDoUpdate({
+  const requestId = queueingRequestId();
+  await transaction.insert(generationJobs).values({ ...job, status: "queued", owner: jobOwner(), requestId }).onConflictDoUpdate({
     target: [generationJobs.courseRequestId, generationJobs.kind],
-    set: { status: "queued", owner: jobOwner(), stage: null, currentSlotId: null, claimToken: null, leaseExpiresAt: null, updatedAt: new Date() },
+    set: { status: "queued", owner: jobOwner(), requestId, stage: null, currentSlotId: null, claimToken: null, leaseExpiresAt: null, updatedAt: new Date() },
   });
 }
 
 /** A fresh claim, with how the job came to it, for the worker's log (SEN-93). */
 export type ClaimedJob = JobLease & {
+  /** The API request that last queued the job (`generation_jobs.request_id`); null for a job queued before SEN-116. */
+  requestId: string | null;
   /** How many times the job has been claimed, this claim included. */
   claims: number;
   /** How long the job had been waiting: since it was queued or handed back, or since its last renewal when taken over. */
@@ -135,7 +149,7 @@ export async function claimGenerationJob(db: Database, leaseMs: number, owner: s
     from claimable
     where ${generationJobs.id} = claimable.id
     returning ${generationJobs.id} as "jobId", ${generationJobs.kind} as "kind", ${generationJobs.courseRequestId} as "courseRequestId",
-      ${generationJobs.learnerId} as "learnerId", ${generationJobs.claimToken} as "claimToken", ${generationJobs.claims} as "claims",
+      ${generationJobs.learnerId} as "learnerId", ${generationJobs.requestId} as "requestId", ${generationJobs.claimToken} as "claimToken", ${generationJobs.claims} as "claims",
       round(extract(epoch from now() - claimable.waiting_since) * 1000)::int as "waitedMs",
       case when claimable.was = 'running' then round(extract(epoch from now() - claimable.lapsed_at) * 1000)::int end as "lapsedMs"
   `);

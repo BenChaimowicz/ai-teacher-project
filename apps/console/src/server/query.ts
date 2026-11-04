@@ -12,6 +12,7 @@ import {
   type UsageRole,
   type UsageVendor,
 } from "@senoy/db";
+import { LOG_COMPONENTS, LOG_LEVELS, LOG_SEARCH_MAX_LENGTH, type LogComponent, type LogLevel } from "@senoy/db/logs";
 
 /**
  * Turns raw `/api/ops/*` query strings into checked, typed filters. Every parser throws `QueryError` on bad input so
@@ -79,10 +80,27 @@ export type PipelineEventFilter = ResolvedRange &
 export type CourseRequestFilter = ResolvedRange & PageWindow;
 
 /** Checked `GET /product-events` filters. */
-export type ProductEventFilter = ResolvedRange & PageWindow & { kind?: ProductEventKind };
+export type ProductEventFilter = ResolvedRange & PageWindow & { kind?: ProductEventKind; learnerId?: string };
 
 /** Checked `GET /api-requests` filters. */
-export type ApiRequestFilter = ResolvedRange & PageWindow & { route?: string; errorsOnly: boolean };
+export type ApiRequestFilter = ResolvedRange & PageWindow & { route?: string; requestId?: string; errorsOnly: boolean };
+
+/** Checked `GET /logs` filters (`OpsLogQuery`). */
+export type LogFilter = ResolvedRange &
+  PageWindow & {
+    component?: LogComponent;
+    /** The minimum level: `warn` means warn, error and fatal. */
+    level?: LogLevel;
+    requestId?: string;
+    /** A Generation job's id (`log_entries.generation_job_id`). */
+    jobId?: string;
+    courseRequestId?: string;
+    learnerId?: string;
+    /** This Pipeline Event and every step nested under it. */
+    pipelineEventId?: string;
+    /** Case-insensitive text the message contains. */
+    q?: string;
+  };
 
 /**
  * Reads one query value as a single trimmed string; empty counts as absent.
@@ -292,7 +310,12 @@ export function parseCourseRequestQuery(raw: RawQuery, now?: Date): CourseReques
  * @throws QueryError on any bad parameter
  */
 export function parseProductEventQuery(raw: RawQuery, now?: Date): ProductEventFilter {
-  return { ...parseRange(raw, now), ...parsePage(raw), kind: readEnum(raw, "kind", PRODUCT_EVENT_KINDS) };
+  return {
+    ...parseRange(raw, now),
+    ...parsePage(raw),
+    kind: readEnum(raw, "kind", PRODUCT_EVENT_KINDS),
+    learnerId: readUuid(raw, "learnerId"),
+  };
 }
 
 /**
@@ -307,6 +330,31 @@ export function parseApiRequestQuery(raw: RawQuery, now?: Date): ApiRequestFilte
     ...parseRange(raw, now),
     ...parsePage(raw),
     route: readString(raw, "route"),
+    requestId: readUuid(raw, "requestId"),
     errorsOnly: readFlag(raw, "errorsOnly"),
+  };
+}
+
+/**
+ * Checks `GET /logs` query (`OpsLogQuery`).
+ * @param raw - The parsed querystring
+ * @param now - The current instant
+ * @returns Typed filters
+ * @throws QueryError on any bad parameter, or a `q` longer than `LOG_SEARCH_MAX_LENGTH`
+ */
+export function parseLogQuery(raw: RawQuery, now?: Date): LogFilter {
+  const q = readString(raw, "q");
+  if (q !== undefined && q.length > LOG_SEARCH_MAX_LENGTH) throw new QueryError(`q must be at most ${LOG_SEARCH_MAX_LENGTH} characters`);
+  return {
+    ...parseRange(raw, now),
+    ...parsePage(raw),
+    component: readEnum(raw, "component", LOG_COMPONENTS),
+    level: readEnum(raw, "level", LOG_LEVELS),
+    requestId: readUuid(raw, "requestId"),
+    jobId: readUuid(raw, "jobId"),
+    courseRequestId: readUuid(raw, "courseRequestId"),
+    learnerId: readUuid(raw, "learnerId"),
+    pipelineEventId: readUuid(raw, "pipelineEventId"),
+    q,
   };
 }

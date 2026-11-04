@@ -393,3 +393,15 @@ _Avoid_: Analytics event, Pipeline Event (when the Learner, not the platform, ac
 **API Request**:
 One hit on the platform's own HTTP API, with route, status, and latency. Not an external call; that is a Usage Record.
 _Avoid_: Course Request, Usage Record, call (unqualified)
+
+**Log Entry**:
+One line a part of the platform logged at `info` or above, kept in the platform's own Postgres (ADR 0029): when, its Component, its level, its message, a small redacted context, and the ids it was logged for (Request id, Generation job, Course Request, Learner, Pipeline Event). `info` is kept 7 days and `warn` and above 30 days. `debug` lines and each request's own start and finish lines go to the process output only. Operators read them in the Usage Console's Logs view.
+_Avoid_: Usage Record, Pipeline Event, event (when meaning a log line), log (when meaning one row)
+
+**Request id**:
+The uuid the API gives every request it receives. The reply's `x-request-id` header echoes it, and it is stored on the API Request, on any Generation job the request queues, and on every Log Entry written while serving the request or running that job, so one lookup shows the whole chain.
+_Avoid_: trace id, correlation id, reqId
+
+**Component**:
+Which part of the platform wrote a Log Entry: `api`, `worker`, `web` (the Learner's browser, sent through the API) or `console` (the Usage Console's server, and its screens' errors, which are sent through that server).
+_Avoid_: service, app, source

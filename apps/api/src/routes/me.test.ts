@@ -125,6 +125,33 @@ test("A token check that cannot run is 503, not a sign-out", async () => {
   }
 });
 
+test("A client-log call is never refused: a good token attaches the Learner; none, a refused one or an expired one goes on without, unrefreshed and with its cookies kept", async () => {
+  const store = fakeDb([learners]);
+  const app = Fastify();
+  await app.register(fp(async (instance) => { instance.decorate("db", store.db); }, { name: "db" }));
+  await app.register(cookie);
+  await app.register(currentLearnerPlugin, { verifyToken: standInVerifier, refreshSession: standInRefresher });
+  app.post("/api/client-logs", async (request) => ({ learnerId: (request.currentLearner as { id?: string } | undefined)?.id ?? null }));
+  try {
+    const userId = randomUUID();
+    const signedIn = await app.inject({ method: "POST", url: "/api/client-logs", payload: { events: [] }, cookies: { kn_at: `token-${userId}` } });
+    assert.equal(signedIn.statusCode, 200);
+    const learner = (store.rows.get(learners)! as (typeof learners.$inferSelect)[]).find((row) => row.authUserId === userId);
+    assert.ok(learner, "A good token loads (or makes) the Learner.");
+    assert.deepEqual(signedIn.json(), { learnerId: learner.id });
+
+    const sessions: Record<string, string>[] = [{}, { kn_at: "forged" }, { kn_at: "expired", kn_rt: `rt-${userId}` }, { kn_at: "unavailable" }];
+    for (const cookies of sessions) {
+      const response = await app.inject({ method: "POST", url: "/api/client-logs", payload: { events: [] }, cookies });
+      assert.equal(response.statusCode, 200, `Refused with cookies ${JSON.stringify(cookies)}`);
+      assert.deepEqual(response.json(), { learnerId: null });
+      assert.equal(response.cookies.length, 0, "A client-log call never refreshes or clears the session.");
+    }
+  } finally {
+    await app.close();
+  }
+});
+
 test("A new user's first call creates their Learner with a Trait_Thing name; later calls reuse it", async () => {
   const { app, call, learnerRows } = await testApp();
   try {

@@ -186,6 +186,9 @@ importers:
       '@senoy/illustration':
         specifier: workspace:*
         version: link:../../packages/illustration
+      '@senoy/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       '@senoy/media':
         specifier: workspace:*
         version: link:../../packages/media
@@ -226,6 +229,9 @@ importers:
       '@senoy/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@senoy/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       '@senoy/media':
         specifier: workspace:*
         version: link:../../packages/media
@@ -314,6 +320,9 @@ importers:
       '@senoy/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@senoy/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -369,6 +378,9 @@ importers:
       '@senoy/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@senoy/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       drizzle-orm:
         specifier: ^0.44.5
         version: 0.44.7(postgres@3.4.9)
@@ -453,6 +465,28 @@ importers:
       roughjs:
         specifier: ^4.6.6
         version: 4.6.6
+    devDependencies:
+      '@types/node':
+        specifier: ^22.18.1
+        version: 22.20.1
+      tsx:
+        specifier: ^4.20.5
+        version: 4.23.13
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+
+  packages/logging:
+    dependencies:
+      '@senoy/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: ^0.44.5
+        version: 0.44.7(postgres@3.4.9)
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
     devDependencies:
       '@types/node':
         specifier: ^22.18.1

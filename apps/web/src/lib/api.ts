@@ -1,3 +1,5 @@
+import { reportApiFailure } from "@/lib/client-log.ts";
+
 /** Copy for a `429` when the API sends no text of its own. */
 export const TOO_MANY_TRIES = "Too many tries for now. Wait a minute and try again.";
 
@@ -59,6 +61,8 @@ function meansSignedOut(url: string): boolean {
  * same-origin request sends them by itself, so nothing is added here.
  * On a `401` from a signed-in call it tells the auth provider, which sends the person to sign-in and back after.
  * Every `/api` call in the web app goes through this (or `requestJson`, which uses it).
+ * A reply of 500 or more, or no reply at all, is sent to the client logs (ADR 0029) with the reply's `x-request-id`;
+ * a call the page aborted itself is not.
  * @param url - API path, e.g. `/api/library`
  * @param init - The usual fetch options
  * @param options - `signOutOn401: false` for a call whose `401` the caller handles itself (the auth provider's probe)
@@ -68,7 +72,16 @@ export async function apiFetch(
   init: RequestInit = {},
   { signOutOn401 = true }: { signOutOn401?: boolean } = {},
 ): Promise<Response> {
-  const response = await fetch(url, { credentials: "same-origin", ...init });
+  let response: Response;
+  try {
+    response = await fetch(url, { credentials: "same-origin", ...init });
+  } catch (error) {
+    if (!init.signal?.aborted) reportApiFailure({ method: init.method, url, status: 0, requestId: null });
+    throw error;
+  }
+  if (response.status >= 500) {
+    reportApiFailure({ method: init.method, url, status: response.status, requestId: response.headers.get("x-request-id") });
+  }
   if (response.status === 401 && signOutOn401 && meansSignedOut(url)) onUnauthorized?.();
   return response;
 }

@@ -1,15 +1,57 @@
 import { createServer } from "node:http";
-import pino from "pino";
-import { createDb, DEFAULT_POOL_SIZE, loadRootEnv, warmDb } from "@senoy/db";
+import { createDb, DEFAULT_POOL_SIZE, loadRootEnv, warmDb, type Database } from "@senoy/db";
+import { createBatchedLogSink, createLogger, drizzleLogWriter, PRUNE_SCHEDULE, pruneLogEntries } from "@senoy/logging";
 import { createFixtureBlueprintBuilder } from "@senoy/api/blueprint-fixture";
 import { createBlueprintJob } from "@senoy/api/blueprint-job";
 import { createCourseGeneration } from "@senoy/api/course-generation";
 import { createFixtureCourseGeneration } from "@senoy/api/course-generation-fixture";
 import { createGenerationWorker } from "@senoy/api/generation-worker";
 import { balanceProbeFromEnv, createResearchMeter } from "@senoy/api/research-measurement";
-import { installUsageTracking } from "@senoy/api/usage-tracking";
+import { currentLogCorrelation, installUsageTracking } from "@senoy/api/usage-tracking";
 
-const log = pino({ name: "worker" });
+// Loaded before the logger is built, so `LOG_LEVEL` in the root `.env` applies to the worker's stdout too.
+const root = loadRootEnv(import.meta.url, 3);
+
+// The worker's one Log Entry sink (ADR 0029). Lines logged before the database is known wait in it.
+const logSink = createBatchedLogSink();
+// Every line of a run carries its job, the request that queued it, its Course Request, Learner and current Pipeline Event.
+const log = createLogger({ component: "worker", sink: logSink, context: currentLogCorrelation });
+
+/**
+ * Deletes Log Entries past their retention (ADR 0029). A failure is logged and retried at the next run; it never stops
+ * the worker.
+ * @param db - The worker's database
+ */
+async function prune(db: Database) {
+  try {
+    const deleted = await pruneLogEntries(db);
+    if (deleted.info + deleted.warnAndAbove > 0) {
+      log.info(`Pruned ${deleted.info + deleted.warnAndAbove} expired Log Entries || info=${deleted.info} || warnAndAbove=${deleted.warnAndAbove}`);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    log.warn(`[index.ts: prune] Pruning Log Entries failed || ${message}`);
+  }
+}
+
+/**
+ * Prunes shortly after start, then every hour. Neither timer keeps the process alive.
+ * @param db - The worker's database
+ * @returns Stops both timers
+ */
+function schedulePruning(db: Database) {
+  let interval: ReturnType<typeof setInterval> | undefined;
+  const first = setTimeout(() => {
+    void prune(db);
+    interval = setInterval(() => void prune(db), PRUNE_SCHEDULE.intervalMs);
+    interval.unref();
+  }, PRUNE_SCHEDULE.firstRunDelayMs);
+  first.unref();
+  return () => {
+    clearTimeout(first);
+    clearInterval(interval);
+  };
+}
 
 /**
  * Connects to hosted Postgres, then claims Blueprint and Course-generation jobs until stopped.
@@ -17,7 +59,6 @@ const log = pino({ name: "worker" });
  */
 async function startWorker() {
   try {
-    const root = loadRootEnv(import.meta.url, 3);
 
     const url = process.env.DATABASE_URL;
     if (!url) {
@@ -26,6 +67,8 @@ async function startWorker() {
 
     // More connections than a run has queries in flight, so postgres.js never pipelines one onto a busy connection,
     // which the Supabase pooler can lose (SEN-70, SEN-93). All open now, so the first claim doesn't pay setup (SEN-103).
+    // Log Entries go out on a connection of their own, so a log write never takes a slot from a run's queries.
+    logSink.start(drizzleLogWriter(createDb(url, { max: 1 })));
     const db = createDb(url, { max: DEFAULT_POOL_SIZE });
     await warmDb(db, DEFAULT_POOL_SIZE);
     installUsageTracking({
@@ -58,11 +101,20 @@ async function startWorker() {
         }).listen(Number(port), "127.0.0.1")
       : null;
 
-    /** Hands a job in progress back to the queue, then exits. */
+    const stopPruning = schedulePruning(db);
+
+    /** Hands a job in progress back to the queue, writes the last Log Entries, then exits. */
     const shutdown = async () => {
       log.info("worker stopping");
-      await worker.stop();
+      stopPruning();
+      try {
+        await worker.stop();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log.error(`[index.ts: shutdown] Failed to hand the running job back || ${message}`);
+      }
       health?.close();
+      await logSink.close();
       process.exit(0);
     };
     process.once("SIGINT", () => void shutdown());
@@ -75,6 +127,7 @@ async function startWorker() {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     log.error(`[index.ts: startWorker] Worker failed to start || ${message}`);
+    await logSink.close();
     process.exit(1);
   }
 }

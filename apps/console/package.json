@@ -12,6 +12,7 @@
   "dependencies": {
     "@senoy/api": "workspace:*",
     "@senoy/db": "workspace:*",
+    "@senoy/logging": "workspace:*",
     "@senoy/media": "workspace:*",
     "@senoy/research": "workspace:*",
     "clsx": "^2.1.1",

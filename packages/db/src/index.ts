@@ -66,3 +66,4 @@ export * from "./publication.ts";
 export * from "./generation-job.ts";
 export * from "./usage.ts";
 export * from "./media.ts";
+export * from "./logs.ts";

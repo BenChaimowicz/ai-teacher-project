@@ -17,7 +17,7 @@ import {
   type SequenceMode,
 } from "@senoy/db";
 import { IRRELEVANT_REASONS, type BlueprintFeedback, type IrrelevantReason } from "@senoy/db/blueprint";
-import { enqueueJob, jobOwner } from "../lib/generation-job.ts";
+import { enqueueJob, jobOwner, queueingRequestId } from "../lib/generation-job.ts";
 import { studyLinksByCourseId } from "../lib/study.ts";
 import { recordProductEvent } from "../lib/usage-tracking.ts";
 import { requestFields } from "../lib/course-request-fields.ts";
@@ -352,7 +352,7 @@ export async function blueprintRoutes(app: FastifyInstance) {
         const status = job ? from[job.status] : undefined;
         if (!job || status !== row.status) return reply.code(409).send({ error: `This Course cannot be ${action === "resume" ? "resumed" : "retried"}.` });
         const queued = await app.db.transaction(async (transaction) => {
-          const [requeued] = await transaction.update(generationJobs).set({ status: "queued", owner: jobOwner(), stage: null, currentSlotId: null, updatedAt: new Date() })
+          const [requeued] = await transaction.update(generationJobs).set({ status: "queued", owner: jobOwner(), requestId: queueingRequestId(), stage: null, currentSlotId: null, updatedAt: new Date() })
             .where(and(eq(generationJobs.id, job.id), eq(generationJobs.status, job.status))).returning({ id: generationJobs.id });
           if (!requeued) throw new RequestChangedError();
           const [moved] = await transaction.update(courseRequests).set({ status: "generating", failureReason: null }).where(and(
