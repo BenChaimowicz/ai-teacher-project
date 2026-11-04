@@ -2,19 +2,22 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import type { BlueprintSlot } from "@senoy/db/blueprint";
-import type { MediaDescriptorFields, MediaLicense } from "@senoy/db";
+import type { BlueprintSlot, JudgeResult } from "@senoy/db/blueprint";
+import type { MediaDescriptorFields, MediaLicense, VisualBrief } from "@senoy/db";
 import type { MediaBlock, ProseBlock } from "@senoy/db/reading-lesson";
 import { CATALOG_DIR } from "@senoy/media";
 import type { PackSource, SourcePack } from "@senoy/research";
+import { LeaseLostError } from "./generation-job.ts";
+import type { Illustration, Illustrator } from "./illustrator.ts";
 import type { Generator, Judge, StructuredRequest, ModelReply } from "./model-ports.ts";
 import { rankCandidates, type MediaLibrary } from "./media-library.ts";
 import { ModelError } from "./openrouter.ts";
 import {
   applyRepairEdits, authoredSections, createReadingGenerator, LessonUnresearchableError, numberCitations, READING_JUDGE_CHECKS, ReadingFailedError,
-  ReuseUnfitError, UNRELIABLE_SOURCE, lessonEvidence, mediaProposalsOf, MAX_REPAIRS, MEDIA_VISION_CHECKS, type ChapterInput, type ReadingInput, type ReuseSeed,
+  ReuseUnfitError, UNRELIABLE_SOURCE, lessonEvidence, MAX_REPAIRS, type ChapterInput, type CommonsFinder, type ReadingInput, type ReuseSeed,
 } from "./reading-generation.ts";
 import { ILLUSTRATION_RULE, READING_STYLE, TEACHING_VOICE } from "./teaching-style.ts";
+import { createVisualJudge } from "./visual-judge.ts";
 
 /** A Source with the given excerpts. */
 function source(sourceId: string, url: string, excerpts: string[]): PackSource {
@@ -73,7 +76,7 @@ const TOUCH = edits(["Roots again", "Roots again"]);
  */
 function scriptedGenerator(output: unknown, modelId = "fixture/author", ...later: unknown[]) {
   const outputs = [output, ...later];
-  const calls: { input: unknown; schemaName: string; systemPrompt: string }[] = [];
+  const calls: { input: unknown; schemaName: string; systemPrompt: string; schema: unknown }[] = [];
   const glossaries: { input: unknown; systemPrompt: string }[] = [];
   const terms: { term: string; definition: string }[] = [];
   const generator: Generator = {
@@ -83,7 +86,7 @@ function scriptedGenerator(output: unknown, modelId = "fixture/author", ...later
         glossaries.push({ input: request.input, systemPrompt: request.systemPrompt });
         return { value: request.parse({ terms }), modelId };
       }
-      calls.push({ input: request.input, schemaName: request.schemaName, systemPrompt: request.systemPrompt });
+      calls.push({ input: request.input, schemaName: request.schemaName, systemPrompt: request.systemPrompt, schema: request.schema });
       return { value: request.parse(outputs[Math.min(calls.length, outputs.length) - 1]), modelId: modelId };
     },
   };
@@ -570,7 +573,6 @@ const SEED: ReuseSeed = {
   objectives: ["Describe Yggdrasil", "Name its roots"],
   sections: authored().sections,
   writtenFor: { instructionLanguage: "en", requiredReadingSupports: [], contentScope: "compact", explanationOrder: "topic_appropriate" },
-  media: [],
   verbatimAllowed: true,
   authorModelIds: ["origin/author"],
   rejectedSources: [],
@@ -743,20 +745,69 @@ function library(rows: MediaDescriptorFields[], files: Record<string, Uint8Array
   };
 }
 
-/** What the writer asks for: the plate, after the first section. */
-const ASK = { section: "The tree", mediaCategory: "norse-mythic-depiction", topicTags: ["Yggdrasil"], caption: "One artist's depiction of Yggdrasil.", alt: "An engraving of an ash tree with roots and branches spreading wide." };
-
-/** A first draft that asks for each of `media` as an optional image. */
-function asking(...media: unknown[]) {
-  return { ...authored(), media: media.length ? media : [ASK] };
+/** A library holding `rows`, every one of them readable. */
+function readable(rows: MediaDescriptorFields[]): MediaLibrary {
+  return library(rows, Object.fromEntries(rows.map((row) => [row.storageKey, PLATE_BYTES])));
 }
 
-/** A caption repair that finds the file does not show what the section teaches. */
-const UNFIT = { reason: "The file shows something else.", fits: false, caption: "", alt: "" };
+/** The n-th Yggdrasil plate; plates rank by storage key, so plate 1 is tried first. */
+function nthPlate(n: number): MediaDescriptorFields {
+  return plate({ id: `d0a1e001-0000-4000-8000-00000000010${n}`, storageKey: `library/norse/yggdrasil-${n}.jpg`, caption: `Plate ${n} of Yggdrasil.` });
+}
+
+/** The slot's one planned visual: a depiction of the tree. */
+const TREE_PLAN = { kind: "depiction" as const, intent: "Yggdrasil with its three roots and the beings around it, so the Learner sees how it holds the worlds together." };
+
+/** INPUT, with a slot that plans the tree depiction. */
+const PLANNING: ReadingInput = { ...INPUT, slot: { ...SLOT, visuals: [TREE_PLAN] } };
+
+/** The writer's brief for the tree, as the reply writes it, after the first section. */
+const BRIEF = {
+  section: "The tree", subject: "Yggdrasil, the world ash, with its three roots and the beings around it",
+  mustShow: ["exactly three roots", "an eagle in the crown", "a serpent at the roots"],
+  caption: "Yggdrasil as this Course draws it: three roots, an eagle above and a serpent below.",
+  alt: "A great tree with three roots; an eagle sits in its crown and a serpent coils at its base.",
+  mediaCategory: "norse-mythic-depiction", topicTags: ["Yggdrasil", "world-tree"],
+};
+
+/** What the brief becomes once parsed: the plan's kind, slug tags. */
+const PARSED_BRIEF: VisualBrief = { kind: "depiction", subject: BRIEF.subject, mustShow: BRIEF.mustShow, caption: BRIEF.caption, alt: BRIEF.alt, mediaCategory: "norse-mythic-depiction", topicTags: ["yggdrasil", "world-tree"] };
+
+/** A first draft briefing each of `visuals`, or the tree alone. */
+function briefing(...visuals: unknown[]) {
+  return { ...authored(), visuals: visuals.length ? visuals : [BRIEF] };
+}
+
+/** A drawn illustration's descriptor, as the illustrator returns it. */
+const DRAWN: MediaDescriptorFields = {
+  id: "0a1b2c3d-4e5f-8000-8000-000000000000", kind: "image", origin: "generated", license: "product_owned", licenseUrl: null,
+  caption: BRIEF.caption, alt: BRIEF.alt, source: null, storageKey: `generated/${"b".repeat(64)}.png`, mimeType: "image/png",
+  byteSize: 10, sha256: "b".repeat(64), width: 1200, height: 800, mediaCategory: "norse-mythic-depiction", topicTags: ["yggdrasil", "world-tree"],
+};
+
+const VISION_FAIL: JudgeResult = { pass: false, failedChecks: ["must_show"], reasons: ["It shows a different tree."] };
 
 /**
- * The scripted Judge, with the vision call answered apart: each `media_fitness` call gets the next verdict, or throws
- * when the verdict is an Error. Records every vision request.
+ * A scripted illustrator: each call gets the next outcome, repeating the last; an Error is thrown. Records every
+ * brief and the authors it was told.
+ * @param outcomes - `"illustrated"` draws `DRAWN`; `"judge_failed"` and `"error"` draw nothing
+ */
+function scriptedIllustrator(...outcomes: (Illustration["outcome"] | Error)[]) {
+  const calls: { brief: VisualBrief; authorModelIds: readonly string[]; startedAt: number }[] = [];
+  const illustrator: Illustrator = async (brief, authorModelIds) => {
+    calls.push({ brief, authorModelIds, startedAt: calls.length });
+    const outcome = outcomes[Math.min(calls.length, outcomes.length) - 1] ?? "illustrated";
+    if (outcome instanceof Error) throw outcome;
+    const attempt = { modelId: "fixture/illustrator", plan: null, judge: outcome === "illustrated" ? PASS : VISION_FAIL, judgeModelId: "fixture/vision" };
+    return { outcome, descriptor: outcome === "illustrated" ? { ...DRAWN, topicTags: [...DRAWN.topicTags] } : null, attempts: outcome === "error" ? [{ ...attempt, judge: undefined, error: "timeout" }] : [attempt] };
+  };
+  return { illustrator, calls };
+}
+
+/**
+ * The scripted Judge with the Vision Judge beside it: each `visual_fitness` call gets the next verdict, or throws when
+ * the verdict is an Error. Records every vision request. The Vision Judge is built the way production builds it, over
+ * the Judge port, so what it sends is what a real call sends.
  * @param verdicts - One per vision call, repeating the last
  */
 function visionJudge(...verdicts: (unknown | Error)[]) {
@@ -765,14 +816,14 @@ function visionJudge(...verdicts: (unknown | Error)[]) {
   const judge: Judge = {
     modelId: scripted.judge.modelId,
     async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
-      if (request.schemaName !== "media_fitness") return scripted.judge.judge(request);
+      if (request.schemaName !== "visual_fitness") return scripted.judge.judge(request);
       vision.push(request as StructuredRequest<unknown> & { authorModelIds: readonly string[] });
       const verdict = verdicts[Math.min(vision.length, verdicts.length) - 1] ?? PASS;
       if (verdict instanceof Error) throw verdict;
       return { value: request.parse(verdict), modelId: "fixture/vision" };
     },
   };
-  return { ...scripted, judge, vision };
+  return { ...scripted, judge, vision, judgeVisual: createVisualJudge({ judge, techniqueJudge: judge }) };
 }
 
 /** Every media block in a Lesson body. */
@@ -780,384 +831,283 @@ function mediaBlocks(body: { sections: { blocks: { kind: string }[] }[] }): Medi
   return body.sections.flatMap((section) => section.blocks).filter((block): block is MediaBlock => block.kind === "media");
 }
 
-test("A Reading's one image is looked up by category and tags, vision-judged by a non-author, and placed after its section", async () => {
-  const { generator, calls } = scriptedGenerator(asking());
+test("The writer briefs each visual its slot plans, with the plan's kind; the illustrator draws it and the picture follows its section (SEN-121)", async () => {
+  const { generator, calls } = scriptedGenerator(briefing());
   const { judge, vision } = visionJudge(PASS);
-  const other = plate({ id: "d0a1e001-0000-4000-8000-000000000002", storageKey: "library/norse/valhalla.jpg", topicTags: ["valhalla"] });
-  const checked = await createReadingGenerator({ generator, judge, media: library([other, plate()]) }).generate(INPUT);
+  const drawn = scriptedIllustrator("illustrated");
+  const checked = await createReadingGenerator({ generator, judge, media: readable([plate()]), illustrator: drawn.illustrator }).generate(PLANNING);
 
   const author = calls[0]!;
-  assert.match(author.systemPrompt, /"mediaCatalog" lists each Media category/);
-  assert.deepEqual((author.input as { mediaCatalog: unknown }).mediaCatalog, [{ mediaCategory: "norse-mythic-depiction", topicTags: ["valhalla", "yggdrasil", "world-tree"] }]);
+  assert.match(author.systemPrompt, /"slot\.visuals" lists the pictures this Lesson is planned to show/);
+  assert.match(author.systemPrompt, /the prose never refers to it/);
+  assert.deepEqual((author.input as { slot: { visuals: unknown } }).slot.visuals, [TREE_PLAN]);
+  assert.deepEqual((author.input as { mediaCatalog: unknown }).mediaCatalog, [{ mediaCategory: "norse-mythic-depiction", topicTags: ["yggdrasil", "world-tree"] }], "The library's tags are offered so a file of the same thing is found.");
+  const schema = author.schema as { required: string[]; properties: { visuals: { minItems: number; maxItems: number; items: { properties: { mediaCategory: { enum: string[] }; mustShow: { maxItems: number } } } } } };
+  assert.deepEqual(schema.required, ["sections", "visuals"]);
+  assert.deepEqual([schema.properties.visuals.minItems, schema.properties.visuals.maxItems], [1, 1], "One brief per planned visual, no more.");
+  assert.ok(schema.properties.visuals.items.properties.mediaCategory.enum.includes("drum-grip"), "Any library category may be named.");
+  assert.equal(schema.properties.visuals.items.properties.mustShow.maxItems, 6);
 
-  assert.equal(vision.length, 1);
-  assert.deepEqual(vision[0]!.input, { caption: ASK.caption, alt: ASK.alt });
-  assert.deepEqual(vision[0]!.images, [{ mimeType: "image/jpeg", bytes: PLATE_BYTES }]);
-  assert.deepEqual(vision[0]!.authorModelIds, ["fixture/author"], "The vision Judge is never a model that wrote the Lesson.");
-  assert.deepEqual((vision[0]!.schema as { properties: { failedChecks: { items: { enum: unknown } } } }).properties.failedChecks.items.enum, MEDIA_VISION_CHECKS);
+  assert.equal(drawn.calls.length, 1);
+  assert.deepEqual(drawn.calls[0]!.brief, PARSED_BRIEF, "The illustrator gets the brief with the plan's kind and slug tags.");
+  assert.deepEqual(drawn.calls[0]!.authorModelIds, ["fixture/author"], "The brief's writer is ruled out of judging the picture.");
+  assert.equal(vision.length, 0, "A drawn picture that passed is not judged again here, and the library is not tried.");
 
   const [block, ...extra] = mediaBlocks(checked.lesson.body);
   assert.equal(extra.length, 0);
-  assert.equal(checked.lesson.body.sections[0]!.blocks.at(-1), block, "The image follows the section it names.");
-  assert.equal(block!.caption, ASK.caption);
-  assert.equal(block!.alt, ASK.alt);
-  assert.deepEqual(block!.descriptor, plate(), "The Lesson keeps every descriptor field.");
-  assert.deepEqual(checked.media.map(({ status }) => status), ["attached"]);
-  assert.deepEqual(checked.rounds[0]!.media, [{ ...ASK, topicTags: ["yggdrasil"], required: false }], "Tags are read as lowercase.");
+  assert.equal(checked.lesson.body.sections[0]!.blocks.at(-1), block, "The picture follows the section its brief names.");
+  assert.deepEqual([block!.caption, block!.alt], [BRIEF.caption, BRIEF.alt]);
+  assert.deepEqual(block!.descriptor, DRAWN, "The Lesson keeps the generated descriptor.");
+  assert.deepEqual(checked.visuals.map(({ status, descriptorId }) => [status, descriptorId]), [["illustrated", DRAWN.id]]);
+  assert.deepEqual(checked.visuals[0]!.illustration, { outcome: "illustrated", attempts: [{ modelId: "fixture/illustrator", judge: PASS, judgeModelId: "fixture/vision" }] }, "The plans stay on the illustration event; the Reading keeps the verdicts.");
+  assert.deepEqual(checked.rounds[0]!.visuals, [{ section: "The tree", brief: PARSED_BRIEF }]);
+  assert.deepEqual(checked.rounds[0]!.attached, checked.visuals);
+});
+
+test("A drawing the Judge failed twice falls back to the library, whose best files are judged against the brief; then Commons; then no image", async () => {
+  const { generator } = scriptedGenerator(briefing());
+  const scripted = visionJudge(VISION_FAIL, PASS);
+  const other = plate({ id: "d0a1e001-0000-4000-8000-000000000002", storageKey: "library/norse/valhalla.jpg", topicTags: ["valhalla"] });
+  const checked = await createReadingGenerator({
+    generator, judge: scripted.judge, media: readable([other, nthPlate(1), nthPlate(2), nthPlate(3)]), illustrator: scriptedIllustrator("judge_failed").illustrator,
+  }).generate(PLANNING);
+
+  assert.equal(scripted.vision.length, 2, "Plate 1 fails, plate 2 passes; plate 3 is never looked at.");
+  assert.deepEqual(scripted.vision[0]!.input, { brief: { kind: "depiction", subject: BRIEF.subject, mustShow: BRIEF.mustShow, caption: BRIEF.caption, alt: BRIEF.alt } }, "A library file is judged against the brief, mustShow included.");
+  assert.deepEqual(scripted.vision[0]!.images, [{ mimeType: "image/jpeg", bytes: PLATE_BYTES }]);
+  assert.deepEqual(scripted.vision[0]!.authorModelIds, ["fixture/author"]);
+  assert.match(scripted.vision[0]!.systemPrompt, /Lenient on style, strict on facts/);
+  const [outcome] = checked.visuals;
+  assert.equal(outcome!.status, "library");
+  assert.equal(outcome!.illustration!.outcome, "judge_failed");
+  assert.deepEqual(outcome!.library.map(({ storageKey, judge }) => [storageKey, judge?.pass]), [[nthPlate(1).storageKey, false], [nthPlate(2).storageKey, true]]);
+  assert.equal(mediaBlocks(checked.lesson.body)[0]!.descriptor.id, nthPlate(2).id);
+  assert.equal(checked.repairs, 0, "A picture that fails costs no Lesson repair.");
+
+  // Every library file fails: Commons is searched with the brief and a Judge that rules out the brief's writer.
+  const commonsCalls: { brief: VisualBrief }[] = [];
+  const found = { ...plate({ id: "d0a1e001-0000-4000-8000-00000000c0de", storageKey: `library/commons/${"c".repeat(64)}.jpg` }), source: { title: "File:Tree.jpg", author: "Someone", url: "https://commons.wikimedia.org/wiki/File:Tree.jpg" } };
+  const commons: CommonsFinder = async (brief, judge) => {
+    commonsCalls.push({ brief });
+    const verdict = await judge({ bytes: PLATE_BYTES, mimeType: "image/jpeg" }, brief);
+    return { descriptor: verdict.pass ? found : null, outcome: verdict.pass ? "ingested" : "miss", queries: ["yggdrasil"], searchErrors: [], tried: [], rejected: [] };
+  };
+  const failing = visionJudge(VISION_FAIL, VISION_FAIL, PASS);
+  const fromCommons = await createReadingGenerator({
+    generator: scriptedGenerator(briefing()).generator, judge: failing.judge, media: readable([nthPlate(1), nthPlate(2), nthPlate(3)]),
+    illustrator: scriptedIllustrator("judge_failed").illustrator, commons,
+  }).generate(PLANNING);
+  assert.equal(failing.vision.length, 3, "Two library files at most, then the Commons file.");
+  assert.deepEqual(commonsCalls.map(({ brief }) => brief), [PARSED_BRIEF]);
+  assert.deepEqual(failing.vision[2]!.authorModelIds, ["fixture/author"], "The Commons Judge rules out the brief's writer too.");
+  assert.equal(fromCommons.visuals[0]!.status, "commons");
+  assert.equal(fromCommons.visuals[0]!.commons!.outcome, "ingested");
+  assert.equal(mediaBlocks(fromCommons.lesson.body)[0]!.descriptor.id, found.id);
+
+  // Nothing passes anywhere: the Lesson publishes with no image, and that is not a defect.
+  const nothing = visionJudge(VISION_FAIL);
+  const without = await createReadingGenerator({
+    generator: scriptedGenerator(briefing()).generator, judge: nothing.judge, media: readable([nthPlate(1)]), illustrator: scriptedIllustrator("judge_failed").illustrator, commons,
+  }).generate(PLANNING);
+  assert.equal(without.visuals[0]!.status, "none");
+  assert.equal(without.visuals[0]!.commons!.outcome, "miss");
+  assert.deepEqual(mediaBlocks(without.lesson.body), []);
+  assert.equal(without.judge.pass, true);
+});
+
+test("A technique is never drawn: the library, then Commons, judged on the technique Judge with the harsh rule", async () => {
+  const grip = { kind: "technique" as const, intent: "Matched grip from above, so the fulcrum shows." };
+  const gripBrief = { ...BRIEF, section: "Roots", subject: "A right hand holding a drumstick in matched grip", mustShow: ["the stick pinched between thumb and index finger"], mediaCategory: "drum-grip", topicTags: ["matched-grip"] };
+  const photo = plate({ id: "d0a1e001-0000-4000-8000-00000000d0d0", storageKey: "library/drums/grip.jpg", mediaCategory: "drum-grip", topicTags: ["matched-grip"], source: { title: "File:Grip.jpg", author: "A", url: "https://commons.wikimedia.org/wiki/File:Grip.jpg" } });
+  const { generator } = scriptedGenerator(briefing(gripBrief));
+  const drawn = scriptedIllustrator("illustrated");
+  const technique: (StructuredRequest<unknown> & { authorModelIds: readonly string[] })[] = [];
+  const techniqueJudge: Judge = {
+    modelId: "fixture/technique-judge",
+    async judge<T>(request: StructuredRequest<T> & { authorModelIds: readonly string[] }): Promise<ModelReply<T>> {
+      technique.push(request as StructuredRequest<unknown> & { authorModelIds: readonly string[] });
+      return { value: request.parse(PASS), modelId: "fixture/technique-judge" };
+    },
+  };
+  const scripted = visionJudge(PASS);
+  const checked = await createReadingGenerator({
+    generator, judge: scripted.judge, media: readable([photo]), illustrator: drawn.illustrator,
+    judgeVisual: createVisualJudge({ judge: scripted.judge, techniqueJudge }),
+  }).generate({ ...INPUT, slot: { ...SLOT, visuals: [grip] } });
+
+  assert.equal(drawn.calls.length, 0, "A technique skips the illustrator (decision 2026-11-03).");
+  assert.equal(scripted.vision.length, 0);
+  assert.equal(technique.length, 1, "The technique Judge, on its own model, judged the photo.");
+  assert.match(technique[0]!.systemPrompt, /Be harsh/);
+  assert.equal((technique[0]!.input as { brief: { kind: string } }).brief.kind, "technique");
+  assert.equal(checked.visuals[0]!.status, "library");
+  assert.equal(checked.visuals[0]!.illustration, undefined);
+  assert.equal(checked.visuals[0]!.library[0]!.judgeModelId, "fixture/technique-judge");
+  assert.equal(mediaBlocks(checked.lesson.body)[0]!.descriptor.id, photo.id);
+  assert.equal(checked.lesson.body.sections[1]!.blocks.at(-1)!.kind, "media", "The photo follows the section the brief names.");
+});
+
+test("A picture is searched for while the prose is judged and repaired, and placed once it passes; a section the repairs cut leaves it out", async () => {
+  const fail = { pass: false, failedChecks: ["claim_support"], reasons: ["Roots are unsupported."] };
+  const { generator } = scriptedGenerator(briefing(), "fixture/author", TOUCH);
+  const scripted = visionJudge(PASS);
+  let lessonVerdicts = 0;
+  const order: string[] = [];
+  const judge: Judge = {
+    modelId: scripted.judge.modelId,
+    async judge(request) {
+      if (request.schemaName === "reading_lesson_review") {
+        order.push("lesson judge");
+        return { value: request.parse(lessonVerdicts++ === 0 ? fail : PASS), modelId: "fixture/judge" };
+      }
+      return scripted.judge.judge(request);
+    },
+  };
+  let release!: () => void;
+  const slow: Illustrator = async (brief, authorModelIds) => {
+    order.push("illustrator started");
+    await new Promise<void>((resolve) => { release = resolve; });
+    order.push("illustrator finished");
+    return (await scriptedIllustrator("illustrated").illustrator(brief, authorModelIds));
+  };
+  const run = createReadingGenerator({ generator, judge, media: readable([plate()]), illustrator: slow }).generate(PLANNING);
+  // The illustrator was started by the first draft and is still drawing while the Lesson is judged and repaired.
+  while (order.filter((step) => step === "lesson judge").length < 2) await new Promise((resolve) => setTimeout(resolve, 1));
+  assert.deepEqual(order, ["illustrator started", "lesson judge", "lesson judge"]);
+  release();
+  const repaired = await run;
+  assert.equal(repaired.repairs, 1);
+  assert.equal(repaired.visuals[0]!.status, "illustrated");
+  assert.equal(order.at(-1), "illustrator finished");
+
+  const { generator: misnamed } = scriptedGenerator(briefing({ ...BRIEF, section: "A heading no draft has" }));
+  const unplaced = await createReadingGenerator({ generator: misnamed, judge: visionJudge(PASS).judge, media: readable([plate()]), illustrator: scriptedIllustrator("illustrated").illustrator }).generate(PLANNING);
+  assert.equal(unplaced.visuals[0]!.status, "unplaced");
+  assert.equal(unplaced.visuals[0]!.descriptorId, DRAWN.id, "The picture was drawn; only its section is gone.");
+  assert.deepEqual(mediaBlocks(unplaced.lesson.body), []);
+
+  const { generator: loosely } = scriptedGenerator(briefing({ ...BRIEF, section: "  the  TREE " }));
+  const placed = await createReadingGenerator({ generator: loosely, judge: visionJudge(PASS).judge, media: readable([plate()]), illustrator: scriptedIllustrator("illustrated").illustrator }).generate(PLANNING);
+  assert.equal(placed.visuals[0]!.status, "illustrated", "A heading named with other case or spacing still places the picture.");
+});
+
+test("A draft that does not brief every planned visual, briefs one hollow, or names a category the library does not know is invalid output", async () => {
+  for (const draft of [authored(), { ...authored(), visuals: [] }, briefing({ ...BRIEF, caption: " " }), briefing({ ...BRIEF, mustShow: [] }), briefing({ ...BRIEF, mediaCategory: "selfies" })]) {
+    const { generator } = scriptedGenerator(draft);
+    await assert.rejects(
+      createReadingGenerator({ generator, judge: visionJudge(PASS).judge, media: readable([plate()]) }).generate(PLANNING),
+      (error: unknown) => error instanceof ModelError && error.code === "invalid_output",
+    );
+  }
+});
+
+test("Two planned visuals are briefed in order, never share a file, and a Reading shows a found file once", async () => {
+  const second = { ...BRIEF, section: "Roots", subject: "The three roots of Yggdrasil and what lies under each", mustShow: ["three roots", "a well under one root"] };
+  const { generator } = scriptedGenerator(briefing(BRIEF, second));
+  const scripted = visionJudge(PASS);
+  const twice = { ...INPUT, slot: { ...SLOT, visuals: [TREE_PLAN, { kind: "diagram" as const, intent: "The three roots and what lies under each." }] } };
+  const checked = await createReadingGenerator({ generator, judge: scripted.judge, media: readable([nthPlate(1), nthPlate(2)]), illustrator: scriptedIllustrator("judge_failed").illustrator }).generate(twice);
+  assert.deepEqual(checked.visuals.map(({ status, placement }) => [status, placement.brief.kind, placement.section]), [["library", "depiction", "The tree"], ["library", "diagram", "Roots"]]);
+  const blocks = mediaBlocks(checked.lesson.body);
+  assert.deepEqual(blocks.map((block) => block.descriptor.id), [nthPlate(1).id, nthPlate(2).id], "The second visual skips the file the first took.");
+  assert.equal(scripted.vision.length, 2);
+
+  // The illustrator draws the same picture for both (the same plan, the same bytes): the Lesson shows it once.
+  const same = await createReadingGenerator({ generator: scriptedGenerator(briefing(BRIEF, second)).generator, judge: visionJudge(PASS).judge, media: readable([]), illustrator: scriptedIllustrator("illustrated").illustrator }).generate(twice);
+  assert.deepEqual(same.visuals.map(({ status }) => status), ["illustrated", "duplicate"]);
+  assert.equal(mediaBlocks(same.lesson.body).length, 1);
+});
+
+test("A provider failure on one source is recorded and the next source is tried; a lost job stops the run", async () => {
+  const { generator } = scriptedGenerator(briefing());
+  const erroring = visionJudge(new ModelError("timeout"), PASS);
+  const checked = await createReadingGenerator({ generator, judge: erroring.judge, media: readable([nthPlate(1), nthPlate(2)]), illustrator: scriptedIllustrator("error").illustrator }).generate(PLANNING);
+  assert.equal(checked.visuals[0]!.illustration!.outcome, "error");
+  assert.deepEqual(checked.visuals[0]!.library.map(({ error, judge }) => [error ? /timeout/.test(error) : null, judge?.pass ?? null]), [[true, null], [null, true]]);
+  assert.equal(checked.visuals[0]!.status, "library");
+
+  const commonsDown: CommonsFinder = async () => { throw new Error("[commons-ingest.ts: findVisualOnCommons] Failed to add a Commons file to the library || bucket down"); };
+  const noCommons = await createReadingGenerator({ generator: scriptedGenerator(briefing()).generator, judge: visionJudge(VISION_FAIL).judge, media: readable([nthPlate(1)]), commons: commonsDown }).generate(PLANNING);
+  assert.equal(noCommons.visuals[0]!.status, "none");
+  assert.match(noCommons.visuals[0]!.commonsError!, /bucket down/);
+  assert.equal(noCommons.judge.pass, true, "The Lesson still passes.");
+
+  const lost = visionJudge(new LeaseLostError("job1"));
+  await assert.rejects(createReadingGenerator({ generator: scriptedGenerator(briefing()).generator, judge: lost.judge, media: readable([nthPlate(1)]) }).generate(PLANNING), LeaseLostError);
+});
+
+test("Deterministic checks skip an unhostable or unreadable file before any vision call, and an SVG is judged as a PNG and kept as the SVG", async () => {
+  const nonCommercial = plate({ id: "d0a1e001-0000-4000-8000-00000000000a", storageKey: "library/norse/a-nc.jpg", license: "cc_by_nc" as MediaLicense });
+  const unreadable = plate({ id: "d0a1e001-0000-4000-8000-00000000000b", storageKey: "library/norse/b-gone.jpg" });
+  const { generator } = scriptedGenerator(briefing());
+  const { judge, vision } = visionJudge(PASS);
+  const checked = await createReadingGenerator({ generator, judge, media: library([nonCommercial, unreadable, plate()]) }).generate(PLANNING);
+  assert.equal(vision.length, 1);
+  assert.equal(mediaBlocks(checked.lesson.body)[0]!.descriptor.id, plate().id);
+  const [outcome] = checked.visuals;
+  assert.equal(outcome!.status, "library");
+  assert.deepEqual(outcome!.library.map(({ storageKey }) => storageKey), [nonCommercial.storageKey, unreadable.storageKey, plate().storageKey]);
+  assert.match(outcome!.library[0]!.failures!.join(" "), /not one the product can host/);
+  assert.match(outcome!.library[1]!.failures!.join(" "), /No file at/);
+
+  const svg = await readFile(resolve(CATALOG_DIR, "drums/rebound-stroke.svg"));
+  const unsafe = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+  const diagram = (overrides: Partial<MediaDescriptorFields>) => plate({ license: "product_owned", source: null, licenseUrl: null, mimeType: "image/svg+xml", mediaCategory: "drum-stroke", ...overrides });
+  const strip = diagram({ id: "d0a1e047-0000-4000-8000-000000000028", storageKey: "library/drums/rebound-stroke.svg", topicTags: ["rebound-stroke", "full-stroke"] });
+  const scripted = diagram({ id: "d0a1e047-0000-4000-8000-000000000099", storageKey: "library/drums/a-scripted.svg", topicTags: ["rebound-stroke", "full-stroke", "stroke"] });
+  const strokeBrief = { ...BRIEF, subject: "A full stroke in four stills", mustShow: ["four stills"], mediaCategory: "drum-stroke", topicTags: ["rebound-stroke", "stroke"] };
+  const seen = visionJudge(PASS);
+  const stroke = await createReadingGenerator({
+    generator: scriptedGenerator(briefing(strokeBrief)).generator, judge: seen.judge, media: library([strip, scripted], { [strip.storageKey]: svg, [scripted.storageKey]: unsafe }),
+  }).generate({ ...INPUT, slot: { ...SLOT, visuals: [{ kind: "diagram", intent: "The four heights of a full stroke." }] } });
+  assert.match(stroke.visuals[0]!.library[0]!.failures!.join(" "), /The SVG holds a script/, "The best-ranked file is unsafe and skipped.");
+  const [image] = seen.vision[0]!.images!;
+  assert.equal(image!.mimeType, "image/png");
+  assert.deepEqual([...image!.bytes.subarray(0, 4)], [0x89, 0x50, 0x4e, 0x47]);
+  assert.equal(mediaBlocks(stroke.lesson.body)[0]!.descriptor.mimeType, "image/svg+xml", "The Learner is served the SVG itself.");
 });
 
 test("A Lesson's descriptor is a copy: editing the catalog afterwards cannot change it", async () => {
   const row = plate();
-  const { generator } = scriptedGenerator(asking());
-  const { judge } = visionJudge(PASS);
-  const checked = await createReadingGenerator({ generator, judge, media: library([row]) }).generate(INPUT);
+  const { generator } = scriptedGenerator(briefing());
+  const checked = await createReadingGenerator({ generator, judge: visionJudge(PASS).judge, media: library([row]) }).generate(PLANNING);
   row.caption = "Edited later.";
   row.topicTags.push("edited");
   row.source!.author = "Someone else";
   assert.deepEqual(mediaBlocks(checked.lesson.body)[0]!.descriptor, plate());
 });
 
-test("A catalog miss drops the image and the Lesson goes on without it, with no vision call", async () => {
-  const { generator } = scriptedGenerator(asking({ ...ASK, topicTags: ["bifrost"] }));
+test("A reused Lesson briefs the visuals its new slot plans; its own pictures are not carried over", async () => {
+  const { generator, calls } = scriptedGenerator({ ...fitReply("verbatim"), visuals: [BRIEF] });
   const { judge, vision } = visionJudge(PASS);
-  const checked = await createReadingGenerator({ generator, judge, media: library([plate()]) }).generate(INPUT);
-  assert.equal(vision.length, 0);
-  assert.deepEqual(mediaBlocks(checked.lesson.body), []);
-  assert.equal(checked.media[0]!.status, "miss");
-  assert.equal(checked.judge.pass, true);
-});
+  const checked = await createReadingGenerator({ generator, judge, media: readable([nthPlate(1)]) }).generate({ ...PLANNING, reuse: SEED });
 
-test("Deterministic checks skip an unhostable or unreadable file for the next match, and drop the image when none is left", async () => {
-  const nonCommercial = plate({ id: "d0a1e001-0000-4000-8000-00000000000a", storageKey: "library/norse/a-nc.jpg", license: "cc_by_nc" as MediaLicense, topicTags: ["yggdrasil", "world-tree", "ash"] });
-  const unreadable = plate({ id: "d0a1e001-0000-4000-8000-00000000000b", storageKey: "library/norse/b-gone.jpg" });
-  const { generator } = scriptedGenerator(asking({ ...ASK, topicTags: ["yggdrasil", "ash"] }));
-  const { judge, vision } = visionJudge(PASS);
-  const checked = await createReadingGenerator({ generator, judge, media: library([nonCommercial, unreadable, plate()]) }).generate(INPUT);
+  assert.match(calls[0]!.systemPrompt, /"slot\.visuals" lists the pictures/);
+  assert.ok((calls[0]!.schema as { required: string[] }).required.includes("visuals"));
+  assert.deepEqual(checked.visuals.map(({ placement, status }) => [placement.section, status]), [["The tree", "library"]]);
   assert.equal(vision.length, 1);
-  assert.equal(mediaBlocks(checked.lesson.body)[0]!.descriptor.id, plate().id);
-  const [outcome] = checked.media;
-  assert.equal(outcome!.status, "attached");
-  assert.deepEqual(outcome!.rejected.map(({ storageKey }) => storageKey), [nonCommercial.storageKey, unreadable.storageKey]);
-  assert.match(outcome!.rejected[0]!.failures.join(" "), /not one the product can host/);
-  assert.match(outcome!.rejected[1]!.failures.join(" "), /No file at/);
+  assert.equal(checked.lesson.lineage?.mode, "verbatim", "Briefing a visual does not make a verbatim Lesson adapted.");
 
-  const { generator: again } = scriptedGenerator(asking());
-  const none = visionJudge(PASS);
-  const dropped = await createReadingGenerator({ generator: again, judge: none.judge, media: library([nonCommercial]) }).generate(INPUT);
-  assert.equal(none.vision.length, 0, "No file passed the checks, so nothing is shown to the vision Judge.");
-  assert.equal(dropped.media[0]!.status, "invalid");
-  assert.deepEqual(mediaBlocks(dropped.lesson.body), []);
-});
+  const { generator: plain, calls: fitCalls } = scriptedGenerator(fitReply("verbatim"));
+  const without = await createReadingGenerator({ generator: plain, judge: visionJudge(PASS).judge, media: readable([nthPlate(1)]) }).generate(reusing());
+  assert.deepEqual(without.visuals, [], "A slot that plans nothing briefs nothing.");
+  assert.doesNotMatch(fitCalls[0]!.systemPrompt, /slot\.visuals/);
 
-test("An optional image the vision Judge fails, or whose vision call fails, is dropped and the Lesson keeps what passed", async () => {
-  const { generator } = scriptedGenerator(asking(), "fixture/author", UNFIT);
-  const failing = visionJudge({ pass: false, failedChecks: ["caption_fit"], reasons: ["The image is a painting, not a photograph."] });
-  const failed = await createReadingGenerator({ generator, judge: failing.judge, media: library([plate()]) }).generate(INPUT);
-  assert.equal(failed.media[0]!.status, "vision_failed");
-  assert.deepEqual(mediaBlocks(failed.lesson.body), []);
-  assert.equal(failed.repairs, 0, "An optional image spends no Lesson repair.");
-
-  const { generator: again } = scriptedGenerator(asking());
-  const erroring = visionJudge(new ModelError("timeout"));
-  const errored = await createReadingGenerator({ generator: again, judge: erroring.judge, media: library([plate()]) }).generate(INPUT);
-  assert.equal(errored.media[0]!.status, "vision_error");
-  assert.deepEqual(mediaBlocks(errored.lesson.body), []);
-
-  const { generator: third } = scriptedGenerator(asking());
-  const broken = visionJudge(new Error("lease lost"));
-  await assert.rejects(createReadingGenerator({ generator: third, judge: broken.judge, media: library([plate()]) }).generate(INPUT), /lease lost/);
-});
-
-test("Repairs keep the image the first draft asked for; a section the repairs cut takes it with it", async () => {
-  const fail = { pass: false, failedChecks: ["claim_support"], reasons: ["Roots are unsupported."] };
-  const { generator } = scriptedGenerator(asking(), "fixture/author", TOUCH);
-  const scripted = visionJudge(PASS);
-  const base = scripted.judge;
-  let lessonVerdicts = 0;
-  const judge: Judge = {
-    modelId: base.modelId,
-    async judge(request) {
-      if (request.schemaName === "reading_lesson_review") return { value: request.parse(lessonVerdicts++ === 0 ? fail : PASS), modelId: "fixture/judge" };
-      return base.judge(request);
-    },
-  };
-  const repaired = await createReadingGenerator({ generator, judge, media: library([plate()]) }).generate(INPUT);
-  assert.equal(repaired.repairs, 1);
-  assert.equal(repaired.media[0]!.status, "attached");
-
-  const { generator: misnamed } = scriptedGenerator(asking({ ...ASK, section: "A heading no draft has" }));
-  const unplaced = visionJudge(PASS);
-  const checked = await createReadingGenerator({ generator: misnamed, judge: unplaced.judge, media: library([plate()]) }).generate(INPUT);
-  assert.equal(checked.media[0]!.status, "unplaced");
-  assert.equal(unplaced.vision.length, 0);
-
-  const { generator: loosely } = scriptedGenerator(asking({ ...ASK, section: "  the  TREE " }));
-  const placed = await createReadingGenerator({ generator: loosely, judge: visionJudge(PASS).judge, media: library([plate()]) }).generate(INPUT);
-  assert.equal(placed.media[0]!.status, "attached", "A heading named with other case or spacing still places the image.");
-});
-
-test("A request outside the offered catalog is dropped, not a failed draft; with no library, no image is offered", async () => {
-  const { generator } = scriptedGenerator(asking({ ...ASK, mediaCategory: "drum-grip" }));
-  const { judge } = visionJudge(PASS);
-  const checked = await createReadingGenerator({ generator, judge, media: library([plate()]) }).generate(INPUT);
-  assert.deepEqual(checked.media, []);
-
-  const { generator: plain, calls } = scriptedGenerator(authored());
-  const without = await createReadingGenerator({ generator: plain, judge: scriptedJudge().judge }).generate(INPUT);
-  assert.deepEqual(without.media, []);
-  assert.doesNotMatch(calls[0]!.systemPrompt, /mediaCatalog/);
-  assert.ok(!("mediaCatalog" in (calls[0]!.input as object)));
-});
-
-test("A reused Lesson asks this Course's catalog again for the image it had", async () => {
-  const origin = await createReadingGenerator({ generator: scriptedGenerator(asking()).generator, judge: visionJudge(PASS).judge, media: library([plate()]) }).generate(INPUT);
-  const proposals = mediaProposalsOf(origin.lesson.body);
-  assert.deepEqual(proposals, [{ section: "The tree", mediaCategory: "norse-mythic-depiction", topicTags: ["yggdrasil", "world-tree"], caption: ASK.caption, alt: ASK.alt, required: false }]);
-  assert.deepEqual(authoredSections(origin.lesson.body, origin.lesson.sources), authoredSections(numberCitations(authored().sections, lessonEvidence(INPUT.packs)).body, origin.lesson.sources), "Media blocks are not prose to fit.");
-
-  const { generator, calls } = scriptedGenerator(fitReply("verbatim"));
-  const { judge, vision } = visionJudge(PASS);
-  const reused = await createReadingGenerator({ generator, judge, media: library([plate()]) }).generate(reusing({ media: proposals }));
-  assert.ok(!("mediaCatalog" in (calls[0]!.input as object)), "The fit pass is not offered a new image.");
-  assert.equal(vision.length, 1);
-  assert.equal(reused.media[0]!.status, "attached");
-  assert.equal(mediaBlocks(reused.lesson.body)[0]!.descriptor.id, plate().id);
-});
-
-// ── Required media (SEN-115) ────────────────────────────────────────────────────────────────────────────────────────
-
-/** INPUT, with a slot that cannot teach without a Yggdrasil plate. */
-const REQUIRING: ReadingInput = { ...INPUT, slot: { ...SLOT, requiredMedia: [{ mediaCategory: "norse-mythic-depiction", topicTags: ["yggdrasil"] }] } };
-
-/** Where the writer places the required plate, and what the Learner reads with it. */
-const PLACE = { section: "The tree", caption: "One artist's depiction of Yggdrasil.", alt: "An engraving of an ash tree whose roots spread wide." };
-
-/** A first draft placing each required image, and asking for each of `media` as an optional one. */
-function placing(required: unknown[] = [PLACE], ...media: unknown[]) {
-  return { ...authored(), requiredMedia: required, media };
-}
-
-/** The n-th Yggdrasil plate; plates rank by storage key, so plate 1 is tried first. */
-function nthPlate(n: number): MediaDescriptorFields {
-  return plate({ id: `d0a1e001-0000-4000-8000-00000000010${n}`, storageKey: `library/norse/yggdrasil-${n}.jpg`, caption: `Plate ${n} of Yggdrasil.` });
-}
-
-/** A library holding `rows`, every one of them readable. */
-function readable(rows: MediaDescriptorFields[]): MediaLibrary {
-  return library(rows, Object.fromEntries(rows.map((row) => [row.storageKey, PLATE_BYTES])));
-}
-
-const VISION_FAIL = { pass: false, failedChecks: ["caption_fit"], reasons: ["It shows a different tree."] };
-
-/** A caption repair that keeps the file with new sentences. */
-const REFIT = { reason: "It shows the tree, drawn differently.", fits: true, caption: "Yggdrasil as one engraver drew it.", alt: "An engraving of a tall ash tree." };
-
-/** Records every generator call by schema; the caption repair answers as `repairModelId` when given. */
-function writer(outputs: { draft: unknown; repair?: unknown }, repairModelId = "fixture/author") {
-  const calls: { schemaName: string; input: unknown; systemPrompt: string; schema: unknown }[] = [];
-  const generator: Generator = {
-    modelId: "fixture/author",
-    async generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
-      calls.push({ schemaName: request.schemaName, input: request.input, systemPrompt: request.systemPrompt, schema: request.schema });
-      const repair = request.schemaName === "media_caption_repair";
-      return { value: request.parse(repair ? outputs.repair : outputs.draft), modelId: repair ? repairModelId : "fixture/author" };
-    },
-  };
-  return { generator, calls };
-}
-
-test("The writer places each image the slot requires, from the slot's category and tags, before any optional one; no file is shown twice", async () => {
-  const { generator, calls } = writer({ draft: placing([PLACE], { ...ASK, section: "Roots" }) });
-  const { judge, vision } = visionJudge(PASS);
-  const checked = await createReadingGenerator({ generator, judge, media: readable([nthPlate(1), nthPlate(2)]) }).generate(REQUIRING);
-
-  const author = calls[0]!;
-  assert.match(author.systemPrompt, /"slot\.requiredMedia" lists images this Lesson cannot teach without/);
-  assert.deepEqual((author.input as { slot: { requiredMedia: unknown } }).slot.requiredMedia, REQUIRING.slot.requiredMedia);
-  const schema = author.schema as { required: string[]; properties: { requiredMedia: { minItems: number; maxItems: number }; media: { maxItems: number } } };
-  assert.deepEqual(schema.required, ["sections", "requiredMedia", "media"]);
-  assert.deepEqual([schema.properties.requiredMedia.minItems, schema.properties.requiredMedia.maxItems], [1, 1], "One placement per required image, no more.");
-  assert.equal(schema.properties.media.maxItems, 2);
-
-  assert.deepEqual(checked.media.map(({ status, proposal }) => [status, proposal.required]), [["attached", true], ["attached", false]]);
-  assert.deepEqual(checked.media[0]!.proposal, { ...PLACE, mediaCategory: "norse-mythic-depiction", topicTags: ["yggdrasil"], required: true });
-  assert.equal(vision.length, 2);
-  const [tree, roots] = checked.lesson.body.sections;
-  assert.equal((tree!.blocks.at(-1) as MediaBlock).descriptor.id, nthPlate(1).id, "The required image has first pick.");
-  assert.equal((roots!.blocks.at(-1) as MediaBlock).descriptor.id, nthPlate(2).id, "The optional image takes the next file, not the same one.");
-  assert.equal(checked.repairs, 0);
-});
-
-test("A writer may add at most two optional images; more are ignored", async () => {
-  const { generator } = writer({ draft: asking(ASK, { ...ASK, section: "Roots" }, ASK) });
-  const checked = await createReadingGenerator({ generator, judge: visionJudge(PASS).judge, media: readable([nthPlate(1), nthPlate(2), nthPlate(3)]) }).generate(INPUT);
-  assert.equal(checked.media.length, 2);
-  assert.equal(mediaBlocks(checked.lesson.body).length, 2);
-});
-
-test("A draft that does not place every required image, or places one with no caption, is invalid output", async () => {
-  for (const draft of [placing([]), placing([{ ...PLACE, caption: " " }]), authored()]) {
-    const { generator } = writer({ draft });
-    await assert.rejects(
-      createReadingGenerator({ generator, judge: visionJudge(PASS).judge, media: readable([nthPlate(1)]) }).generate(REQUIRING),
-      (error: unknown) => error instanceof ModelError && error.code === "invalid_output",
-    );
-  }
-});
-
-test("A file the vision Judge fails gets one caption repair: the writer sees the reasons and what a person wrote for the file, and the new sentences are judged again", async () => {
-  const { generator, calls } = writer({ draft: asking(), repair: REFIT }, "fixture/fallback");
-  const { judge, vision } = visionJudge(VISION_FAIL, PASS);
-  const checked = await createReadingGenerator({ generator, judge, media: readable([nthPlate(1)]) }).generate(INPUT);
-
-  const repair = calls.find((call) => call.schemaName === "media_caption_repair")!;
-  assert.deepEqual((repair.input as { file: unknown }).file, { caption: nthPlate(1).caption, alt: nthPlate(1).alt });
-  assert.deepEqual((repair.input as { reasons: unknown }).reasons, VISION_FAIL.reasons);
-  assert.deepEqual((repair.input as { section: { heading: string } }).section.heading, "The tree");
-  assert.deepEqual(vision.map((request) => request.input), [{ caption: ASK.caption, alt: ASK.alt }, { caption: REFIT.caption, alt: REFIT.alt }]);
-  assert.ok(vision[1]!.authorModelIds.includes("fixture/fallback"), "The model that rewrote the caption is an author the vision Judge is not.");
-  assert.ok(checked.authorModelIds.includes("fixture/fallback"));
-
-  const [block] = mediaBlocks(checked.lesson.body);
-  assert.deepEqual([block!.caption, block!.alt], [REFIT.caption, REFIT.alt]);
-  assert.equal(checked.media[0]!.checks.length, 2);
-  assert.equal(checked.media[0]!.repair!.fits, true);
-  assert.equal(checked.repairs, 0, "The caption repair is the image's own, not one of the Lesson's.");
-
-  const unfit = writer({ draft: asking(), repair: UNFIT });
-  const once = visionJudge(VISION_FAIL, PASS);
-  const dropped = await createReadingGenerator({ generator: unfit.generator, judge: once.judge, media: readable([nthPlate(1)]) }).generate(INPUT);
-  assert.equal(once.vision.length, 1, "A file the writer finds unfit is not judged again.");
-  assert.equal(dropped.media[0]!.status, "vision_failed");
-  assert.deepEqual(mediaBlocks(dropped.lesson.body), []);
-});
-
-test("A required image that still fails its vision check spends a Lesson repair on the next-ranked file", async () => {
-  const { generator } = writer({ draft: placing(), repair: REFIT });
-  const { judge, vision } = visionJudge(VISION_FAIL, VISION_FAIL, PASS);
-  const checked = await createReadingGenerator({ generator, judge, media: readable([nthPlate(1), nthPlate(2)]) }).generate(REQUIRING);
-
-  assert.equal(checked.repairs, 1);
-  assert.equal(vision.length, 3, "Plate 1, its caption repair, then plate 2.");
-  assert.deepEqual(vision[2]!.input, { caption: PLACE.caption, alt: PLACE.alt }, "The next file is judged against the caption as placed.");
-  assert.equal(mediaBlocks(checked.lesson.body)[0]!.descriptor.id, nthPlate(2).id);
-  assert.deepEqual(checked.rounds.map((round) => [round.mediaRepair ?? false, round.attached?.map(({ status }) => status)]), [[false, ["vision_failed"]], [true, ["attached"]]]);
-  assert.match(checked.rounds[0]!.problems.join(" "), /The required norse-mythic-depiction image \(yggdrasil\) after "The tree" failed its vision check: It shows a different tree\./);
-  assert.deepEqual(checked.rounds[1]!.problems, []);
-});
-
-test("A required image with no file left fails the Lesson, then the fallback author's, naming the image", async () => {
-  const { generator, calls } = writer({ draft: placing(), repair: UNFIT });
-  const fallback = writer({ draft: placing(), repair: UNFIT });
-  const fallbackGenerator: Generator = { ...fallback.generator, modelId: "fixture/fallback" };
-  const { judge, vision } = visionJudge(VISION_FAIL);
-  await assert.rejects(
-    createReadingGenerator({ generator, fallbackGenerator, judge, media: readable([nthPlate(1)]) }).generate(REQUIRING),
-    (error: unknown) => {
-      assert.ok(error instanceof ReadingFailedError);
-      assert.equal(error.requiredMediaMissing, true);
-      assert.match(error.message, /failed required media checks \|\| The required norse-mythic-depiction image \(yggdrasil\) after "The tree" has no library file left to try\./);
-      assert.equal(error.media[0]!.status, "miss");
-      assert.ok(error.rounds.some((round) => round.mediaRepair), "Looking for another file spent a repair.");
-      return true;
-    },
-  );
-  assert.equal(calls.filter((call) => call.schemaName === "cited_reading").length, 1);
-  assert.equal(fallback.calls.filter((call) => call.schemaName === "cited_reading").length, 1, "The fallback author writes a fresh draft, as for any failed check.");
-  assert.equal(vision.length, 2, "One vision call per author: plate 1, found unfit, and no second file.");
-});
-
-test("A required image whose section is gone, or that the library cannot supply, fails with no vision call", async () => {
-  const cases: [unknown, MediaLibrary | undefined, string][] = [
-    [placing([{ ...PLACE, section: "A heading no draft has" }]), readable([nthPlate(1)]), "names a section the Lesson does not have"],
-    [placing(), readable([]), "has no library file left to try"],
-  ];
-  for (const [draft, media, reason] of cases) {
-    const { generator } = writer({ draft });
-    const { judge, vision } = visionJudge(PASS);
-    await assert.rejects(createReadingGenerator({ generator, judge, media }).generate(REQUIRING), (error: unknown) =>
-      error instanceof ReadingFailedError && error.requiredMediaMissing && error.message.includes(reason) && !error.rounds.some((round) => round.mediaRepair));
-    assert.equal(vision.length, 0);
-  }
-});
-
-test("Required images spend only the repairs the prose left", async () => {
-  const fail = { pass: false, failedChecks: ["claim_support"], reasons: ["Roots are unsupported."] };
-  const scripted = visionJudge(VISION_FAIL);
-  let lessonVerdicts = 0;
-  const judge: Judge = {
-    modelId: scripted.judge.modelId,
-    async judge(request) {
-      if (request.schemaName === "reading_lesson_review") return { value: request.parse(lessonVerdicts++ === 0 ? fail : PASS), modelId: "fixture/judge" };
-      return scripted.judge.judge(request);
-    },
-  };
-  // One reply serves both calls: the first draft reads its sections and placement, the repair its edit, which changes
-  // nothing but still applies, so the draft is judged again and passes.
-  const { generator } = writer({ draft: { ...placing(), edits: TOUCH.edits }, repair: REFIT });
-  const media = readable([nthPlate(1), nthPlate(2), nthPlate(3)]);
-  await assert.rejects(createReadingGenerator({ generator, judge, media }).generate(REQUIRING), (error: unknown) =>
-    error instanceof ReadingFailedError && error.requiredMediaMissing && error.media[0]!.status === "vision_failed");
-  assert.equal(MAX_REPAIRS, 2);
-  assert.equal(scripted.vision.length, 4, "One prose repair leaves one media repair: plates 1 and 2, two checks each; plate 3 is never tried.");
-});
-
-test("A provider failure on a required image's vision call stops the run as an interruption, not a failed check", async () => {
-  const { generator } = writer({ draft: placing() });
-  const { judge } = visionJudge(new ModelError("timeout"));
-  await assert.rejects(createReadingGenerator({ generator, judge, media: readable([nthPlate(1)]) }).generate(REQUIRING), (error: unknown) =>
-    error instanceof ModelError && error.code === "timeout");
-});
-
-test("An SVG diagram is checked for unsafe content, shown to the vision Judge as a PNG, and kept as the SVG", async () => {
-  const svg = await readFile(resolve(CATALOG_DIR, "drums/rebound-stroke.svg"));
-  const unsafe = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
-  /** A product-owned stroke diagram. */
-  const diagram = (overrides: Partial<MediaDescriptorFields>) => plate({
-    kind: "image", license: "product_owned", source: null, licenseUrl: null, mimeType: "image/svg+xml", mediaCategory: "drum-stroke", ...overrides,
-  });
-  const strip = diagram({ id: "d0a1e047-0000-4000-8000-000000000028", storageKey: "library/drums/rebound-stroke.svg", topicTags: ["rebound-stroke", "full-stroke"] });
-  const scripted = diagram({ id: "d0a1e047-0000-4000-8000-000000000099", storageKey: "library/drums/a-scripted.svg", topicTags: ["rebound-stroke", "full-stroke", "stroke"] });
-  const input: ReadingInput = { ...INPUT, slot: { ...SLOT, requiredMedia: [{ mediaCategory: "drum-stroke", topicTags: ["rebound-stroke", "stroke"] }] } };
-  const { generator } = writer({ draft: placing([{ ...PLACE, caption: "A full stroke in four stills.", alt: "Four views of a stick." }]) });
-  const { judge, vision } = visionJudge(PASS);
-  const checked = await createReadingGenerator({ generator, judge, media: library([strip, scripted], { [strip.storageKey]: svg, [scripted.storageKey]: unsafe }) }).generate(input);
-
-  assert.match(checked.media[0]!.rejected[0]!.failures.join(" "), /The SVG holds a script/, "The best-ranked file is unsafe and skipped.");
-  const [image] = vision[0]!.images!;
-  assert.equal(image!.mimeType, "image/png");
-  assert.deepEqual([...image!.bytes.subarray(0, 4)], [0x89, 0x50, 0x4e, 0x47]);
-  const [block] = mediaBlocks(checked.lesson.body);
-  assert.equal(block!.descriptor.mimeType, "image/svg+xml", "The Learner is served the SVG itself.");
-  assert.equal(block!.descriptor.id, strip.id);
-});
-
-test("A reused Lesson places the images its new slot requires; its own image of that category gives way", async () => {
-  const proposals = [{ section: "Roots", mediaCategory: "norse-mythic-depiction" as const, topicTags: ["yggdrasil"], caption: "Old caption.", alt: "Old alt.", required: false }];
-  const { generator, calls } = writer({ draft: { ...fitReply("verbatim"), requiredMedia: [PLACE] } });
-  const { judge, vision } = visionJudge(PASS);
-  const checked = await createReadingGenerator({ generator, judge, media: readable([nthPlate(1)]) }).generate({ ...REQUIRING, reuse: { ...SEED, media: proposals } });
-
-  assert.match(calls[0]!.systemPrompt, /"slot\.requiredMedia" lists images/);
-  assert.ok((calls[0]!.schema as { required: string[] }).required.includes("requiredMedia"));
-  assert.deepEqual(checked.media.map(({ proposal }) => [proposal.section, proposal.required]), [["The tree", true]]);
-  assert.equal(vision.length, 1);
-  assert.equal(checked.lesson.lineage?.mode, "verbatim", "Placing an image does not make a verbatim Lesson adapted.");
-
-  const { generator: unplaced } = writer({ draft: fitReply("verbatim") });
-  await assert.rejects(createReadingGenerator({ generator: unplaced, judge: visionJudge(PASS).judge, media: readable([nthPlate(1)]) }).generate({ ...REQUIRING, reuse: SEED }),
+  const { generator: unbriefed } = scriptedGenerator(fitReply("verbatim"));
+  await assert.rejects(createReadingGenerator({ generator: unbriefed, judge: visionJudge(PASS).judge, media: readable([nthPlate(1)]) }).generate({ ...PLANNING, reuse: SEED }),
     (error: unknown) => error instanceof ModelError && error.code === "invalid_output");
 });
 
-test("With no media library (READING_MEDIA=off) a slot's required images are not asked for, so the Lesson is written with none", async () => {
-  const { generator, calls } = writer({ draft: { ...authored(), media: [] } });
+test("With no media library (READING_MEDIA=off) a slot's planned visuals are not briefed, so the Lesson is written with none", async () => {
+  const { generator, calls } = scriptedGenerator(authored());
   const { judge } = visionJudge(PASS);
-  const checked = await createReadingGenerator({ generator, judge }).generate(REQUIRING);
+  const checked = await createReadingGenerator({ generator, judge }).generate(PLANNING);
 
   const author = calls[0]!;
-  assert.equal((author.input as { slot: { requiredMedia?: unknown } }).slot.requiredMedia, undefined);
-  assert.equal((author.schema as { properties: Record<string, unknown> }).properties.requiredMedia, undefined);
-  assert.deepEqual(checked.media, []);
+  assert.equal((author.input as { slot: { visuals?: unknown } }).slot.visuals, undefined);
+  assert.equal((author.schema as { properties: Record<string, unknown> }).properties.visuals, undefined);
+  assert.doesNotMatch(author.systemPrompt, /slot\.visuals|mediaCatalog/);
+  assert.deepEqual(checked.visuals, []);
 });
 
 test("A passing Reading gets a word list: a word not in the prose and one the glossary Judge rejects are dropped (SEN-48)", async () => {
@@ -1333,6 +1283,32 @@ test("A Chapter is drafted in one author call, vetted once, grounded per slot, a
   assert.equal(glossaries.length, 2);
   await assert.rejects(draft.finish("slot2", [prior]), /finished already/);
   await assert.rejects(reading.draftChapter!(chapterInput(SLOT)), /at least two Lessons/);
+});
+
+test("A Chapter's Lessons brief their visuals in their own entries, and every picture is searched for as soon as the Chapter is drafted", async () => {
+  const second = { ...BRIEF, section: "Roots", subject: "The roots" };
+  const { generator, calls } = scriptedGenerator({ lessons: { slot1: briefing(), slot2: briefing(second) } });
+  const drawn = scriptedIllustrator("illustrated");
+  const scripted = visionJudge(PASS);
+  const slots: BlueprintSlot[] = [{ ...SLOT, chapter: "The tree", visuals: [TREE_PLAN] }, { ...SLOT2, visuals: [{ kind: "diagram", intent: "The roots." }] }];
+  const draft = await createReadingGenerator({ generator, judge: scripted.judge, media: readable([plate()]), illustrator: drawn.illustrator }).draftChapter!(chapterInput(...slots));
+
+  assert.match(calls[0]!.systemPrompt, /"slot\.visuals" lists the pictures/);
+  assert.match(calls[0]!.systemPrompt, /"visuals" is written inside each Lesson's own entry/);
+  assert.ok("mediaCatalog" in (calls[0]!.input as object));
+  const told = calls[0]!.input as { chapter: { slots: { visuals?: unknown }[] } };
+  assert.deepEqual(told.chapter.slots.map((slot) => slot.visuals), [[TREE_PLAN], [{ kind: "diagram", intent: "The roots." }]]);
+  const schema = calls[0]!.schema as { properties: { lessons: { properties: Record<string, { required: string[] }> } } };
+  assert.deepEqual(schema.properties.lessons.properties.slot2!.required, ["sections", "visuals"]);
+  assert.deepEqual(draft.lessons.map(({ visuals }) => visuals.map(({ brief }) => brief.subject)), [[BRIEF.subject], [second.subject]]);
+  assert.equal(drawn.calls.length, 2, "Both Lessons' pictures are being drawn before either Lesson is finished.");
+  assert.deepEqual(drawn.calls.map(({ authorModelIds }) => authorModelIds), [["fixture/author"], ["fixture/author"]]);
+
+  const first = await draft.finish("slot1", []);
+  assert.equal(first.visuals[0]!.status, "illustrated");
+  assert.equal(drawn.calls.length, 2, "Finishing a Lesson draws nothing new.");
+  const next = await draft.finish("slot2", []);
+  assert.equal(next.visuals[0]!.status, "illustrated", "The fixture drew the same picture for both; a file is a duplicate only within one Lesson.");
 });
 
 test("A Chapter Lesson the Judge fails is repaired alone, from its own share of the draft, with its own slot in the brief", async () => {

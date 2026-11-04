@@ -1,0 +1,779 @@
+{
+  "startedAt": "2026-11-03T22:30:42.714Z",
+  "latencyMs": 179530,
+  "sourcePacks": "docs\\research\\sen-36-norse-source-packs.json",
+  "slot": {
+    "id": "slot1",
+    "method": "reading",
+    "title": "Yggdrasil and the Nine Worlds",
+    "lessonGoal": "Describe how Norse sources picture Yggdrasil connecting the Nine Worlds.",
+    "objectives": [
+      "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "Explain why accounts of Yggdrasil's roots differ between Norse sources"
+    ],
+    "topicTags": [
+      "yggdrasil",
+      "nine-worlds",
+      "norse-cosmology"
+    ],
+    "assessesSlotIds": [],
+    "visuals": [
+      {
+        "kind": "depiction",
+        "intent": "Yggdrasil, the world ash, with its roots and the beings the sources place around it, so the Learner sees how one tree holds the worlds together."
+      }
+    ]
+  },
+  "profile": {
+    "instructionLanguage": "en",
+    "requiredReadingSupports": [],
+    "contentScope": "standard",
+    "explanationOrder": "topic_appropriate"
+  },
+  "status": "checkpoint",
+  "lesson": {
+    "slotId": "slot1",
+    "teachingMethod": "reading",
+    "title": "Yggdrasil and the Nine Worlds",
+    "lessonGoal": "Describe how Norse sources picture Yggdrasil connecting the Nine Worlds.",
+    "objectives": [
+      "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "Explain how accounts of Yggdrasil's roots differ between Norse sources"
+    ],
+    "topicTags": [
+      "yggdrasil",
+      "nine-worlds",
+      "norse-cosmology"
+    ],
+    "lineage": null,
+    "body": {
+      "sections": [
+        {
+          "heading": "A tree at the centre",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Yggdrasil, the world tree, has branches that reach across the world and above the sky [1]. Norse sources picture the Nine Worlds around this tree, giving you a way to picture their universe [2]. A squirrel carries an eagle’s words down the tree to a creature below [3]. A dragon gnaws at the tree’s roots [4]."
+            }
+          ]
+        },
+        {
+          "heading": "Gods, humans, and the dead",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Asgard is a world of gods [5]. Midgard is the world where humans live [5]. Hel is a world of the dead, associated at first with those who died from illness or old age [5]. These are three of the Nine Worlds in the account associated with the writer Snorri Sturluson and those who followed him [5]."
+            }
+          ]
+        },
+        {
+          "heading": "The roots reach different places",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "One poem places Hel, giants, and human lands beneath Yggdrasil’s three roots [3]. A prose account also gives the tree three roots, but includes a root among the gods as well as a root among giants [1]. Yggdrasil stands at the centre of the worlds, while accounts differ about where its roots reach [5][3][1]."
+            },
+            {
+              "kind": "media",
+              "caption": "The Course’s own illustration shows the world tree, three roots, and the beings around it.",
+              "alt": "A spreading tree has three roots above areas labelled Hel, Giants, and Human lands. An eagle sits high in the tree, a squirrel is lower down, and a dragon beneath the tree gnaws a root.",
+              "descriptor": {
+                "id": "c9335d7e-5798-8969-a204-af9f4bc55a91",
+                "kind": "image",
+                "origin": "generated",
+                "license": "product_owned",
+                "licenseUrl": null,
+                "caption": "The Course’s own illustration shows the world tree, three roots, and the beings around it.",
+                "alt": "A spreading tree has three roots above areas labelled Hel, Giants, and Human lands. An eagle sits high in the tree, a squirrel is lower down, and a dragon beneath the tree gnaws a root.",
+                "source": null,
+                "storageKey": "generated/c9335d7e5798f969a204af9f4bc55a9121b620e0e133eb2c935543a9f36a2eb1.png",
+                "mimeType": "image/png",
+                "byteSize": 1075606,
+                "sha256": "c9335d7e5798f969a204af9f4bc55a9121b620e0e133eb2c935543a9f36a2eb1",
+                "width": 1200,
+                "height": 800,
+                "mediaCategory": "norse-mythic-depiction",
+                "topicTags": [
+                  "world-tree",
+                  "yggdrasil",
+                  "cosmology"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "glossary": [
+        {
+          "term": "world tree",
+          "definition": "A tree in mythology that connects different parts of the universe."
+        },
+        {
+          "term": "prose",
+          "definition": "Writing in ordinary sentences rather than poetry."
+        }
+      ]
+    },
+    "sources": [
+      {
+        "n": 1,
+        "sourceId": "src_238610fc85",
+        "url": "https://www.sacred-texts.com/neu/pre/pre04.htm",
+        "title": "Gylfaginning | Internet Sacred Text Archive",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 2,
+        "sourceId": "src_8c1061af65",
+        "url": "https://en.wikipedia.org/w/index.php?title=Norse_cosmology&oldid=1357244099",
+        "title": "Norse cosmology",
+        "publisher": "en.wikipedia.org",
+        "retrievedAt": "2026-10-08T17:41:28.581Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 3,
+        "sourceId": "src_7d9e9ae17d",
+        "url": "https://sacred-texts.com/neu/poe/poe06.htm",
+        "title": "Grimnismol – The Poetic Edda | Internet Sacred Text Archive",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 4,
+        "sourceId": "src_b6cf1c25b8",
+        "url": "https://sacred-texts.com/neu/poe/poe03.htm",
+        "title": "Völuspá (Voluspo) – Poetic Edda, Vol. I | Bellows Translation",
+        "publisher": "sacred-texts.com",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 5,
+        "sourceId": "src_2b9c51c172",
+        "url": "https://www.worldhistory.org/article/1305/nine-realms-of-norse-cosmology",
+        "title": "Nine Realms of Norse Cosmology",
+        "publisher": "worldhistory.org",
+        "retrievedAt": "2026-10-08T17:41:57.034Z",
+        "usedAs": "paraphrase"
+      }
+    ],
+    "citations": [
+      {
+        "n": 1,
+        "title": "Gylfaginning | Internet Sacred Text Archive",
+        "url": "https://www.sacred-texts.com/neu/pre/pre04.htm"
+      },
+      {
+        "n": 2,
+        "title": "Norse cosmology",
+        "url": "https://en.wikipedia.org/w/index.php?title=Norse_cosmology&oldid=1357244099"
+      },
+      {
+        "n": 3,
+        "title": "Grimnismol – The Poetic Edda | Internet Sacred Text Archive",
+        "url": "https://sacred-texts.com/neu/poe/poe06.htm"
+      },
+      {
+        "n": 4,
+        "title": "Völuspá (Voluspo) – Poetic Edda, Vol. I | Bellows Translation",
+        "url": "https://sacred-texts.com/neu/poe/poe03.htm"
+      },
+      {
+        "n": 5,
+        "title": "Nine Realms of Norse Cosmology",
+        "url": "https://www.worldhistory.org/article/1305/nine-realms-of-norse-cosmology"
+      }
+    ]
+  },
+  "visuals": [
+    {
+      "placement": {
+        "section": "The roots reach different places",
+        "brief": {
+          "kind": "depiction",
+          "subject": "An ash tree spreads above three roots leading to Hel, giants, and human lands, with an eagle above, a squirrel on the tree, and a dragon below.",
+          "mustShow": [
+            "A large central tree with widely spreading branches",
+            "Exactly three spreading roots",
+            "Three areas beneath the roots, individually labelled Hel, Giants, and Human lands",
+            "An eagle above the squirrel",
+            "A squirrel on the tree",
+            "A dragon below the tree, gnawing a root"
+          ],
+          "caption": "The Course’s own illustration shows the world tree, three roots, and the beings around it.",
+          "alt": "A spreading tree has three roots above areas labelled Hel, Giants, and Human lands. An eagle sits high in the tree, a squirrel is lower down, and a dragon beneath the tree gnaws a root.",
+          "mediaCategory": "norse-mythic-depiction",
+          "topicTags": [
+            "world-tree",
+            "yggdrasil",
+            "cosmology"
+          ]
+        }
+      },
+      "status": "illustrated",
+      "library": [],
+      "illustration": {
+        "outcome": "illustrated",
+        "attempts": [
+          {
+            "modelId": "openai/gpt-6.1-sol",
+            "judge": {
+              "pass": true,
+              "failedChecks": [],
+              "reasons": []
+            },
+            "judgeModelId": "openai/gpt-6-luna"
+          }
+        ]
+      },
+      "descriptorId": "c9335d7e-5798-8969-a204-af9f4bc55a91"
+    }
+  ],
+  "judge": {
+    "pass": true,
+    "failedChecks": [],
+    "reasons": []
+  },
+  "repairs": 0,
+  "grounding": [
+    {
+      "objective": "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "verdict": "supported",
+      "text": "Describe Yggdrasil as the world tree at the centre of Norse cosmology",
+      "reason": ""
+    },
+    {
+      "objective": "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "verdict": "supported",
+      "text": "Name the realms of gods, humans, and the dead among the Nine Worlds",
+      "reason": ""
+    },
+    {
+      "objective": "Explain why accounts of Yggdrasil's roots differ between Norse sources",
+      "verdict": "rewritten",
+      "text": "Explain how accounts of Yggdrasil's roots differ between Norse sources",
+      "reason": "The excerpts give contrasting root locations but do not explain why the accounts differ."
+    }
+  ],
+  "rejectedSources": [
+    {
+      "sourceId": "src_f41bf8c22d",
+      "url": "https://wevikings.com/library/poetry/voluspa/olive-bray/",
+      "reason": "A commercial Viking-themed site reproducing a translation; cite the original edition or a scholarly text archive instead."
+    },
+    {
+      "sourceId": "src_39d3dea075",
+      "url": "https://www.glanzundgravur.de/en/blog-yggdrasil.html",
+      "reason": "A jewelry and engraving business blog, so it is not an independent source for Norse mythology."
+    },
+    {
+      "sourceId": "src_afdad0e405",
+      "url": "https://www.mythic-harmonies.com/norse-mythology/yggdrasil-world-tree-nine-realms/",
+      "reason": "A music-themed site’s explanatory article, not a clearly scholarly or independent reference source."
+    },
+    {
+      "sourceId": "src_6feffb6846",
+      "url": "https://norse-mythology.org/cosmology/yggdrasil-and-the-well-of-urd/",
+      "reason": "A privately run mythology site rather than a scholarly or institutional reference; use a primary-text archive or academic source."
+    }
+  ],
+  "authorModelIds": [
+    "openai/gpt-6.1-sol"
+  ],
+  "judgeModelId": "openai/gpt-6-luna",
+  "rounds": [
+    {
+      "modelId": "openai/gpt-6.1-sol",
+      "draft": [
+        {
+          "heading": "A tree at the centre",
+          "paragraphs": [
+            "Yggdrasil, the world tree, has branches that reach across the world and above the sky [src_238610fc85]. Norse sources picture the Nine Worlds around this tree, giving you a way to picture their universe [src_8c1061af65]. A squirrel carries an eagle’s words down the tree to a creature below [src_7d9e9ae17d]. A dragon gnaws at the tree’s roots [src_b6cf1c25b8]."
+          ]
+        },
+        {
+          "heading": "Gods, humans, and the dead",
+          "paragraphs": [
+            "Asgard is a world of gods [src_2b9c51c172]. Midgard is the world where humans live [src_2b9c51c172]. Hel is a world of the dead, associated at first with those who died from illness or old age [src_2b9c51c172]. These are three of the Nine Worlds in the account associated with the writer Snorri Sturluson and those who followed him [src_2b9c51c172]."
+          ]
+        },
+        {
+          "heading": "The roots reach different places",
+          "paragraphs": [
+            "One poem places Hel, giants, and human lands beneath Yggdrasil’s three roots [src_7d9e9ae17d]. A prose account also gives the tree three roots, but includes a root among the gods as well as a root among giants [src_238610fc85]. Yggdrasil stands at the centre of the worlds, while accounts differ about where its roots reach [src_2b9c51c172, src_7d9e9ae17d, src_238610fc85]."
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "section": "The roots reach different places",
+          "brief": {
+            "kind": "depiction",
+            "subject": "An ash tree spreads above three roots leading to Hel, giants, and human lands, with an eagle above, a squirrel on the tree, and a dragon below.",
+            "mustShow": [
+              "A large central tree with widely spreading branches",
+              "Exactly three spreading roots",
+              "Three areas beneath the roots, individually labelled Hel, Giants, and Human lands",
+              "An eagle above the squirrel",
+              "A squirrel on the tree",
+              "A dragon below the tree, gnawing a root"
+            ],
+            "caption": "The Course’s own illustration shows the world tree, three roots, and the beings around it.",
+            "alt": "A spreading tree has three roots above areas labelled Hel, Giants, and Human lands. An eagle sits high in the tree, a squirrel is lower down, and a dragon beneath the tree gnaws a root.",
+            "mediaCategory": "norse-mythic-depiction",
+            "topicTags": [
+              "world-tree",
+              "yggdrasil",
+              "cosmology"
+            ]
+          }
+        }
+      ],
+      "problems": [],
+      "attached": [
+        {
+          "placement": {
+            "section": "The roots reach different places",
+            "brief": {
+              "kind": "depiction",
+              "subject": "An ash tree spreads above three roots leading to Hel, giants, and human lands, with an eagle above, a squirrel on the tree, and a dragon below.",
+              "mustShow": [
+                "A large central tree with widely spreading branches",
+                "Exactly three spreading roots",
+                "Three areas beneath the roots, individually labelled Hel, Giants, and Human lands",
+                "An eagle above the squirrel",
+                "A squirrel on the tree",
+                "A dragon below the tree, gnawing a root"
+              ],
+              "caption": "The Course’s own illustration shows the world tree, three roots, and the beings around it.",
+              "alt": "A spreading tree has three roots above areas labelled Hel, Giants, and Human lands. An eagle sits high in the tree, a squirrel is lower down, and a dragon beneath the tree gnaws a root.",
+              "mediaCategory": "norse-mythic-depiction",
+              "topicTags": [
+                "world-tree",
+                "yggdrasil",
+                "cosmology"
+              ]
+            }
+          },
+          "status": "illustrated",
+          "library": [],
+          "illustration": {
+            "outcome": "illustrated",
+            "attempts": [
+              {
+                "modelId": "openai/gpt-6.1-sol",
+                "judge": {
+                  "pass": true,
+                  "failedChecks": [],
+                  "reasons": []
+                },
+                "judgeModelId": "openai/gpt-6-luna"
+              }
+            ]
+          },
+          "descriptorId": "c9335d7e-5798-8969-a204-af9f4bc55a91"
+        }
+      ]
+    }
+  ],
+  "glossary": {
+    "proposed": [
+      {
+        "term": "world tree",
+        "definition": "A tree in mythology that connects different parts of the universe."
+      },
+      {
+        "term": "prose",
+        "definition": "Writing in ordinary sentences rather than poetry."
+      }
+    ],
+    "rejected": [],
+    "modelId": "openai/gpt-6.1-sol",
+    "judgeModelId": "openai/gpt-6-luna"
+  },
+  "illustrations": [
+    {
+      "subject": "An ash tree spreads above three roots leading to Hel, giants, and human lands, with an eagle above, a squirrel on the tree, and a dragon below.",
+      "attempts": [
+        {
+          "modelId": "openai/gpt-6.1-sol",
+          "pass": true,
+          "error": null,
+          "plan": {
+            "title": null,
+            "items": [
+              {
+                "type": "shape",
+                "shape": "band",
+                "box": {
+                  "x": 44,
+                  "y": 590,
+                  "w": 1112,
+                  "h": 170
+                },
+                "colour": "plum",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "band",
+                "box": {
+                  "x": 44,
+                  "y": 686,
+                  "w": 1112,
+                  "h": 74
+                },
+                "colour": "plum-light",
+                "depth": "low"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 115,
+                    "y": 724
+                  },
+                  {
+                    "x": 134,
+                    "y": 689
+                  },
+                  {
+                    "x": 165,
+                    "y": 677
+                  },
+                  {
+                    "x": 184,
+                    "y": 655
+                  },
+                  {
+                    "x": 221,
+                    "y": 665
+                  },
+                  {
+                    "x": 248,
+                    "y": 653
+                  },
+                  {
+                    "x": 279,
+                    "y": 676
+                  },
+                  {
+                    "x": 317,
+                    "y": 683
+                  },
+                  {
+                    "x": 357,
+                    "y": 724
+                  }
+                ],
+                "colour": "stone",
+                "depth": "raised"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 207,
+                    "y": 724
+                  },
+                  {
+                    "x": 207,
+                    "y": 697
+                  },
+                  {
+                    "x": 218,
+                    "y": 684
+                  },
+                  {
+                    "x": 239,
+                    "y": 681
+                  },
+                  {
+                    "x": 255,
+                    "y": 695
+                  },
+                  {
+                    "x": 260,
+                    "y": 724
+                  }
+                ],
+                "colour": "ink",
+                "depth": "flat"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 459,
+                    "y": 724
+                  },
+                  {
+                    "x": 493,
+                    "y": 687
+                  },
+                  {
+                    "x": 518,
+                    "y": 654
+                  },
+                  {
+                    "x": 548,
+                    "y": 690
+                  },
+                  {
+                    "x": 578,
+                    "y": 661
+                  },
+                  {
+                    "x": 616,
+                    "y": 708
+                  },
+                  {
+                    "x": 654,
+                    "y": 681
+                  },
+                  {
+                    "x": 716,
+                    "y": 724
+                  }
+                ],
+                "colour": "stone",
+                "depth": "raised"
+              },
+              {
+                "type": "figure",
+                "x": 642,
+                "y": 724,
+                "height": 83,
+                "clothes": "cream-deep",
+                "hair": "wood-dark",
+                "skin": "skin-deep"
+              },
+              {
+                "type": "shape",
+                "shape": "blob",
+                "box": {
+                  "x": 840,
+                  "y": 686,
+                  "w": 266,
+                  "h": 41
+                },
+                "colour": "leaf-dark",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "rect",
+                "box": {
+                  "x": 930,
+                  "y": 675,
+                  "w": 83,
+                  "h": 45
+                },
+                "colour": "cream",
+                "depth": "raised"
+              },
+              {
+                "type": "shape",
+                "shape": "triangle",
+                "box": {
+                  "x": 918,
+                  "y": 649,
+                  "w": 107,
+                  "h": 35
+                },
+                "colour": "red",
+                "depth": "raised"
+              },
+              {
+                "type": "shape",
+                "shape": "rect",
+                "box": {
+                  "x": 960,
+                  "y": 694,
+                  "w": 20,
+                  "h": 26
+                },
+                "colour": "wood-dark",
+                "depth": "flat"
+              },
+              {
+                "type": "figure",
+                "x": 1050,
+                "y": 722,
+                "height": 39,
+                "clothes": "apricot",
+                "hair": "wood-dark",
+                "skin": "skin"
+              },
+              {
+                "type": "tree",
+                "box": {
+                  "x": 115,
+                  "y": 120,
+                  "w": 970,
+                  "h": 530
+                },
+                "roots": 3,
+                "crown": "wide",
+                "leaves": "leaf",
+                "wood": "wood"
+              },
+              {
+                "type": "creature",
+                "kind": "bird",
+                "box": {
+                  "x": 445,
+                  "y": 48,
+                  "w": 310,
+                  "h": 120
+                },
+                "colour": "wood-dark",
+                "accent": "gold",
+                "facing": "right"
+              },
+              {
+                "type": "creature",
+                "kind": "squirrel",
+                "box": {
+                  "x": 623,
+                  "y": 385,
+                  "w": 78,
+                  "h": 87
+                },
+                "colour": "apricot",
+                "accent": "apricot-deep",
+                "facing": "left"
+              },
+              {
+                "type": "creature",
+                "kind": "serpent",
+                "box": {
+                  "x": 835,
+                  "y": 557,
+                  "w": 285,
+                  "h": 115
+                },
+                "colour": "red",
+                "accent": "gold",
+                "facing": "left"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 850,
+                    "y": 614
+                  },
+                  {
+                    "x": 860,
+                    "y": 620
+                  },
+                  {
+                    "x": 854,
+                    "y": 627
+                  }
+                ],
+                "colour": "wood-light",
+                "depth": "raised"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 867,
+                    "y": 621
+                  },
+                  {
+                    "x": 877,
+                    "y": 628
+                  },
+                  {
+                    "x": 865,
+                    "y": 632
+                  }
+                ],
+                "colour": "wood-light",
+                "depth": "raised"
+              },
+              {
+                "type": "text",
+                "x": 236,
+                "y": 742,
+                "text": "Hel",
+                "size": "medium",
+                "colour": "cream",
+                "align": "middle"
+              },
+              {
+                "type": "text",
+                "x": 590,
+                "y": 742,
+                "text": "Giants",
+                "size": "medium",
+                "colour": "cream",
+                "align": "middle"
+              },
+              {
+                "type": "text",
+                "x": 972,
+                "y": 742,
+                "text": "Human lands",
+                "size": "medium",
+                "colour": "cream",
+                "align": "middle"
+              }
+            ],
+            "labels": [
+              {
+                "text": "Ash tree",
+                "target": {
+                  "x": 590,
+                  "y": 446
+                },
+                "side": "left"
+              },
+              {
+                "text": "Eagle",
+                "target": {
+                  "x": 698,
+                  "y": 107
+                },
+                "side": "right"
+              },
+              {
+                "text": "Squirrel",
+                "target": {
+                  "x": 671,
+                  "y": 428
+                },
+                "side": "right"
+              },
+              {
+                "text": "Dragon",
+                "target": {
+                  "x": 1010,
+                  "y": 606
+                },
+                "side": "above"
+              },
+              {
+                "text": "Gnawing a root",
+                "target": {
+                  "x": 850,
+                  "y": 591
+                },
+                "side": "left"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

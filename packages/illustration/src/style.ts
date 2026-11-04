@@ -14,8 +14,14 @@ import { HEX } from "./palette.ts";
 /** The fixed canvas every scene plan is laid out on. */
 export const CANVAS = { width: 1200, height: 800 } as const;
 
-/** The desk margin around the sheet; nothing a plan places should sit outside the sheet. */
+/** The desk margin around the outer sheet. */
 export const SHEET_MARGIN = 22;
+
+/**
+ * Where the raised card on the sheet starts, from the canvas edge. A plan places everything on the card, so its
+ * usable area (`SHEET` in scene-plan.ts) is the card itself: a panel laid at the card's edge never hangs over it.
+ */
+export const CARD_INSET = { x: 44, y: 40 } as const;
 
 /** How one piece of paper is cut and glued. */
 export type PieceOptions = {

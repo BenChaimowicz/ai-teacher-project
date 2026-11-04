@@ -311,7 +311,7 @@ Scaffolding *dosage* (worked-example amount, tighter sequencing) follows Startin
 
 The generator is told subject, Learning Goal, Goal scope (when focused), Starting Level (its capabilities, not the Learner-facing remaining-gap statement, which reads as a Lesson order), and the write-time Teaching Profile fields the Blueprint consumes (including `quizCadence`). No slot, title, Lesson goal, or objective teaches an out-of-scope facet, and the sequence reaches the focused goal within its scope. It designs the Module and Lesson sequence for that remaining gap alone: what the whole Learning Goal needs that the Learner does not yet have. The diagnostic's probed capabilities sample the goal; they do not list it, so a Blueprint teaches the missed probes and whatever else the goal clearly needs, and skips only what the diagnostic evidenced. There is no canonical novice→goal outline and no unpublished prefix, but a subject with a natural internal order (a narrative corpus, a history, a process) is taught in that order unless a prerequisite requires otherwise. Remaining-gap scope lives on the Blueprint; Lessons have no difficulty score.
 
-Each slot: title, Lesson goal, non-empty objectives, registered teaching method (`reading` or `quiz`), 2–5 Topic tags (lowercase slugs from the slot’s objectives; no closed taxonomy). A Reading slot also names its Chapter: consecutive Readings with the same chapter (at most four, at most six Chapters in a Course) are one topic, researched once and drafted together, and no Quiz sits between them; each Reading is about one screen, one idea (decision 2026-11-03). A Reading slot that cannot teach without the Learner seeing something also lists its **required media**: at most two images, each a Media category and Topic tags taken from what the media catalog holds, so each one has a file to fill it (SEN-115). Learner review never shows them. A Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it) and lists 1–10 objectives. No two slots share a Lesson goal. At least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal.
+Each slot: title, Lesson goal, non-empty objectives, registered teaching method (`reading` or `quiz`), 2–5 Topic tags (lowercase slugs from the slot’s objectives; no closed taxonomy). A Reading slot also names its Chapter: consecutive Readings with the same chapter (at most four, at most six Chapters in a Course) are one topic, researched once and drafted together, and no Quiz sits between them; each Reading is about one screen, one idea (decision 2026-11-03). A Reading slot also plans its **visuals** (SEN-121, decision 2026-11-03): at most two, each a kind (`depiction`, `diagram`, or `technique`) and one sentence of intent, planned the way a teacher plans what to draw on the board, so a picture is the norm, not the exception; a visual that cannot be made or found is left out and never fails the Lesson. Learner review never shows them. A Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it) and lists 1–10 objectives. No two slots share a Lesson goal. At least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal.
 
 For named-work goals, the Blueprint deconstructs the Learning Goal into generic skill Lessons that do not belong to the work. Lesson titles and Lesson goals may name the work as the destination so the Learner can judge relevance. Generation fills those slots; it does not invent a transcription and does not silently rewrite a slot mid-job.
 
@@ -414,6 +414,7 @@ Domain **Generator** port. Model IDs live in shared server configuration, not on
 | Lesson writer (Readings and Quizzes) | `openai/gpt-6.1-sol` | Same transport; its own setting, so Lessons can be pinned apart again (ADR 0018, ADR 0028) |
 | Lesson fallback writer | `openai/gpt-6.1-terra` | Writes a fresh draft once the Lesson writer's repairs run out (ADR 0017) |
 | Triage (subject check, research tier) | `openai/gpt-6-luna` | Same transport; its own setting, defaulting to the Judge's model. Two small structured calls per Request, no fallback: a failure takes the safe default (§4.2, §5.3) |
+| Illustrator (scene plans for depictions and diagrams) | `openai/gpt-6.1-sol` | Same transport, strict `json_schema` over the scene plan; its own pair (`ILLUSTRATOR_MODEL`, `ILLUSTRATOR_FALLBACK_MODEL`), defaulting to the writer pair (SEN-121) |
 
 Claude is not a Generator fallback, and DeepSeek is no longer called anywhere (ADR 0028). No direct OpenAI text adapter is required. Structured calls use `response_format: json_schema`, strict mode, `provider.require_parameters: true` with no host pinned, application-side output validation, and no search tools or plugins. Invalid output, refusal, interruption, or timeout is a provider failure, never a passing validity decision.
 
@@ -435,22 +436,22 @@ The reading and Quiz authors write to one teaching style guide: a concrete openi
 
 ### 5.6 Demonstrative media
 
-Hosted inside the reading Lesson. Not an AV teaching method. Not from Search JSON. Off-app links may be ordinary Citations. Quizzes skip media. Config `READING_MEDIA=off` leaves the library out of Reading generation, so no image is offered or required; test runs use it while media is being designed (default `on`).
+Hosted inside the reading Lesson. Not an AV teaching method. Not from Search JSON. Off-app links may be ordinary Citations. Quizzes skip media. Config `READING_MEDIA=off` leaves the library out of Reading generation, so no visual is briefed or shown; test runs use it while media is being designed (default `on`).
 
-**Order, inside sequential Lesson generate, after caption/alt exist, before checkpoint:**
+What a Reading shows is planned on its Blueprint slot (§4.4: at most two visuals, each a kind and an intent) before it is written. The writer turns each planned visual into a **Visual brief**: the section it follows, its subject, a `mustShow` checklist of the facts that must be visibly right, the caption and alt text the Learner reads, and the Media category and Topic tags it is filed and looked up under. The prose stays true without the picture and never refers to it. For a technique, `mustShow` lists only what a normal photograph of the position visibly shows from a usual angle (which way the hand faces, where it sits along the stick or tool, which way the thumb points, how the fingers sit): never a label, a contact point the hand itself covers, or anything only a diagram could show, since the photograph is found, not made.
 
-1. Library lookup by Media category + Topic tags. A hit is good enough only if the product can host the license (public domain, CC0, CC BY, CC BY-SA, or original we own — **not** CC BY-NC), the file depicts the intended technique or object, caption/alt can be honest, and it is not a named-work substitute.
-2. On miss: ingest, do not hotlink. Wikimedia Commons Action API (`generator=search` + `imageinfo` `extmetadata`) with a descriptive User-Agent; Gram photomicrographs also from CDC PHIL public-domain records (credit CDC/contributor, no CDC logo). Copy bytes into private Storage; write a library Media descriptor. Not You.com Images; not YouTube / Vic Firth / PAS scrapes.
-3. On still miss: generate.
-   - Default: constrained SVG from the text Generator (`image/svg+xml`). Validate: no `script`, no `foreignObject`.
-   - Pictorial stills SVG cannot draw: OpenAI `gpt-image-2` (pin snapshot `gpt-image-2-2026-04-21`, 1024×1024 WebP, medium quality, `moderation: "auto"`). Customer owns image Output. Organization Verification may be required.
-   - Loops only when motion is load-bearing: silent SVG/CSS (or SVG-frame / 2–4-frame animated WebP), cap ~4 seconds, no soundtrack. If that fails, sequenced stills. Never video (Sora/Videos API out).
-4. Vision Judge on attached stills/loops (or a still frame of a loop; an SVG drawn as a PNG): binary fitness vs caption/alt — not Gram-species ID from a generated stain. One moderation/vision repair: the writer rewrites caption and alt from the Judge's reasons and the file's own catalog caption, or finds the file unfit. Then a Lesson defect on **required** media: each Lesson repair it spends tries the next-ranked library file, then the fallback author, then the Request fails. Optional decorative media may skip.
-5. Snapshot descriptor fields onto the Lesson.
+**Order, per visual, started when its brief is written and placed once the prose passes its Judge (decision 2026-11-03):**
 
-Whether a Reading needs media is fixed on its Blueprint slot (§4.4, required media), before it is written. The writer places each required image and may add up to two optional ones. In this prototype, step 1 is the only source: a catalog miss on required media fails the Lesson, with no ingest and no generation (SEN-115).
+1. **Illustration**, for a depiction or a diagram, never for a technique. The illustrator model (§5.4) answers the brief with a scene plan, a closed set of cut-paper blocks in the one papercraft house style (SEN-128), which the engine renders in the worker as SVG and PNG. The Vision Judge checks the PNG against the brief. A fail gets one more plan with the Judge's reasons; two fails fall through. A passing PNG is stored under `generated/` and described as product-owned, origin `generated`. Jongi is not offered to the illustrator until his poses exist (SEN-104). Never drawn: a photograph, a logo, a named artwork, a real person's likeness, or anything passed off as a microscope photograph; cells on a slide are a schematic and the caption says so.
+2. **Library lookup** by Media category + Topic tags. The best two files by shared tags go to the Vision Judge against the brief. A hit is good enough only if the product can host the license (public domain, CC0, CC BY, CC BY-SA, or original we own — **not** CC BY-NC), it passes the Judge, and it is not a named-work substitute. An SVG is checked for `script` and `foreignObject` and drawn as a PNG for the Judge; the Learner is served the SVG.
+3. **Wikimedia Commons** (SEN-129): search with a descriptive User-Agent, keep only still images under a licence we may host, judge at most three against the brief, copy the first that passes into private Storage under `library/commons/`, and add it to the library as unreviewed, used at once; an Operator approves or removes it in the Usage Console. Not You.com Images; not YouTube / Vic Firth / PAS scrapes. Gram photomicrographs may also come from CDC PHIL public-domain records (credit CDC/contributor, no CDC logo); not built yet.
+4. **No image.** The Lesson publishes without it. A missing visual is never a Lesson defect and never fails a Request.
 
-**Never generate:** photomicrographs, named-work copies, living-person likeness, or video. Audio is library-or-skip (no TTS or generated percussion in this prototype). Prototype ships a small seeded catalog covering the Test-course slots in §7.
+**Vision Judge** (§6.1): one call per image, lenient on style and strict on facts. It fails any `mustShow` item it cannot see, a caption or alt text that does not fit the image, and labels the Learner could not read; it never fails a drawing for being simple or stylised. A technique is judged harshly, on its own configured model (`TECHNIQUE_JUDGE_MODEL`): a drawing, a different grip or position, or an item partly hidden fails it, because an image that passes teaches a habit. No species identification or diagnosis from an image: the brief is the standard. Every image a Learner sees passed this same call, whether drawn, from the library, or from Commons.
+
+Pictures for different Lessons are made concurrently: a Chapter's Lessons start their searches when the Chapter is drafted, and a Lesson written alone starts its own when its first draft is written, while the prose is judged and repaired. Lessons are still checkpointed one at a time in Blueprint order.
+
+**Never generate:** photomicrographs, named-work copies, living-person likeness, or video; and no AI image model or stock (decision 2026-11-03). Audio is library-or-skip (no TTS or generated percussion in this prototype). Loops and animated stills are not built. Prototype ships a small seeded catalog covering the Test-course slots in §7.
 
 ### 5.7 Course coherence
 
@@ -507,6 +508,7 @@ Automated, binary, on every Course (including Test courses). Any fail fails that
 | --- | --- |
 | Default Judge (text and vision) | `openai/gpt-6-luna` |
 | Judge fallback | `openai/gpt-5.6-luna`, which never authors (ADR 0028) |
+| Technique Judge (vision, technique photographs) | `TECHNIQUE_JUDGE_MODEL`: `openai/gpt-5.6-luna`, an OpenAI model that writes nothing, picked on 2026-11-04 (12 of 13 right, no wrong grip let through) by `pnpm check:technique-judge:live` from a set of right and wrong drum-grip images (SEN-121) |
 
 Pairing: author `openai/gpt-6.1-sol` or `openai/gpt-6.1-terra` → judge `openai/gpt-6-luna`. If Luna is down or schema-fails: `openai/gpt-5.6-luna`, which writes nothing. Never an author as Judge. Do not default to Claude Sonnet or Opus.
 
@@ -524,7 +526,7 @@ type JudgeResult = {
 
 If Test-course protocol finds missed factual errors, bump the Judge SKU in config (for example `gpt-6-luna` → `gpt-6-luna-pro`) without changing the pairing rule — never to an authoring model.
 
-**Repair budget.** Two regenerations per slot after the first failed validate (initial generate + two repairs). A Reading repair edits only the passages the failed checks name and keeps every other sentence verbatim, so a repair cannot add new problems elsewhere in the Lesson (ADR 0016). A passage the Judge fails as `off_goal` is cut, not rewritten; a section the cut empties is removed, and Citations and the source list are renumbered from what remains. A third failure on a Reading or Quiz slot sends it to the Lesson fallback writer, which writes a fresh draft from the same Sources or Lessons with its own two repairs (ADR 0017); only a failure after those is terminal: keep unpublished Lessons before it; Course Request fails; Retry refreshes that slot’s budget on the same approved Blueprint; Revise request discards unpublished Lessons. No Course-wide repair pool. Retrieval’s 2–3 query reformulations and the one media vision repair stay inside generate and do not draw on this number. A Judge **fail** consumes a regeneration of the artifact, not a second Judge SKU, unless the Judge call itself errored.
+**Repair budget.** Two regenerations per slot after the first failed validate (initial generate + two repairs). A Reading repair edits only the passages the failed checks name and keeps every other sentence verbatim, so a repair cannot add new problems elsewhere in the Lesson (ADR 0016). A passage the Judge fails as `off_goal` is cut, not rewritten; a section the cut empties is removed, and Citations and the source list are renumbered from what remains. A third failure on a Reading or Quiz slot sends it to the Lesson fallback writer, which writes a fresh draft from the same Sources or Lessons with its own two repairs (ADR 0017); only a failure after those is terminal: keep unpublished Lessons before it; Course Request fails; Retry refreshes that slot’s budget on the same approved Blueprint; Revise request discards unpublished Lessons. No Course-wide repair pool. Retrieval’s 2–3 query reformulations and the illustrator's second attempt (§5.6) stay inside generate and do not draw on this number. A Judge **fail** consumes a regeneration of the artifact, not a second Judge SKU, unless the Judge call itself errored.
 
 ### 6.2 Blueprint (before Learner review)
 
@@ -536,9 +538,9 @@ A Blueprint fail is a Blueprint revision, then Learner review again.
 
 ### 6.3 Reading Lesson (before checkpoint)
 
-**Code:** envelope + reading plugin `validate`; every Citation URL is in this Lesson’s retrieval set; required Demonstrative media has a hostable Media descriptor; SVG has no script / `foreignObject`.
+**Code:** envelope + reading plugin `validate`; every Citation URL is in this Lesson’s retrieval set; every attached media block has a hostable Media descriptor and is shown once; SVG has no script / `foreignObject`.
 
-**Judge:** every factual claim is supported by a retrieved excerpt from a cited Source (a plainly marked analogy or invented example is not a claim, as long as it states no fact about the subject); every grounded slot objective is taught, and an objective the excerpts cannot support is not a coverage failure (ADR 0022); sequential coherence with prior finalized Lessons; no generated substitute of a named work; every section serves a slot objective toward the Lesson goal and the Learning Goal, so a true, cited stretch that serves none fails (`off_goal`), while a sentence or two of context that serves an objective passes, and with a Goal scope so does a passage on an out-of-scope facet; media vision on attached stills/loops (required slots fail closed; optional decorative may skip).
+**Judge:** every factual claim is supported by a retrieved excerpt from a cited Source (a plainly marked analogy or invented example is not a claim, as long as it states no fact about the subject); every grounded slot objective is taught, and an objective the excerpts cannot support is not a coverage failure (ADR 0022); sequential coherence with prior finalized Lessons; no generated substitute of a named work; every section serves a slot objective toward the Lesson goal and the Learning Goal, so a true, cited stretch that serves none fails (`off_goal`), while a sentence or two of context that serves an objective passes, and with a Goal scope so does a passage on an out-of-scope facet; media vision is the Vision Judge's own call on each image against its Visual brief (§5.6), so a picture that fails is replaced or dropped, never a Lesson failure.
 
 ### 6.4 Quiz (before checkpoint)
 
@@ -552,7 +554,7 @@ If a Quiz slot lists more than 10 objectives, that is **structural**: discard un
 
 Do not re-judge every Lesson from scratch.
 
-**Code:** every Blueprint slot has a checkpointed unpublished Lesson whose Code and Judge both passed; required media still attached; no extra Lessons off the approved Blueprint.
+**Code:** every Blueprint slot has a checkpointed unpublished Lesson whose Code and Judge both passed; no extra Lessons off the approved Blueprint. A Reading without the visual its slot planned still publishes.
 
 **Judge:** one pass over titles, Lesson goals, objectives, and short per-Lesson commitments — Course coherence across Modules, and the assembled sequence reaches this Learning Goal from this Starting Level (within its Goal scope, when focused; out-of-scope facets are not required).
 
@@ -578,7 +580,7 @@ Selection driver: personal learning goals, which doubles as authentic QA. Course
 
 Broadened from Gram staining, which stays the centerpiece; also aseptic technique, microscopy, culture methods. A Learner entering at a higher Starting Level skips evidenced basics.
 
-**Media.** Gram photomicrographs are real library files (CDC PHIL and/or Commons), never generated. Cell-wall and procedure diagrams: library first, else SVG schematic — never a fake microscope field. Optional silent sequence of reagent steps from library/SVG states, not a video model.
+**Media.** A Gram result to recognise is a `diagram` visual: drawn first in the house style as a plain schematic, never a fake microscope field, with real photomicrographs (CDC PHIL and/or Commons library files) as the fallback. Photomicrographs are never generated (decision 2026-11-03). Cell-wall and procedure diagrams are `diagram` visuals: drawn first in the house style as plainly a schematic, else library — never a fake microscope field. Optional silent sequence of reagent steps from library/SVG states, not a video model.
 
 **Protocol extra:** Gram photomicrographs are real library files, never generated.
 
@@ -592,7 +594,7 @@ Theory plus offline practice: Lessons teach notation, rudiments, and coordinatio
 
 **Sources.** You.com-class search returns pages, not teaching images. Demonstrative media from cited pages (Commons) or product-owned/licensed files. Preference-list adds PAS / Vic Firth / Commons as in §5.3. Cite PAS/Vic Firth; do not copy PAS © 1984 engravings, Alfred audio, Vic Firth videos, Stick Control exercises, or any “Iris” transcription or sound recording.
 
-**Media-reliance.** Anatomy and notation: text + stills. Grip/stroke and rock-beat coordination **require** Demonstrative media inside the reading Lesson (library grip stills; SVG schematic if stills miss; for the rebound stroke, a product-owned SVG strip of stills rather than a loop, decided 2026-11-01; no photorealistic generated hands as the technique source). Playing the song end-to-end cannot be taught or assessed under reading+quiz-only.
+**Media-reliance.** Anatomy and notation: text + stills. Grip/stroke and rock-beat coordination plan Demonstrative media inside the reading Lesson: a grip is a `technique` visual, a real photograph from the library or Commons judged harshly and never drawn (decision 2026-11-03); the rebound stroke is a `diagram`, drawn first, with the product-owned SVG strip of stills as the library fallback (rather than a loop, decided 2026-11-01); no photorealistic generated hands as the technique source. Playing the song end-to-end cannot be taught or assessed under reading+quiz-only.
 
 **Protocol extra:** no Iris chart or official audio.
 
@@ -602,7 +604,7 @@ Theory plus offline practice: Lessons teach notation, rudiments, and coordinatio
 
 Canonical term (not “Viking mythology”). Mythic corpus only: cosmology, gods, major myths; Poetic/Prose Edda as primary Sources. Viking history/archaeology appears only as context.
 
-**Media.** Public-domain historic plates (e.g. Doepler, Frølich). Caption: one artist’s depiction, not a photograph of a place and not “the” canonical Valhalla. Generate only a simple original diagram, captioned as illustration not reconstruction. No franchise look.
+**Media.** Every Reading plans a `depiction` or `diagram`, drawn in the house style and captioned as the Course's own illustration, not a reconstruction (SEN-121); public-domain historic plates (e.g. Doepler, Frølich) are the library fallback, captioned as one artist’s depiction, not a photograph of a place and not “the” canonical Valhalla. No franchise look.
 
 **Protocol extra:** mythic corpus with credited historic art, not a franchise Valhalla.
 

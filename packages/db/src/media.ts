@@ -50,20 +50,31 @@ export const MEDIA_CATEGORIES = [
 export type MediaCategory = (typeof MEDIA_CATEGORIES)[number];
 
 /**
- * Demonstrative media asked for by what library lookup filters on: a Media category, and Topic tags from that category
- * naming what the file must show. A Reading slot's required media is a list of these (SEN-115).
- */
-export type MediaRequest = { mediaCategory: MediaCategory; topicTags: string[] };
-
-/**
  * What a Reading's visual is (SEN-121): a *depiction* of a myth, a person or a place; a *diagram* of a process or a
- * structure; or a *technique* the Learner copies with their body. Depictions and diagrams are drawn first; a technique is
- * a real image, from the library or Wikimedia Commons (decision 2026-11-03).
+ * structure, including a specimen or result to recognise, drawn as a plain schematic; or a *technique*, a real photograph
+ * of a position or movement the Learner copies with their body. Depictions and diagrams are drawn first; a technique is a real image, from the library or Wikimedia
+ * Commons, and is never drawn (decision 2026-11-03).
  */
 export const VISUAL_KINDS = ["depiction", "diagram", "technique"] as const;
 
 /** One of {@link VISUAL_KINDS}. */
 export type VisualKind = (typeof VISUAL_KINDS)[number];
+
+/**
+ * One visual a Reading slot plans to show (SEN-121, decision 2026-11-03): what it is for, in the Blueprint author's
+ * words, and its kind, which decides how it is made. The Reading writer turns it into a {@link VisualBrief}. A planned
+ * visual that cannot be made or found is dropped; it is never a Lesson defect.
+ */
+export type PlannedVisual = { kind: VisualKind; intent: string };
+
+/** Visuals one Reading plans and shows at most: a one-screen Lesson has room for one, sometimes two. */
+export const MAX_SLOT_VISUALS = 2;
+
+/** Facts one brief's `mustShow` lists at most: a checklist a Judge can hold in view, not a specification. */
+export const MAX_MUST_SHOW = 6;
+
+/** Topic tags one brief files its visual under at most, the cap a Blueprint slot's tags share. */
+export const MAX_BRIEF_TAGS = 5;
 
 /**
  * The Reading writer's description of one visual, shared by everything that makes or finds it: the illustrator draws
@@ -95,15 +106,6 @@ export const MEDIA_REVIEWS = ["reviewed", "unreviewed", "removed"] as const;
 
 /** One of {@link MEDIA_REVIEWS}. */
 export type MediaReview = (typeof MEDIA_REVIEWS)[number];
-
-/**
- * Whether a file fills a request the way lookup finds it: the same Media category and at least one shared Topic tag.
- * @param descriptor - The file's category and tags
- * @param request - What was asked for
- */
-export function fillsRequest(descriptor: Pick<MediaDescriptorFields, "mediaCategory" | "topicTags">, request: MediaRequest): boolean {
-  return descriptor.mediaCategory === request.mediaCategory && descriptor.topicTags.some((tag) => request.topicTags.includes(tag));
-}
 
 /** The web page a library file was taken from and who made it. Null only on product-owned files. */
 export type MediaSource = {

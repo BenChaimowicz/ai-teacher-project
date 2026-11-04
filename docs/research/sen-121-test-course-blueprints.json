@@ -1,0 +1,1922 @@
+{
+  "startedAt": "2026-11-03T21:51:05.306Z",
+  "runs": [
+    {
+      "name": "norse",
+      "subject": "Norse mythology",
+      "learningGoal": "Know the Norse mythic corpus: the cosmology, the main gods, and the major myths from the creation to Ragnarök, as the Eddas tell them",
+      "latencyMs": 233618,
+      "blueprint": {
+        "courseTitle": "Norse Mythology: From Creation to Ragnarök",
+        "modules": [
+          {
+            "title": "The Worlds, Gods, and Stories of the Eddas",
+            "slots": [
+              {
+                "id": "slot1",
+                "method": "reading",
+                "chapter": "The Beginning of the Mythic World",
+                "title": "What the Eddas Preserve",
+                "lessonGoal": "You will be able to explain what Norse mythology is, where its surviving stories come from, and why people study them.",
+                "objectives": [
+                  "Say what Norse mythology is and how its stories developed through oral traditions in Scandinavia.",
+                  "Distinguish the Poetic Edda's collection of poems from Snorri Sturluson's Prose Edda, written in medieval Iceland.",
+                  "Say why these stories matter for understanding past beliefs, poetry, and later storytelling."
+                ],
+                "topicTags": [
+                  "norse-mythology",
+                  "eddas",
+                  "oral-tradition"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show oral storytelling feeding into the two medieval Eddas, with their different forms labelled, so the learner sees that the surviving books preserve rather than invent the traditions."
+                  }
+                ]
+              },
+              {
+                "id": "slot2",
+                "method": "reading",
+                "chapter": "The Beginning of the Mythic World",
+                "title": "A World Made from a Giant",
+                "lessonGoal": "You will be able to retell the world's emergence from the first beings and the body of Ymir.",
+                "objectives": [
+                  "Place the meeting of cold and heat in Ginnungagap before the appearance of Ymir and the first divine ancestors.",
+                  "Tell how Odin and his brothers kill Ymir and make features of the world from his body."
+                ],
+                "topicTags": [
+                  "creation",
+                  "ymir",
+                  "odin"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show a short creation sequence from heat and cold to Ymir and then to the earth, sea, and sky, making the body-to-world correspondences clear."
+                  }
+                ]
+              },
+              {
+                "id": "slot3",
+                "method": "reading",
+                "chapter": "The Beginning of the Mythic World",
+                "title": "The First Human Beings",
+                "lessonGoal": "You will be able to recount how the first human pair receives life and human capacities.",
+                "objectives": [
+                  "Identify Ask and Embla as the first human pair in the Eddic creation accounts.",
+                  "Retell the transformation of wood into living people through divine gifts.",
+                  "Recognize that the Eddic accounts differ over the divine givers and their gifts."
+                ],
+                "topicTags": [
+                  "human-origins",
+                  "ask-and-embla",
+                  "divine-gifts"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Depict divine figures giving life to two wooden forms on a shore so the learner can remember the movement from lifeless material to human beings."
+                  }
+                ]
+              },
+              {
+                "id": "slot4",
+                "method": "reading",
+                "chapter": "The Beginning of the Mythic World",
+                "title": "The Tree Connecting the Worlds",
+                "lessonGoal": "You will be able to explain the world tree's place in Norse cosmology without treating it as a fixed geographical map.",
+                "objectives": [
+                  "Identify Yggdrasil as the tree connecting the mythic world.",
+                  "Distinguish Asgard, associated with the gods, from Midgard, the human world.",
+                  "Connect the Norns with fate and the tree while recognizing that the Eddas do not supply one consistent map of nine worlds."
+                ],
+                "topicTags": [
+                  "yggdrasil",
+                  "asgard",
+                  "midgard",
+                  "norns"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show Yggdrasil with selected associated places and the Norns near its roots, using an explicitly schematic arrangement rather than claiming to map all nine worlds."
+                  }
+                ]
+              },
+              {
+                "id": "slot5",
+                "method": "reading",
+                "chapter": "The Gods and Their Roles",
+                "title": "Odin Pays for Wisdom",
+                "lessonGoal": "You will be able to explain Odin's pursuit of knowledge through two different sacrifices.",
+                "objectives": [
+                  "Associate Odin with the pursuit of wisdom, poetry, and knowledge of fate.",
+                  "Distinguish the sacrifice of his eye at Mimir's well from his hanging ordeal to gain knowledge of runes."
+                ],
+                "topicTags": [
+                  "odin",
+                  "wisdom",
+                  "mimir",
+                  "runes"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Present separate scenes of Odin at the well and hanging from a tree so the learner does not merge the two sacrifices into one event."
+                  }
+                ]
+              },
+              {
+                "id": "slot6",
+                "method": "reading",
+                "chapter": "The Gods and Their Roles",
+                "title": "Thor Guards the Gods' World",
+                "lessonGoal": "You will be able to recognize Thor's protective role and his relationship with the giants.",
+                "objectives": [
+                  "Identify Thor by his hammer, Mjolnir, and his role as a powerful defender.",
+                  "Explain why giants can be opponents, relatives, or partners of the gods rather than a single group of evil beings."
+                ],
+                "topicTags": [
+                  "thor",
+                  "mjolnir",
+                  "giants"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Show Thor holding his hammer at the boundary of an inhabited settlement and wild country so the learner can connect his weapon with his protective role."
+                  }
+                ]
+              },
+              {
+                "id": "slot7",
+                "method": "reading",
+                "chapter": "The Gods and Their Roles",
+                "title": "Two Families of Gods",
+                "lessonGoal": "You will be able to distinguish the two divine groups and recognize three leading Vanir gods.",
+                "objectives": [
+                  "Distinguish the Aesir and Vanir as divine groups whose conflict leads to an exchange of hostages.",
+                  "Associate Njord with seafaring and prosperity, Freyr with fertility and prosperity, and Freyja with desire and magic."
+                ],
+                "topicTags": [
+                  "aesir",
+                  "vanir",
+                  "njord",
+                  "freyr",
+                  "freyja"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show the Aesir and Vanir linked by peace and an exchange of hostages, with Njord, Freyr, and Freyja labelled by their principal associations rather than rigid job descriptions."
+                  }
+                ]
+              },
+              {
+                "id": "slot8",
+                "method": "reading",
+                "chapter": "The Gods and Their Roles",
+                "title": "Loki and His Dangerous Children",
+                "lessonGoal": "You will be able to identify Loki's place among the gods and the three children central to their future.",
+                "objectives": [
+                  "Recognize Loki as a figure who both assists and endangers the gods.",
+                  "Identify Fenrir as the wolf, Jormungandr as the world-encircling serpent, and Hel as the ruler of an underworld realm.",
+                  "Distinguish Hel's realm from a universal place of punishment for wrongdoing."
+                ],
+                "topicTags": [
+                  "loki",
+                  "fenrir",
+                  "jormungandr",
+                  "hel"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Connect Loki to his three children and their distinct placements so the learner can tell the wolf, serpent, and underworld ruler apart."
+                  }
+                ]
+              },
+              {
+                "id": "slot9",
+                "method": "quiz",
+                "title": "Recognize the World and Its Gods",
+                "lessonGoal": "You will be able to connect the Eddas' creation accounts, cosmic setting, and leading divine figures.",
+                "objectives": [
+                  "Distinguish the two Eddas and explain their relationship to oral tradition.",
+                  "Sequence the emergence of Ymir, the making of the world, and the creation of human beings.",
+                  "Identify Yggdrasil, Asgard, Midgard, and the Norns without assuming a fixed map.",
+                  "Distinguish Odin's two sacrifices for knowledge.",
+                  "Recognize Thor's protective role and the varied relationships between gods and giants.",
+                  "Distinguish the Aesir and Vanir and identify Njord, Freyr, and Freyja.",
+                  "Identify Loki's three children and their places in the mythic world."
+                ],
+                "topicTags": [
+                  "eddas",
+                  "creation",
+                  "cosmology",
+                  "gods",
+                  "loki"
+                ],
+                "assessesSlotIds": [
+                  "slot1",
+                  "slot2",
+                  "slot3",
+                  "slot4",
+                  "slot5",
+                  "slot6",
+                  "slot7",
+                  "slot8"
+                ]
+              },
+              {
+                "id": "slot10",
+                "method": "reading",
+                "chapter": "Keeping the Gods' World Secure",
+                "title": "The Builder's Impossible Bargain",
+                "lessonGoal": "You will be able to trace how the bargain for a defensive wall leads Loki to rescue the gods.",
+                "objectives": [
+                  "Identify the builder's promised reward and the deadline that makes the bargain seem safe.",
+                  "Explain how Loki prevents the builder from finishing and how the episode leads to the birth of Odin's horse, Sleipnir."
+                ],
+                "topicTags": [
+                  "wall-builder",
+                  "loki",
+                  "sleipnir",
+                  "bargains"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Show the unfinished wall and Loki in mare form drawing the builder's working horse away, making the bargain's turning point visible."
+                  }
+                ]
+              },
+              {
+                "id": "slot11",
+                "method": "reading",
+                "chapter": "Keeping the Gods' World Secure",
+                "title": "The Wolf and the Broken Pledge",
+                "lessonGoal": "You will be able to explain how the gods bind Fenrir and why Tyr loses his hand.",
+                "objectives": [
+                  "Explain why Fenrir demands a hand as a pledge before accepting the apparently harmless binding.",
+                  "Connect Tyr's lost hand with the gods' refusal to release Fenrir."
+                ],
+                "topicTags": [
+                  "fenrir",
+                  "tyr",
+                  "binding",
+                  "pledges"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Show the thin binding holding Fenrir while Tyr's hand rests in the wolf's mouth so the learner understands both the deception and its cost."
+                  }
+                ]
+              },
+              {
+                "id": "slot12",
+                "method": "reading",
+                "chapter": "Keeping the Gods' World Secure",
+                "title": "The Gods Begin to Grow Old",
+                "lessonGoal": "You will be able to explain why Idunn's abduction threatens the gods and how Loki reverses it.",
+                "objectives": [
+                  "Connect Idunn and her apples with the gods' continuing youth.",
+                  "Trace Loki's role in delivering Idunn to the giant Thjazi and bringing her back."
+                ],
+                "topicTags": [
+                  "idunn",
+                  "thjazi",
+                  "loki",
+                  "divine-youth"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Contrast the gods aging during Idunn's absence with her return, including her apples, so the learner sees what her rescue restores."
+                  }
+                ]
+              },
+              {
+                "id": "slot13",
+                "method": "reading",
+                "chapter": "Keeping the Gods' World Secure",
+                "title": "How Odin Wins the Mead of Poetry",
+                "lessonGoal": "You will be able to trace the mead of poetry from its origin to Odin's escape with it.",
+                "objectives": [
+                  "Connect the mead's origin in Kvasir's blood with its gift of poetic ability.",
+                  "Explain how Odin gains access through Gunnlod and escapes from Suttung with the mead."
+                ],
+                "topicTags": [
+                  "odin",
+                  "mead-of-poetry",
+                  "kvasir",
+                  "gunnlod"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Trace the mead from Kvasir through its guarded storage to Odin's escape, using a single labelled path to clarify who possesses it at each stage."
+                  }
+                ]
+              },
+              {
+                "id": "slot14",
+                "method": "reading",
+                "chapter": "Journeys Beyond the Gods' Home",
+                "title": "Thor's Hammer Goes Missing",
+                "lessonGoal": "You will be able to explain how disguise allows Thor to recover his stolen hammer.",
+                "objectives": [
+                  "Identify Thrym's demand for Freyja as the condition for returning the hammer.",
+                  "Trace how Thor's bridal disguise and Loki's explanations bring the hammer within Thor's reach."
+                ],
+                "topicTags": [
+                  "thor",
+                  "thrym",
+                  "mjolnir",
+                  "disguise"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Show the disguised Thor at the wedding as the hammer is brought to him, making clear how the supposed marriage becomes a recovery plan."
+                  }
+                ]
+              },
+              {
+                "id": "slot15",
+                "method": "reading",
+                "chapter": "Journeys Beyond the Gods' Home",
+                "title": "The Contests Thor Cannot Win",
+                "lessonGoal": "You will be able to explain why Thor's apparent failures in Utgarda-Loki's hall reveal extraordinary strength.",
+                "objectives": [
+                  "Match Thor's drinking, lifting, and wrestling contests to the sea, the world serpent, and old age.",
+                  "Explain how the concealed opponents change the meaning of Thor's apparent defeats."
+                ],
+                "topicTags": [
+                  "thor",
+                  "utgarda-loki",
+                  "contests",
+                  "illusion"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Pair the drinking horn, cat, and elderly wrestler with their concealed identities so the learner can reinterpret each contest."
+                  }
+                ]
+              },
+              {
+                "id": "slot16",
+                "method": "reading",
+                "chapter": "Journeys Beyond the Gods' Home",
+                "title": "Thor Hooks the World Serpent",
+                "lessonGoal": "You will be able to recount Thor's fishing encounter with Jormungandr while recognizing its differing endings.",
+                "objectives": [
+                  "Identify Hymir as Thor's fishing companion and an ox's head as Thor's bait.",
+                  "Retell the confrontation with Jormungandr without assuming that all Eddic references give the same outcome."
+                ],
+                "topicTags": [
+                  "thor",
+                  "jormungandr",
+                  "hymir",
+                  "fishing"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Show Thor braced in the boat with the hooked serpent rising from the water, emphasizing the confrontation without depicting one disputed ending as certain."
+                  }
+                ]
+              },
+              {
+                "id": "slot17",
+                "method": "reading",
+                "chapter": "Journeys Beyond the Gods' Home",
+                "title": "The Price of Freyr's Courtship",
+                "lessonGoal": "You will be able to explain how Freyr's desire for Gerd leads to a costly and coercive courtship.",
+                "objectives": [
+                  "Identify Skirnir as the messenger Freyr sends to Gerd after giving him his sword.",
+                  "Distinguish Skirnir's offered gifts from the threats that precede Gerd's agreement to meet Freyr."
+                ],
+                "topicTags": [
+                  "freyr",
+                  "gerd",
+                  "skirnir",
+                  "courtship"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show the sequence from Freyr handing over his sword to Skirnir's gifts, threats, and arranged meeting, keeping the coercive steps explicit rather than presenting a simple romance."
+                  }
+                ]
+              },
+              {
+                "id": "slot18",
+                "method": "quiz",
+                "title": "Follow the Gods' Bargains and Adventures",
+                "lessonGoal": "You will be able to explain the choices, deceptions, and consequences driving the gods' major adventures.",
+                "objectives": [
+                  "Explain how Loki resolves the wall-builder's bargain.",
+                  "Connect Fenrir's binding with Tyr's sacrifice.",
+                  "Explain why Idunn's rescue restores the gods' youth.",
+                  "Trace the origin and acquisition of the mead of poetry.",
+                  "Explain how Thor recovers his hammer from Thrym.",
+                  "Match Thor's apparently failed contests to their concealed opponents.",
+                  "Recognize the central events and differing outcomes of Thor's fishing story.",
+                  "Identify the sword, messenger, and coercion in Freyr's courtship."
+                ],
+                "topicTags": [
+                  "divine-adventures",
+                  "bargains",
+                  "thor",
+                  "loki",
+                  "freyr"
+                ],
+                "assessesSlotIds": [
+                  "slot10",
+                  "slot11",
+                  "slot12",
+                  "slot13",
+                  "slot14",
+                  "slot15",
+                  "slot16",
+                  "slot17"
+                ]
+              },
+              {
+                "id": "slot19",
+                "method": "reading",
+                "chapter": "Sigurd and the Dragon's Treasure",
+                "title": "Sigurd Kills the Dragon",
+                "lessonGoal": "You will be able to explain how Sigurd's victory over Fafnir brings both treasure and danger.",
+                "objectives": [
+                  "Identify Sigurd as a human hero of the Eddic heroic poems and Regin as the smith who urges him to kill Fafnir.",
+                  "Trace how tasting the dragon's blood lets Sigurd understand birds and discover Regin's treachery.",
+                  "Connect the dragon's treasure with the danger surrounding its possession."
+                ],
+                "topicTags": [
+                  "sigurd",
+                  "fafnir",
+                  "regin",
+                  "dragon-treasure"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show the sequence from the dragon's death to tasting its blood, hearing the birds, and discovering betrayal so the learner can follow the causal chain."
+                  }
+                ]
+              },
+              {
+                "id": "slot20",
+                "method": "reading",
+                "chapter": "Sigurd and the Dragon's Treasure",
+                "title": "The Deception That Destroys Sigurd",
+                "lessonGoal": "You will be able to connect the deception surrounding Brynhild's marriage with Sigurd's death.",
+                "objectives": [
+                  "Identify Gudrun as Sigurd's wife and Gunnar as the man seeking to marry Brynhild.",
+                  "Explain how Sigurd's disguised assistance to Gunnar and the exposure of that deception lead toward Sigurd's murder.",
+                  "Recognize that Eddic poems preserve differing details of Sigurd and Brynhild's earlier relationship and their deaths."
+                ],
+                "topicTags": [
+                  "sigurd",
+                  "brynhild",
+                  "gudrun",
+                  "gunnar",
+                  "betrayal"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Map the four principal figures and distinguish actual identities from the identity Brynhild is led to believe, so the learner can understand the marriage deception."
+                  }
+                ]
+              },
+              {
+                "id": "slot21",
+                "method": "reading",
+                "chapter": "The Road to Ragnarök and Renewal",
+                "title": "Why Baldr Does Not Return",
+                "lessonGoal": "You will be able to explain how Baldr dies despite protection and why the attempt to recover him fails.",
+                "objectives": [
+                  "Connect Frigg's protective oaths, the overlooked mistletoe, and Hodr's fatal action under Loki's direction in the Prose Edda account.",
+                  "Explain why Hermod's request for Baldr's return fails when universal mourning is not achieved."
+                ],
+                "topicTags": [
+                  "baldr",
+                  "frigg",
+                  "hodr",
+                  "hermod",
+                  "mourning"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Trace the failed protection and failed recovery as two stages of Baldr's loss, clearly distinguishing the mistletoe exception from the refusal to mourn."
+                  }
+                ]
+              },
+              {
+                "id": "slot22",
+                "method": "reading",
+                "chapter": "The Road to Ragnarök and Renewal",
+                "title": "Loki's Bonds Will Not Hold Forever",
+                "lessonGoal": "You will be able to explain Loki's punishment and why binding the gods' enemies only postpones the catastrophe.",
+                "objectives": [
+                  "Connect Loki's flight and capture with his binding by the gods.",
+                  "Explain how Sigyn's bowl shields Loki from dripping venom and why his movements are associated with earthquakes.",
+                  "Identify the eventual release of Loki and other restrained enemies as part of Ragnarök, the destruction and transformation of the gods' world."
+                ],
+                "topicTags": [
+                  "loki",
+                  "sigyn",
+                  "binding",
+                  "ragnarok"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Show bound Loki beneath the venom-dripping snake with Sigyn holding a bowl, making the source of his suffering and her temporary protection clear."
+                  },
+                  {
+                    "kind": "diagram",
+                    "intent": "Contrast the restraint of Loki and Fenrir with their eventual release at Ragnarök so the learner recognizes that the gods' bindings postpone rather than eliminate the threat."
+                  }
+                ]
+              },
+              {
+                "id": "slot23",
+                "method": "reading",
+                "chapter": "The Road to Ragnarök and Renewal",
+                "title": "The Gods' Last Battles",
+                "lessonGoal": "You will be able to follow the warnings, principal encounters, and destruction of Ragnarök.",
+                "objectives": [
+                  "Identify the great winter and Heimdall's warning horn as signs that the final conflict is approaching.",
+                  "Match Odin with Fenrir, Thor with Jormungandr, Freyr with Surtr, Tyr with Garm, and Heimdall with Loki, identifying the fatal outcomes in the Prose Edda account.",
+                  "Connect Surtr's fire with the destruction of the world."
+                ],
+                "topicTags": [
+                  "ragnarok",
+                  "heimdall",
+                  "final-battles",
+                  "surtr",
+                  "divine-deaths"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show the great winter and warning horn leading into labelled pairs of final opponents and their outcomes, followed by Surtr's fire, without claiming that every Eddic source presents an identical sequence."
+                  }
+                ]
+              },
+              {
+                "id": "slot24",
+                "method": "reading",
+                "chapter": "The Road to Ragnarök and Renewal",
+                "title": "Life Returns After Destruction",
+                "lessonGoal": "You will be able to explain what survives or returns after Ragnarök and what remains uncertain.",
+                "objectives": [
+                  "Identify the renewed earth and the return of Baldr and Hodr as features of the world after Ragnarök.",
+                  "Identify Lif and Lifthrasir as the human pair who survive and become ancestors of future people.",
+                  "Distinguish the renewal described in the sources from the unsupported claim that they explicitly narrate an endlessly repeating cycle."
+                ],
+                "topicTags": [
+                  "renewal",
+                  "baldr",
+                  "human-survivors",
+                  "eddic-endings"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Show a green earth emerging after destruction with returning gods and a surviving human pair, conveying renewal without drawing a repeating cosmic loop."
+                  }
+                ]
+              },
+              {
+                "id": "slot25",
+                "method": "quiz",
+                "title": "Trace Heroic Tragedy and the World's Renewal",
+                "lessonGoal": "You will be able to distinguish Sigurd's heroic tragedy from the gods' path through loss, destruction, and renewal.",
+                "objectives": [
+                  "Trace Sigurd's victory over Fafnir and discovery of Regin's betrayal.",
+                  "Explain the marriage deception leading to Sigurd's death while recognizing differences among accounts.",
+                  "Explain why Baldr's protection and attempted recovery fail.",
+                  "Identify Loki's punishment, Sigyn's role, and the eventual breaking of restraints.",
+                  "Identify the warnings preceding Ragnarök.",
+                  "Match the principal opponents and outcomes in the final battles.",
+                  "Explain the renewed earth, returning gods, and human survivors without assuming an explicitly endless cycle."
+                ],
+                "topicTags": [
+                  "sigurd",
+                  "baldr",
+                  "loki",
+                  "ragnarok",
+                  "renewal"
+                ],
+                "assessesSlotIds": [
+                  "slot19",
+                  "slot20",
+                  "slot21",
+                  "slot22",
+                  "slot23",
+                  "slot24"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "judge": {
+        "pass": true,
+        "failedChecks": [],
+        "reasons": []
+      },
+      "visuals": 23,
+      "byKind": {
+        "depiction": 10,
+        "diagram": 13,
+        "technique": 0
+      },
+      "withoutVisual": []
+    },
+    {
+      "name": "drums",
+      "subject": "Drum kit",
+      "learningGoal": "Learn the drum-kit skills to work toward playing “Iris” by the Goo Goo Dolls: grip and strokes, reading drum notation, 4/4 and 6/8 grooves, and how to practise them",
+      "latencyMs": 122871,
+      "blueprint": {
+        "courseTitle": "Beginner Drum Kit: Building Toward “Iris”",
+        "modules": [
+          {
+            "title": "From First Strokes to Steady Grooves",
+            "slots": [
+              {
+                "id": "slot1",
+                "method": "reading",
+                "chapter": "Getting Ready at the Kit",
+                "title": "One Player, Many Drum Sounds",
+                "lessonGoal": "Explain what a drum kit is, where it came from, and what it contributes to a band.",
+                "objectives": [
+                  "Say what a drum kit is and how it developed as players combined drums and cymbals in the late nineteenth and early twentieth centuries.",
+                  "Explain in one sentence how a drummer supports a song's pulse, feel, and changes."
+                ],
+                "topicTags": [
+                  "drum-kit",
+                  "drumming-history",
+                  "band-role"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "depiction",
+                    "intent": "Show one seated drummer reaching drums and cymbals with hands and feet so the learner understands how one person plays several instruments."
+                  }
+                ]
+              },
+              {
+                "id": "slot2",
+                "method": "reading",
+                "chapter": "Getting Ready at the Kit",
+                "title": "Find Your Three Main Sounds",
+                "lessonGoal": "Locate the snare drum, bass drum, and hi-hat and identify how each is played.",
+                "objectives": [
+                  "Point out the snare drum, bass drum, and hi-hat on a kit.",
+                  "Match each instrument to its hand or foot control and its typical sound."
+                ],
+                "topicTags": [
+                  "snare-drum",
+                  "bass-drum",
+                  "hi-hat"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Label the snare drum, bass drum, and hi-hat on a basic kit and connect each to the hand or foot that operates it in a common right-handed setup."
+                  }
+                ]
+              },
+              {
+                "id": "slot3",
+                "method": "reading",
+                "chapter": "Getting Ready at the Kit",
+                "title": "Set Up for Comfortable Playing",
+                "lessonGoal": "Prepare a balanced playing position and a hearing-safe practice setup.",
+                "objectives": [
+                  "Adjust the seat and instrument reach so the feet can operate the pedals without leaning or stretching.",
+                  "Choose hearing protection and a practice volume that reduce sound exposure.",
+                  "Identify discomfort or ringing in the ears as reasons to stop and reassess the setup."
+                ],
+                "topicTags": [
+                  "playing-posture",
+                  "kit-setup",
+                  "hearing-protection"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "technique",
+                    "intent": "Show a real drummer seated with relaxed shoulders, reachable drums, and feet resting naturally on the pedals so the learner can copy a balanced setup."
+                  }
+                ]
+              },
+              {
+                "id": "slot4",
+                "method": "reading",
+                "chapter": "Getting Ready at the Kit",
+                "title": "Hold the Sticks Without Squeezing",
+                "lessonGoal": "Use a relaxed matched grip that lets each stick move freely.",
+                "objectives": [
+                  "Place both sticks in a matched grip with a light thumb-and-finger pivot.",
+                  "Keep the remaining fingers in contact without clamping the sticks.",
+                  "Recognize excess tension in the hands and release it before continuing."
+                ],
+                "topicTags": [
+                  "matched-grip",
+                  "stick-control",
+                  "hand-tension"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "technique",
+                    "intent": "Show close-up photographs of a relaxed matched grip from above and from the side, making the pivot and supporting fingers visible."
+                  }
+                ]
+              },
+              {
+                "id": "slot5",
+                "method": "reading",
+                "chapter": "Making Controlled Sounds",
+                "title": "Let the Stick Bounce Back",
+                "lessonGoal": "Make a controlled single stroke without forcing the stick into the drumhead.",
+                "objectives": [
+                  "Use a small wrist-led motion to strike a drum or practice pad.",
+                  "Allow the stick to rebound while keeping a relaxed grip.",
+                  "Produce several separate strokes with a similar sound."
+                ],
+                "topicTags": [
+                  "single-strokes",
+                  "rebound",
+                  "wrist-motion"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "technique",
+                    "intent": "Show a real hand and stick before contact, at contact, and after rebound so the learner can copy a free-returning stroke."
+                  }
+                ]
+              },
+              {
+                "id": "slot6",
+                "method": "reading",
+                "chapter": "Making Controlled Sounds",
+                "title": "Control the Two Pedals",
+                "lessonGoal": "Operate the bass-drum and hi-hat pedals with controlled foot movements.",
+                "objectives": [
+                  "Produce separate bass-drum strokes using a comfortable heel-down starting position.",
+                  "Use foot pressure to keep the hi-hat closed while striking it.",
+                  "Release unnecessary leg tension between movements."
+                ],
+                "topicTags": [
+                  "bass-drum-pedal",
+                  "hi-hat-pedal",
+                  "foot-control"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "technique",
+                    "intent": "Show real feet on the bass-drum and hi-hat pedals, making the heel-down starting position and closed-hi-hat pressure clear."
+                  }
+                ]
+              },
+              {
+                "id": "slot7",
+                "method": "reading",
+                "chapter": "Making Controlled Sounds",
+                "title": "Keep a Steady Pulse",
+                "lessonGoal": "Match evenly spaced strokes to a metronome without speeding up or slowing down.",
+                "objectives": [
+                  "Explain pulse as a regular beat and tempo as its speed.",
+                  "Set a metronome to a comfortable beats-per-minute value.",
+                  "Play one relaxed stroke per click for a short, steady run."
+                ],
+                "topicTags": [
+                  "pulse",
+                  "tempo",
+                  "metronome"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Align evenly spaced metronome clicks with single drum strokes on a timeline so the learner can see what matching the pulse means."
+                  }
+                ]
+              },
+              {
+                "id": "slot8",
+                "method": "reading",
+                "chapter": "Making Controlled Sounds",
+                "title": "Alternate Your Hands Evenly",
+                "lessonGoal": "Play a steady sequence of alternating right- and left-hand strokes.",
+                "objectives": [
+                  "Follow a repeating right-left sticking sequence.",
+                  "Keep the spacing and volume similar when switching hands.",
+                  "Continue alternating without adding unintended double strokes."
+                ],
+                "topicTags": [
+                  "alternating-hands",
+                  "sticking",
+                  "even-strokes"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show an evenly spaced row of strokes labelled right and left so the learner can follow the alternating order without changing the pulse."
+                  }
+                ]
+              },
+              {
+                "id": "slot9",
+                "method": "quiz",
+                "title": "Ready to Make a Steady Sound",
+                "lessonGoal": "Identify the setup and movements needed to begin drumming safely and steadily.",
+                "objectives": [
+                  "Explain what a drum kit is, how it developed, and its role in a band.",
+                  "Identify the snare drum, bass drum, and hi-hat and their controls.",
+                  "Select a balanced setup and appropriate hearing precautions.",
+                  "Recognize a relaxed matched grip and a rebounding stroke.",
+                  "Choose controlled bass-drum and hi-hat pedal movements.",
+                  "Match a stroke sequence to a steady metronome pulse.",
+                  "Follow an alternating right-left sticking sequence."
+                ],
+                "topicTags": [
+                  "kit-setup",
+                  "stick-control",
+                  "foot-control",
+                  "pulse"
+                ],
+                "assessesSlotIds": [
+                  "slot1",
+                  "slot2",
+                  "slot3",
+                  "slot4",
+                  "slot5",
+                  "slot6",
+                  "slot7",
+                  "slot8"
+                ]
+              },
+              {
+                "id": "slot10",
+                "method": "reading",
+                "chapter": "Reading Your First Drum Patterns",
+                "title": "Match Written Notes to Kit Sounds",
+                "lessonGoal": "Use a drum-notation key to identify which instrument a written note represents.",
+                "objectives": [
+                  "Use a notation key to locate snare, bass-drum, and hi-hat notes on a staff.",
+                  "Distinguish ordinary and cross-shaped noteheads in the supplied key.",
+                  "Check the key rather than assume every drum chart uses identical positions."
+                ],
+                "topicTags": [
+                  "drum-notation",
+                  "notation-key",
+                  "noteheads"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Pair a simple drum staff and its key with labelled snare, bass-drum, and hi-hat symbols so the learner can translate each written sound."
+                  }
+                ]
+              },
+              {
+                "id": "slot11",
+                "method": "reading",
+                "chapter": "Reading Your First Drum Patterns",
+                "title": "Count Four Beats in a Bar",
+                "lessonGoal": "Read and count a simple 4/4 bar containing quarter notes and quarter rests.",
+                "objectives": [
+                  "Read 4/4 as four quarter-note beats in each bar.",
+                  "Count one through four while following bar lines.",
+                  "Play quarter notes and remain silent for quarter rests without losing the count."
+                ],
+                "topicTags": [
+                  "4-4-time",
+                  "quarter-notes",
+                  "quarter-rests",
+                  "bar-lines"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Place a four-beat count beneath an original bar of quarter notes and quarter rests, showing that silent beats still occupy time."
+                  }
+                ]
+              },
+              {
+                "id": "slot12",
+                "method": "reading",
+                "chapter": "Reading Your First Drum Patterns",
+                "title": "Fit Two Notes Inside Each Beat",
+                "lessonGoal": "Read and count eighth notes within a steady 4/4 pulse.",
+                "objectives": [
+                  "Divide each quarter-note beat into two equal eighth notes.",
+                  "Count an eighth-note line as one-and, two-and, three-and, four-and.",
+                  "Read a short rhythm mixing quarter notes and eighth notes."
+                ],
+                "topicTags": [
+                  "eighth-notes",
+                  "subdivision",
+                  "rhythm-reading"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Align four beat markers with eight equal subdivisions and their written notes so the learner can see how two eighth notes fit each beat."
+                  }
+                ]
+              },
+              {
+                "id": "slot13",
+                "method": "reading",
+                "chapter": "Reading Your First Drum Patterns",
+                "title": "Read Sounds That Happen Together",
+                "lessonGoal": "Translate a short drum score into simultaneous and separate hand-and-foot actions.",
+                "objectives": [
+                  "Identify vertically aligned notes as sounds played at the same moment.",
+                  "Follow hi-hat, snare, and bass-drum parts along one shared count.",
+                  "Turn a short written pattern into a spoken sequence of limb actions."
+                ],
+                "topicTags": [
+                  "simultaneous-notes",
+                  "limb-coordination",
+                  "score-reading"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Connect vertically aligned drum notes to a shared counting grid and hand-and-foot labels so the learner can distinguish together from successive actions."
+                  }
+                ]
+              },
+              {
+                "id": "slot14",
+                "method": "reading",
+                "chapter": "Building a Four-Beat Groove",
+                "title": "Put Your First Groove Together",
+                "lessonGoal": "Play a basic 4/4 groove with steady hi-hat notes and coordinated bass-drum and snare strokes.",
+                "objectives": [
+                  "Play eighth notes on the closed hi-hat over a four-beat count.",
+                  "Place bass-drum strokes on beats one and three and snare strokes on beats two and four.",
+                  "Repeat the complete pattern without pausing at the bar line."
+                ],
+                "topicTags": [
+                  "4-4-groove",
+                  "backbeat",
+                  "limb-coordination"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show an original one-bar groove as notation above a limb grid, making the steady hi-hat and alternating bass-drum and snare placements easy to follow."
+                  }
+                ]
+              },
+              {
+                "id": "slot15",
+                "method": "reading",
+                "chapter": "Building a Four-Beat Groove",
+                "title": "Balance the Sounds of Your Groove",
+                "lessonGoal": "Control the relative loudness of the kit parts while keeping the groove steady.",
+                "objectives": [
+                  "Explain dynamics as differences in playing loudness.",
+                  "Use a smaller stick motion to make the hi-hat quieter without changing its timing.",
+                  "Keep the snare and bass drum clear without making every sound equally loud."
+                ],
+                "topicTags": [
+                  "dynamics",
+                  "sound-balance",
+                  "hi-hat-control"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Compare a groove with equally loud parts against one with a quieter hi-hat and clear snare and bass drum, using labelled relative-level bars."
+                  }
+                ]
+              },
+              {
+                "id": "slot16",
+                "method": "reading",
+                "chapter": "Building a Four-Beat Groove",
+                "title": "Make a Simple Fill",
+                "lessonGoal": "Play a short fill that occupies a planned amount of time in a 4/4 bar.",
+                "objectives": [
+                  "Identify a fill as a brief variation that leads toward a musical change.",
+                  "Locate the toms and distinguish their role from the snare in a simple fill.",
+                  "Play an original four-eighth-note fill across beats three and four without adding time."
+                ],
+                "topicTags": [
+                  "drum-fills",
+                  "toms",
+                  "fill-counting"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Label the toms on a kit and connect a four-note fill route to beats three and four of a counting grid so the learner sees both the sound choices and the time limit."
+                  }
+                ]
+              },
+              {
+                "id": "slot17",
+                "method": "reading",
+                "chapter": "Building a Four-Beat Groove",
+                "title": "Land Back on Beat One",
+                "lessonGoal": "Return from a short fill to the groove on the next bar's first beat.",
+                "objectives": [
+                  "Keep counting through a groove-to-fill transition.",
+                  "Resume the groove on the next beat one without inserting a pause.",
+                  "Add a crash cymbal with the bass drum on the returning beat one, then resume the hi-hat."
+                ],
+                "topicTags": [
+                  "fill-transitions",
+                  "beat-one",
+                  "crash-cymbal"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show the end of a groove bar, a short fill, and the next bar's crash-and-bass-drum landing on one continuous timeline."
+                  }
+                ]
+              },
+              {
+                "id": "slot18",
+                "method": "quiz",
+                "title": "Read and Build a Four-Beat Groove",
+                "lessonGoal": "Interpret a beginner 4/4 drum pattern and choose how to play it with a clear groove and timed transitions.",
+                "objectives": [
+                  "Use a drum key to identify written kit sounds.",
+                  "Count quarter notes, quarter rests, and eighth notes in 4/4.",
+                  "Identify simultaneous hand-and-foot actions in a score.",
+                  "Recognize the parts of a basic 4/4 groove.",
+                  "Choose adjustments that make the hi-hat quieter without changing the rhythm.",
+                  "Keep a short fill within its allotted beats.",
+                  "Identify the correct return to beat one after a fill."
+                ],
+                "topicTags": [
+                  "rhythm-reading",
+                  "4-4-groove",
+                  "dynamics",
+                  "fill-transitions"
+                ],
+                "assessesSlotIds": [
+                  "slot10",
+                  "slot11",
+                  "slot12",
+                  "slot13",
+                  "slot14",
+                  "slot15",
+                  "slot16",
+                  "slot17"
+                ]
+              },
+              {
+                "id": "slot19",
+                "method": "reading",
+                "chapter": "Feeling and Playing Six-Eight",
+                "title": "Feel Six as Two Groups of Three",
+                "lessonGoal": "Count 6/8 with six small counts grouped into two larger beats.",
+                "objectives": [
+                  "Count six equal subdivisions as one-two-three, four-five-six.",
+                  "Mark the two larger beats on counts one and four.",
+                  "Distinguish this two-groups-of-three feel from the paired subdivisions of a basic 4/4 groove."
+                ],
+                "topicTags": [
+                  "6-8-time",
+                  "compound-pulse",
+                  "meter-comparison"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Compare a 6/8 bar grouped as three plus three with a 4/4 bar grouped as four pairs, clearly separating large beats from smaller subdivisions."
+                  }
+                ]
+              },
+              {
+                "id": "slot20",
+                "method": "reading",
+                "chapter": "Feeling and Playing Six-Eight",
+                "title": "Read a Six-Eight Bar",
+                "lessonGoal": "Read simple 6/8 notation while keeping its two large beats.",
+                "objectives": [
+                  "Read 6/8 as six eighth-note units in each bar.",
+                  "Recognize a dotted quarter note as three eighth-note units.",
+                  "Follow groups of three eighth notes without treating each small count as a separate large beat."
+                ],
+                "topicTags": [
+                  "6-8-notation",
+                  "dotted-quarter-notes",
+                  "note-grouping"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Align six eighth notes, two dotted quarter notes, and a one-through-six count to show two ways of representing the same bar length."
+                  }
+                ]
+              },
+              {
+                "id": "slot21",
+                "method": "reading",
+                "chapter": "Feeling and Playing Six-Eight",
+                "title": "Build a Flowing Six-Eight Groove",
+                "lessonGoal": "Play a repeating 6/8 groove with a clear two-beat feel.",
+                "objectives": [
+                  "Play six even hi-hat notes in each 6/8 bar.",
+                  "Place the bass drum on count one and the snare on count four.",
+                  "Repeat the groove while preserving the three-plus-three grouping."
+                ],
+                "topicTags": [
+                  "6-8-groove",
+                  "limb-coordination",
+                  "three-plus-three"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show an original 6/8 groove in notation and on a six-column limb grid, with counts one and four marking the two large beats."
+                  }
+                ]
+              },
+              {
+                "id": "slot22",
+                "method": "reading",
+                "chapter": "Practising Toward a Song",
+                "title": "Build a Pattern in Small Steps",
+                "lessonGoal": "Use a repeatable practice sequence to learn a groove without sacrificing control.",
+                "objectives": [
+                  "Isolate a difficult hand-and-foot combination before rebuilding the full groove.",
+                  "Choose a practice tempo at which the pattern can be repeated accurately and comfortably.",
+                  "Increase tempo in small steps only after several clean repetitions, and step back when control slips."
+                ],
+                "topicTags": [
+                  "practice-chunks",
+                  "tempo-progression",
+                  "groove-practice"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show a practice sequence from one difficult combination to the complete groove, with a repeat-or-slow-down branch before any tempo increase."
+                  }
+                ]
+              },
+              {
+                "id": "slot23",
+                "method": "reading",
+                "chapter": "Practising Toward a Song",
+                "title": "Listen Back and Fix One Problem",
+                "lessonGoal": "Use a short practice recording to choose one specific correction for the next attempt.",
+                "objectives": [
+                  "Record a short groove at a safe listening level with an audible timing reference.",
+                  "Identify a timing drift, missed note, uneven sound balance, or delayed return after a fill.",
+                  "Choose one matching correction and compare the next recording with the first."
+                ],
+                "topicTags": [
+                  "practice-recording",
+                  "error-detection",
+                  "self-feedback"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Compare expected beat positions with a short example containing a late fill return, highlighting the single timing problem to correct on the next attempt."
+                  }
+                ]
+              },
+              {
+                "id": "slot24",
+                "method": "reading",
+                "chapter": "Practising Toward a Song",
+                "title": "Plan Your Route Toward “Iris”",
+                "lessonGoal": "Make a manageable song-practice plan using the groove, reading, and listening skills learned in this module.",
+                "objectives": [
+                  "Use a recording and a reliable beginner chart or tutorial to identify section boundaries and confirm the counting needed for a chosen passage.",
+                  "Choose a simplified groove that preserves the passage's pulse and grouping before attempting extra details.",
+                  "Plan a short practice session that combines an isolated passage, a transition, and a play-along attempt at a manageable speed."
+                ],
+                "topicTags": [
+                  "song-preparation",
+                  "simplified-grooves",
+                  "practice-planning"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show a generic song-practice map with unnamed sections, one selected passage, and its transition, without reproducing any notation or arrangement from the target song."
+                  }
+                ]
+              },
+              {
+                "id": "slot25",
+                "method": "quiz",
+                "title": "Choose a Groove and a Practice Plan",
+                "lessonGoal": "Interpret a beginner 6/8 pattern and choose practical steps for progressing toward a song.",
+                "objectives": [
+                  "Distinguish two groups of three in 6/8 from paired subdivisions in 4/4.",
+                  "Read eighth notes and dotted quarter notes within a 6/8 bar.",
+                  "Identify the coordinated parts of a basic 6/8 groove.",
+                  "Choose a useful practice chunk and a controlled tempo progression.",
+                  "Match a recorded performance problem to a specific correction.",
+                  "Choose a simplified groove using a passage's confirmed pulse and grouping.",
+                  "Arrange passage practice, transition practice, and a manageable play-along into a short session."
+                ],
+                "topicTags": [
+                  "6-8-groove",
+                  "rhythm-reading",
+                  "self-feedback",
+                  "practice-planning"
+                ],
+                "assessesSlotIds": [
+                  "slot19",
+                  "slot20",
+                  "slot21",
+                  "slot22",
+                  "slot23",
+                  "slot24"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "judge": {
+        "pass": true,
+        "failedChecks": [],
+        "reasons": []
+      },
+      "visuals": 22,
+      "byKind": {
+        "depiction": 1,
+        "diagram": 17,
+        "technique": 4
+      },
+      "withoutVisual": []
+    },
+    {
+      "name": "microbiology",
+      "subject": "Microbiology lab fundamentals",
+      "learningGoal": "Understand Gram staining and the lab basics around it: aseptic technique, microscopy, and culture methods",
+      "latencyMs": 106020,
+      "blueprint": {
+        "courseTitle": "Microbiology Lab Fundamentals",
+        "modules": [
+          {
+            "title": "From Safe Lab Work to Gram Stain Interpretation",
+            "slots": [
+              {
+                "id": "slot1",
+                "method": "reading",
+                "chapter": "Working Safely With Microbes",
+                "title": "What a Microbiology Lab Does",
+                "lessonGoal": "You will be able to explain what microbiology studies, where laboratory microbiology began, and why its tools matter.",
+                "objectives": [
+                  "Say what microbiology studies and how early microscope observations helped establish it.",
+                  "Give an example of how growing, viewing, and staining microbes answer different laboratory questions.",
+                  "Say why microbiology matters in healthcare, food production, or environmental work."
+                ],
+                "topicTags": [
+                  "microbiology",
+                  "laboratory-tools",
+                  "scientific-origins"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show one microbial sample branching into growing microbes, viewing them through a microscope, and staining them, with each branch labelled by the different question it can answer."
+                  }
+                ]
+              },
+              {
+                "id": "slot2",
+                "method": "reading",
+                "chapter": "Working Safely With Microbes",
+                "title": "Keep Microbes Inside the Work Area",
+                "lessonGoal": "You will be able to choose basic precautions that protect people and contain laboratory material.",
+                "objectives": [
+                  "Identify common routes by which laboratory microbes can reach people or leave the work area.",
+                  "Match handwashing, protective clothing, closed containers, and designated waste containers to the exposure they reduce.",
+                  "State why unfamiliar samples, spills, and aerosol-producing work require approved procedures and trained supervision."
+                ],
+                "topicTags": [
+                  "lab-safety",
+                  "containment",
+                  "exposure-prevention"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show a teaching-lab bench with labelled barriers between microbial material, hands, eyes, personal belongings, and waste so the learner can identify routes of exposure and their controls."
+                  }
+                ]
+              },
+              {
+                "id": "slot3",
+                "method": "reading",
+                "chapter": "Working Safely With Microbes",
+                "title": "Clean Is Not the Same as Sterile",
+                "lessonGoal": "You will be able to distinguish cleaning, disinfection, and sterilization when preparing laboratory materials.",
+                "objectives": [
+                  "Tell apart removing soil, reducing microbes on surfaces, and eliminating viable microorganisms through a validated process.",
+                  "Match bench preparation and reusable laboratory equipment to the appropriate level of treatment.",
+                  "Recognize that disinfectants require the specified contact time and are not interchangeable with sterilization."
+                ],
+                "topicTags": [
+                  "cleaning",
+                  "disinfection",
+                  "sterilization"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Compare cleaning, disinfection, and sterilization using labelled surfaces and microbial symbols, making clear that a visibly clean surface is not necessarily disinfected or sterile."
+                  }
+                ]
+              },
+              {
+                "id": "slot4",
+                "method": "reading",
+                "chapter": "Preventing Unwanted Contamination",
+                "title": "Plan a Clean Transfer",
+                "lessonGoal": "You will be able to arrange a workspace to reduce contamination during a supervised microbial transfer.",
+                "objectives": [
+                  "Explain aseptic technique as preventing unwanted microbes from entering material or spreading from it.",
+                  "Identify which surfaces and tools must remain sterile during a transfer.",
+                  "Arrange labels, supplies, and waste before opening a container."
+                ],
+                "topicTags": [
+                  "aseptic-technique",
+                  "workspace-preparation",
+                  "contamination"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show a prepared teaching-lab workspace with labelled clean supplies, source and receiving containers, and waste, highlighting the sterile surfaces that must not be touched."
+                  }
+                ]
+              },
+              {
+                "id": "slot5",
+                "method": "reading",
+                "chapter": "Preventing Unwanted Contamination",
+                "title": "Protect Open Containers and Sterile Tools",
+                "lessonGoal": "You will be able to recognize handling choices that preserve sterility during a transfer.",
+                "objectives": [
+                  "Distinguish safe handling of a sterile loop or pipette tip from handling that contaminates its working end.",
+                  "Explain why containers are opened only as much and as long as necessary.",
+                  "Choose a fresh sterile tool when its sterility is uncertain."
+                ],
+                "topicTags": [
+                  "sterile-tools",
+                  "container-handling",
+                  "aseptic-transfer"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "technique",
+                    "intent": "Show gloved hands handling an approved teaching-lab container and sterile transfer tool, with the working end untouched and the container opening kept small."
+                  }
+                ]
+              },
+              {
+                "id": "slot6",
+                "method": "reading",
+                "chapter": "Preventing Unwanted Contamination",
+                "title": "Finish a Transfer Without Spreading Material",
+                "lessonGoal": "You will be able to recognize and correct contamination risks at the end of a supervised transfer.",
+                "objectives": [
+                  "Put closing containers, discarding used tools, treating the bench, and washing hands into a safe finishing sequence.",
+                  "Identify actions such as vigorous mixing or forceful expulsion that can create droplets or aerosols.",
+                  "Choose to stop and follow the reporting procedure after a spill or suspected exposure."
+                ],
+                "topicTags": [
+                  "transfer-completion",
+                  "aerosol-prevention",
+                  "incident-response"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show the end-of-transfer sequence from closed containers through designated waste and bench treatment to handwashing, with a separate stop-and-report branch for a spill."
+                  }
+                ]
+              },
+              {
+                "id": "slot7",
+                "method": "reading",
+                "chapter": "Seeing Microbes With a Microscope",
+                "title": "Follow the Light Through the Microscope",
+                "lessonGoal": "You will be able to locate the microscope parts needed to illuminate, position, and view a specimen.",
+                "objectives": [
+                  "Locate the eyepiece, objective lenses, stage, and focus controls on a compound light microscope.",
+                  "Trace light from the lamp through the condenser, specimen, and viewing lenses.",
+                  "Identify the controls that position the slide and adjust illumination."
+                ],
+                "topicTags": [
+                  "light-microscope",
+                  "microscope-parts",
+                  "illumination"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show a labelled compound light microscope with the light path marked and the slide-positioning, focusing, and illumination controls clearly distinguished."
+                  }
+                ]
+              },
+              {
+                "id": "slot8",
+                "method": "reading",
+                "chapter": "Seeing Microbes With a Microscope",
+                "title": "Find the Specimen Before Zooming In",
+                "lessonGoal": "You will be able to outline a focusing sequence that finds a specimen while protecting the slide and lenses.",
+                "objectives": [
+                  "Start with the low-power objective and center the area of interest before increasing magnification.",
+                  "Distinguish coarse focusing at low power from fine focusing at higher power.",
+                  "Explain why lens-to-slide clearance must be watched when positioning the objective."
+                ],
+                "topicTags": [
+                  "microscope-focus",
+                  "slide-positioning",
+                  "lens-safety"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show a slide first located and centered at low power and then viewed at higher power, alongside a side view that makes objective-to-slide clearance visible."
+                  }
+                ]
+              },
+              {
+                "id": "slot9",
+                "method": "reading",
+                "chapter": "Seeing Microbes With a Microscope",
+                "title": "Bigger Does Not Always Mean Clearer",
+                "lessonGoal": "You will be able to distinguish image magnification from the ability to separate nearby details.",
+                "objectives": [
+                  "Calculate total magnification from eyepiece and objective magnifications.",
+                  "Distinguish magnification from resolution using paired images.",
+                  "Recognize that increasing magnification cannot recover detail the microscope has not resolved."
+                ],
+                "topicTags": [
+                  "magnification",
+                  "resolution",
+                  "image-detail"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Compare two nearby dots at increasing image sizes with and without improved resolution, and label the eyepiece-times-objective calculation beside the examples."
+                  }
+                ]
+              },
+              {
+                "id": "slot10",
+                "method": "reading",
+                "chapter": "Seeing Microbes With a Microscope",
+                "title": "Use Oil Only With the Right Lens",
+                "lessonGoal": "You will be able to explain the purpose and basic handling requirements of an oil-immersion objective.",
+                "objectives": [
+                  "Explain how immersion oil helps a compatible objective collect light for finer detail.",
+                  "Identify the objective marked for oil rather than assuming any high-power lens can use it.",
+                  "State how to avoid oil on dry objectives and remove it using approved lens-cleaning materials."
+                ],
+                "topicTags": [
+                  "oil-immersion",
+                  "objective-lenses",
+                  "lens-care"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Compare the light paths across an air gap and an oil bridge between slide and compatible objective, clearly marking that oil belongs only with an appropriately designated lens."
+                  }
+                ]
+              },
+              {
+                "id": "slot11",
+                "method": "quiz",
+                "title": "Choose Safe Handling and Clear Viewing",
+                "lessonGoal": "You will be able to select safe laboratory actions and an appropriate microscope setup for a beginner laboratory scenario.",
+                "objectives": [
+                  "Distinguish the questions answered by growing, viewing, and staining microbes.",
+                  "Select precautions that reduce exposure and contain laboratory material.",
+                  "Distinguish cleaning, disinfection, and sterilization.",
+                  "Identify sterile surfaces and prepare an orderly transfer workspace.",
+                  "Recognize handling that contaminates a tool or open container.",
+                  "Choose safe transfer-completion and incident-response actions.",
+                  "Identify microscope parts and their functions.",
+                  "Choose a safe low-to-high-power focusing sequence.",
+                  "Calculate total magnification and distinguish it from resolution.",
+                  "Recognize correct oil-immersion lens use and care."
+                ],
+                "topicTags": [
+                  "lab-safety",
+                  "aseptic-technique",
+                  "microscopy",
+                  "resolution"
+                ],
+                "assessesSlotIds": [
+                  "slot1",
+                  "slot2",
+                  "slot3",
+                  "slot4",
+                  "slot5",
+                  "slot6",
+                  "slot7",
+                  "slot8",
+                  "slot9",
+                  "slot10"
+                ]
+              },
+              {
+                "id": "slot12",
+                "method": "reading",
+                "chapter": "Growing and Separating Microbes",
+                "title": "What Microbes Grow In",
+                "lessonGoal": "You will be able to distinguish liquid and solid culture media and explain what visible growth represents.",
+                "objectives": [
+                  "Define a culture as microbes grown under chosen laboratory conditions.",
+                  "Distinguish liquid broth from solid medium made with agar.",
+                  "Recognize that culture media supply nutrients but do not support every microbe."
+                ],
+                "topicTags": [
+                  "culture",
+                  "broth",
+                  "agar",
+                  "growth-media"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Compare a labelled broth tube and agar plate, showing dispersed growth in liquid and localized growth on a solid surface without implying that every microbe grows in either medium."
+                  }
+                ]
+              },
+              {
+                "id": "slot13",
+                "method": "reading",
+                "chapter": "Growing and Separating Microbes",
+                "title": "Spread Growth to Find Separate Colonies",
+                "lessonGoal": "You will be able to explain how streaking a plate can separate a mixed starting sample into isolated colonies.",
+                "objectives": [
+                  "Recognize a colony as visible growth arising from a cell or group of cells.",
+                  "Explain how successive streak areas reduce the number of cells deposited.",
+                  "Identify an isolated colony rather than overlapping growth as a candidate for a follow-up culture."
+                ],
+                "topicTags": [
+                  "streak-plate",
+                  "isolated-colonies",
+                  "cell-separation"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show a labelled streak-plate sequence with progressively fewer deposited cells and a corresponding growth pattern, distinguishing isolated colonies from crowded growth."
+                  }
+                ]
+              },
+              {
+                "id": "slot14",
+                "method": "reading",
+                "chapter": "Growing and Separating Microbes",
+                "title": "Growth Depends on the Conditions",
+                "lessonGoal": "You will be able to explain why culture conditions determine which microbes become visible.",
+                "objectives": [
+                  "Identify temperature, time, and oxygen availability as conditions that affect growth.",
+                  "Explain why no visible growth does not prove that the original sample contained no microbes.",
+                  "Choose approved organism-specific incubation instructions rather than a universal setting."
+                ],
+                "topicTags": [
+                  "incubation",
+                  "oxygen",
+                  "growth-conditions"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show portions of the same sample under different labelled temperature, time, and oxygen conditions, illustrating that visible growth depends on the conditions provided."
+                  }
+                ]
+              },
+              {
+                "id": "slot15",
+                "method": "reading",
+                "chapter": "Growing and Separating Microbes",
+                "title": "Read a Plate Without Guessing Its Identity",
+                "lessonGoal": "You will be able to record colony differences and judge what they suggest about a culture.",
+                "objectives": [
+                  "Record colony size, outline, and pigmentation using neutral observations.",
+                  "Distinguish evidence suggesting mixed growth from a uniform-looking culture.",
+                  "Explain why colony appearance alone neither identifies a species nor proves purity."
+                ],
+                "topicTags": [
+                  "colony-appearance",
+                  "mixed-culture",
+                  "culture-purity"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Compare plates with uniform-looking and visibly different colony types, labelling observable features while separating those observations from claims about identity or purity."
+                  }
+                ]
+              },
+              {
+                "id": "slot16",
+                "method": "reading",
+                "chapter": "How Gram Staining Works",
+                "title": "Why Some Cells Stay Purple",
+                "lessonGoal": "You will be able to explain what Gram staining distinguishes and why bacterial envelope structure affects the result.",
+                "objectives": [
+                  "Say that Hans Christian Gram developed the staining method in the nineteenth century to make bacteria easier to distinguish in specimens.",
+                  "Relate the usual Gram-positive and Gram-negative responses to differences in cell-envelope structure.",
+                  "Predict the usual final purple or pink appearance of the two groups."
+                ],
+                "topicTags": [
+                  "gram-stain",
+                  "cell-envelope",
+                  "gram-positive",
+                  "gram-negative"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Compare simplified Gram-positive and Gram-negative cell envelopes, labelling the peptidoglycan layer and outer membrane and pairing each with its usual final stain color."
+                  }
+                ]
+              },
+              {
+                "id": "slot17",
+                "method": "reading",
+                "chapter": "How Gram Staining Works",
+                "title": "Start With a Thin, Fixed Smear",
+                "lessonGoal": "You will be able to recognize a suitable smear and explain the preparation needed before staining.",
+                "objectives": [
+                  "Distinguish a thin, spread-out smear from a thick clump that will stain unevenly.",
+                  "Put spreading, complete air-drying, and protocol-specified fixation in order.",
+                  "Explain why fixation attaches material to the slide but must not be treated as a guarantee of safety."
+                ],
+                "topicTags": [
+                  "smear-preparation",
+                  "air-drying",
+                  "fixation"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show thin and overly thick smears side by side, followed by the labelled sequence of spreading, complete air-drying, and approved fixation."
+                  }
+                ]
+              },
+              {
+                "id": "slot18",
+                "method": "reading",
+                "chapter": "How Gram Staining Works",
+                "title": "Give Both Groups the First Stain",
+                "lessonGoal": "You will be able to explain the roles and order of the first two Gram-stain reagents.",
+                "objectives": [
+                  "Place crystal violet before iodine in the staining sequence.",
+                  "Explain that crystal violet initially colors both bacterial groups.",
+                  "Explain iodine's role in forming a dye complex that is retained differently during the next stage."
+                ],
+                "topicTags": [
+                  "crystal-violet",
+                  "iodine",
+                  "dye-complex"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show both cell-envelope types after crystal violet and then iodine, with both remaining purple and a labelled dye complex forming before their responses diverge."
+                  }
+                ]
+              },
+              {
+                "id": "slot19",
+                "method": "reading",
+                "chapter": "How Gram Staining Works",
+                "title": "Remove Dye, Then Add Contrast",
+                "lessonGoal": "You will be able to explain how decolorization and counterstaining produce the final Gram-stain contrast.",
+                "objectives": [
+                  "Place decolorizer and the usual safranin counterstain after crystal violet and iodine.",
+                  "Predict the usual cell colors immediately after decolorization and after counterstaining.",
+                  "Identify reagent timing, rinsing, and the approved protocol as essential controls rather than assume one timing fits every kit."
+                ],
+                "topicTags": [
+                  "decolorization",
+                  "safranin",
+                  "staining-sequence"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Track both bacterial groups through the complete reagent sequence, emphasizing the colorless intermediate in the usual Gram-negative response and the final purple-versus-pink contrast."
+                  }
+                ]
+              },
+              {
+                "id": "slot20",
+                "method": "reading",
+                "chapter": "Making Sense of a Gram Stain",
+                "title": "Report Color, Shape, and Arrangement",
+                "lessonGoal": "You will be able to write a basic Gram-stain observation using reaction, cell shape, and arrangement.",
+                "objectives": [
+                  "Distinguish round cells, called cocci, from rod-shaped cells, called bacilli.",
+                  "Recognize cells occurring singly, in pairs, in chains, or in clusters.",
+                  "Combine observed color, shape, and arrangement into a concise report without assigning a species."
+                ],
+                "topicTags": [
+                  "gram-stain-report",
+                  "cell-shape",
+                  "cell-arrangement"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show plain labelled schematics of purple and pink cocci and rods in several arrangements, paired with example observation wording rather than organism names."
+                  }
+                ]
+              },
+              {
+                "id": "slot21",
+                "method": "reading",
+                "chapter": "Making Sense of a Gram Stain",
+                "title": "Decide Whether the Stain Is Trustworthy",
+                "lessonGoal": "You will be able to use control results and preparation clues to recognize an unreliable Gram stain.",
+                "objectives": [
+                  "Explain how known Gram-positive and Gram-negative controls check the staining process.",
+                  "Predict how excessive or insufficient decolorization can produce misleading colors.",
+                  "Recognize thick smears, damaged or aging cells, and failed controls as reasons to question a result."
+                ],
+                "topicTags": [
+                  "stain-controls",
+                  "staining-errors",
+                  "result-quality"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Compare expected control colors with patterns caused by too much or too little decolorization, showing when a sample result cannot be accepted confidently."
+                  }
+                ]
+              },
+              {
+                "id": "slot22",
+                "method": "reading",
+                "chapter": "Making Sense of a Gram Stain",
+                "title": "Use the Result Without Overclaiming",
+                "lessonGoal": "You will be able to connect a Gram-stain observation to culture evidence and choose an appropriate next step.",
+                "objectives": [
+                  "Separate direct observations from conclusions about organism identity or disease.",
+                  "Explain why a Gram stain does not establish species, viability, or antibiotic susceptibility.",
+                  "Choose between reporting an interpretable observation, repeating an unreliable stain, and requesting further testing in a simple laboratory scenario."
+                ],
+                "topicTags": [
+                  "result-interpretation",
+                  "evidence-limits",
+                  "laboratory-decisions"
+                ],
+                "assessesSlotIds": [],
+                "visuals": [
+                  {
+                    "kind": "diagram",
+                    "intent": "Show a decision path from stain quality and observed cell features to reporting, repeating, or further testing, keeping unsupported species and treatment conclusions outside the observation report."
+                  }
+                ]
+              },
+              {
+                "id": "slot23",
+                "method": "quiz",
+                "title": "Connect Culture, Staining, and Evidence",
+                "lessonGoal": "You will be able to interpret a basic culture-and-Gram-stain scenario and choose a justified laboratory conclusion.",
+                "objectives": [
+                  "Distinguish broth and solid media and explain what culture growth represents.",
+                  "Explain how streaking produces isolated colonies.",
+                  "Relate visible growth to incubation conditions without treating absent growth as proof of absent microbes.",
+                  "Record colony differences without claiming identity or proven purity.",
+                  "Relate usual Gram reactions to cell-envelope differences.",
+                  "Recognize suitable smear preparation and the correct reagent sequence.",
+                  "Predict cell colors at the main stages of Gram staining.",
+                  "Report observed Gram reaction, shape, and arrangement.",
+                  "Use controls and error patterns to judge stain reliability.",
+                  "Choose a justified report, repeat, or further test without inferring species, viability, or antibiotic susceptibility from the stain alone."
+                ],
+                "topicTags": [
+                  "culture-methods",
+                  "gram-stain",
+                  "quality-control",
+                  "evidence-limits"
+                ],
+                "assessesSlotIds": [
+                  "slot12",
+                  "slot13",
+                  "slot14",
+                  "slot15",
+                  "slot16",
+                  "slot17",
+                  "slot18",
+                  "slot19",
+                  "slot20",
+                  "slot21",
+                  "slot22"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "judge": {
+        "pass": true,
+        "failedChecks": [],
+        "reasons": []
+      },
+      "visuals": 21,
+      "byKind": {
+        "depiction": 0,
+        "diagram": 20,
+        "technique": 1
+      },
+      "withoutVisual": []
+    }
+  ]
+}

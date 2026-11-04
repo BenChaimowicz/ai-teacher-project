@@ -28,6 +28,10 @@ import { readingPlugin } from "../teaching-methods/reading.ts";
 import type { TeachingMethodPlugin } from "../teaching-methods/types.ts";
 import { courseOutline, createCourseJudge, type CourseJudge } from "./course-judge.ts";
 import { enqueueJob, LeaseLostError, type GenerationControl, type SettledStatus, type WorkerIdentity } from "./generation-job.ts";
+import { createMediaStorage, mediaStorageConfigFromEnv, type MediaStorage } from "@senoy/media";
+import { findVisualOnCommons } from "./commons-ingest.ts";
+import { WIKIMEDIA_CONTACT_ENV } from "./commons.ts";
+import { createIllustrator } from "./illustrator.ts";
 import { createReuseFit, findReuseCandidates, reuseSeed, type FindReuseCandidates, type ReuseFit } from "./lesson-reuse.ts";
 import { createMediaLibrary } from "./media-library.ts";
 import { loadModelConfig } from "./model-config.ts";
@@ -40,12 +44,15 @@ import {
   ReadingFailedError,
   ReuseUnfitError,
   type CheckedReading,
+  type ReadingGeneratorOptions,
   type PriorLesson,
   type ReadingGenerator,
   type ChapterDraft,
 } from "./reading-generation.ts";
 import { createResearchTierRater, type ResearchTierRater } from "./research-tier.ts";
+import type { StructuredTransport } from "./openrouter.ts";
 import { createTrackedTransport, trackResearchRun, withPipelineEvent, type PipelineEventScope } from "./usage-tracking.ts";
+import { createVisualJudge } from "./visual-judge.ts";
 
 /** What one run of a claimed generation job receives. */
 export type GenerationStart = {
@@ -140,10 +147,6 @@ export function failureReason(stage: Stage, error: unknown, written: number): st
       return `We couldn't find reliable Sources for the Lesson “${stage.title}”. Retry searches for it again${keptClause(written)}.`;
     }
     const retryStep = written === 0 ? "Retry tries that Lesson again." : `Retry tries again from there${keptClause(written)}.`;
-    // The prose passed, but the Lesson cannot teach without an image the media library could not supply (SEN-115).
-    if (error instanceof ReadingFailedError && error.requiredMediaMissing) {
-      return `We couldn't find an image that fits the Lesson “${stage.title}”, and it can't teach without one. ${retryStep}`;
-    }
     return failedCheck(error)
       ? `We couldn't write the Lesson “${stage.title}” so that it passed our quality checks. ${retryStep}`
       : `Generation was interrupted while writing the Lesson “${stage.title}”. ${RESUME_STEP}`;
@@ -303,7 +306,7 @@ async function chooseResearchTier({ request, rater, holding }: {
 
 /**
  * Whether Readings get images: `READING_MEDIA` is `on` (default) or `off`. Off leaves the media library out, so no
- * image is offered or required; test runs use it while media is still being designed (decision 2026-11-02).
+ * visual is briefed or shown; test runs use it while media is still being designed (decision 2026-11-02).
  * @param env - Usually `process.env`
  * @throws Error for any other value
  */
@@ -313,6 +316,40 @@ export function readingMediaFromEnv(env: Record<string, string | undefined>): "o
     throw new Error(`[course-generation.ts: readingMediaFromEnv] Unknown reading media setting || READING_MEDIA=${env.READING_MEDIA} || known=on,off`);
   }
   return value;
+}
+
+/**
+ * The private bucket, opened on first use, so a run that never stores or reads a file never needs the bucket keys.
+ */
+function lazyMediaStorage(): MediaStorage {
+  let bucket: MediaStorage | null = null;
+  const open = () => (bucket ??= createMediaStorage(mediaStorageConfigFromEnv()));
+  return {
+    put: (key, body, contentType) => open().put(key, body, contentType),
+    head: (key) => open().head(key),
+    get: (key) => open().get(key),
+  };
+}
+
+/**
+ * Everything a run's Readings get their visuals from (SEN-121, decision 2026-11-03): the library over the bucket, the
+ * illustrator that draws depictions and diagrams into the same bucket, and the Commons search when `WIKIMEDIA_CONTACT`
+ * names a contact for its User-Agent (SEN-129); without one, Commons is left out and the library is the last source.
+ * Every Judge call goes through one Vision Judge over the run's transport, so it stops with the run.
+ * @param db - Database, for the library and the Commons ingest
+ * @param transport - The run's tracked transport
+ * @param env - Usually `process.env`
+ */
+function visualSources(db: Database, transport: StructuredTransport, env: NodeJS.ProcessEnv = process.env): Pick<ReadingGeneratorOptions, "media" | "illustrator" | "commons" | "judgeVisual"> {
+  const storage = lazyMediaStorage();
+  const judgeVisual = createVisualJudge({ transport });
+  const commons: ReadingGeneratorOptions["commons"] = (brief, judge) => findVisualOnCommons({ brief, judge, db, storage });
+  return {
+    media: createMediaLibrary(db, storage),
+    judgeVisual,
+    illustrator: createIllustrator({ storage, judgeVisual, transport }),
+    ...(env[WIKIMEDIA_CONTACT_ENV]?.trim() ? { commons } : {}),
+  };
 }
 
 /**
@@ -401,8 +438,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       const tieredResearch = options.research ?? researchUntil(control.signal);
       /** Every research call of this Course runs on its stored tier. */
       const research: LessonResearch = (topic) => tieredResearch(topic, tier);
-      const media = readingMediaFromEnv(process.env) === "on" ? createMediaLibrary(db) : undefined;
-      const generator = options.readingGenerator ?? createReadingGenerator({ transport, media });
+      const generator = options.readingGenerator ?? createReadingGenerator({ transport, ...(readingMediaFromEnv(process.env) === "on" ? visualSources(db, transport) : {}) });
       const reuseFit = options.reuseFit ?? createReuseFit({ transport });
       const findCandidates = options.findReuseCandidates ?? ((subject: string) => findReuseCandidates(db, subject));
       let pool: Promise<ReuseCandidate[]> | null = null;
@@ -608,7 +644,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
           } catch (error) {
             // Rejected drafts are saved nowhere else, so the event keeps every draft, edit, and verdict, pass or fail.
             if (error instanceof ReadingFailedError) {
-              step.setDetail({ grounding: error.grounding, rejectedSources: error.rejectedSources, rounds: error.rounds, media: error.media });
+              step.setDetail({ grounding: error.grounding, rejectedSources: error.rejectedSources, rounds: error.rounds });
             }
             if (error instanceof ReuseUnfitError) step.setDetail({ reuseUnfit: error.reason, grounding: error.grounding, rounds: error.rounds });
             throw error;
@@ -616,7 +652,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
           step.setDetail({
             repairs: checked.repairs, judgePass: checked.judge.pass, rejectedSources: checked.rejectedSources.length,
             authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId,
-            grounding: checked.grounding, rounds: checked.rounds, lineage: checked.lesson.lineage, media: checked.media,
+            grounding: checked.grounding, rounds: checked.rounds, lineage: checked.lesson.lineage, visuals: checked.visuals,
             glossary: checked.glossary,
           });
           return checked;
@@ -720,7 +756,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       stage = { kind: "course" };
       await control.progress("publish", null);
       const checkpoints = await db.select().from(unpublishedLessons).where(eq(unpublishedLessons.courseRequestId, courseRequestId));
-      const codeFailures = courseCodeFailures(approved, checkpoints, { requireMedia: media !== undefined });
+      const codeFailures = courseCodeFailures(approved, checkpoints);
       if (codeFailures.length) throw new CourseFailedError(codeFailures, null);
       if (!diagnostic?.startingLevel) throw new Error(`[course-generation: publish] Request has no Starting Level || requestId=${courseRequestId}`);
       const courseJudge = options.courseJudge ?? createCourseJudge({ transport });

@@ -44,7 +44,10 @@ function recordedCommons() {
     agents.push(new Headers(init?.headers).get("User-Agent"));
     if (url.startsWith(COMMONS_API_URL)) {
       const query = new URL(url).searchParams.get("gsrsearch")!;
-      return new Response(JSON.stringify(REPLIES[query] ?? { batchcomplete: true }), { status: 200, headers: { "content-type": "application/json" } });
+      // Commons ANDs the words, so a recording answers any query made of the same words in any order.
+      const words = (text: string) => text.split(" ").sort().join(" ");
+      const recorded = Object.keys(REPLIES).find((key) => words(key) === words(query));
+      return new Response(JSON.stringify(recorded ? REPLIES[recorded] : { batchcomplete: true }), { status: 200, headers: { "content-type": "application/json" } });
     }
     return new Response(JPEG, { status: 200, headers: { "content-type": "image/jpeg", "content-length": String(JPEG.byteLength) } });
   };
@@ -180,7 +183,7 @@ test("The same Commons file is never ingested twice: a page already in the libra
   const bucket = fakeBucket();
   const first = await findVisualOnCommons({ brief: BRIEF, judge: fakeJudge({ pass: true, reasons: [] }).judge, store: table.store, storage: bucket.storage, fetch: recordedCommons().fetch, userAgent: USER_AGENT });
   // Another Course asks for the same file under other tags, so its library lookup missed.
-  const other = { ...BRIEF, topicTags: ["thumb-on-top"] };
+  const other = { ...BRIEF, topicTags: ["right-hand"] };
   const second = await findVisualOnCommons({ brief: other, judge: fakeJudge({ pass: true, reasons: [] }).judge, store: table.store, storage: bucket.storage, fetch: recordedCommons().fetch, userAgent: USER_AGENT });
   assert.equal(second.outcome, "reused");
   assert.equal(second.descriptor!.id, first.descriptor!.id);
@@ -221,7 +224,8 @@ test("A Commons outage is a miss, not a failed Lesson", async () => {
   const throttled: typeof globalThis.fetch = async () => new Response("You are making too many requests to the API.", { status: 429 });
   const found = await findVisualOnCommons({ brief: BRIEF, judge: fakeJudge({ pass: true, reasons: [] }).judge, store: table.store, storage: fakeBucket().storage, fetch: throttled, userAgent: USER_AGENT });
   assert.equal(found.outcome, "miss");
-  assert.equal(found.searchErrors.length, 2);
+  assert.equal(found.queries.length, 3);
+  assert.equal(found.searchErrors.length, found.queries.length, "Every search failed, and each failure is reported.");
   assert.match(found.searchErrors[0]!, /status 429/);
 });
 
@@ -248,11 +252,12 @@ test("Each Commons call and each Judge call is a Usage Record under one media_se
 
     assert.deepEqual(events.map(({ kind, label }) => [kind, label]), [["media_search", BRIEF.subject]]);
     const eventId = events[0]!.id;
-    assert.deepEqual(usage.map(({ vendor, role, modelId, pipelineEventId }) => [vendor, role, modelId, pipelineEventId]), [
-      ["wikimedia", "media_search", "commons-search", eventId],
-      ["wikimedia", "media_search", "commons-file", eventId],
-      ["openrouter", "judge", "fixture/judge", eventId],
-    ]);
+    assert.deepEqual(usage.map(({ vendor, role, modelId, pipelineEventId, outcome }) => [vendor, role, modelId, pipelineEventId, outcome]), [
+      ["wikimedia", "media_search", "commons-search", eventId, "empty_vendor"],
+      ["wikimedia", "media_search", "commons-search", eventId, "ok"],
+      ["wikimedia", "media_search", "commons-file", eventId, "ok"],
+      ["openrouter", "judge", "fixture/judge", eventId, "ok"],
+    ], "The tag-phrase search found nothing on the recording; the tags search found the file.");
     assert.ok(usage.filter(({ vendor }) => vendor === "wikimedia").every(({ costUsd, costBasis }) => costUsd === 0 && costBasis === "actual"));
   });
 });

@@ -319,12 +319,28 @@ A headed stretch of a reading Lesson, containing Content blocks; Study shows eac
 _Avoid_: Module, Lesson, Content block (when meaning the whole stretch), page, card
 
 **Demonstrative media**:
-A product-hosted image, animation, or audio clip inside a reading Lesson that illustrates a technique. Prefer the best existing original, licensed, or Commons file; if none is good enough, generate a simple SVG diagram or pictorial still. Photomicrographs and named-work copies are never generated. Not from Search, not from an off-app video as the teaching clip, and not a separate teaching method.
+A product-hosted image, animation, or audio clip inside a reading Lesson that shows what the Lesson teaches. A depiction or diagram is drawn by the product first (an Illustration), then looked for in the library, then on Wikimedia Commons; a technique is a real photograph from the library or Commons, never drawn (decision 2026-11-03). Photomicrographs and named-work copies are never generated, and no AI image model or stock is used. Not from Search, not from an off-app video as the teaching clip, and not a separate teaching method.
 _Avoid_: AV lesson, video course, teaching method (when meaning the embed), YouTube embed (when meaning the teaching clip)
 
-**Required media**:
-Demonstrative media a Reading cannot teach without, set by the Blueprint author on the Reading slot as a Media category and Topic tags the catalog holds (at most two per slot). The Reading's writer places each one and writes its caption and alt text. A required image the library cannot supply, or that still fails its vision check after its repair, is a Lesson defect, not a dropped figure. The Learner never sees or edits it. Any other image a writer asks for is optional and is dropped on a miss.
-_Avoid_: mandatory media, essential image, required slot (when meaning the image)
+**Planned visual**:
+What a Reading slot says it should show, set by the Blueprint author the way a teacher plans what to draw on the board: a kind (depiction, diagram, or technique) and one sentence of intent, at most two per Reading, and one is the norm. The Reading's writer turns each into a Visual brief. A planned visual that cannot be made or found is left out; it is never a Lesson defect and never fails a Request. The Learner never sees it. In code it is the slot's `visuals`.
+_Avoid_: required media, mandatory image, decoration
+
+**Visual brief**:
+The Reading writer's description of one planned visual, which everything that makes or finds the picture works from: the section it follows, its subject, a `mustShow` checklist of the facts that must be visibly right, the caption and alt text the Learner reads, and the Media category and Topic tags it is filed under. The illustrator draws from it, the library and Commons are searched by it, and the Vision Judge checks the picture against it.
+_Avoid_: prompt, image description, caption (when meaning the whole brief)
+
+**Illustration**:
+A picture the product draws itself for a depiction or diagram: the illustrator model turns the Visual brief into a Scene plan, the illustration engine renders it in the papercraft house style, and the Vision Judge checks it. Two attempts, then the library. Stored under `generated/` as product-owned media, origin `generated`. Never for a technique, never a photograph, and never passed off as one; the caption calls it the Course's own illustration or a schematic.
+_Avoid_: AI image, generated image (when meaning a diffusion model's output), stock
+
+**Scene plan**:
+The illustrator model's answer to a Visual brief: a closed set of cut-paper building blocks (shapes, limbs, a tree, figures, creatures, lab objects, cells, numbered discs, arrows, text, panels) placed on a fixed 1200 x 800 sheet, plus labels the engine places itself. Strict JSON the engine validates before anything is drawn; the same plan always gives the same bytes. Jongi is a block of the engine but is not offered to the illustrator until his poses exist.
+_Avoid_: SVG (when meaning the plan), prompt, sketch
+
+**Vision Judge**:
+The Judge check on one image against its Visual brief: lenient on style, strict on facts. It fails any `mustShow` item it cannot see, a caption or alt text that does not fit the image, and labels the Learner could not read; it never fails a drawing for being simple. A technique photograph is judged harshly, on its own configured model. Every image a Learner sees passed it, whether drawn, from the library, or from Wikimedia Commons; a picture that fails is replaced or dropped, never repaired by rewriting its caption.
+_Avoid_: vision repair, moderation, caption check (when meaning the whole check)
 
 **Media category**:
 A coarse technique-family or subject-slice label on a library Media descriptor, used with Topic tags to retrieve library files. It is not a Topic tag and not a Lesson.

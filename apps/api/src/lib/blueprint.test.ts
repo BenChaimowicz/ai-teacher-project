@@ -390,16 +390,10 @@ test("The fixture builder designs a Blueprint from an empty capability list", as
   assert.deepEqual(blueprintCodeFailures(blueprint, "every_2_to_3_readings"), []);
 });
 
-/** What the media library holds, as the Blueprint author is shown it. */
-const CATALOG = [
-  { mediaCategory: "drum-grip" as const, topicTags: ["fulcrum", "matched-grip", "traditional-grip"] },
-  { mediaCategory: "drum-notation" as const, topicTags: ["4-4", "6-8", "rock-beat"] },
-];
-
-/** The default draft with Reading 1 requiring `requiredMedia` and every other slot requiring none. */
-function requiring(requiredMedia: unknown[]) {
+/** The default draft with Reading 1 planning `visuals` and every other slot planning none. */
+function planning(visuals: unknown[]) {
   const draft = authored();
-  return { ...draft, lessons: draft.lessons.map((lesson, index) => ({ ...lesson, requiredMedia: index === 0 ? requiredMedia : [] })) };
+  return { ...draft, lessons: draft.lessons.map((lesson, index) => ({ ...lesson, visuals: index === 0 ? visuals : [] })) };
 }
 
 /** An author that replies with each output in turn and records the schema it was given. */
@@ -416,44 +410,48 @@ function schemaRecordingGenerator(...outputs: unknown[]) {
   return { generator, calls: queued.calls, schemas };
 }
 
-test("With a media catalog, a Reading slot requires images only from it: each category with only its own tags", async () => {
-  const { generator, calls, schemas } = schemaRecordingGenerator(requiring([{ mediaCategory: "drum-notation", topicTags: ["6-8", "Rock Beat"] }]));
-  const { blueprint } = await createBlueprintBuilder({ generator, judge: queuedJudge(PASS).judge }).build({ ...INPUT, mediaCatalog: CATALOG });
+test("A Reading slot plans its visuals by kind and intent, the author is told to plan one as the norm, and a Quiz plans none (SEN-121)", async () => {
+  const grip = { kind: "technique", intent: "A matched grip seen from above, so the fulcrum between thumb and index finger shows." };
+  const { generator, calls, schemas } = schemaRecordingGenerator(planning([grip]));
+  const verdicts = queuedJudge(PASS);
+  const { blueprint } = await createBlueprintBuilder({ generator, judge: verdicts.judge }).build(INPUT);
 
-  assert.match(calls[0]!.systemPrompt, /"mediaCatalog" lists the images the media library holds/);
-  assert.deepEqual(calls[0]!.input.mediaCatalog, CATALOG);
-  const slot = (schemas[0] as { properties: { lessons: { items: { required: string[]; properties: { requiredMedia: { maxItems: number; items: { anyOf: unknown[] } } } } } } })
+  assert.match(calls[0]!.systemPrompt, /Plan the visuals the way a good teacher plans what to draw on the board/);
+  assert.match(calls[0]!.systemPrompt, /one is the norm, not the exception/);
+  assert.doesNotMatch(calls[0]!.systemPrompt, /only when words alone cannot teach|never to decorate/, "The rule that left a Course with no images is gone.");
+  assert.ok(!("mediaCatalog" in calls[0]!.input), "The plan does not depend on what the library holds.");
+  assert.match(verdicts.prompts[0]!, /- visual_plan:/);
+  const slot = (schemas[0] as { properties: { lessons: { items: { required: string[]; properties: { visuals: { maxItems: number; items: { properties: { kind: { enum: string[] } } } } } } } } })
     .properties.lessons.items;
-  assert.ok(slot.required.includes("requiredMedia"));
-  assert.equal(slot.properties.requiredMedia.maxItems, 2);
-  assert.deepEqual(slot.properties.requiredMedia.items.anyOf.map((option) => {
-    const { properties } = option as { properties: { mediaCategory: { enum: string[] }; topicTags: { items: { enum: string[] } } } };
-    return [properties.mediaCategory.enum, properties.topicTags.items.enum];
-  }), [[["drum-grip"], CATALOG[0]!.topicTags], [["drum-notation"], CATALOG[1]!.topicTags]], "A tag from another category cannot be asked for.");
+  assert.ok(slot.required.includes("visuals"));
+  assert.equal(slot.properties.visuals.maxItems, 2);
+  assert.deepEqual(slot.properties.visuals.items.properties.kind.enum, ["depiction", "diagram", "technique"]);
 
   const [reading, quiz] = blueprint.modules[0]!.slots;
-  assert.deepEqual(reading!.requiredMedia, [{ mediaCategory: "drum-notation", topicTags: ["6-8", "rock-beat"] }]);
-  assert.ok(!("requiredMedia" in quiz!), "A slot that requires nothing carries no list.");
+  assert.deepEqual(reading!.visuals, [grip]);
+  assert.ok(!("visuals" in quiz!), "A slot that plans nothing carries no list.");
 });
 
-test("A required image the catalog cannot fill fails the Code checks, and the revision sees each slot's required images", async () => {
-  const unfillable = requiring([{ mediaCategory: "drum-grip", topicTags: ["rock-beat"] }]);
-  const { generator, calls } = queuedGenerator(unfillable, requiring([{ mediaCategory: "drum-grip", topicTags: ["matched-grip"] }]));
+test("A visual of an unknown kind or with no intent fails before the Judge, and the revision sees each slot's visuals", async () => {
+  const { generator, calls } = queuedGenerator(planning([{ kind: "animation", intent: "A loop of the stroke." }]), planning([{ kind: "diagram", intent: "The stroke's four heights." }]));
   const verdicts = queuedJudge(PASS);
-  const checked = await createBlueprintBuilder({ generator, judge: verdicts.judge }).build({ ...INPUT, mediaCatalog: CATALOG });
-  assert.equal(verdicts.calls(), 1, "The unfillable design never reached the Judge.");
-  assert.deepEqual(calls[1]!.input.problems, ["Slot 1 requires a drum-grip image (rock-beat) that no file in mediaCatalog fills."]);
-  const previous = calls[1]!.input.previousBlueprint as ReturnType<typeof requiring>;
-  assert.deepEqual(previous.lessons.map((lesson) => lesson.requiredMedia), [[{ mediaCategory: "drum-grip", topicTags: ["rock-beat"] }], [], [], []]);
-  assert.deepEqual(checked.blueprint.modules[0]!.slots[0]!.requiredMedia, [{ mediaCategory: "drum-grip", topicTags: ["matched-grip"] }]);
+  const checked = await createBlueprintBuilder({ generator, judge: verdicts.judge }).build(INPUT);
+  assert.equal(verdicts.calls(), 1, "The design with an unknown kind never reached the Judge.");
+  assert.deepEqual(calls[1]!.input.problems, ['Slot 1 plans a visual of an unknown kind, "animation".']);
+  const previous = calls[1]!.input.previousBlueprint as ReturnType<typeof planning>;
+  assert.deepEqual(previous.lessons.map((lesson) => lesson.visuals), [[{ kind: "animation", intent: "A loop of the stroke." }], [], [], []]);
+  assert.deepEqual(checked.blueprint.modules[0]!.slots[0]!.visuals, [{ kind: "diagram", intent: "The stroke's four heights." }]);
+
+  const { generator: blank } = queuedGenerator(planning([{ kind: "diagram", intent: " " }]));
+  await assert.rejects(createBlueprintBuilder({ generator: blank, judge: queuedJudge(PASS).judge }).build(INPUT), (error: unknown) =>
+    error instanceof ModelError && error.code === "invalid_output");
 });
 
-test("Without a media catalog, no slot is offered required images and the author is prompted as before", async () => {
-  const { generator, calls, schemas } = schemaRecordingGenerator(authored());
-  const { blueprint } = await createBlueprintBuilder({ generator, judge: queuedJudge(PASS).judge }).build({ ...INPUT, mediaCatalog: [] });
-  assert.doesNotMatch(calls[0]!.systemPrompt, /mediaCatalog|requiredMedia/);
-  assert.ok(!("mediaCatalog" in calls[0]!.input));
-  const slot = (schemas[0] as { properties: { lessons: { items: { properties: Record<string, unknown> } } } }).properties.lessons.items;
-  assert.ok(!("requiredMedia" in slot.properties));
-  assert.ok(blueprint.modules[0]!.slots.every((candidate) => !("requiredMedia" in candidate)));
+test("The Blueprint Judge may fail visual_plan, and the plan is revised like any other failed check", async () => {
+  const { generator } = queuedGenerator(planning([]), planning([{ kind: "depiction", intent: "The scene." }]));
+  const verdicts = queuedJudge({ pass: false, failedChecks: ["visual_plan"], reasons: ["Reading 1 centres on a scene and plans no visual."] }, PASS);
+  const checked = await createBlueprintBuilder({ generator, judge: verdicts.judge }).build(INPUT);
+  assert.equal(verdicts.calls(), 2);
+  assert.deepEqual(checked.blueprint.modules[0]!.slots[0]!.visuals, [{ kind: "depiction", intent: "The scene." }]);
+  assert.ok((BLUEPRINT_JUDGE_CHECKS as readonly string[]).includes("visual_plan"));
 });

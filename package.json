@@ -20,6 +20,7 @@
     "check:reading:live": "pnpm --filter @senoy/api exec tsx src/lib/reading-generation.live-check.ts",
     "check:reading-media:live": "pnpm --filter @senoy/api exec tsx src/lib/reading-media.live-check.ts",
     "check:test-course-blueprints:live": "pnpm --filter @senoy/api exec tsx src/lib/test-course-blueprints.live-check.ts",
+    "check:technique-judge:live": "pnpm --filter @senoy/api exec tsx src/lib/technique-judge.live-check.ts",
     "check:quiz:live": "pnpm --filter @senoy/api exec tsx src/lib/quiz-generation.live-check.ts",
     "check:reuse:live": "pnpm --filter @senoy/api exec tsx src/lib/lesson-reuse.live-check.ts",
     "check:research:live": "pnpm --filter @senoy/api exec tsx src/lib/research.live-check.ts",

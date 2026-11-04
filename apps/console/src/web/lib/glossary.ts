@@ -57,6 +57,7 @@ export const KIND_HELP: Record<PipelineEventKind, string> = {
   course_judge: "A last review of the whole course for consistency, by a model that wrote none of it. Code: course_judge",
   publish: "Final checks and publishing the finished course. Code: publish",
   media_search: "Looks on Wikimedia Commons for an image the library lacks: searches, keeps only files we may host, has the vision Judge check each against what it must show, and adds the first that passes to the library as not yet reviewed (see Media review). Code: media_search",
+  illustration: "Draws one picture for a reading lesson: the illustrator model turns the lesson's description of the picture into a scene plan of paper cut-outs, our renderer draws it, and the vision Judge checks it against the facts it must show. A fail gets one more try with the Judge's reasons; after two fails the library and Commons are tried instead. Code: illustration",
   live_check: "A developer's live check (a pnpm check:*:live script) calling the real models and research vendors. Its label is the script; no Learner caused it. Code: live_check",
 };
 

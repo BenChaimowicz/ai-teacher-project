@@ -1,4 +1,5 @@
-import { MAX_REQUIRED_MEDIA, type BlueprintSlot } from "./blueprint.ts";
+import type { BlueprintSlot } from "./blueprint.ts";
+import { MAX_SLOT_VISUALS } from "./media.ts";
 import type { LessonLineage } from "./lesson-reuse.ts";
 import { parseQuizBody, QUIZ_MAX_ITEMS, QUIZ_MIN_ITEMS, QUIZ_OPTION_COUNT, type QuizBody } from "./quiz.ts";
 import {
@@ -51,11 +52,8 @@ const SOURCE_ID_MARKER = /\[[^\]]*\bsrc_[^\]]*\]/;
 /** Markdown or HTML in reading prose, which Study renders as plain text: image and link syntax, bold, tags, URLs, and a heading or list at a line start. */
 const MARKUP = /!\[|\]\(|\*\*|__|<\/?[a-z][^>]*>|https?:\/\/\S+|^\s*(?:#{1,6}\s|[-*+]\s|\d+\.\s)/gim;
 
-/** Optional images a Reading's writer may add of its own, beside the ones its slot requires (SEN-115). */
-export const MAX_OPTIONAL_MEDIA = 2;
-
-/** Media blocks one Reading may carry: its slot's required images and its writer's optional ones. */
-export const MAX_MEDIA_BLOCKS = MAX_REQUIRED_MEDIA + MAX_OPTIONAL_MEDIA;
+/** Media blocks one Reading may carry: one per visual its slot plans (SEN-121). */
+export const MAX_MEDIA_BLOCKS = MAX_SLOT_VISUALS;
 
 /**
  * Code checks for a reading Lesson before checkpoint (spec §6.3): envelope, reading-method shape, Citations that

@@ -48,13 +48,10 @@ const startingLevel: StartingLevel = {
   extremity: "mixed",
 };
 
-/** What the media library holds, as the Blueprint job reads it (SEN-115). */
-const MEDIA_CATALOG = [{ mediaCategory: "drum-grip" as const, topicTags: ["matched-grip"] }];
+/** The visual the recording builder's first Reading plans, as a real design might (SEN-121). */
+const GRIP_VISUAL = { kind: "technique" as const, intent: "A matched grip seen from above." };
 
-/**
- * Fixture builder that records its inputs; `fail` makes it throw a Judge failure. When offered a media catalog, its
- * first Reading requires the catalog's first image, as a real design might.
- */
+/** Fixture builder that records its inputs; `fail` makes it throw a Judge failure. Its first Reading plans one visual. */
 function recordingBuilder(fail = false) {
   const inputs: BlueprintInput[] = [];
   const fixture = createFixtureBlueprintBuilder();
@@ -63,8 +60,7 @@ function recordingBuilder(fail = false) {
       inputs.push(input);
       if (fail) throw new BlueprintFailedError([], { pass: false, failedChecks: ["coverage"], reasons: ["Misses counting."] });
       const built = await fixture.build(input);
-      const [offered] = input.mediaCatalog ?? [];
-      if (offered) built.blueprint.modules[0]!.slots[0]!.requiredMedia = [{ mediaCategory: offered.mediaCategory, topicTags: offered.topicTags }];
+      built.blueprint.modules[0]!.slots[0]!.visuals = [GRIP_VISUAL];
       return built;
     },
   };
@@ -118,7 +114,7 @@ async function testApp(status: CourseRequestStatus = "starting_level_confirmed",
     const job = jobs("blueprint").find((candidate) => candidate.status === "queued");
     assert.ok(job, "A Blueprint job is queued.");
     Object.assign(job, { status: "running", claimToken: randomUUID(), leaseExpiresAt: new Date() });
-    return createBlueprintJob(builder, async () => MEDIA_CATALOG).start({ db, courseRequestId: request!.id, learnerId: learner.id, control: heldControl(job) })
+    return createBlueprintJob(builder).start({ db, courseRequestId: request!.id, learnerId: learner.id, control: heldControl(job) })
       .then(() => null, (error: unknown) => error);
   }
   /** Queues the Blueprint through the route, then runs its job. */
@@ -151,10 +147,9 @@ test("Preparing queues a Blueprint job whose run designs from the confirmed gap 
     const slots = blueprint.blueprint.modules[0].slots;
     assert.deepEqual(slots.map((slot: { method: string }) => slot.method), ["reading", "reading", "quiz"]);
     assert.deepEqual(Object.keys(slots[0]).sort(), ["id", "lessonGoal", "method", "title"]);
-    assert.ok(!/objectives|topicTags|assessesSlotIds|judge|requiredMedia|drum-grip/.test(response.body), "The Learner never sees what a slot requires.");
+    assert.ok(!/objectives|topicTags|assessesSlotIds|judge|visuals|matched grip/.test(response.body), "The Learner never sees what a slot plans to show.");
 
     assert.equal(inputs[0]!.startingLevel.remainingGapStatement, "Your Course would start at Capability 4.");
-    assert.deepEqual(inputs[0]!.mediaCatalog, MEDIA_CATALOG, "The design is offered the media catalog's categories and tags (SEN-115).");
     assert.equal(inputs[0]!.confirmation, "looks_right");
     assert.equal(inputs[0]!.profile.quizCadence, "every_reading");
     const stored = rows.get(courseBlueprints)![0] as typeof courseBlueprints.$inferSelect;

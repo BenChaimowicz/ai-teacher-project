@@ -183,6 +183,9 @@ importers:
       '@senoy/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@senoy/illustration':
+        specifier: workspace:*
+        version: link:../../packages/illustration
       '@senoy/media':
         specifier: workspace:*
         version: link:../../packages/media
