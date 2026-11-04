@@ -215,8 +215,9 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
   --r-font: var(--font-read); --r-size: 16px; --r-lh: 1.75; --r-ls: 0em; --r-ws: 0em; --r-page: 647px;
   max-width: var(--r-page); margin: 0 auto; padding: 14px 28px 80px; color: var(--text); transition: background 0.3s;
 }
-/* The reading page is calmer than the rest of the app: the title a step lighter than the display weight, labels at 500. */
-.l-lhead h1 { font-family: var(--font-display); font-weight: 600; font-size: 2.3rem; line-height: 1.08; margin-top: 10px; letter-spacing: -0.005em; }
+/* The reading page is calmer than the rest of the app: the title is set in the reading font, not the round display
+   face, so it reads like the start of an article rather than a poster; labels at 500. */
+.l-lhead h1 { font-family: var(--font-read); font-weight: 620; font-size: 2.05rem; line-height: 1.15; margin-top: 10px; letter-spacing: -0.022em; text-wrap: balance; }
 .l-lhead .learn { margin-top: 12px; font-family: var(--font-read); color: var(--text-muted); font-size: 1rem; line-height: 1.55; }
 .l-lhead .learn b { color: var(--text); font-weight: 500; }
 .l-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 14px; font-family: var(--font-label); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
@@ -224,21 +225,18 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
 .l-read.f-hyper .l-lhead h1 { font-size: 2rem; letter-spacing: -0.01em; }
 .l-read.f-serif .l-lhead .learn { font-family: var(--font-book); }
 
-/* Notes: each section is a short paper note taped to the page, its title inside. A figure sits in its note. */
+/* Notes: each section is a short paper note laid on the page, its title inside. A figure sits in its note. The note is
+   only a shade off the desk with a soft shadow, so the text, not the card, is what the eye lands on. */
 .l-note {
-  position: relative; margin-top: 16px; padding: 18px 20px 17px; border-radius: 3px 12px 12px 12px; background: var(--panel-2); box-shadow: var(--sheet);
+  position: relative; margin-top: 18px; padding: 20px 22px 20px; border-radius: 3px 14px 14px 14px;
+  background: color-mix(in srgb, var(--panel) 80%, var(--bg)); box-shadow: inset 1px 1px 0 rgba(255, 238, 212, 0.045), 0 12px 24px -16px rgba(0, 0, 0, 0.7);
   font-family: var(--r-font); font-size: var(--r-size); line-height: var(--r-lh); letter-spacing: var(--r-ls); word-spacing: var(--r-ws); color: var(--read);
 }
+.l-read:not(.light) { --read: #d6d1c7; }
+.l-read.light .l-note { background: var(--panel); box-shadow: var(--sheet); }
 .l-lhead + .l-note { margin-top: 30px; }
-/* A strip of tape over the top edge, left on odd notes and right on even, so the stack looks hand-placed. */
-.l-note::before {
-  content: ""; position: absolute; top: -6px; left: 26px; width: 46px; height: 13px; border-radius: 1px;
-  background: rgba(var(--b-rgb), 0.16); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); transform: rotate(-2deg);
-}
-.l-note:nth-of-type(even)::before { left: auto; right: 28px; transform: rotate(2.5deg); }
-.l-read.light .l-note::before { background: rgba(60, 40, 20, 0.1); }
-.l-note h2 { font-family: var(--font-ui); font-size: 1.05rem; font-weight: 500; color: var(--text); margin: 0 0 10px; display: flex; align-items: baseline; gap: 10px; letter-spacing: 0.01em; word-spacing: 0; line-height: 1.35; scroll-margin-top: 24px; }
-.l-note h2 .sec-n { font-family: var(--font-label); font-size: 0.68rem; font-weight: 500; color: var(--a); flex: none; }
+.l-note h2 { font-family: var(--font-read); font-size: 1.08rem; font-weight: 650; color: var(--text); margin: 0 0 10px; display: flex; align-items: baseline; gap: 10px; letter-spacing: -0.008em; word-spacing: 0; line-height: 1.35; scroll-margin-top: 24px; }
+.l-note h2 .sec-n { font-family: var(--font-label); font-size: 0.68rem; font-weight: 500; color: var(--a); opacity: 0.85; flex: none; }
 .l-note p + p { margin-top: calc(var(--r-lh) * 0.55em); }
 .l-note > .l-figure:last-child { margin-bottom: 0; }
 /* Citations: a small apricot superscript that never changes the line height; the source shows on hover or focus. */
@@ -291,15 +289,15 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
    `.l-wkey` is the same key at rest, on the Course's Words page, where the meaning sits beside it and nothing opens. */
 .l-term, .l-wkey {
   cursor: pointer; color: var(--text); text-decoration: none; font-weight: 500;
-  padding: 0.02em 0.34em 0.04em; margin: 0 0.05em; border-radius: 6px;
-  background: rgba(var(--a-rgb), 0.22); box-shadow: inset 0 0 0 1px var(--a-line), 0 1.5px 0 rgba(var(--a-rgb), 0.55);
+  padding: 0.02em 0.3em 0.04em; margin: 0 0.02em; border-radius: 5px;
+  background: rgba(var(--a-rgb), 0.12); box-shadow: inset 0 -1.5px 0 rgba(var(--a-rgb), 0.5);
   -webkit-box-decoration-break: clone; box-decoration-break: clone;
   transition: background 0.15s, color 0.15s, box-shadow 0.12s, transform 0.12s;
 }
 .l-term:hover, .l-term[aria-expanded="true"] { background: var(--a); color: var(--on-a); box-shadow: inset 0 0 0 1px var(--a), 0 0.5px 0 rgba(var(--a-rgb), 0.55); transform: translateY(1px); }
 .l-term:focus { outline: none; }
 .l-term:focus-visible { box-shadow: inset 0 0 0 1px var(--a), 0 0 0 2px var(--a-soft); }
-.l-read.light .l-term { background: rgba(var(--a-rgb), 0.3); }
+.l-read.light .l-term { background: rgba(var(--a-rgb), 0.2); }
 .l-gloss-layer { position: relative; height: 0; }
 /* The bubble: paper, its sharp corner and a small tail toward the word, Jongi inside at the tail corner. It opens above
    the word when there is room (tail at the bottom), else below (tail at the top); `data-side` says which. */
@@ -479,73 +477,89 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
 .l-quiz .k-thread { margin-top: 28px; }
 .l-best { margin-top: 12px; font-size: 0.88rem; color: var(--text-muted); }
 .l-best b { color: var(--text); font-weight: 600; }
-/* One question: the prompt in the display serif, then the answers as paper tiles. */
+/* One question: the prompt in the reading font, then the answers as quiet sheets edged with a hairline. The quiz reads
+   like a well-set exam paper: small type, soft fills, thin rims, nothing that jumps; the wins stay on the score card. */
 .l-qcard { margin: 18px 0 0 46px; padding: 0; border: 0; min-width: 0; animation: k-in 0.3s ease-out both; }
 @media (max-width: 640px) { .l-qcard { margin-left: 0; } }
-.l-qcard + .l-qcard { margin-top: 34px; padding-top: 26px; border-top: 1px solid var(--line); }
+.l-qcard + .l-qcard { margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--line); }
 .l-qcard legend { float: left; width: 100%; padding: 0; }
 .l-qcard legend + * { clear: both; }
-.l-qc-head { display: flex; align-items: center; gap: 12px; font-family: var(--font-label); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+.l-qc-head { display: flex; align-items: center; gap: 12px; font-family: var(--font-label); font-size: 0.62rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
 .l-combo { margin-left: auto; }
 .l-combo svg { width: 11px; height: 11px; }
-.l-qc-q { display: block; margin-top: 10px; font-family: var(--font-display); font-weight: var(--weight-display); font-size: 2rem; line-height: 1.12; color: var(--text); overflow-wrap: anywhere; }
-.l-qopts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding-top: 18px; }
+/* The question is read, not celebrated: the reading font like the Lesson title, not the round display face. */
+.l-qc-q { display: block; margin-top: 12px; font-family: var(--font-read); font-weight: 600; font-size: 1.32rem; line-height: 1.35; letter-spacing: -0.014em; text-wrap: balance; color: var(--text); overflow-wrap: anywhere; }
+.l-qopts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-top: 20px; }
 @media (max-width: 640px) { .l-qopts { grid-template-columns: 1fr; } }
-.l-qopts .k-tile { cursor: pointer; min-height: 64px; padding: 14px 16px 14px 14px; }
-.l-qopts .k-tile .tt { font-weight: 600; }
-.l-qopts .k-tile:has(input:disabled) { cursor: default; }
-.l-qopts .k-tile:has(input:disabled):hover { transform: none; }
-/* Picked, not checked yet: lifted with an apricot rim. */
-.l-qopts .k-tile:has(input:checked):not(.good):not(.miss) {
-  transform: translateY(-3px); background: var(--panel-2);
-  box-shadow: inset 0 0 0 1px rgba(var(--a-rgb), 0.6), inset 1px 1px 0 rgba(255, 238, 212, 0.1), 5px 6px 0 -1px var(--stack-under), 6px 18px 26px -10px rgba(0, 0, 0, 0.85);
+.l-qopts .k-tile {
+  cursor: pointer; min-height: 56px; padding: 13px 16px 13px 13px; gap: 13px; border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 72%, var(--bg)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  transition: box-shadow 0.18s, background 0.18s, opacity 0.25s;
 }
-.l-qopts .k-tile.dim { opacity: 0.45; box-shadow: var(--sheet); }
+.l-qopts .k-tile:hover { transform: none; background: color-mix(in srgb, var(--panel) 92%, var(--bg)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.13); }
+.l-qopts .k-tile .tt { font-family: var(--font-read); font-weight: 500; font-size: 0.92rem; line-height: 1.4; color: var(--text); }
+.l-qopts .k-tile:has(input:disabled) { cursor: default; }
+.l-qopts .k-tile:has(input:disabled):hover { background: color-mix(in srgb, var(--panel) 72%, var(--bg)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+/* Picked, not checked yet: an apricot hairline and the faintest apricot wash; it stays in place. */
+.l-qopts .k-tile:has(input:checked):not(.good):not(.miss) {
+  transform: none; background: color-mix(in srgb, var(--panel) 80%, rgb(var(--a-rgb)) 6%);
+  box-shadow: inset 0 0 0 1px rgba(var(--a-rgb), 0.55);
+}
+.l-qopts .k-tile.dim { opacity: 0.5; }
 .l-qopts .k-tile:has(input:focus-visible) { outline: 2px solid var(--a); outline-offset: 2px; }
-/* Right: a soft green rim, no glow. The kit's .good lifts it; here it stays still and calm. */
-.l-qopts .k-tile.good { background: var(--panel-2) !important; box-shadow: inset 0 0 0 1.5px rgba(var(--good-rgb), 0.7), var(--sheet) !important; }
-.l-qopts .k-tile.miss { background: var(--panel) !important; }
-.l-qopts .k-tile.reveal { opacity: 1; }
+/* Right and wrong: a thin coloured rim over a faint wash of the same colour. The kit's .good lifts and .miss shakes;
+   here the right one stays still, and only the wrong pick keeps its small shake. */
+.l-qopts .k-tile.good { transform: none; background: color-mix(in srgb, var(--panel) 88%, var(--good) 8%) !important; box-shadow: inset 0 0 0 1px rgba(var(--good-rgb), 0.6) !important; }
+.l-qopts .k-tile.miss { background: color-mix(in srgb, var(--panel) 88%, var(--miss) 6%) !important; box-shadow: inset 0 0 0 1px rgba(var(--miss-rgb), 0.5) !important; }
+.l-qopts .k-tile.miss .tt { text-decoration-thickness: 1px; text-decoration-color: rgba(var(--miss-rgb), 0.55); }
+.l-qopts .k-tile.reveal { opacity: 1; box-shadow: inset 0 0 0 1px rgba(var(--good-rgb), 0.35); }
 /* The option's text, and under it its one-line note once the item has feedback (SEN-48): a tick on the right answer,
    a cross on the rest. The pick that missed reads brightest; the other distractors stay quiet but legible, so a dimmed
    tile lifts a little while it carries one. */
 .l-opt { flex: 1; min-width: 0; display: block; }
-.l-opt-why { display: flex; gap: 6px; align-items: baseline; margin-top: 5px; font-size: 0.8rem; font-weight: 400; line-height: 1.45; color: var(--text-muted); animation: k-in 0.3s ease-out both; }
+.l-opt-why { display: flex; gap: 6px; align-items: baseline; margin-top: 4px; font-family: var(--font-read); font-size: 0.8rem; font-weight: 400; line-height: 1.5; color: var(--text-muted); animation: k-in 0.3s ease-out both; }
 .l-opt-why .g { flex: none; font-family: var(--font-label); font-size: 0.72rem; color: var(--faint); }
-.l-opt-why.right, .l-opt-why.picked { color: var(--text); }
+.l-opt-why.right, .l-opt-why.picked { color: color-mix(in srgb, var(--text) 85%, var(--text-muted)); }
 .l-opt-why.right .g { color: var(--good); }
 .l-opt-why.picked .g { color: var(--miss); }
-.l-qopts .k-tile.dim:has(.l-opt-why) { opacity: 0.72; }
+.l-qopts .k-tile.dim:has(.l-opt-why) { opacity: 0.75; }
 @media (prefers-reduced-motion: reduce) { .l-opt-why { animation: none; } }
-/* The number key: a cut-out square holding the radio, like the mock's answer keys. */
-.l-key { position: relative; width: 30px; height: 30px; flex: none; display: grid; place-items: center; }
-.l-key .n { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-family: var(--font-code); font-size: 0.74rem; color: var(--text-muted); }
+/* The number key: a small outlined square holding the radio; it fills once picked or marked. */
+.l-key { position: relative; width: 26px; height: 26px; flex: none; display: grid; place-items: center; }
+.l-key .n { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-family: var(--font-read); font-size: 0.72rem; font-weight: 600; color: var(--faint); }
 .l-radio {
-  appearance: none; -webkit-appearance: none; margin: 0; width: 30px; height: 30px; border-radius: 8px; cursor: inherit;
-  background: var(--well); box-shadow: var(--recess); transition: background 0.15s;
+  appearance: none; -webkit-appearance: none; margin: 0; width: 26px; height: 26px; border-radius: 7px; cursor: inherit;
+  background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); transition: background 0.15s, box-shadow 0.15s;
 }
 .l-radio:focus-visible { outline: none; }
-.l-radio:checked { background: var(--a); box-shadow: inset 1px 1px 0 rgba(255, 240, 215, 0.4); }
+.l-radio:checked { background: var(--a); box-shadow: none; }
 .l-radio:checked + .n { color: var(--on-a); }
 .k-tile.good .l-radio { background: var(--good); box-shadow: none; }
 .k-tile.good .l-radio + .n { color: var(--on-good); }
 .k-tile.miss .l-radio { background: var(--miss); box-shadow: none; }
 .k-tile.miss .l-radio + .n { color: var(--on-miss); }
+.k-tile.reveal .l-radio { box-shadow: inset 0 0 0 1px rgba(var(--good-rgb), 0.6); }
 .k-tile.reveal .l-key .n { color: var(--good); }
-/* Flags hang from the top edge of a marked answer. */
+/* Flags hang from the top edge of a marked answer, quieter than the kit's ribbons. */
 .l-flag { position: absolute; top: -1px; right: 12px; }
 .l-qopts .k-tile:has(.l-flag) { padding-top: 26px; }
-.k-rib.l-flag.pick { color: var(--miss); background: rgba(var(--miss-rgb), 0.16); }
-.k-rib.l-flag.right { color: var(--on-good); background: var(--good); }
+.k-rib.l-flag.pick { color: var(--miss); background: rgba(var(--miss-rgb), 0.14); }
+.k-rib.l-flag.right { color: var(--good); background: rgba(var(--good-rgb), 0.16); }
+/* Progress pips: thin hairlines rather than chunky bars. */
+.l-qc-head .l-dots { gap: 4px; }
+.l-qc-head .l-dots i { width: 16px; height: 3px; border-radius: 2px; background: var(--line-2); box-shadow: none; }
+.l-qc-head .l-dots i.on { background: var(--b); }
+.l-qc-head .l-dots i.good { background: var(--good); }
+.l-qc-head .l-dots i.miss { background: var(--miss); }
 .l-qres { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; font-size: 0.9rem; min-height: 0; }
 .l-qres:empty { display: none; }
-.l-verdict { font-weight: 600; }
+.l-verdict { font-family: var(--font-read); font-size: 0.86rem; font-weight: 600; }
 .l-verdict.good { color: var(--good); }
 .l-verdict.miss { color: var(--miss); }
 /* What it means: a recessed note with Jongi, like the mock's feedback strip. */
 .l-why {
-  display: flex; gap: 12px; align-items: flex-start; margin-top: 12px; padding: 12px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.55;
-  background: var(--well); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 12px 22px -14px rgba(0, 0, 0, 0.9);
+  display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 12px 16px 12px 12px; border-radius: 12px; font-family: var(--font-read); font-size: 0.88rem; line-height: 1.55;
+  background: color-mix(in srgb, var(--panel) 55%, var(--bg)); box-shadow: inset 0 0 0 1px var(--line);
 }
 .l-why .av { flex: none; width: 36px; height: 36px; }
 .l-why .tx { min-width: 0; }
@@ -554,7 +568,7 @@ html[data-read-focus] .k-top:hover, html[data-read-focus] .k-top:focus-within, h
 .l-why p + p { margin-top: 4px; color: var(--text-muted); }
 .l-submit-bar {
   position: sticky; bottom: 0; z-index: 5; margin: 26px 0 0 46px; padding: 12px 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  background: var(--panel); box-shadow: var(--sheet), 0 -12px 24px -12px var(--bg);
+  background: color-mix(in srgb, var(--panel) 85%, var(--bg)); box-shadow: inset 0 0 0 1px var(--line), 0 -16px 28px -14px var(--bg);
 }
 .l-submit-bar .info { flex: 1; min-width: 0; font-family: var(--font-label); font-size: 0.68rem; color: var(--text-muted); }
 @media (max-width: 640px) { .l-submit-bar { margin-left: 0; } }
