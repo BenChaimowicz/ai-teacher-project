@@ -121,6 +121,11 @@ test("Words about the picture itself never reach a query: the 2026-11-03 drum gr
   for (const query of [...commonsQueries({ kind: "technique", subject: "A close-up photograph shows a hand holding a drumstick in matched grip.", topicTags: ["matched-grip"] }), ...commonsQueries({ kind: "diagram", subject: "The Course's own schematic shows four moments of a full stroke above a drum.", topicTags: ["full-stroke"] })]) {
     assert.doesNotMatch(query, /\b(photograph|shows|close|up|course|courses|own|schematic|holding|above|four)\b/, query);
   }
+  // The 2026-11-04 rerun searched "matched grip drumstick slightly": an adverb about the view is not about the object.
+  assert.deepEqual(
+    commonsQueries({ kind: "technique", subject: "A right hand holding a drumstick in matched grip, viewed from above and slightly to the side.", topicTags: ["matched-grip"] })[0],
+    "matched grip right hand filetype:bitmap",
+  );
 });
 
 test("A recorded search keeps hostable stills in relevance order and says why it turned the rest down", () => {

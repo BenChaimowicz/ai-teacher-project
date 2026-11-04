@@ -236,7 +236,8 @@ const META_WORDS = new Set([
   "schematic", "diagram", "figure", "scene", "still", "stills", "panel", "panels", "course", "courses", "own", "real",
   // How it is framed.
   "close", "closeup", "up", "view", "viewed", "shows", "showing", "shown", "show", "seen", "see", "depicts", "depicted", "depicting",
-  "labelled", "labeled", "label", "labels", "angle", "detail",
+  "labelled", "labeled", "label", "labels", "angle", "detail", "slightly", "partly", "mostly", "roughly", "approximately",
+  "about", "visible", "clearly",
   // How things in it are arranged.
   "holding", "held", "hold", "holds", "standing", "stands", "sitting", "sits", "lying", "lies", "resting", "rests", "surrounded",
   "surrounding", "placed", "positioned", "above", "below", "beside", "between", "around", "across", "along", "under", "over",
