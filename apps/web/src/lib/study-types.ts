@@ -1,3 +1,4 @@
+import type { GoalCheckMissingReason, GoalCheckNextStep, GoalCheckResult } from "@senoy/db/goal-check";
 import type { NumberedSource } from "@senoy/db/reading-lesson";
 import type { QuizAnswers, QuizAttemptStatus, QuizScore } from "@senoy/db/quiz";
 import type { SequenceMode } from "@senoy/db/sequence-mode";
@@ -28,7 +29,7 @@ export type StudyModule = {
 /** Published Course payload for Study chrome. */
 export type StudyPayload = {
   /** `completedAt` is set once every Lesson is complete. */
-  course: { id: string; title: string; sequenceMode: SequenceMode; completedAt: string | null };
+  course: { id: string; title: string; learningGoal: string; sequenceMode: SequenceMode; completedAt: string | null };
   progress: { completed: number; total: number };
   currentLessonId: string;
   modules: StudyModule[];
@@ -49,8 +50,24 @@ export type QuizView = {
   feedbackTiming: FeedbackTiming;
   attempt: QuizAttemptView | null;
   best: QuizScore | null;
+  /** For a Goal Check, true once it has a scored attempt, whatever the score (decision 2026-11-04). */
   passed: boolean;
+  /** Goal Check only, once it has a scored attempt: where the best attempt lands against the Learning Goal. */
+  goal?: GoalCheckView | null;
 };
+
+/** What the Learner said after a "not met" Goal Check, and what they chose next (null until they choose). */
+export type GoalCheckFeedbackView = {
+  reasons: GoalCheckMissingReason[];
+  otherText: string | null;
+  nextStep: GoalCheckNextStep | null;
+};
+
+/** A Goal Check's result as Study shows it: outcome, best score, missed objectives, and the Learner's feedback. */
+export type GoalCheckView = GoalCheckResult & { feedback: GoalCheckFeedbackView | null };
+
+/** The reply to choosing a next step after a "not met" Goal Check. `newCourseHref` is set for `new_course`. */
+export type GoalCheckNextStepReply = { nextStep: GoalCheckNextStep; newCourseHref: string | null };
 
 /** A correct answer, revealed with an item's feedback. */
 export type QuizAnswerKey = {
@@ -70,4 +87,6 @@ export type CourseSummary = {
     lessons: { id: string; title: string; lessonGoal: string; teachingMethod: string }[];
   }[];
   quizzes: { lessonId: string; title: string; best: QuizScore | null }[];
+  /** The Course's Goal Check and its result (null before a scored attempt); null on Courses made before SEN-81. */
+  goalCheck: { lessonId: string; result: GoalCheckResult | null } | null;
 };

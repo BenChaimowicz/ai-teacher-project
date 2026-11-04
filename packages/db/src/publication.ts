@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { blueprintSlots, type ApprovedBlueprint } from "./blueprint.ts";
+import { GOAL_CHECK_METHOD_ID } from "./goal-check.ts";
 import type { QuizBody } from "./quiz.ts";
 import { QUIZ_METHOD_ID, type ReadingBody } from "./reading-lesson.ts";
 import type { publishedCourses, publishedLessons, publishedModules, unpublishedLessons } from "./schema.ts";
@@ -42,7 +43,7 @@ export function courseCodeFailures(approved: ApprovedBlueprint, checkpoints: rea
  * @param checkpoint - A finalized checkpoint
  */
 export function lessonCommitments(checkpoint: Pick<LessonCheckpoint, "teachingMethod" | "objectives" | "body">): string[] {
-  if (checkpoint.teachingMethod === QUIZ_METHOD_ID) return checkpoint.objectives;
+  if (checkpoint.teachingMethod === QUIZ_METHOD_ID || checkpoint.teachingMethod === GOAL_CHECK_METHOD_ID) return checkpoint.objectives;
   return (checkpoint.body as ReadingBody).sections.map((section) => section.heading);
 }
 
@@ -68,8 +69,9 @@ export type PublicationRows = {
 
 /**
  * Builds the published Course snapshot from the approved Blueprint and its checkpoints: Blueprint Modules become
- * published Modules, each slot's checkpoint becomes a published Lesson at the same position, and a Quiz's assessed
- * slots become the published Lesson ids it assesses.
+ * published Modules, each slot's checkpoint becomes a published Lesson at the same position, a Quiz's assessed
+ * slots become the published Lesson ids it assesses, and the Goal Check's teaching slots per goal objective become
+ * published Lesson ids (SEN-81).
  * @param input - Request fields, the approved Blueprint, and its checkpoints
  */
 export function publicationRows(input: PublicationInput): PublicationRows {
@@ -97,6 +99,9 @@ export function publicationRows(input: PublicationInput): PublicationRows {
         objectives: checkpoint.objectives,
         topicTags: checkpoint.topicTags,
         assessedLessonIds: slot.assessesSlotIds.map((slotId) => lessonIds.get(slotId)!),
+        objectiveLessonIds: Object.fromEntries(
+          Object.entries(slot.objectiveSlotIds ?? {}).map(([objective, slotIds]) => [objective, slotIds.map((slotId) => lessonIds.get(slotId)!)]),
+        ),
         lineage: checkpoint.lineage,
         sources: checkpoint.sources,
         citations: checkpoint.citations,

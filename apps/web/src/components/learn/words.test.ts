@@ -12,7 +12,7 @@ const quiz = (id: string, locked = false): StudyLesson => ({
   body: { items: [{ id: "q", prompt: "p", options: [] }], glossary: [{ term: "not a reading", definition: "ignored" }] },
 });
 const payload = (lessons: StudyLesson[]): StudyPayload => ({
-  course: { id: "c", title: "Course", sequenceMode: "linear", completedAt: null },
+  course: { id: "c", title: "Course", learningGoal: "Goal", sequenceMode: "linear", completedAt: null },
   progress: { completed: 0, total: lessons.length },
   currentLessonId: lessons[0]!.id,
   modules: [{ id: "m", title: "Module", position: 0, lessons }],

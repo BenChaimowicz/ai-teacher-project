@@ -146,9 +146,10 @@ test("Preparing queues a Blueprint job whose run designs from the confirmed gap 
     assert.equal(blueprint.sequenceMode, "linear");
     assert.equal(blueprint.approved, false);
     const slots = blueprint.blueprint.modules[0].slots;
-    assert.deepEqual(slots.map((slot: { method: string }) => slot.method), ["reading", "reading", "quiz"]);
+    assert.deepEqual(slots.map((slot: { method: string }) => slot.method), ["reading", "reading", "quiz", "goal_check"], "The Goal Check shows as the Course's last item.");
     assert.deepEqual(Object.keys(slots[0]).sort(), ["id", "lessonGoal", "method", "title"]);
-    assert.ok(!/objectives|topicTags|assessesSlotIds|judge|visuals|matched grip/.test(response.body), "The Learner never sees what a slot plans to show.");
+    assert.deepEqual(Object.keys(slots[3]).sort(), ["id", "lessonGoal", "method", "title"]);
+    assert.ok(!/objectives|objectiveSlotIds|topicTags|assessesSlotIds|judge|visuals|matched grip/.test(response.body), "The Learner never sees what a slot plans to show.");
 
     assert.equal(inputs[0]!.startingLevel.remainingGapStatement, "Your Course would start at Capability 4.");
     assert.equal(inputs[0]!.confirmation, "looks_right");
@@ -221,7 +222,7 @@ test("Closing and returning keeps the review and the Sequence mode pick", async 
     const reopened = await app.inject({ method: "GET", url });
     assert.equal(reopened.json().courseRequest.status, "blueprint_review");
     assert.equal(reopened.json().blueprint.sequenceMode, "free_jump");
-    assert.equal(reopened.json().blueprint.blueprint.modules[0].slots.length, 3);
+    assert.equal(reopened.json().blueprint.blueprint.modules[0].slots.length, 4, "Three Lessons and the Goal Check.");
     assert.equal((await app.inject({ method: "PUT", url: `${url}/sequence-mode`, payload: { sequenceMode: "random" } })).statusCode, 400);
   } finally {
     recorded.uninstall();
@@ -482,8 +483,10 @@ test("Marking Lessons as not relevant queues a redesign from the marks; the new 
   try {
     await designBlueprint();
     await app.inject({ method: "PUT", url: `${url}/sequence-mode`, payload: { sequenceMode: "free_jump" } });
+    // slot4 is the Goal Check: it checks the Learning Goal itself, so it cannot be marked (SEN-81), and marking every
+    // other Lesson keeps none.
     for (const payload of [{}, { irrelevantSlotIds: [] }, { irrelevantSlotIds: ["nope"] }, { irrelevantSlotIds: ["slot1", "slot2", "slot3"] },
-      { irrelevantSlotIds: ["slot1"], reason: "bored" }]) {
+      { irrelevantSlotIds: ["slot1"], reason: "bored" }, { irrelevantSlotIds: ["slot4"] }, { irrelevantSlotIds: ["slot1", "slot4"] }]) {
       assert.equal((await app.inject({ method: "POST", url: `${url}/revise`, payload })).statusCode, 400, JSON.stringify(payload));
     }
     const queued = await app.inject({ method: "POST", url: `${url}/revise`, payload: { irrelevantSlotIds: ["slot1"], reason: "already_know" } });

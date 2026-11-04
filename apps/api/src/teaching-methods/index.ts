@@ -1,3 +1,4 @@
+import { goalCheckPlugin } from "./goal-check.ts";
 import { quizPlugin } from "./quiz.ts";
 import { readingPlugin } from "./reading.ts";
 import type { TeachingMethodPlugin } from "./types.ts";
@@ -5,6 +6,7 @@ import type { TeachingMethodPlugin } from "./types.ts";
 const plugins: Record<string, TeachingMethodPlugin> = {
   [readingPlugin.id]: readingPlugin,
   [quizPlugin.id]: quizPlugin,
+  [goalCheckPlugin.id]: goalCheckPlugin,
 };
 
 /**

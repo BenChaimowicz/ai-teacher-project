@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { SEEDED_COURSE, SEEDED_COURSE_ID, SEEDED_FOLLOW_UP_LESSON_ID, SEEDED_QUIZ_LESSON_ID } from "@senoy/db";
+import {
+  SEEDED_COURSE,
+  SEEDED_COURSE_ID,
+  SEEDED_FOLLOW_UP_LESSON_ID,
+  SEEDED_GOAL_CHECK_BODY,
+  SEEDED_GOAL_CHECK_LESSON_ID,
+  SEEDED_QUIZ_LESSON_ID,
+} from "@senoy/db";
 import { answerAll, resetFixture } from "./fixture.ts";
 
 const lessonUrl = (lessonId: string) => `/study/${SEEDED_COURSE_ID}/lessons/${lessonId}`;
@@ -28,13 +35,23 @@ test("Next Lesson walks the fixture Course to the Course-complete screen, and Ho
   await page.getByRole("link", { name: "Next Lesson" }).click();
   await expect(page).toHaveURL(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
 
-  // The last Lesson's tile finishes the Course in the same click.
-  await page.getByRole("button", { name: "I've read it, finish the course" }).click();
+  // The last Reading's tile opens the Goal Check in the same click. It sits outside Progress (decision 2026-11-04).
+  await page.getByRole("button", { name: "I've read it, start the goal check" }).click();
+  await expect(page).toHaveURL(lessonUrl(SEEDED_GOAL_CHECK_LESSON_ID));
+  await expect(page.getByText(`${SEEDED_COURSE.title} · 3 / 3`)).toBeVisible();
+  await expect(page.getByRole("link", { name: /Finish Course/ })).toHaveCount(0);
+
+  await answerAll(page, 5, true, SEEDED_GOAL_CHECK_BODY);
+  await page.getByRole("button", { name: "Submit" }).click();
+  await expect(page.getByRole("status")).toContainText("Goal met. Your best is 5 / 6.");
+  await expect(page.getByRole("group", { name: "What was missing?" })).toHaveCount(0);
+  await page.getByRole("link", { name: /Finish Course/ }).click();
 
   await expect(page).toHaveURL(`/study/${SEEDED_COURSE_ID}/complete`);
   await expect(page.getByRole("heading", { name: `You finished ${SEEDED_COURSE.title}` })).toBeVisible();
   await expect(page.getByText("Explain why a square knot holds under tension.")).toBeVisible();
   await expect(page.getByText("Best score 4 / 5 · Passed")).toBeVisible();
+  await expect(page.getByText("Goal Check · Goal met · 5 / 6")).toBeVisible();
 
   await page.getByRole("link", { name: /Back to Home/ }).click();
   const completed = page.getByRole("main").getByRole("link", { name: new RegExp(SEEDED_COURSE.title) });

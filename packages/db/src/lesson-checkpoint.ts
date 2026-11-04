@@ -1,4 +1,5 @@
 import type { BlueprintSlot } from "./blueprint.ts";
+import { GOAL_CHECK_MAX_ITEMS, GOAL_CHECK_METHOD_ID, GOAL_CHECK_MIN_ITEMS, parseGoalCheckBody, type GoalCheckBody } from "./goal-check.ts";
 import { MAX_SLOT_VISUALS } from "./media.ts";
 import type { LessonLineage } from "./lesson-reuse.ts";
 import { parseQuizBody, QUIZ_MAX_ITEMS, QUIZ_MIN_ITEMS, QUIZ_OPTION_COUNT, type QuizBody } from "./quiz.ts";
@@ -141,9 +142,30 @@ export type QuizLessonDraft = {
   body: QuizBody;
 };
 
+/**
+ * A finished Goal Check Lesson before publication (SEN-81): the shared envelope plus the Goal Check body. Like a Quiz it
+ * cites nothing of its own and is never reused. Its `objectives` are the slot's goal objectives, the parts of the
+ * Learning Goal, and every item names the one it checks.
+ */
+export type GoalCheckLessonDraft = {
+  slotId: string;
+  teachingMethod: typeof GOAL_CHECK_METHOD_ID;
+  title: string;
+  lessonGoal: string;
+  objectives: string[];
+  topicTags: string[];
+  lineage: null;
+  sources: LessonSource[];
+  citations: NumberedSource[];
+  body: GoalCheckBody;
+};
+
 /** Keys a Quiz body and a Quiz item may carry; anything else (reading sections, media) is not a Quiz. */
 const QUIZ_BODY_KEYS = new Set(["items"]);
 const QUIZ_ITEM_KEYS = new Set(["id", "prompt", "options", "correctOptionId", "explanations"]);
+
+/** A Goal Check item also names its goal objective (SEN-81). */
+const GOAL_CHECK_ITEM_KEYS = new Set([...QUIZ_ITEM_KEYS, "objective"]);
 
 /**
  * An explanation pointing at an option by letter or position, which shuffling makes wrong: "option A", "(b)",
@@ -159,32 +181,67 @@ const OPTION_REFERENCE = [
 /** Option text a model left as a slot name rather than an answer: "option1", "Option B", "a", "answer". */
 const PLACEHOLDER_OPTION = /^(?:(?:option|answer|choice|distractor)\s*[a-d1-4]?|[a-d1-4])[.)]?$/;
 
+/** What differs between the Quiz's and the Goal Check's Code checks; everything else they share. */
+type AssessmentRules = {
+  method: string;
+  /** How a failure names the Lesson kind: "Quiz" or "Goal Check". */
+  name: string;
+  minItems: number;
+  maxItems: number;
+  itemKeys: ReadonlySet<string>;
+  /** The plugin's own body parser, run last as the final word on shape. */
+  parses: (body: unknown) => boolean;
+};
+
+/** The Quiz's Code-check rules (spec §6.4). */
+const QUIZ_RULES: AssessmentRules = {
+  method: QUIZ_METHOD_ID, name: "Quiz", minItems: QUIZ_MIN_ITEMS, maxItems: QUIZ_MAX_ITEMS, itemKeys: QUIZ_ITEM_KEYS,
+  parses: (body) => parseQuizBody(body) !== null,
+};
+
+/** The Goal Check's Code-check rules (SEN-81). */
+const GOAL_CHECK_RULES: AssessmentRules = {
+  method: GOAL_CHECK_METHOD_ID, name: "Goal Check", minItems: GOAL_CHECK_MIN_ITEMS, maxItems: GOAL_CHECK_MAX_ITEMS,
+  itemKeys: GOAL_CHECK_ITEM_KEYS, parses: (body) => parseGoalCheckBody(body) !== null,
+};
+
 /**
- * Code checks for a Quiz Lesson before checkpoint (spec §6.4): envelope, Quiz shape, and the Reading slots it assesses.
- * @param lesson - The finished Quiz
+ * Code checks a Quiz and a Goal Check share: envelope, four-option single-correct items with a why on every option and
+ * no letter or position references, the plugin's body parser, and the earlier checkpointed Readings the slot assesses.
+ * @param lesson - The finished Lesson
  * @param slots - Every Blueprint slot, in Blueprint order
  * @param checkpointedSlotIds - Slots of this Course Request that already have a finalized checkpoint
- * @returns Learner-invisible failure messages; empty when the Quiz passes
+ * @param rules - What differs by method
+ * @returns Learner-invisible failure messages; empty when the Lesson passes
  */
-export function quizCodeFailures(lesson: QuizLessonDraft, slots: readonly BlueprintSlot[], checkpointedSlotIds: ReadonlySet<string>): string[] {
+function assessmentCodeFailures(
+  lesson: QuizLessonDraft | GoalCheckLessonDraft,
+  slots: readonly BlueprintSlot[],
+  checkpointedSlotIds: ReadonlySet<string>,
+  rules: AssessmentRules,
+): string[] {
+  const { name } = rules;
   const failures: string[] = [];
-  if (lesson.teachingMethod !== QUIZ_METHOD_ID) failures.push("The Lesson must use the quiz method.");
+  if (lesson.teachingMethod !== rules.method) failures.push(`The Lesson must use the ${rules.method} method.`);
   if (!lesson.title.trim() || !lesson.lessonGoal.trim()) failures.push("The Lesson needs a title and a Lesson goal.");
   if (lesson.objectives.length === 0 || lesson.objectives.some((objective) => !objective.trim())) {
     failures.push("The Lesson needs non-empty objectives.");
   }
-  if (lesson.lineage !== null) failures.push("A Quiz is always generated, never reused.");
-  if (lesson.sources.length || lesson.citations.length) failures.push("A Quiz carries no Sources or Citations of its own.");
+  if (lesson.lineage !== null) failures.push(`A ${name} is always generated, never reused.`);
+  if (lesson.sources.length || lesson.citations.length) failures.push(`A ${name} carries no Sources or Citations of its own.`);
 
   const body = lesson.body as unknown as Record<string, unknown>;
-  if (Object.keys(body).some((key) => !QUIZ_BODY_KEYS.has(key))) failures.push("A Quiz has no reading sections or Demonstrative media.");
+  if (Object.keys(body).some((key) => !QUIZ_BODY_KEYS.has(key))) failures.push(`A ${name} has no reading sections or Demonstrative media.`);
   const items = Array.isArray(body.items) ? lesson.body.items : [];
-  if (items.length < QUIZ_MIN_ITEMS || items.length > QUIZ_MAX_ITEMS) {
-    failures.push(`A Quiz has ${QUIZ_MIN_ITEMS}–${QUIZ_MAX_ITEMS} items, not ${items.length}.`);
+  if (items.length < rules.minItems || items.length > rules.maxItems) {
+    failures.push(`A ${name} has ${rules.minItems}–${rules.maxItems} items, not ${items.length}.`);
   }
+  const itemContents = rules.itemKeys.has("objective")
+    ? "a question, options, key, explanations, and its goal objective"
+    : "a question, options, key, and explanations";
   for (const [index, item] of items.entries()) {
     const label = `Item ${index + 1}`;
-    if (Object.keys(item).some((key) => !QUIZ_ITEM_KEYS.has(key))) failures.push(`${label} carries something other than a question, options, key, and explanations.`);
+    if (Object.keys(item).some((key) => !rules.itemKeys.has(key))) failures.push(`${label} carries something other than ${itemContents}.`);
     if (!item.prompt?.trim()) failures.push(`${label} has no question.`);
     const options = Array.isArray(item.options) ? item.options : [];
     if (options.length !== QUIZ_OPTION_COUNT) failures.push(`${label} needs exactly ${QUIZ_OPTION_COUNT} options.`);
@@ -201,19 +258,58 @@ export function quizCodeFailures(lesson: QuizLessonDraft, slots: readonly Bluepr
   }
   const prompts = items.map((item) => item.prompt?.trim().toLowerCase());
   if (new Set(prompts).size !== prompts.length) failures.push("Two items ask the same question.");
-  if (failures.length === 0 && !parseQuizBody(lesson.body)) failures.push("The Quiz body does not pass the Quiz plugin's validation.");
+  if (failures.length === 0 && !rules.parses(lesson.body)) failures.push(`The ${name} body does not pass the ${name} plugin's validation.`);
 
   const position = slots.findIndex((slot) => slot.id === lesson.slotId);
   const slot = slots[position];
-  if (!slot || slot.method !== QUIZ_METHOD_ID) failures.push("The Quiz has no Quiz slot in the Blueprint.");
-  else if (slot.assessesSlotIds.length === 0) failures.push("The Quiz slot assesses no Lessons.");
+  if (!slot || slot.method !== rules.method) failures.push(`The ${name} has no ${name} slot in the Blueprint.`);
+  else if (slot.assessesSlotIds.length === 0) failures.push(`The ${name} slot assesses no Lessons.`);
   for (const assessedId of slot?.assessesSlotIds ?? []) {
     const index = slots.findIndex((candidate) => candidate.id === assessedId);
     const assessed = slots[index];
     if (!assessed) failures.push(`Assessed slot ${assessedId} is not in the Blueprint.`);
     else if (assessed.method !== READING_METHOD_ID) failures.push(`Assessed slot ${assessedId} is not a Reading.`);
-    else if (index > position) failures.push(`Assessed slot ${assessedId} does not precede the Quiz.`);
+    else if (index > position) failures.push(`Assessed slot ${assessedId} does not precede the ${name}.`);
     else if (!checkpointedSlotIds.has(assessedId)) failures.push(`Assessed slot ${assessedId} has no checkpointed Lesson.`);
+  }
+  return failures;
+}
+
+/**
+ * Code checks for a Quiz Lesson before checkpoint (spec §6.4): envelope, Quiz shape, and the Reading slots it assesses.
+ * @param lesson - The finished Quiz
+ * @param slots - Every Blueprint slot, in Blueprint order
+ * @param checkpointedSlotIds - Slots of this Course Request that already have a finalized checkpoint
+ * @returns Learner-invisible failure messages; empty when the Quiz passes
+ */
+export function quizCodeFailures(lesson: QuizLessonDraft, slots: readonly BlueprintSlot[], checkpointedSlotIds: ReadonlySet<string>): string[] {
+  return assessmentCodeFailures(lesson, slots, checkpointedSlotIds, QUIZ_RULES);
+}
+
+/**
+ * Code checks for a Goal Check Lesson before checkpoint (SEN-81): the Quiz's item checks with
+ * {@link GOAL_CHECK_MIN_ITEMS}–{@link GOAL_CHECK_MAX_ITEMS} items, on the Blueprint's Goal Check slot, every assessed
+ * Reading checkpointed, every item naming one of the slot's goal objectives, and every goal objective checked by at
+ * least one item.
+ * @param lesson - The finished Goal Check
+ * @param slots - Every Blueprint slot, in Blueprint order
+ * @param checkpointedSlotIds - Slots of this Course Request that already have a finalized checkpoint
+ * @returns Learner-invisible failure messages; empty when the Goal Check passes
+ */
+export function goalCheckCodeFailures(lesson: GoalCheckLessonDraft, slots: readonly BlueprintSlot[], checkpointedSlotIds: ReadonlySet<string>): string[] {
+  const failures = assessmentCodeFailures(lesson, slots, checkpointedSlotIds, GOAL_CHECK_RULES);
+  const slot = slots.find((candidate) => candidate.id === lesson.slotId);
+  if (!slot || slot.method !== GOAL_CHECK_METHOD_ID) return failures;
+  const objectives = new Set(slot.objectives);
+  const items = Array.isArray(lesson.body.items) ? lesson.body.items : [];
+  for (const [index, item] of items.entries()) {
+    const objective = typeof item.objective === "string" ? item.objective.trim() : "";
+    if (!objective) failures.push(`Item ${index + 1} names no goal objective.`);
+    else if (!objectives.has(objective)) failures.push(`Item ${index + 1} names “${objective}”, which is not one of the Goal Check's goal objectives.`);
+  }
+  const checked = new Set(items.map((item) => (typeof item.objective === "string" ? item.objective.trim() : "")));
+  for (const objective of slot.objectives) {
+    if (!checked.has(objective)) failures.push(`No item checks the goal objective “${objective}”.`);
   }
   return failures;
 }

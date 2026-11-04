@@ -25,6 +25,8 @@ import { fakeDb } from "../routes/fake-db.ts";
 import type { CourseJudge, CourseOutline } from "./course-judge.ts";
 import { createCourseGeneration, CourseFailedError, failureReason, lessonResearchTopic, readingMediaFromEnv, researchQueries, searchForEvidence } from "./course-generation.ts";
 import { LeaseLostError, type GenerationControl, type SettledStatus, type WorkerIdentity } from "./generation-job.ts";
+import { createFixtureCourseGeneration, FIXTURE_GOAL_CHECK_ITEMS } from "./course-generation-fixture.ts";
+import { GoalCheckFailedError, type GoalCheckGenerator, type GoalCheckInput } from "./goal-check-generation.ts";
 import type { ReuseFit, ReuseFitInput } from "./lesson-reuse.ts";
 import { QuizFailedError, type AuthoredItem, type QuizGenerator, type QuizInput, type QuizRound } from "./quiz-generation.ts";
 import { loadModelConfig } from "./model-config.ts";
@@ -188,6 +190,41 @@ function recordingQuizGenerator(fail = false) {
   return { quizGenerator, inputs };
 }
 
+/** Goal Check generator returning six items that cycle through the slot's goal objectives; `fail` throws a Judge failure. */
+function recordingGoalCheckGenerator(fail = false) {
+  const inputs: GoalCheckInput[] = [];
+  const goalCheckGenerator: GoalCheckGenerator = {
+    async generate(input) {
+      inputs.push(input);
+      if (fail) {
+        throw new GoalCheckFailedError(
+          [], { pass: false, failedChecks: ["integrative_items"], reasons: ["Every item only recalls one sentence."] }, null, QUIZ_ROUNDS,
+        );
+      }
+      return {
+        judge: { pass: true, failedChecks: [], reasons: [] },
+        repairs: 0,
+        authorModelIds: ["fixture/author"],
+        judgeModelId: "fixture/judge",
+        rounds: QUIZ_ROUNDS,
+        lesson: {
+          slotId: input.slot.id, teachingMethod: "goal_check", title: input.slot.title, lessonGoal: input.slot.lessonGoal,
+          objectives: input.slot.objectives, topicTags: input.slot.topicTags, lineage: null, sources: [], citations: [],
+          body: {
+            items: [1, 2, 3, 4, 5, 6].map((n) => ({
+              id: `item${n}`, prompt: `Scenario ${n}?`, correctOptionId: "c",
+              options: ["a", "b", "c", "d"].map((id) => ({ id, text: `${id}${n}`, why: `Why ${id}.` })),
+              explanations: { brief: "B.", standard: "S.", detailed: "D." },
+              objective: input.slot.objectives[n % input.slot.objectives.length]!,
+            })),
+          },
+        },
+      };
+    },
+  };
+  return { goalCheckGenerator, inputs };
+}
+
 /** Whole-Course Judge recording each outline it reads and who it was told wrote it; `fail` names a Lesson. */
 function recordingCourseJudge(fail = false) {
   const outlines: CourseOutline[] = [];
@@ -244,7 +281,7 @@ function eventSink() {
   return { sink, detail: (kind: PipelineEventStart["kind"]) => events.find((event) => event.kind === kind)!.detail };
 }
 
-type Failure = "reading" | "quiz" | "course" | "reuse" | null;
+type Failure = "reading" | "quiz" | "goal_check" | "course" | "reuse" | null;
 
 /** The Course Request whose published Reading the reuse tests offer. */
 const ORIGIN_REQUEST = "origin-request";
@@ -349,6 +386,7 @@ async function run(
   const { reuseFit, inputs: fitInputs } = recordingReuseFit(reuse.pick);
   const { quizGenerator, inputs: quizInputs } = recordingQuizGenerator(fail === "quiz");
   const { courseJudge, outlines, authors } = recordingCourseJudge(fail === "course");
+  const { goalCheckGenerator, inputs: goalCheckInputs } = recordingGoalCheckGenerator(fail === "goal_check");
   /** Published rows when the Quiz was generated: nothing may be playable mid-generation. */
   const publishedDuringGeneration: number[] = [];
   const quizGeneratorSpy: QuizGenerator = {
@@ -358,7 +396,7 @@ async function run(
     },
   };
   const generation = createCourseGeneration({
-    readingGenerator, quizGenerator: quizGeneratorSpy, courseJudge: courseJudgeOverride?.(rows) ?? courseJudge,
+    readingGenerator, quizGenerator: quizGeneratorSpy, goalCheckGenerator, courseJudge: courseJudgeOverride?.(rows) ?? courseJudge,
     research: async (topic, tier) => { topics.push(topic); tiers.push(tier); return research(topic); },
     findReuseCandidates: async () => reuse.candidates ?? [], reuseFit, researchTierRater: rater,
   });
@@ -370,7 +408,7 @@ async function run(
   const stored = () => (rows.get(courseRequests)! as (typeof courseRequests.$inferSelect)[])[0]!;
   return {
     started, rows, topics, inputs, quizInputs, outlines, authors, publishedDuringGeneration, stored, job, requestId: request!.id, learnerId: learner!.id,
-    fitInputs, tiers, rated, chapterInputs, finishes,
+    fitInputs, tiers, rated, chapterInputs, finishes, goalCheckInputs,
   };
 }
 
@@ -1211,4 +1249,106 @@ test("A generator without a Chapter draft, and a Chapter of one Reading, write e
   assert.equal(chapterInputs.length, 0);
   assert.equal(topics.length, 1, "Research is still one search per Chapter.");
   assert.deepEqual(inputs.map((input) => input.slot.id), ["slot1", "slot2"]);
+});
+
+/** The longer Course closed by its Goal Check (SEN-81): two goal objectives, each taught by Readings of both halves. */
+const WITH_GOAL_CHECK: ApprovedBlueprint = {
+  ...LONG,
+  blueprint: {
+    ...LONG.blueprint,
+    modules: [{
+      ...LONG.blueprint.modules[0]!,
+      slots: [...LONG.blueprint.modules[0]!.slots, {
+        id: "slot7", method: "goal_check", title: "Goal Check", lessonGoal: "Show you can explain the Norse picture of the world.",
+        objectives: ["Connect the worlds", "Place a world"], topicTags: ["norse", "goal-check"],
+        assessesSlotIds: ["slot1", "slot2", "slot4", "slot5"],
+        objectiveSlotIds: { "Connect the worlds": ["slot1", "slot4"], "Place a world": ["slot2", "slot5"] },
+      }],
+    }],
+  },
+};
+
+test("The Goal Check is written last from every Reading it assesses, under its own Pipeline Event, and publishes with its objectives' Lessons (SEN-81)", async () => {
+  const recording = eventSink();
+  const uninstall = installUsageTracking({ sink: recording.sink, log: { error() {} } });
+  let result: Awaited<ReturnType<typeof run>>;
+  try {
+    result = await run(null, undefined, undefined, WITH_GOAL_CHECK);
+    await result.started;
+  } finally {
+    uninstall();
+  }
+  const { rows, goalCheckInputs, quizInputs, outlines, stored, job } = result;
+
+  assert.equal(quizInputs.length, 2, "Quizzes are written as before.");
+  assert.equal(goalCheckInputs.length, 1);
+  const input = goalCheckInputs[0]!;
+  assert.equal(input.slot.id, "slot7");
+  assert.equal(input.learningGoal, "Explain the Norse picture of the world");
+  assert.equal(input.startingLevel, "Your Course would start at the World Tree.");
+  assert.equal(input.scope, null);
+  assert.deepEqual(input.assessed.map((lesson) => lesson.slotId), ["slot1", "slot2", "slot4", "slot5"]);
+  assert.deepEqual(input.profile, { instructionLanguage: "en" }, "The quiz plugin's write-time fields.");
+  assert.equal(job.progress.at(-2), "lesson:slot7");
+
+  const saved = rows.get(unpublishedLessons)! as (typeof unpublishedLessons.$inferSelect)[];
+  const goalCheck = saved.find((row) => row.slotId === "slot7")!;
+  assert.deepEqual([goalCheck.teachingMethod, goalCheck.position, goalCheck.writeTimeProfile], ["goal_check", 6, { instructionLanguage: "en" }]);
+  assert.deepEqual([goalCheck.sources, goalCheck.citations, goalCheck.rejectedSources, goalCheck.lineage], [[], [], [], null]);
+
+  const detail = recording.detail("goal_check")!;
+  assert.deepEqual([detail.slotId, detail.position, detail.rounds], ["slot7", 6, QUIZ_ROUNDS]);
+
+  assert.deepEqual(outlines[0]!.modules[0]!.lessons.at(-1), {
+    n: 7, method: "goal_check", title: "Goal Check", lessonGoal: "Show you can explain the Norse picture of the world.",
+    objectives: ["Connect the worlds", "Place a world"], commitments: ["Connect the worlds", "Place a world"],
+  });
+  assert.equal(stored().status, "published");
+  const lessons = rows.get(publishedLessons)! as (typeof publishedLessons.$inferSelect)[];
+  const published = lessons.find((row) => row.teachingMethod === "goal_check")!;
+  const id = (position: number) => lessons.find((row) => row.position === position)!.id;
+  assert.deepEqual(published.objectiveLessonIds, { "Connect the worlds": [id(0), id(3)], "Place a world": [id(1), id(4)] });
+  assert.deepEqual(published.assessedLessonIds, [id(0), id(1), id(3), id(4)]);
+});
+
+test("A Goal Check that fails its checks is not saved, keeps its rounds on the event, and fails the Request for Retry", async () => {
+  const recording = eventSink();
+  const uninstall = installUsageTracking({ sink: recording.sink, log: { error() {} } });
+  let result: Awaited<ReturnType<typeof run>>;
+  try {
+    result = await run("goal_check", undefined, undefined, WITH_GOAL_CHECK);
+    await assert.rejects(result.started, GoalCheckFailedError);
+  } finally {
+    uninstall();
+  }
+  const { rows, stored, job } = result;
+  assert.ok(!(rows.get(unpublishedLessons)! as (typeof unpublishedLessons.$inferSelect)[]).some((row) => row.slotId === "slot7"));
+  assert.deepEqual(job.settled, ["failed"]);
+  assert.equal(stored().status, "generation_failed");
+  assert.match(stored().failureReason!, /“Goal Check” so that it passed our quality checks\. Retry tries again from there, keeping the 6 Lessons already written\.$/);
+  assert.deepEqual(recording.detail("goal_check")!.rounds, QUIZ_ROUNDS);
+  assert.equal(rows.get(publishedCourses)!.length, 0);
+});
+
+test("The fixture Course generation writes a Goal Check that passes its Code checks, one objective per item in turn", async () => {
+  const { db, rows } = fakeDb(TABLES);
+  const [learner] = await db.insert(learners).values({
+    id: randomUUID(), displayName: "Curious_Owl", teachingProfileVersion: TEACHING_PROFILE_VERSION,
+    teachingProfileAnswers: parseTeachingProfileAnswers({}),
+  }).returning();
+  const [request] = await db.insert(courseRequests).values({
+    learnerId: learner!.id, subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world", status: "generating",
+  }).returning();
+  await db.insert(startingLevelDiagnostics).values({
+    courseRequestId: request!.id, learnerId: learner!.id, confirmation: "looks_right",
+    startingLevel: { learningGoal: "Explain the Norse picture of the world", probedCapabilities: [], coverageNote: "Note.", extremity: "mixed", remainingGapStatement: "Gap." },
+  });
+  await createFixtureCourseGeneration().start({
+    db: db as unknown as Database, courseRequestId: request!.id, learnerId: learner!.id, approved: WITH_GOAL_CHECK, control: recordingControl().control,
+  });
+  const lessons = rows.get(publishedLessons)! as (typeof publishedLessons.$inferSelect)[];
+  const goalCheck = lessons.find((row) => row.teachingMethod === "goal_check")!;
+  const items = (goalCheck.body as { items: { objective: string }[] }).items;
+  assert.equal(items.length, FIXTURE_GOAL_CHECK_ITEMS);
+  assert.deepEqual(items.map((item) => item.objective), ["Connect the worlds", "Place a world", "Connect the worlds", "Place a world", "Connect the worlds", "Place a world"]);
 });

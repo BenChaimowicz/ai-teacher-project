@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
+import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
 import { nextLessonId } from "@senoy/db/progress";
 import { parseReadingBody, READING_METHOD_ID } from "@senoy/db/reading-lesson";
 import { MoreHorizontal } from "lucide-react";
@@ -27,6 +28,7 @@ const READING_LINES = [
   "The sources are at the bottom, if you're curious.",
 ];
 const QUIZ_LINES = ["No timer. Think it through.", "Earlier lessons stay open while you work.", "A wrong answer is just something to look at again."];
+const GOAL_CHECK_LINES = ["This one is about your goal, not one lesson.", "No timer, and earlier lessons stay open.", "Whatever you score, the Course still finishes."];
 
 /**
  * Flatten Lessons in Course order.
@@ -189,7 +191,8 @@ function StudyScreen() {
   const lessons = useMemo(() => (payload ? allLessons(payload.modules) : []), [payload]);
   const visible = lessons.find((row) => row.id === lessonId) ?? null;
   const isReading = visible?.teachingMethod === READING_METHOD_ID;
-  useCompanionLines(isReading ? READING_LINES : QUIZ_LINES);
+  const isGoalCheck = visible?.teachingMethod === GOAL_CHECK_METHOD_ID;
+  useCompanionLines(isReading ? READING_LINES : isGoalCheck ? GOAL_CHECK_LINES : QUIZ_LINES);
   useFocusMode(Boolean(visible && !visible.locked && isReading && settings.layout === "focus"), () => applyMode("comfort"));
 
   const sections = useMemo(() => {
@@ -296,6 +299,8 @@ function StudyScreen() {
           lessonNumber={lessonNumber}
           finish={finish}
           next={after}
+          lessons={lessons}
+          learningGoal={payload?.course.learningGoal}
         />
       ) : (
         <div className="mx-auto max-w-[720px]">

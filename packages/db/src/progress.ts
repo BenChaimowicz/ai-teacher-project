@@ -1,3 +1,15 @@
+import { GOAL_CHECK_METHOD_ID } from "./goal-check.ts";
+
+/**
+ * The Lessons Progress counts: every Lesson but the Goal Check, which sits outside Progress (decision 2026-11-04).
+ * `isCourseComplete` still takes every Lesson: a Course completes once its Goal Check has one scored attempt.
+ * @param lessons - Lessons of the Course
+ * @returns Their ids, in the order given, without the Goal Check
+ */
+export function progressLessonIds(lessons: readonly { id: string; teachingMethod: string }[]): string[] {
+  return lessons.filter((lesson) => lesson.teachingMethod !== GOAL_CHECK_METHOD_ID).map((lesson) => lesson.id);
+}
+
 /**
  * First incomplete Lesson in Course order, or the last Lesson if every Lesson is complete.
  * @param lessonIds - Lesson ids in Course order

@@ -1,11 +1,13 @@
 import {
   SEEDED_COURSE_ID,
   SEEDED_FOLLOW_UP_LESSON_ID,
+  SEEDED_GOAL_CHECK_LESSON_ID,
   SEEDED_LEARNER_ID,
   SEEDED_MODULE_ID,
   SEEDED_QUIZ_LESSON_ID,
   SEEDED_READING_LESSON_ID,
 } from "./seed-ids.ts";
+import { GOAL_CHECK_METHOD_ID, type GoalCheckBody } from "./goal-check.ts";
 import type { QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import { READING_METHOD_ID, QUIZ_METHOD_ID } from "./reading-lesson.ts";
@@ -13,6 +15,7 @@ import { READING_METHOD_ID, QUIZ_METHOD_ID } from "./reading-lesson.ts";
 export {
   SEEDED_COURSE_ID,
   SEEDED_FOLLOW_UP_LESSON_ID,
+  SEEDED_GOAL_CHECK_LESSON_ID,
   SEEDED_LEARNER_ID,
   SEEDED_MODULE_ID,
   SEEDED_QUIZ_LESSON_ID,
@@ -284,5 +287,161 @@ export const SEEDED_FOLLOW_UP_LESSON = {
   body: SEEDED_FOLLOW_UP_BODY,
 };
 
-/** Fixture Lessons in Course order. */
+/** The fixture Goal Check's goal objectives: the parts of the Learning Goal, in the order the result lists them. */
+export const SEEDED_GOAL_OBJECTIVES = [
+  "Tell a square knot from a granny knot",
+  "Explain why a square knot holds under load",
+  "Know when not to use a square knot",
+] as const;
+
+/**
+ * Goal Check body for the fixture (SEN-81): six items across the whole Course, each naming the goal objective it
+ * checks, two per objective in objective order.
+ */
+export const SEEDED_GOAL_CHECK_BODY: GoalCheckBody = {
+  items: [
+    {
+      id: "g1",
+      objective: SEEDED_GOAL_OBJECTIVES[0],
+      prompt: "You tie right-over-left, then right-over-left again. What have you tied?",
+      options: [
+        { id: "a", text: "A square knot" },
+        { id: "b", text: "A granny knot" },
+        { id: "c", text: "A reef knot" },
+        { id: "d", text: "A half hitch" },
+      ],
+      correctOptionId: "b",
+      explanations: {
+        brief: "The same direction twice makes a granny knot.",
+        standard: "Two overhand knots turning the same way make a granny knot. A square knot needs the second one to turn the other way.",
+        detailed:
+          "Two overhand knots turning the same way make a granny knot. A square (reef) knot needs right-over-left, then left-over-right. A half hitch is a single turn around something else.",
+      },
+    },
+    {
+      id: "g2",
+      objective: SEEDED_GOAL_OBJECTIVES[0],
+      prompt: "You look at a finished knot to check it is a square knot. What do you look for?",
+      options: [
+        { id: "a", text: "The working ends sit on opposite sides of the standing parts" },
+        { id: "b", text: "The knot looks twisted and lopsided" },
+        { id: "c", text: "The working ends sit on the same side of the standing parts" },
+        { id: "d", text: "There are three overhand turns" },
+      ],
+      correctOptionId: "c",
+      explanations: {
+        brief: "On a square knot both working ends finish on the same side.",
+        standard:
+          "A square knot's working ends finish on the same side of the standing parts. Ends on opposite sides, or a twisted look, point to a granny knot.",
+        detailed:
+          "A square knot's working ends finish on the same side of the standing parts, and the knot lies flat. Ends on opposite sides, or a twisted, lopsided knot, point to a granny knot. It is only ever two overhand turns.",
+      },
+    },
+    {
+      id: "g3",
+      objective: SEEDED_GOAL_OBJECTIVES[1],
+      prompt: "What keeps a square knot closed while it is under load?",
+      options: [
+        { id: "a", text: "The two loops press against each other, so each turn jams the other" },
+        { id: "b", text: "The fibres of the rope grip by themselves" },
+        { id: "c", text: "The working ends are long" },
+        { id: "d", text: "Nothing: it only holds with no load on it" },
+      ],
+      correctOptionId: "a",
+      explanations: {
+        brief: "The loops press together and jam each other.",
+        standard: "Under tension the two loops press against each other. Each turn jams the other, so the knot holds while the load stays on.",
+        detailed:
+          "Under tension the two loops press against each other. Each turn jams the other, so the load itself keeps the knot closed. Long ends and rope fibres are not what holds it.",
+      },
+    },
+    {
+      id: "g4",
+      objective: SEEDED_GOAL_OBJECTIVES[1],
+      prompt: "The load on a square knot binding a bundle gets heavier. What happens to the knot?",
+      options: [
+        { id: "a", text: "It loosens, because the loops slide apart" },
+        { id: "b", text: "It stays closed, because the load presses the loops together" },
+        { id: "c", text: "It turns into a granny knot" },
+        { id: "d", text: "It unties itself at once" },
+      ],
+      correctOptionId: "b",
+      explanations: {
+        brief: "A load presses the loops together, so it stays closed.",
+        standard: "A square knot binds: the load presses the two loops together, so it stays closed while the load is on.",
+        detailed:
+          "A square knot binds: the load presses the two loops together, and each turn jams the other. A knot cannot change into a different knot by itself; a granny comes from how it is tied.",
+      },
+    },
+    {
+      id: "g5",
+      objective: SEEDED_GOAL_OBJECTIVES[2],
+      prompt: "You need to join a thick rope to a thin one. Is a square knot a good choice?",
+      options: [
+        { id: "a", text: "Yes, it suits any two ropes" },
+        { id: "b", text: "Yes, if you pull it extra tight" },
+        { id: "c", text: "No, it cannot grip both evenly and can slip" },
+        { id: "d", text: "No, because square knots only work on thin rope" },
+      ],
+      correctOptionId: "c",
+      explanations: {
+        brief: "Different ropes make a square knot slip.",
+        standard:
+          "A square knot cannot grip ropes of different thickness or stiffness evenly, so it can slip under load. Choose a knot made for joining.",
+        detailed:
+          "A square knot cannot grip ropes of different thickness or stiffness evenly, so it can slip under load, however tight you pull it. It works on thick rope too; the trouble is the mismatch. Choose a knot made for joining.",
+      },
+    },
+    {
+      id: "g6",
+      objective: SEEDED_GOAL_OBJECTIVES[2],
+      prompt: "Which of these is a job for a square knot?",
+      options: [
+        { id: "a", text: "Tying off a bundle you will untie by hand" },
+        { id: "b", text: "Joining two climbing ropes" },
+        { id: "c", text: "A join where something may snag the ends" },
+        { id: "d", text: "Joining a thick rope to a thin one" },
+      ],
+      correctOptionId: "a",
+      explanations: {
+        brief: "Binding a bundle is what it is for.",
+        standard:
+          "A square knot is a binding knot: fine for a bundle you will untie by hand, not for a join a life depends on or one whose ends may snag.",
+        detailed:
+          "A square knot is a binding knot: fine for a bundle you will untie by hand. It can spill when an end is pulled, so not where ends may snag, and not for a join a life depends on or for ropes of different thickness.",
+      },
+    },
+  ],
+};
+
+/**
+ * Seeded Goal Check, the Course's last Lesson (SEN-81). Outside Progress; it completes on its first scored attempt.
+ * Each goal objective links back to the Reading that teaches it.
+ */
+export const SEEDED_GOAL_CHECK_LESSON = {
+  id: SEEDED_GOAL_CHECK_LESSON_ID,
+  publishedCourseId: SEEDED_COURSE_ID,
+  moduleId: SEEDED_MODULE_ID,
+  position: 3,
+  teachingMethod: GOAL_CHECK_METHOD_ID,
+  title: "Goal Check: the square knot",
+  lessonGoal: SEEDED_COURSE.learningGoal,
+  objectives: [...SEEDED_GOAL_OBJECTIVES] as string[],
+  topicTags: ["square-knot", "binding-knots"],
+  assessedLessonIds: [SEEDED_READING_LESSON_ID, SEEDED_FOLLOW_UP_LESSON_ID],
+  objectiveLessonIds: {
+    [SEEDED_GOAL_OBJECTIVES[0]]: [SEEDED_READING_LESSON_ID],
+    [SEEDED_GOAL_OBJECTIVES[1]]: [SEEDED_READING_LESSON_ID],
+    [SEEDED_GOAL_OBJECTIVES[2]]: [SEEDED_FOLLOW_UP_LESSON_ID],
+  } as Record<string, string[]>,
+  lineage: null,
+  sources: [] as unknown[],
+  citations: [] as unknown[],
+  body: SEEDED_GOAL_CHECK_BODY,
+};
+
+/** The fixture's taught Lessons in Course order: everything before the Goal Check, which is what Progress counts. */
 export const SEEDED_LESSONS = [SEEDED_READING_LESSON, SEEDED_QUIZ_LESSON, SEEDED_FOLLOW_UP_LESSON];
+
+/** Every Lesson the fixture Course is seeded with, in Course order: the taught Lessons, then the Goal Check. */
+export const SEEDED_COURSE_LESSONS = [...SEEDED_LESSONS, SEEDED_GOAL_CHECK_LESSON];

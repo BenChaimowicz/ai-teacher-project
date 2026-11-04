@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import Fastify from "fastify";
 import {
+  GOAL_CHECK_METHOD_ID,
+  type GoalCheckBody,
   learners,
   parseTeachingProfileAnswers,
   SEEDED_COURSE,
@@ -20,29 +22,73 @@ import {
 } from "@senoy/db";
 import type { Generator, Judge } from "../lib/model-ports.ts";
 import { createQuizGenerator } from "../lib/quiz-generation.ts";
-import type { QuizAttemptRow, StudyStore } from "../lib/study-store.ts";
+import type { GoalCheckFeedbackRow, LessonRow, QuizAttemptRow, StudyStore } from "../lib/study-store.ts";
 import { recordProductEvents, settled } from "./recording-sink.ts";
 import { studyRoutes } from "./study.ts";
+
+/** Id of the Goal Check Lesson some tests add after the fixture's Lessons. */
+const GOAL_CHECK_LESSON_ID = "00000000-0000-4000-8000-0000000000a1";
+
+/** Goal objectives of the test Goal Check, in slot order: deliberately not the order the items check them in. */
+const GOAL_OBJECTIVES = ["Pick the right job for a square knot", "Tie a square knot", "Spot a granny knot"];
+
+/** Six items, two per objective: g1–g2 tie it, g3–g4 spot a granny, g5–g6 pick the job. */
+const GOAL_CHECK_BODY: GoalCheckBody = {
+  items: [1, 2, 3, 4, 5, 6].map((n) => ({
+    id: `g${n}`,
+    objective: GOAL_OBJECTIVES[[1, 1, 2, 2, 0, 0][n - 1]!]!,
+    prompt: `Goal question ${n}?`,
+    options: ["a", "b", "c", "d"].map((id) => ({ id, text: `Option ${id} for ${n}` })),
+    correctOptionId: "a",
+    explanations: { brief: `Brief ${n}.`, standard: `Standard ${n}.`, detailed: `Detailed ${n}.` },
+  })),
+};
+
+/** The Goal Check Lesson closing the fixture Course, with each objective's teaching Lessons. */
+const GOAL_CHECK_LESSON: LessonRow = {
+  id: GOAL_CHECK_LESSON_ID,
+  moduleId: SEEDED_MODULE.id,
+  title: "Goal Check",
+  teachingMethod: GOAL_CHECK_METHOD_ID,
+  position: 3,
+  lessonGoal: SEEDED_COURSE.learningGoal,
+  body: GOAL_CHECK_BODY,
+  citations: [],
+  objectives: GOAL_OBJECTIVES,
+  // Key order differs from GOAL_OBJECTIVES on purpose: Postgres jsonb does not keep it.
+  objectiveLessonIds: {
+    "Spot a granny knot": [SEEDED_QUIZ_LESSON_ID],
+    "Tie a square knot": [SEEDED_READING_LESSON_ID],
+    "Pick the right job for a square knot": [SEEDED_FOLLOW_UP_LESSON_ID],
+  },
+};
 
 /**
  * In-memory Study store holding the fixture Course.
  * @param quizBody - Body of the fixture's Quiz Lesson
+ * @param goalCheck - A Goal Check Lesson to add after the fixture's Lessons; none by default, like a Course before SEN-81
  */
-function memoryStore(quizBody: QuizBody): StudyStore {
+function memoryStore(quizBody: QuizBody, goalCheck: LessonRow | null = null): StudyStore {
   let sequenceMode: string = SEEDED_COURSE.sequenceMode;
   const completions = new Set<string>();
   let courseCompletedAt: Date | null = null;
   const attempts: (QuizAttemptRow & { lessonId: string })[] = [];
+  const feedback = new Map<string, GoalCheckFeedbackRow>();
   return {
     async findCourse(learnerId, courseId) {
       if (learnerId !== SEEDED_LEARNER_ID || courseId !== SEEDED_COURSE_ID) return null;
-      return { id: SEEDED_COURSE_ID, title: SEEDED_COURSE.title, learningGoal: SEEDED_COURSE.learningGoal, sequenceMode };
+      return {
+        id: SEEDED_COURSE_ID, title: SEEDED_COURSE.title, subject: SEEDED_COURSE.subject, learningGoal: SEEDED_COURSE.learningGoal, sequenceMode,
+      };
     },
     async listModules() {
       return [{ id: SEEDED_MODULE.id, title: SEEDED_MODULE.title, position: SEEDED_MODULE.position }];
     },
     async listLessons() {
-      return SEEDED_LESSONS.map((lesson) => ({ ...lesson, ...(lesson.id === SEEDED_QUIZ_LESSON_ID ? { body: quizBody } : {}) }));
+      const fixture: LessonRow[] = SEEDED_LESSONS.map((lesson) => ({
+        ...lesson, objectiveLessonIds: {}, ...(lesson.id === SEEDED_QUIZ_LESSON_ID ? { body: quizBody } : {}),
+      }));
+      return goalCheck ? [...fixture, structuredClone(goalCheck)] : fixture;
     },
     async completedLessonIds() {
       return new Set(completions);
@@ -82,6 +128,17 @@ function memoryStore(quizBody: QuizBody): StudyStore {
       const { submittedAt: _submittedAt, ...rest } = patch;
       Object.assign(row, structuredClone(rest));
     },
+    async getGoalCheckFeedback(_learnerId, lessonId) {
+      const row = feedback.get(lessonId);
+      return row ? structuredClone(row) : null;
+    },
+    async saveGoalCheckFeedback(_learnerId, lessonId, sent) {
+      feedback.set(lessonId, { ...structuredClone(sent), nextStep: null });
+    },
+    async setGoalCheckNextStep(_learnerId, lessonId, nextStep) {
+      const row = feedback.get(lessonId);
+      if (row) row.nextStep = nextStep;
+    },
   };
 }
 
@@ -100,17 +157,18 @@ function learnerWith(answers: Record<string, unknown> = {}): typeof learners.$in
 }
 
 /** Real Study handlers over the in-memory store. `state.learner` can change between requests. */
-async function testApp(answers: Record<string, unknown> = {}, quizBody: QuizBody = SEEDED_QUIZ_BODY) {
+async function testApp(answers: Record<string, unknown> = {}, quizBody: QuizBody = SEEDED_QUIZ_BODY, goalCheck: LessonRow | null = null) {
   const state = { learner: learnerWith(answers) };
   const app = Fastify();
   app.decorate("db", {} as Database);
   app.addHook("onRequest", async (request) => {
     request.currentLearner = state.learner;
   });
-  await app.register(studyRoutes, { store: memoryStore(quizBody) });
+  await app.register(studyRoutes, { store: memoryStore(quizBody, goalCheck) });
 
   const base = `/api/courses/${SEEDED_COURSE_ID}`;
   const quiz = `${base}/lessons/${SEEDED_QUIZ_LESSON_ID}/quiz`;
+  const goalQuiz = `${base}/lessons/${GOAL_CHECK_LESSON_ID}/quiz`;
   const call = async (method: "GET" | "POST" | "PUT", url: string, payload?: object) => {
     const response = await app.inject({ method, url, payload });
     return { status: response.statusCode, body: response.json() };
@@ -128,6 +186,16 @@ async function testApp(answers: Record<string, unknown> = {}, quizBody: QuizBody
     complete: (lessonId: string) => call("POST", `${base}/lessons/${lessonId}/complete`),
     summary: () => call("GET", `${base}/summary`),
     sequenceMode: (mode: string) => call("PUT", `${base}/sequence-mode`, { mode }),
+    goal: {
+      get: () => call("GET", goalQuiz),
+      answer: (itemId: string, optionId: string) => call("PUT", `${goalQuiz}/answers/${itemId}`, { optionId }),
+      check: (itemId: string) => call("POST", `${goalQuiz}/answers/${itemId}/check`),
+      submit: () => call("POST", `${goalQuiz}/submit`),
+      retake: () => call("POST", `${goalQuiz}/retake`),
+      feedback: (payload: object, lessonId = GOAL_CHECK_LESSON_ID) =>
+        call("PUT", `${base}/lessons/${lessonId}/goal-check/feedback`, payload),
+      nextStep: (nextStep: unknown) => call("PUT", `${base}/lessons/${GOAL_CHECK_LESSON_ID}/goal-check/next-step`, { nextStep }),
+    },
   };
 }
 
@@ -453,6 +521,7 @@ test("Completing the last Lesson stores Course completion once; the summary show
     assert.deepEqual(summary.body.quizzes, [
       { lessonId: SEEDED_QUIZ_LESSON_ID, title: SEEDED_LESSONS[1]!.title, best: { correct: 5, total: 5 } },
     ]);
+    assert.equal(summary.body.goalCheck, null, "A Course without a Goal Check summarises as before.");
   } finally {
     await t.app.close();
   }
@@ -523,5 +592,183 @@ test("Opening the Course's Words page answers 200 for the Learner's Course and 4
     assert.equal((await app.inject({ method: "POST", url: `/api/courses/${randomUUID()}/words-opens` })).statusCode, 404);
   } finally {
     await app.close();
+  }
+});
+
+/**
+ * Answers every Goal Check item, the first `correct` of them right, checking each (per-item timing is the default).
+ * @param t - Test app
+ * @param correct - How many items to answer correctly
+ */
+async function answerGoal(t: TestApp, correct: number) {
+  for (const [index, item] of GOAL_CHECK_BODY.items.entries()) {
+    const saved = await t.goal.answer(item.id, index < correct ? "a" : "b");
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    assert.equal((await t.goal.check(item.id)).status, 200);
+  }
+}
+
+/**
+ * Brings the fixture Course to "every Lesson but the Goal Check complete": the Reading, a passed Quiz, the follow-up.
+ * @param t - Test app
+ */
+async function finishLessons(t: TestApp) {
+  assert.equal((await t.complete(SEEDED_READING_LESSON_ID)).status, 200);
+  await answerAll(t, 5, true);
+  assert.equal((await t.submit()).body.quiz.passed, true);
+  const last = await t.complete(SEEDED_FOLLOW_UP_LESSON_ID);
+  assert.equal(last.status, 200);
+  return last.body;
+}
+
+/** A test app whose Course ends with the Goal Check. */
+function goalApp(answers: Record<string, unknown> = {}) {
+  return testApp(answers, SEEDED_QUIZ_BODY, GOAL_CHECK_LESSON);
+}
+
+test("The Goal Check sits outside Progress, hides its key, and in linear order waits on every Quiz before it (SEN-81)", async () => {
+  const t = await goalApp();
+  try {
+    const fresh = await t.study();
+    assert.deepEqual(fresh.body.progress, { completed: 0, total: 3 }, "The Goal Check is not counted.");
+    const goal = lessonIn(fresh.body, GOAL_CHECK_LESSON_ID);
+    assert.equal(goal.locked, true);
+    assert.ok(!JSON.stringify(fresh.body).includes("correctOptionId"));
+    assert.deepEqual((goal.body as { items: unknown[] }).items.length, 6);
+    assert.equal((await t.goal.get()).status, 403, "Locked in linear order until the Quiz is passed.");
+
+    const last = await finishLessons(t);
+    assert.deepEqual(last.progress, { completed: 3, total: 3 });
+    assert.equal(last.course.completedAt, null, "The Course waits on the Goal Check.");
+    assert.equal(last.currentLessonId, GOAL_CHECK_LESSON_ID);
+    assert.equal(lessonIn(last, GOAL_CHECK_LESSON_ID).locked, false);
+    const shown = await t.goal.get();
+    assert.equal(shown.status, 200);
+    assert.equal(shown.body.quiz.passed, false);
+    assert.ok(!("goal" in shown.body.quiz), "No result before the first Submit.");
+    assert.equal((await t.goal.feedback({ reasons: ["too_basic"] })).status, 409, "No feedback before a result.");
+    assert.equal((await t.complete(GOAL_CHECK_LESSON_ID)).status, 400, "Cannot be marked complete before a Submit.");
+  } finally {
+    await t.app.close();
+  }
+});
+
+test("The Goal Check completes the Course on its first scored attempt, whatever the score; a retake keeps the best (SEN-81)", async () => {
+  const t = await goalApp();
+  try {
+    await finishLessons(t);
+    await answerGoal(t, 1);
+    const first = await t.goal.submit();
+    assert.equal(first.status, 200);
+    assert.deepEqual(first.body.quiz.attempt.score, { correct: 1, total: 6 });
+    assert.equal(first.body.quiz.passed, true, "Passed means it has a scored attempt.");
+    assert.equal(first.body.quiz.goal.outcome, "not_met");
+    assert.equal(lessonIn(first.body.study, GOAL_CHECK_LESSON_ID).completed, true);
+    assert.deepEqual(first.body.study.progress, { completed: 3, total: 3 }, "Progress still leaves it out.");
+    const completedAt = first.body.study.course.completedAt;
+    assert.ok(completedAt, "The Course completes with the Goal Check's first Submit.");
+
+    // 3/6 is exactly 50%: partly met. 4/6 is 67%: still partly met. 5/6 is 83%: met.
+    for (const [correct, outcome] of [[3, "partly_met"], [4, "partly_met"], [5, "met"]] as const) {
+      await t.goal.retake();
+      await answerGoal(t, correct);
+      const next = await t.goal.submit();
+      assert.equal(next.body.quiz.goal.outcome, outcome, `${correct}/6`);
+      assert.deepEqual(next.body.quiz.goal.best, { correct, total: 6 });
+    }
+    await t.goal.retake();
+    await answerGoal(t, 0);
+    const worse = await t.goal.submit();
+    assert.deepEqual(worse.body.quiz.best, { correct: 5, total: 6 });
+    assert.equal(worse.body.quiz.goal.outcome, "met", "The result is on the best attempt.");
+    assert.equal(worse.body.study.course.completedAt, completedAt, "The first completion time is kept.");
+
+    const summary = await t.summary();
+    assert.equal(summary.status, 200);
+    assert.deepEqual(summary.body.goalCheck, {
+      lessonId: GOAL_CHECK_LESSON_ID,
+      result: {
+        outcome: "met",
+        best: { correct: 5, total: 6 },
+        missedObjectives: [{ objective: "Pick the right job for a square knot", lessonIds: [SEEDED_FOLLOW_UP_LESSON_ID] }],
+      },
+    });
+    assert.deepEqual(summary.body.quizzes.map((row: { lessonId: string }) => row.lessonId), [SEEDED_QUIZ_LESSON_ID], "The Goal Check is not a Quiz row.");
+  } finally {
+    await t.app.close();
+  }
+});
+
+test("Not met: missed objectives in slot order with their Lessons, then feedback and a next step (SEN-81)", async () => {
+  const t = await goalApp();
+  const recorded = recordProductEvents();
+  try {
+    await finishLessons(t);
+    await answerGoal(t, 2);
+    const submitted = await t.goal.submit();
+    assert.deepEqual(submitted.body.quiz.goal, {
+      outcome: "not_met",
+      best: { correct: 2, total: 6 },
+      missedObjectives: [
+        { objective: "Pick the right job for a square knot", lessonIds: [SEEDED_FOLLOW_UP_LESSON_ID] },
+        { objective: "Spot a granny knot", lessonIds: [SEEDED_QUIZ_LESSON_ID] },
+      ],
+      feedback: null,
+    });
+
+    assert.equal((await t.goal.nextStep("nothing")).status, 409, "No next step before feedback.");
+    assert.equal((await t.goal.feedback({ reasons: [] })).status, 400);
+    assert.equal((await t.goal.feedback({ reasons: ["too_basic", "too_basic"] })).status, 400);
+    assert.equal((await t.goal.feedback({ reasons: ["other"] })).status, 400, "Something else needs words.");
+    assert.equal((await t.goal.feedback({ reasons: ["bored"] })).status, 400);
+    assert.equal((await t.goal.feedback({ reasons: ["too_basic"] }, SEEDED_QUIZ_LESSON_ID)).status, 404, "A Quiz has no Goal Check feedback.");
+    assert.equal((await t.goal.feedback({ reasons: ["too_basic"] }, randomUUID())).status, 404);
+
+    const sent = await t.goal.feedback({ reasons: ["missing_topic", "other"], otherText: "  Knots for climbing  " });
+    assert.equal(sent.status, 200);
+    assert.deepEqual(sent.body, { feedback: { reasons: ["missing_topic", "other"], otherText: "Knots for climbing", nextStep: null } });
+
+    assert.equal((await t.goal.nextStep("more_lessons")).status, 400);
+    const chosen = await t.goal.nextStep("new_course");
+    assert.equal(chosen.status, 200);
+    const href = new URL(chosen.body.newCourseHref, "http://x");
+    assert.equal(href.pathname, "/new-course-request");
+    assert.equal(href.searchParams.get("subject"), SEEDED_COURSE.subject);
+    assert.equal(href.searchParams.get("topic"), "Pick the right job for a square knot; Spot a granny knot; Knots for climbing");
+    assert.equal(chosen.body.nextStep, "new_course");
+    assert.equal((await t.goal.get()).body.quiz.goal.feedback.nextStep, "new_course");
+    assert.deepEqual((await t.goal.nextStep("nothing")).body, { nextStep: "nothing", newCourseHref: null });
+
+    await t.goal.feedback({ reasons: ["too_advanced"] });
+    assert.deepEqual((await t.goal.get()).body.quiz.goal.feedback, { reasons: ["too_advanced"], otherText: null, nextStep: null },
+      "Sending again replaces the reasons and clears the next step.");
+
+    await settled();
+    const where = { courseId: SEEDED_COURSE_ID, lessonId: GOAL_CHECK_LESSON_ID };
+    assert.equal(recorded.of("goal_check_answer_checked").length, 6);
+    assert.deepEqual(recorded.of("goal_check_submitted").map((event) => event.detail), [
+      { ...where, correct: 2, total: 6, outcome: "not_met", feedbackTiming: "per_item" },
+    ]);
+    assert.equal(recorded.of("quiz_submitted").length, 1, "Only the Quiz's own Submit is a quiz event.");
+    assert.equal(recorded.of("quiz_answer_checked").length, 5);
+    assert.deepEqual(recorded.of("goal_check_feedback_given").map((event) => event.detail), [
+      { ...where, reasons: ["missing_topic", "other"], hasOtherText: true },
+      { ...where, reasons: ["too_advanced"], hasOtherText: false },
+    ]);
+    assert.deepEqual(recorded.of("goal_check_next_step_chosen").map((event) => event.detail), [
+      { ...where, nextStep: "new_course" },
+      { ...where, nextStep: "nothing" },
+    ]);
+
+    await t.goal.retake();
+    await answerGoal(t, 6);
+    await t.goal.submit();
+    await settled();
+    assert.deepEqual(recorded.of("goal_check_retaken").map((event) => event.detail), [{ ...where, lastCorrect: 2, lastTotal: 6 }]);
+    assert.equal((await t.goal.feedback({ reasons: ["too_basic"] })).status, 409, "Feedback is only for not met.");
+    assert.equal((await t.goal.nextStep("nothing")).status, 409);
+  } finally {
+    recorded.uninstall();
+    await t.app.close();
   }
 });

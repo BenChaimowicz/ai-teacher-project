@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { ChatThread, CompanionLine } from "@/components/ui/chat-thread.tsx";
 import { useToast } from "@/components/ui/toast.tsx";
 import { useCountUp } from "@/components/learn/count-up.tsx";
+import { GOAL_OUTCOME_LABEL } from "@/components/learn/goal-check-copy.ts";
 import { requestJson } from "@/lib/api.ts";
 import { cheer, confettiAt } from "@/lib/cheer.ts";
 import type { QuizAnswerKey, QuizView as QuizState, StudyPayload } from "@/lib/study-types.ts";
@@ -228,7 +229,22 @@ export function ScoreCard({ score, passed, results, busy, onRetake, celebrate }:
   );
 }
 
+/** What a custom result card gets once an attempt is submitted (the Goal Check's card replaces the score card). */
+export type QuizResultSlot = {
+  view: QuizState;
+  /** This attempt's score. */
+  score: QuizScore;
+  /** Right or wrong per item, in item order, for this attempt. */
+  results: boolean[];
+  busy: boolean;
+  /** The attempt was submitted on this screen just now (not a reload), so the card may celebrate. */
+  celebrate: boolean;
+  onRetake: () => void;
+};
+
 type QuizViewProps = {
+  /** `goal_check` plays the Goal Check (SEN-81): its own copy, no pass mark, and `result` in place of the score card. */
+  mode?: "quiz" | "goal_check";
   courseId: string;
   lessonId: string;
   title: string;
@@ -236,8 +252,10 @@ type QuizViewProps = {
   lessonNumber?: number;
   body: PublicQuizBody;
   onPayload: (payload: StudyPayload) => void;
-  /** Next Lesson / Finish Course, shown once the Quiz is passed. */
+  /** Next Lesson / Finish Course, shown once the Quiz is passed (a Goal Check: once it has a scored attempt). */
   finish?: ReactNode;
+  /** Replaces the score card and the companion's line under it after Submit. */
+  result?: (slot: QuizResultSlot) => ReactNode;
 };
 
 /**
@@ -245,8 +263,10 @@ type QuizViewProps = {
  * Draft until Submit, untimed, open-book. `per_item`: each question has Check, which locks it and shows
  * right or wrong; Submit waits until all are checked. `end_of_quiz`: no Check, verdicts after Submit.
  * The server grades and keeps the answer key; it reaches the browser only through Show answer.
+ * The Goal Check plays here too (`mode="goal_check"`): same questions and endpoints, its own words, and its own result.
  */
-export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, body, onPayload, finish }: QuizViewProps) {
+export function QuizView({ mode = "quiz", courseId, lessonId, title, lessonGoal, lessonNumber, body, onPayload, finish, result }: QuizViewProps) {
+  const goalMode = mode === "goal_check";
   const [view, setView] = useState<QuizState | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -335,7 +355,17 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
       setJustSubmitted(true);
       onPayload(json.study);
       const score = json.quiz.attempt?.score;
-      if (score && json.quiz.passed && score.correct / score.total >= 0.7) {
+      if (goalMode) {
+        const outcome = json.quiz.goal?.outcome;
+        if (outcome === "met") {
+          toast({ title: "Goal met", body: `${json.quiz.goal!.best.correct} / ${json.quiz.goal!.best.total} · ${title}`, tone: "celebrate" });
+          say("You did what you came for.", "cheer");
+        } else if (outcome === "partly_met") {
+          say("Most of the way there. Let's see which parts to look at again.");
+        } else {
+          say("Not there yet. Let's see what was missing.");
+        }
+      } else if (score && json.quiz.passed && score.correct / score.total >= 0.7) {
         toast({ title: "Quiz passed", body: `${scoreText(score)} · ${title}`, tone: "celebrate" });
         say(`${score.correct} of ${score.total}. Good work.`, "cheer");
       } else {
@@ -405,7 +435,7 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
   return (
     <div className="l-quiz">
       <header className="l-lhead">
-        <p className="l-kicker">{lessonNumber ? `lesson ${pad(lessonNumber)} · quiz` : "quiz"}</p>
+        <p className="l-kicker">{goalMode ? "goal check · the whole course" : lessonNumber ? `lesson ${pad(lessonNumber)} · quiz` : "quiz"}</p>
         <h1>{title}</h1>
         <p className="learn">{lessonGoal}</p>
         <p className="l-meta">
@@ -417,9 +447,13 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
           <span aria-hidden="true">·</span>
           <span>open-book: earlier lessons stay open</span>
           <span aria-hidden="true">·</span>
-          <span>pass with 70%</span>
+          <span>{goalMode ? "goal met at 70%" : "pass with 70%"}</span>
         </p>
-        {view?.best ? (
+        {goalMode && view?.goal ? (
+          <p className="l-best">
+            Best score: <b>{scoreText(view.goal.best)}</b> · {GOAL_OUTCOME_LABEL[view.goal.outcome]}
+          </p>
+        ) : !goalMode && view?.best ? (
           <p className="l-best">
             Best score: <b>{scoreText(view.best)}</b>
             {view.passed ? " · Passed" : " · Not passed yet"}
@@ -439,6 +473,7 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
         <div>
           <ChatThread label="Quiz" replay>
             <CompanionLine>
+              {goalMode ? "One last check, on what you came here for. " : null}
               {perItem
                 ? `${count[0]!.toUpperCase()}${count.slice(1)} questions, one at a time. Pick an answer, then Check it.`
                 : `${count[0]!.toUpperCase()}${count.slice(1)} questions, one at a time. You'll see how you did after you submit.`}{" "}
@@ -468,7 +503,16 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
               );
             })}
             {canSubmit ? <CompanionLine key="all-done">That's all {count}. Submit when you're ready.</CompanionLine> : null}
-            {submitted && attempt?.score ? (
+            {submitted && attempt?.score && result ? (
+              result({
+                view,
+                score: attempt.score,
+                results: items.map((item) => results[item.id] === true),
+                busy,
+                celebrate: justSubmitted,
+                onRetake: () => void retake(),
+              })
+            ) : submitted && attempt?.score ? (
               <>
                 <ScoreCard
                   score={attempt.score}

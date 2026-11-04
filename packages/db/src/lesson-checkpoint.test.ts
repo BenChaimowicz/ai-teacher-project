@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MAX_READING_SECTIONS, MAX_READING_WORDS } from "./reading-lesson.ts";
 import type { BlueprintSlot } from "./blueprint.ts";
-import { quizCodeFailures, readingCodeFailures, type QuizLessonDraft, type ReadingLessonDraft } from "./lesson-checkpoint.ts";
+import {
+  goalCheckCodeFailures, quizCodeFailures, readingCodeFailures, type GoalCheckLessonDraft, type QuizLessonDraft, type ReadingLessonDraft,
+} from "./lesson-checkpoint.ts";
 import type { MediaDescriptorFields, MediaLicense } from "./media.ts";
 import type { MediaBlock } from "./reading-lesson.ts";
 
@@ -283,4 +285,96 @@ test("A Reading fits one screen: more words than the cap, markers aside, or more
   const many = valid();
   many.body.sections = Array.from({ length: MAX_READING_SECTIONS + 1 }, (_, n) => ({ heading: `Note ${n}`, blocks: [{ kind: "prose" as const, text: "A fact [1][2]." }] }));
   assert.match(readingCodeFailures(many, RETRIEVED)[0]!, new RegExp(`at most ${MAX_READING_SECTIONS} sections, not ${MAX_READING_SECTIONS + 1}`));
+});
+
+const SECOND_READING: BlueprintSlot = {
+  id: "slot3", method: "reading", title: "The Roots", lessonGoal: "Trace the three roots of Yggdrasil.",
+  objectives: ["Trace the three roots"], topicTags: ["yggdrasil", "roots"], assessesSlotIds: [],
+};
+const GOAL_OBJECTIVES = ["Explain how the worlds connect", "Use the roots to place a world"];
+const GOAL_CHECK_SLOT: BlueprintSlot = {
+  id: "slot4", method: "goal_check", title: "Goal Check", lessonGoal: "Show you can find your way around the Norse cosmos.",
+  objectives: GOAL_OBJECTIVES, topicTags: ["yggdrasil"], assessesSlotIds: ["slot1", "slot3"],
+  objectiveSlotIds: { [GOAL_OBJECTIVES[0]!]: ["slot1"], [GOAL_OBJECTIVES[1]!]: ["slot1", "slot3"] },
+};
+const GOAL_SLOTS = [READING_SLOT, QUIZ_SLOT, SECOND_READING, GOAL_CHECK_SLOT];
+const GOAL_CHECKPOINTED = new Set(["slot1", "slot2", "slot3"]);
+
+/** A six-item Goal Check, alternating its two goal objectives. */
+function goalCheck(): GoalCheckLessonDraft {
+  return {
+    slotId: "slot4", teachingMethod: "goal_check", title: GOAL_CHECK_SLOT.title, lessonGoal: GOAL_CHECK_SLOT.lessonGoal,
+    objectives: GOAL_OBJECTIVES, topicTags: GOAL_CHECK_SLOT.topicTags, lineage: null, sources: [], citations: [],
+    body: {
+      items: [1, 2, 3, 4, 5, 6].map((n) => ({
+        id: `item${n}`,
+        prompt: `Scenario ${n}: where do you go?`,
+        options: ["a", "b", "c", "d"].map((id) => ({ id, text: `Route ${id} of ${n}`, why: id === "c" ? "The Lessons say so." : "The Lessons say otherwise." })),
+        correctOptionId: "c",
+        explanations: { brief: "Brief.", standard: "Standard.", detailed: "Detailed." },
+        objective: GOAL_OBJECTIVES[n % 2]!,
+      })),
+    },
+  };
+}
+
+test("A six-item Goal Check that checks every goal objective on its checkpointed Readings passes the Code checks (SEN-81)", () => {
+  assert.deepEqual(goalCheckCodeFailures(goalCheck(), GOAL_SLOTS, GOAL_CHECKPOINTED), []);
+});
+
+test("A Goal Check runs the Quiz's item checks, with 6–12 items", () => {
+  const short = goalCheck();
+  short.body.items.pop();
+  assert.ok(goalCheckCodeFailures(short, GOAL_SLOTS, GOAL_CHECKPOINTED).includes("A Goal Check has 6–12 items, not 5."));
+  const long = goalCheck();
+  long.body.items.push(...goalCheck().body.items.map((item, index) => ({ ...item, id: `extra${index}`, prompt: `Extra ${index}?` })),
+    { ...goalCheck().body.items[0]!, id: "extra6", prompt: "Extra 6?" });
+  assert.ok(goalCheckCodeFailures(long, GOAL_SLOTS, GOAL_CHECKPOINTED).includes("A Goal Check has 6–12 items, not 13."));
+
+  const broken = goalCheck();
+  broken.body.items[0]!.options.pop();
+  broken.body.items[1]!.correctOptionId = "z";
+  broken.body.items[2]!.options[3]!.text = "Option 4";
+  broken.body.items[3]!.explanations.brief = "Option B is a trap.";
+  broken.body.items[4]!.options[0]!.why = "";
+  broken.body.items[5]!.prompt = broken.body.items[0]!.prompt;
+  const failures = goalCheckCodeFailures(broken, GOAL_SLOTS, GOAL_CHECKPOINTED);
+  assert.ok(failures.includes("Item 1 needs exactly 4 options."), failures.join("\n"));
+  assert.ok(failures.includes("Item 2 needs exactly one correct option."), failures.join("\n"));
+  assert.ok(failures.includes("Item 3 has a placeholder instead of an option."), failures.join("\n"));
+  assert.ok(failures.some((failure) => failure.startsWith("Item 4's explanation or an option's why names")), failures.join("\n"));
+  assert.ok(failures.includes('Item 5 needs a one-sentence "why" on every option.'), failures.join("\n"));
+  assert.ok(failures.includes("Two items ask the same question."), failures.join("\n"));
+});
+
+test("Every Goal Check item names one of the slot's goal objectives, and every goal objective has an item", () => {
+  const unnamed = goalCheck();
+  delete (unnamed.body.items[0] as { objective?: string }).objective;
+  assert.ok(goalCheckCodeFailures(unnamed, GOAL_SLOTS, GOAL_CHECKPOINTED).includes("Item 1 names no goal objective."));
+
+  const stray = goalCheck();
+  stray.body.items[0]!.objective = "Name the Nine Worlds";
+  assert.ok(goalCheckCodeFailures(stray, GOAL_SLOTS, GOAL_CHECKPOINTED).some((failure) => failure.startsWith("Item 1 names “Name the Nine Worlds”")));
+
+  const uncovered = goalCheck();
+  for (const item of uncovered.body.items) item.objective = GOAL_OBJECTIVES[0]!;
+  assert.deepEqual(goalCheckCodeFailures(uncovered, GOAL_SLOTS, GOAL_CHECKPOINTED), [`No item checks the goal objective “${GOAL_OBJECTIVES[1]}”.`]);
+});
+
+test("A Quiz item may not carry a goal objective, while a Goal Check item may", () => {
+  const lesson = quiz();
+  Object.assign(lesson.body.items[0]!, { objective: "Name the Nine Worlds" });
+  assert.ok(quizCodeFailures(lesson, SLOTS, CHECKPOINTED).some((failure) => failure.startsWith("Item 1 carries")));
+  const extra = goalCheck();
+  Object.assign(extra.body.items[0]!, { media: { kind: "image" } });
+  assert.ok(goalCheckCodeFailures(extra, GOAL_SLOTS, GOAL_CHECKPOINTED).some((failure) => failure.startsWith("Item 1 carries")));
+});
+
+test("A Goal Check fails off the Goal Check slot, or when an assessed Reading is not checkpointed", () => {
+  assert.deepEqual(goalCheckCodeFailures(goalCheck(), GOAL_SLOTS, new Set(["slot1", "slot2"])), ["Assessed slot slot3 has no checkpointed Lesson."]);
+  const onQuiz = { ...goalCheck(), slotId: "slot2" };
+  assert.ok(goalCheckCodeFailures(onQuiz, GOAL_SLOTS, GOAL_CHECKPOINTED).includes("The Goal Check has no Goal Check slot in the Blueprint."));
+  const reused = goalCheck();
+  Object.assign(reused, { lineage: { originLessonId: "x" } });
+  assert.ok(goalCheckCodeFailures(reused, GOAL_SLOTS, GOAL_CHECKPOINTED).includes("A Goal Check is always generated, never reused."));
 });

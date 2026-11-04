@@ -24,7 +24,7 @@ test("The plan designs itself; review shows titles and goals, keeps Jump around 
 
   await page.getByRole("button", { name: /^Make my course/ }).click();
   await expect(page.getByText("On it. You can leave; I'll keep going.")).toBeVisible();
-  await expect(page.getByText(/3 lessons · jump around/)).toBeVisible();
+  await expect(page.getByText(/4 lessons · jump around/)).toBeVisible();
   await expect(page.getByText("You can leave: I'll keep writing")).toBeVisible();
 
   await page.reload();

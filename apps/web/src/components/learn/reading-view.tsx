@@ -164,7 +164,12 @@ type ReadingViewProps = {
 };
 
 /** The second half of the "I've read it" tile, by where it leads. */
-const NEXT_LABEL: Record<NextStep["kind"], string> = { reading: "next lesson", quiz: "start the quiz", finish: "finish the course" };
+const NEXT_LABEL: Record<NextStep["kind"], string> = {
+  reading: "next lesson",
+  quiz: "start the quiz",
+  goal_check: "start the goal check",
+  finish: "finish the course",
+};
 
 const STAY_OPTION: OptionTile<"read" | "stay"> = { id: "stay", label: "Not yet, stay here", description: "Keep reading. No rush.", tone: "quiet", value: "stay" };
 

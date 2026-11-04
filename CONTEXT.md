@@ -153,7 +153,7 @@ The coarse shape of a Starting Level after any Too easy: floor (at most one evid
 _Avoid_: band, tier, difficulty, novice/intermediate/advanced
 
 **Progress**:
-The Learner's position through a published Course, shown as completed Lessons over total Lessons. It accumulates by completing Lessons, not by opening them; it is not a re-estimated Starting Level. Completions are Learner runtime on that Course; they do not edit the published snapshot.
+The Learner's position through a published Course, shown as completed Lessons over total Lessons, not counting the Goal Check. It accumulates by completing Lessons, not by opening them; it is not a re-estimated Starting Level. Completions are Learner runtime on that Course; they do not edit the published snapshot.
 _Avoid_: Starting Level (when meaning the bar), level, capability score, percent (when meaning the n / total label)
 
 **Sequence mode**:
@@ -235,7 +235,7 @@ The Lesson Study opens when the Learner enters from Workspace: the first incompl
 _Avoid_: Course overview, resume pointer, active lesson
 
 **Lesson completion**:
-The event that counts a Lesson toward Progress. A reading Lesson completes when the Learner reaches the end and marks it complete; opening or partial reading does not count. A Quiz completes when the Learner's best score is at least 70%.
+The event that counts a Lesson toward Progress. A reading Lesson completes when the Learner reaches the end and marks it complete; opening or partial reading does not count. A Quiz completes when the Learner's best score is at least 70%. A Goal Check completes on its first scored attempt, whatever the score.
 _Avoid_: opened, viewed, started
 
 **Teaching method**:
@@ -257,6 +257,10 @@ _Avoid_: parent, source (when meaning the origin Lesson), fork
 **Quiz**:
 A Lesson that uses the quiz teaching method, placed after the instructional Lessons it assesses. It is completed for Progress when the Learner's best score is at least 70% of questions correct, equal weight per question; retakes are unlimited on the same items. Each item stores its explanation at all three Feedback detail levels, so Study shows the Learner's current one, and each option carries a one-sentence `why` (the Lesson statement that makes it right, or the one it contradicts) that Study shows under the option once the item has feedback (decision 2026-11-03). A Quiz is always generated for its Course; it is not copied from another Course.
 _Avoid_: checkpoint (as a separate object), test, exam, assessment (when meaning this Lesson), Starting Level diagnostic
+
+**Goal Check**:
+The last Lesson of every Course: four-option, single-correct items that check the Learning Goal itself, across the whole Course, rather than the chunk just taught. The Blueprint plans it from the Learning Goal and Starting Level as two to six goal objectives, each tied to the Readings that teach it, and the Learner sees it at Blueprint review. It plays like a Quiz (unlimited retakes, best score kept) but sits outside Progress and completes on its first scored attempt, whatever the score. Its best score reads against the Learning Goal: met at 70% or more, partly met from 50%, not met below. The result names the missed goal objectives and links back to their Lessons. Only "not met" then asks the Learner what was missing and offers a new Course Request built from it, or nothing (SEN-81, decisions 2026-11-04). In code the method id is `goal_check`.
+_Avoid_: final assessment, final exam, final Quiz, Goal Test, assessment
 
 **Source**:
 A published web page the generator used as evidence for a Lesson. Study lists a Reading's Sources at its end and opens the list with the one the Lesson cites most, under a "start here" ribbon, as the one thing to read after the Lesson (decision 2026-11-03).

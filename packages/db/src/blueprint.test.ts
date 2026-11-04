@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { blueprintChapters, blueprintCodeFailures, learnerBlueprint, type BlueprintSlot, type CourseBlueprint } from "./blueprint.ts";
+import { blueprintChapters, blueprintCodeFailures, goalCheckSlot, learnerBlueprint, type BlueprintSlot, type CourseBlueprint } from "./blueprint.ts";
 
 /** A Reading slot, in a Chapter of its own unless `chapter` says otherwise. */
 function reading(n: number, chapter = `Chapter ${n}`): BlueprintSlot {
@@ -18,12 +18,32 @@ function quiz(n: number, assesses: number[]): BlueprintSlot {
   };
 }
 
-/** One Module holding the given slots. */
-function course(...slots: BlueprintSlot[]): CourseBlueprint {
+/**
+ * A Goal Check slot (SEN-81) whose goal objectives map to the given Reading slot numbers.
+ * @param taught - Each goal objective's teaching Reading numbers, by objective
+ */
+function goalCheck(taught: Record<string, number[]>): BlueprintSlot {
+  const objectiveSlotIds = Object.fromEntries(Object.entries(taught).map(([objective, numbers]) => [objective, numbers.map((number) => `slot${number}`)]));
+  return {
+    id: "goal", method: "goal_check", title: "Goal Check: read 6/8", lessonGoal: "Count and feel any 6/8 bar of Iris.",
+    objectives: Object.keys(taught), topicTags: ["meter", "goal-check"],
+    assessesSlotIds: [...new Set(Object.values(objectiveSlotIds).flat())], objectiveSlotIds,
+  };
+}
+
+/** One Module holding the given slots and nothing else. */
+function bare(...slots: BlueprintSlot[]): CourseBlueprint {
   return { courseTitle: "Reading 6/8 for Iris", modules: [{ title: "Counting in six", slots }] };
 }
 
-/** Two Readings and a Quiz that assesses both: the default cadence's smallest Course. */
+/** One Module holding the given slots, then a valid Goal Check over its first and last Readings. */
+function course(...slots: BlueprintSlot[]): CourseBlueprint {
+  const readings = slots.filter((slot) => slot.method === "reading").map((slot) => Number(slot.id.slice("slot".length)));
+  const [first, last] = [readings[0] ?? 1, readings.at(-1) ?? 1];
+  return bare(...slots, goalCheck({ "Count 6/8 aloud": [first], "Feel 6/8 in two": [last] }));
+}
+
+/** Two Readings and a Quiz that assesses both, then the Goal Check: the default cadence's smallest Course. */
 function valid(): CourseBlueprint {
   return course(reading(1), reading(2), quiz(3, [1, 2]));
 }
@@ -40,8 +60,9 @@ function failures(blueprint: CourseBlueprint) {
   return blueprintCodeFailures(blueprint, "every_2_to_3_readings");
 }
 
-test("Two Readings followed by a Quiz that assesses them passes the Code checks", () => {
+test("Two Readings followed by a Quiz that assesses them, then the Goal Check, passes the Code checks", () => {
   assert.deepEqual(failures(valid()), []);
+  assert.equal(goalCheckSlot(valid())?.id, "goal");
 });
 
 test("Every slot needs a title, Lesson goal, objectives, a registered method, and 2–5 slug Topic tags", () => {
@@ -80,13 +101,13 @@ test("No two slots share a Lesson goal, and a Course needs at least one Reading 
 });
 
 test("A Course holds 3–30 Lessons in at most 6 Chapters: one-screen Readings need more of them (decision 2026-11-03)", () => {
-  assert.ok(failures(course(reading(1), quiz(2, [1]))).some((failure) => failure.includes("3–30 Lessons, not 2")));
+  assert.ok(failures(course(reading(1), quiz(2, [1]))).some((failure) => failure.includes("3–30 Lessons before its Goal Check, not 2")));
   /** Readings in pairs, each pair followed by its Quiz, `pairs` times over. */
   const paired = (pairs: number) => course(...Array.from({ length: pairs }, (_, pair) => {
     const first = pair * 3 + 1;
     return [reading(first), reading(first + 1), quiz(first + 2, [first, first + 1])];
   }).flat());
-  assert.ok(failures(paired(11)).some((failure) => failure.includes("3–30 Lessons, not 33")));
+  assert.ok(failures(paired(11)).some((failure) => failure.includes("3–30 Lessons before its Goal Check, not 33")));
   assert.ok(failures(paired(4)).some((failure) => failure.includes("at most 6 Chapters, not 8")));
   const fourteen = course(
     reading(1, "A"), reading(2, "A"), reading(3, "B"), reading(4, "B"), quiz(5, [1, 2, 3, 4]),
@@ -147,5 +168,81 @@ test("Quizzes follow the Learner's Quiz cadence", () => {
 test("Learner review sees titles and Lesson goals, not objectives, tags, assessed slots, or planned visuals", () => {
   const view = learnerBlueprint(withSlot(0, { visuals: [{ kind: "technique", intent: "Matched grip from above." }] }));
   assert.deepEqual(Object.keys(view.modules[0]!.slots[2]!).sort(), ["id", "lessonGoal", "method", "title"]);
+  assert.deepEqual(view.modules[0]!.slots[3], { id: "goal", method: "goal_check", title: "Goal Check: read 6/8", lessonGoal: "Count and feel any 6/8 bar of Iris." },
+    "The Goal Check shows as the Course's last item, without its objectives or the Readings they map to.");
   assert.deepEqual(Object.keys(view.modules[0]!.slots[0]!).sort(), ["id", "lessonGoal", "method", "title"]);
+});
+
+/** The three Lessons of {@link valid}, without its Goal Check. */
+function lessons(): BlueprintSlot[] {
+  return [reading(1), reading(2), quiz(3, [1, 2])];
+}
+
+test("A Course ends with exactly one Goal Check, as its very last slot (SEN-81)", () => {
+  assert.ok(failures(bare(...lessons())).some((failure) => failure.includes("exactly one Goal Check, not 0")));
+  const check = goalCheck({ "Count 6/8 aloud": [1], "Feel 6/8 in two": [2] });
+  assert.ok(failures(bare(...lessons(), check, { ...check, id: "goal2", lessonGoal: "Another goal." }))
+    .some((failure) => failure.includes("exactly one Goal Check, not 2")));
+  const [first, second, third] = lessons();
+  assert.ok(failures(bare(first!, second!, check, third!)).some((failure) => failure.includes("must be the Course's last Lesson")));
+  const twoModules: CourseBlueprint = {
+    courseTitle: "Reading 6/8 for Iris",
+    modules: [{ title: "Counting in six", slots: [...lessons(), check] }, { title: "More", slots: [reading(4), quiz(5, [4])] }],
+  };
+  assert.ok(failures(twoModules).some((failure) => failure.includes("must be the Course's last Lesson")));
+});
+
+test("A Goal Check lists 2–6 distinct goal objectives (SEN-81)", () => {
+  assert.ok(failures(bare(...lessons(), goalCheck({ "Count 6/8 aloud": [1] }))).some((failure) => failure.includes("2–6 goal objectives, not 1")));
+  const seven = Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`Goal ${i}`, [1]]));
+  assert.ok(failures(bare(...lessons(), goalCheck(seven))).some((failure) => failure.includes("2–6 goal objectives, not 7")));
+  const six = Object.fromEntries(Array.from({ length: 6 }, (_, i) => [`Goal ${i}`, [1 + (i % 2)]]));
+  assert.deepEqual(failures(bare(...lessons(), goalCheck(six))), []);
+  const repeated = goalCheck({ "Count 6/8 aloud": [1], "count 6/8 aloud ": [2] });
+  assert.ok(failures(bare(...lessons(), repeated)).some((failure) => failure.includes("repeats a goal objective")));
+});
+
+test("Every goal objective is mapped to earlier Readings that teach it, and nothing else is mapped (SEN-81)", () => {
+  const unmapped = { ...goalCheck({ "Count 6/8 aloud": [1], "Feel 6/8 in two": [2] }), objectives: ["Count 6/8 aloud", "Feel 6/8 in two", "Play the verse"] };
+  assert.ok(failures(bare(...lessons(), unmapped)).some((failure) => failure.includes("name the teaching Readings for each")));
+  assert.ok(failures(bare(...lessons(), unmapped)).some((failure) => failure.includes("“Play the verse” is taught by no Reading")));
+  const extra = { ...goalCheck({ "Count 6/8 aloud": [1], "Feel 6/8 in two": [2], "Play the verse": [2] }), objectives: ["Count 6/8 aloud", "Feel 6/8 in two"] };
+  assert.ok(failures(bare(...lessons(), extra)).some((failure) => failure.includes("and nothing else")));
+  const empty = goalCheck({ "Count 6/8 aloud": [1], "Feel 6/8 in two": [] });
+  assert.ok(failures(bare(...lessons(), empty)).some((failure) => failure.includes("“Feel 6/8 in two” is taught by no Reading")));
+  const toQuiz = goalCheck({ "Count 6/8 aloud": [1], "Feel 6/8 in two": [3] });
+  assert.ok(failures(bare(...lessons(), toQuiz)).some((failure) => failure.includes("names slot3, which is not an earlier Reading")));
+  const missing = goalCheck({ "Count 6/8 aloud": [1], "Feel 6/8 in two": [9] });
+  assert.ok(failures(bare(...lessons(), missing)).some((failure) => failure.includes("names slot9, which is not an earlier Reading")));
+  const toItself = { ...goalCheck({ "Count 6/8 aloud": [1], "Feel 6/8 in two": [2] }), objectiveSlotIds: { "Count 6/8 aloud": ["slot1"], "Feel 6/8 in two": ["goal"] } };
+  assert.ok(failures(bare(...lessons(), toItself)).some((failure) => failure.includes("names goal, which is not an earlier Reading")));
+  // A Reading after the Goal Check is a later slot, even though the Goal Check is then not last.
+  const later = bare(...lessons(), goalCheck({ "Count 6/8 aloud": [1], "Feel 6/8 in two": [4] }), reading(4));
+  assert.ok(failures(later).some((failure) => failure.includes("names slot4, which is not an earlier Reading")));
+});
+
+test("A Goal Check assesses exactly the Readings its goal objectives name (SEN-81)", () => {
+  const check = goalCheck({ "Count 6/8 aloud": [1], "Feel 6/8 in two": [1] });
+  assert.deepEqual(failures(bare(...lessons(), check)), [], "Two objectives may share a Reading.");
+  assert.ok(failures(bare(...lessons(), { ...check, assessesSlotIds: ["slot1", "slot2"] })).some((failure) => failure.includes("assess exactly the Readings")));
+  assert.ok(failures(bare(...lessons(), { ...check, assessesSlotIds: [] })).some((failure) => failure.includes("assess exactly the Readings")));
+  const quizWithMap = withSlot(2, { objectiveSlotIds: { "Objective 1": ["slot1"] } });
+  assert.ok(failures(quizWithMap).some((failure) => failure.includes("Slot 3 is not the Goal Check and must not map goal objectives")));
+});
+
+test("The Goal Check is not a Lesson for the Lesson count or the Quiz cadence, and plans no visuals or chapter (SEN-81)", () => {
+  assert.ok(!failures(valid()).some((failure) => failure.includes("must end with a Quiz")), "The Goal Check after the last Quiz is not a trailing Lesson.");
+  /** Readings in pairs, each pair followed by its Quiz, ten times over: 30 Lessons, then the Goal Check as the 31st slot. */
+  const thirty = course(...Array.from({ length: 10 }, (_, pair) => {
+    const first = pair * 3 + 1;
+    return [reading(first, `Chapter ${pair % 3}`), reading(first + 1, `Chapter ${pair % 3}`), quiz(first + 2, [first, first + 1])];
+  }).flat());
+  assert.ok(!failures(thirty).some((failure) => failure.includes("Lessons before its Goal Check")), "30 Lessons and a Goal Check are within the cap.");
+  assert.deepEqual(blueprintCodeFailures(course(reading(1), quiz(2, [1]), reading(3), quiz(4, [3])), "every_reading"), []);
+  assert.deepEqual(blueprintCodeFailures(course(reading(1), reading(2), reading(3), quiz(4, [1, 2, 3])), "module_end"), [],
+    "One Quiz in the Module: the Goal Check is not a second.");
+  const check = goalCheckSlot(valid())!;
+  assert.ok(failures(bare(...lessons(), { ...check, visuals: [{ kind: "diagram", intent: "A bar of 6/8." }] }))
+    .some((failure) => failure.includes("not a Reading and must not plan visuals")));
+  assert.equal(blueprintChapters(valid()).length, 2, "The Goal Check is in no Chapter.");
 });

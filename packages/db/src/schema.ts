@@ -14,6 +14,7 @@ import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from
 import type { LessonSource } from "./lesson-checkpoint.ts";
 import type { LessonLineage } from "./lesson-reuse.ts";
 import { MEDIA_KINDS, MEDIA_LICENSES, MEDIA_ORIGINS, MEDIA_REVIEWS, type MediaCategory, type MediaSearchRoute, type MediaSource } from "./media.ts";
+import type { GoalCheckMissingReason, GoalCheckNextStep } from "./goal-check.ts";
 import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
 import type { CapabilityPlan, DiagnosticAnswer, DiagnosticItem, GapConfirmation, ItemReview, StartingLevel } from "./starting-level.ts";
@@ -291,6 +292,8 @@ export const publishedLessons = pgTable(
     objectives: jsonb("objectives").$type<string[]>().notNull().default([]),
     topicTags: jsonb("topic_tags").$type<string[]>().notNull().default([]),
     assessedLessonIds: jsonb("assessed_lesson_ids").$type<string[]>().notNull().default([]),
+    /** On the Goal Check only (SEN-81): each goal objective's teaching Lessons, for the result's links back. Empty otherwise. */
+    objectiveLessonIds: jsonb("objective_lesson_ids").$type<Record<string, string[]>>().notNull().default({}),
     lineage: jsonb("lineage").$type<LessonLineage>(),
     sources: jsonb("sources").$type<unknown[]>().notNull().default([]),
     citations: jsonb("citations").$type<unknown[]>().notNull().default([]),
@@ -447,6 +450,29 @@ export const usageRecords = pgTable(
     index("usage_records_event").on(table.pipelineEventId),
     index("usage_records_model").on(table.modelId, table.createdAt),
   ],
+);
+
+/**
+ * Learner runtime: what a Learner said was missing after a "not met" Goal Check, and what they chose to do next
+ * (SEN-81, decision 2026-11-04). One row per Learner and Goal Check; sending again after a retake replaces it.
+ * `nextStep` is null until they choose.
+ */
+export const goalCheckFeedback = pgTable(
+  "goal_check_feedback",
+  {
+    learnerId: uuid("learner_id")
+      .notNull()
+      .references(() => learners.id),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => publishedLessons.id),
+    reasons: jsonb("reasons").$type<GoalCheckMissingReason[]>().notNull(),
+    otherText: text("other_text"),
+    nextStep: text("next_step").$type<GoalCheckNextStep>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.learnerId, table.lessonId] })],
 );
 
 /** Something a Learner did. */

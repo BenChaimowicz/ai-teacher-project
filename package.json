@@ -23,6 +23,7 @@
     "check:technique-judge:live": "pnpm --filter @senoy/api exec tsx src/lib/technique-judge.live-check.ts",
     "check:media-search:live": "pnpm --filter @senoy/api exec tsx src/lib/media-search.live-check.ts",
     "check:quiz:live": "pnpm --filter @senoy/api exec tsx src/lib/quiz-generation.live-check.ts",
+    "check:goal-check:live": "pnpm --filter @senoy/api exec tsx src/lib/goal-check-generation.live-check.ts",
     "check:reuse:live": "pnpm --filter @senoy/api exec tsx src/lib/lesson-reuse.live-check.ts",
     "check:research:live": "pnpm --filter @senoy/api exec tsx src/lib/research.live-check.ts",
     "check:research-processors:live": "pnpm --filter @senoy/api exec tsx src/lib/research-processors.live-check.ts",

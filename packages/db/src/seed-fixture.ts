@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Database } from "./index.ts";
-import { SEEDED_COURSE, SEEDED_COURSE_ID, SEEDED_LESSONS, SEEDED_MODULE } from "./fixture-course.ts";
+import { SEEDED_COURSE, SEEDED_COURSE_ID, SEEDED_COURSE_LESSONS, SEEDED_MODULE } from "./fixture-course.ts";
 import { learners, publishedCourses, publishedLessons, publishedModules } from "./schema.ts";
 import { SEEDED_LEARNER_ID } from "./seed-ids.ts";
 
@@ -29,16 +29,17 @@ export async function seedLearner(db: Database, authUserId?: string) {
 }
 
 /**
- * Inserts the fixture published Course snapshot if those rows are missing, and fills fixture Lesson bodies.
+ * Inserts the fixture published Course snapshot if those rows are missing, and fills fixture Lesson bodies (and the
+ * Goal Check's objective links to its Readings).
  * @param db - Drizzle client
  */
 export async function seedPublishedCourse(db: Database) {
   try {
     await db.insert(publishedCourses).values(SEEDED_COURSE).onConflictDoNothing({ target: publishedCourses.id });
     await db.insert(publishedModules).values(SEEDED_MODULE).onConflictDoNothing({ target: publishedModules.id });
-    await db.insert(publishedLessons).values(SEEDED_LESSONS).onConflictDoNothing({ target: publishedLessons.id });
+    await db.insert(publishedLessons).values(SEEDED_COURSE_LESSONS).onConflictDoNothing({ target: publishedLessons.id });
 
-    for (const lesson of SEEDED_LESSONS) {
+    for (const lesson of SEEDED_COURSE_LESSONS) {
       await db
         .update(publishedLessons)
         .set({
@@ -46,6 +47,7 @@ export async function seedPublishedCourse(db: Database) {
           sources: lesson.sources,
           citations: lesson.citations,
           teachingMethod: lesson.teachingMethod,
+          objectiveLessonIds: "objectiveLessonIds" in lesson ? lesson.objectiveLessonIds : {},
         })
         .where(eq(publishedLessons.id, lesson.id));
     }

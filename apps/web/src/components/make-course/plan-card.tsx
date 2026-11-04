@@ -1,5 +1,6 @@
 import { List, Shuffle } from "lucide-react";
 import type { CSSProperties } from "react";
+import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
 import type { SequenceMode } from "@senoy/db/sequence-mode";
 import { ThreadCard } from "@/components/ui/chat-thread.tsx";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
@@ -8,7 +9,10 @@ import type { BlueprintView } from "@/lib/course-request-types.ts";
 import { cn } from "@/lib/utils";
 
 /** Learner-facing names for a slot's Teaching method. */
-const METHOD_LABELS: Record<string, string> = { reading: "Read", quiz: "Quiz" };
+const METHOD_LABELS: Record<string, string> = { reading: "Read", quiz: "Quiz", [GOAL_CHECK_METHOD_ID]: "Goal Check" };
+
+/** Keeps a row without a tick in line with the rows that have one. */
+const CHECK_SPACER = { width: 20, flex: "none" } as const satisfies CSSProperties;
 
 type PlanCardProps = {
   view: BlueprintView;
@@ -30,13 +34,15 @@ export function sequenceModeName(mode: SequenceMode) {
 
 /**
  * The plan (Course Blueprint) in the thread: titles and Lesson goals only (spec §4.4), a tick per Lesson to mark it
- * not relevant, and Step by step / Jump around.
+ * not relevant, and Step by step / Jump around. The Goal Check (SEN-81) shows as the Course's last item with no tick:
+ * it checks the Learning Goal itself, so it cannot be marked, and it is not counted as a Lesson.
  */
 export function PlanCard({ view, subject, unticked = new Set(), onToggle, onSequenceMode, busy = false, className }: PlanCardProps) {
   const slots = view.blueprint.modules.flatMap((module) => module.slots);
-  const kept = slots.filter((slot) => !unticked.has(slot.id));
+  const kept = slots.filter((slot) => !unticked.has(slot.id) && slot.method !== GOAL_CHECK_METHOD_ID);
   const reads = kept.filter((slot) => slot.method === "reading").length;
   const quizzes = kept.length - reads;
+  const goalChecks = slots.length - slots.filter((slot) => slot.method !== GOAL_CHECK_METHOD_ID).length;
   const multiModule = view.blueprint.modules.length > 1;
   let number = 0;
 
@@ -53,9 +59,10 @@ export function PlanCard({ view, subject, unticked = new Set(), onToggle, onSequ
         <span><b>{kept.length}</b> lessons</span>
         <span><b>{reads}</b> reading</span>
         <span><b>{quizzes}</b> {quizzes === 1 ? "quiz" : "quizzes"}</span>
+        {goalChecks ? <span><b>{goalChecks}</b> goal check</span> : null}
       </div>
       <div className="mk-plan-bar" aria-hidden="true">
-        {slots.map((slot) => <i key={slot.id} className={cn(slot.method === "quiz" && "q", unticked.has(slot.id) && "off")} />)}
+        {slots.map((slot) => <i key={slot.id} className={cn(slot.method !== "reading" && "q", unticked.has(slot.id) && "off")} />)}
       </div>
       {view.blueprint.modules.map((module) => (
         <div key={module.title}>
@@ -63,19 +70,20 @@ export function PlanCard({ view, subject, unticked = new Set(), onToggle, onSequ
           <ol className="mk-lessons" aria-label={multiModule ? module.title : "Lessons"}>
             {module.slots.map((slot) => {
               number += 1;
-              const off = unticked.has(slot.id);
+              const goalCheck = slot.method === GOAL_CHECK_METHOD_ID;
+              const off = !goalCheck && unticked.has(slot.id);
               const body = (
                 <>
-                  {onToggle ? <span className={cn("mk-check", !off && "on")} aria-hidden="true" /> : null}
+                  {onToggle ? (goalCheck ? <span style={CHECK_SPACER} aria-hidden="true" /> : <span className={cn("mk-check", !off && "on")} aria-hidden="true" />) : null}
                   <span className="n">{String(number).padStart(2, "0")}</span>
                   <span className="lt">{slot.title}<small>{slot.lessonGoal}</small></span>
-                  <span className={cn("k-rib", slot.method === "quiz" && "done")}>{METHOD_LABELS[slot.method] ?? slot.method}</span>
+                  <span className={cn("k-rib", slot.method === "quiz" && "done", goalCheck && "making")}>{METHOD_LABELS[slot.method] ?? slot.method}</span>
                 </>
               );
               const style = { "--i": number } as CSSProperties;
               return (
                 <li key={slot.id}>
-                  {onToggle ? (
+                  {onToggle && !goalCheck ? (
                     <label className={cn("mk-lesson", off && "off")} style={style}>
                       <input type="checkbox" checked={!off} disabled={busy} onChange={() => onToggle(slot.id)} aria-label={`Keep lesson ${number}: ${slot.title}`} />
                       {body}

@@ -4,7 +4,8 @@ import type { BlueprintBuilder } from "./blueprint.ts";
 /**
  * Deterministic builder for browser tests (`DIAGNOSTIC_FIXTURE=1`): no provider calls.
  * Two Readings on the two most basic capabilities not evidenced, then a Quiz that assesses both, as the default Quiz
- * cadence places them. A revision from Learner review skips the capabilities of the Lessons the Learner marked.
+ * cadence places them, and the Goal Check (SEN-81) with one goal objective per Reading. A revision from Learner review
+ * skips the capabilities of the Lessons the Learner marked.
  */
 export function createFixtureBlueprintBuilder(): BlueprintBuilder {
   return {
@@ -32,6 +33,11 @@ export function createFixtureBlueprintBuilder(): BlueprintBuilder {
               {
                 id: "slot3", method: "quiz", title: `Quiz: ${first} and ${second}`, lessonGoal: `Show you can use ${first} and ${second}.`,
                 objectives: [`Explain ${first}`, `Explain ${second}`], topicTags: ["fixture", "quiz"], assessesSlotIds: ["slot1", "slot2"],
+              },
+              {
+                id: "slot4", method: "goal_check", title: "Goal Check: your Learning Goal", lessonGoal: `Use ${first} and ${second} together toward your goal.`,
+                objectives: [`Use ${first}`, `Use ${second}`], topicTags: ["fixture", "goal-check"], assessesSlotIds: ["slot1", "slot2"],
+                objectiveSlotIds: { [`Use ${first}`]: ["slot1"], [`Use ${second}`]: ["slot2"] },
               },
             ],
           }],

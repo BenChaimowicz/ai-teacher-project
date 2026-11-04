@@ -1,22 +1,33 @@
 import {
+  asQuizBody,
   bestQuizScore,
   canSubmitQuiz,
+  GOAL_CHECK_METHOD_ID,
+  goalCheckFollowUpTopic,
+  goalCheckOutcome,
   isAnswerCorrect,
   isPassingScore,
   optionNotes,
+  parseGoalCheckBody,
+  parseGoalCheckFeedback,
+  parseGoalCheckNextStep,
   parseQuizAnswers,
   parseQuizBody,
   QUIZ_METHOD_ID,
   scoreQuiz,
   type FeedbackTiming,
+  type GoalCheckNextStep,
+  type GoalCheckResult,
   type QuizAnswers,
   type QuizAttemptStatus,
   type QuizBody,
   type QuizScore,
   type ResolvedTeachingProfile,
 } from "@senoy/db";
+import { goalCheckPlugin } from "../teaching-methods/goal-check.ts";
 import { quizPlugin, submittedScores } from "../teaching-methods/quiz.ts";
 import {
+  goalCheckResultOf,
   LOCKED_LESSON_ERROR,
   loadCourseContext,
   recordCourseCompletion,
@@ -24,7 +35,7 @@ import {
   type CourseContext,
   type StudyCoursePayload,
 } from "./study.ts";
-import type { LessonRow, QuizAttemptRow, StudyStore } from "./study-store.ts";
+import type { GoalCheckFeedbackRow, LessonRow, QuizAttemptRow, StudyStore } from "./study-store.ts";
 import { recordProductEvent } from "./usage-tracking.ts";
 
 /** The attempt Study shows: the open draft, or the last submitted one. */
@@ -47,8 +58,17 @@ export type QuizView = {
   feedbackTiming: FeedbackTiming;
   attempt: QuizAttemptView | null;
   best: QuizScore | null;
+  /** A Quiz: the best score is at least 70%. A Goal Check: it has a scored attempt, whatever the score. */
   passed: boolean;
+  /**
+   * Only on a Goal Check with a scored attempt (SEN-81): the result on the best attempt, and what the Learner said was
+   * missing after "not met" (null until they send it). Absent on a Quiz and before the first Submit.
+   */
+  goal?: GoalCheckView;
 };
+
+/** A Goal Check's result plus the Learner's feedback on it. */
+export type GoalCheckView = GoalCheckResult & { feedback: GoalCheckFeedbackRow | null };
 
 /** A revealed correct answer at the Learner's current Feedback detail. */
 export type QuizAnswerKey = {
@@ -80,7 +100,11 @@ export type QuizRequest = {
 type QuizContext = {
   course: CourseContext;
   lesson: LessonRow;
+  /** The Lesson is the Goal Check, played on the Quiz routes. */
+  isGoalCheck: boolean;
   body: QuizBody;
+  /** Goal Check only: the Learner's feedback; null otherwise. */
+  feedback: GoalCheckFeedbackRow | null;
   attempts: QuizAttemptRow[];
   draft: QuizAttemptRow | null;
   latest: QuizAttemptRow | null;
@@ -99,14 +123,19 @@ async function loadQuiz(store: StudyStore, request: QuizRequest): Promise<QuizCo
   ]);
   if (!context) return { ok: false, status: 404, error: "Published Course not found." };
   const lesson = context.lessons.find((row) => row.id === request.lessonId);
-  if (!lesson || lesson.teachingMethod !== QUIZ_METHOD_ID) {
+  const isGoalCheck = lesson?.teachingMethod === GOAL_CHECK_METHOD_ID;
+  if (!lesson || (lesson.teachingMethod !== QUIZ_METHOD_ID && !isGoalCheck)) {
     return { ok: false, status: 404, error: "Quiz not found." };
   }
   if (context.lockedIds.has(lesson.id)) return { ok: false, status: 403, error: LOCKED_LESSON_ERROR };
-  const body = parseQuizBody(lesson.body);
-  if (!body) return { ok: false, status: 400, error: "This Quiz has no questions." };
+  const goalBody = isGoalCheck ? parseGoalCheckBody(lesson.body) : null;
+  const body = isGoalCheck ? (goalBody ? asQuizBody(goalBody) : null) : parseQuizBody(lesson.body);
+  if (!body) {
+    return { ok: false, status: 400, error: isGoalCheck ? "This Goal Check has no questions." : "This Quiz has no questions." };
+  }
+  const feedback = isGoalCheck ? await store.getGoalCheckFeedback(request.learnerId, lesson.id) : null;
   const draft = attempts.find((row) => row.status === "draft") ?? null;
-  return { course: context, lesson, body, attempts, draft, latest: draft ?? attempts.at(-1) ?? null };
+  return { course: context, lesson, isGoalCheck, body, feedback, attempts, draft, latest: draft ?? attempts.at(-1) ?? null };
 }
 
 /**
@@ -142,12 +171,26 @@ function quizView(quiz: QuizContext, profile: ResolvedTeachingProfile): QuizView
       score: submitted ? scoreQuiz(quiz.body, answers) : null,
     };
   }
-  return {
+  const view: QuizView = {
     feedbackTiming: quiz.draft?.feedbackTiming ?? profile.feedbackTiming.value,
     attempt,
     best,
-    passed: best != null && isPassingScore(best),
+    passed: best != null && (quiz.isGoalCheck || isPassingScore(best)),
   };
+  if (quiz.isGoalCheck) {
+    const result = goalCheckResultOf(quiz.lesson, quiz.attempts);
+    if (result) view.goal = { ...result, feedback: quiz.feedback };
+  }
+  return view;
+}
+
+/**
+ * Product event kind for a Quiz action, or its Goal Check twin.
+ * @param quiz - Loaded Quiz
+ * @param action - What the Learner did
+ */
+function eventKind<A extends "answer_checked" | "submitted" | "retaken">(quiz: QuizContext, action: A) {
+  return quiz.isGoalCheck ? (`goal_check_${action}` as const) : (`quiz_${action}` as const);
 }
 
 /**
@@ -249,7 +292,7 @@ export function checkQuizItem(store: StudyStore, request: QuizRequest, itemId: u
       answer.checked = true;
       await store.updateQuizAttempt(request.learnerId, quiz.draft.id, { answers });
       const item = quiz.body.items.find((row) => row.id === itemId);
-      void recordProductEvent("quiz_answer_checked", {
+      void recordProductEvent(eventKind(quiz, "answer_checked"), {
         learnerId: request.learnerId,
         detail: { courseId: request.courseId, lessonId: request.lessonId, itemId, correct: item ? isAnswerCorrect(item, answer) : null },
       });
@@ -280,14 +323,16 @@ export function submitQuiz(store: StudyStore, request: QuizRequest): Promise<Qui
       submittedAt: new Date(),
     });
 
-    const outcome = await quizPlugin.complete(store, request.learnerId, quiz.lesson);
-    if (!outcome.ok && isPassingScore(score)) throw new Error(outcome.error);
-    void recordProductEvent("quiz_submitted", {
+    // A Goal Check completes on any scored attempt; a Quiz only on a pass.
+    const plugin = quiz.isGoalCheck ? goalCheckPlugin : quizPlugin;
+    const outcome = await plugin.complete(store, request.learnerId, quiz.lesson);
+    if (!outcome.ok && (quiz.isGoalCheck || isPassingScore(score))) throw new Error(outcome.error);
+    const scored = { courseId: request.courseId, lessonId: request.lessonId, correct: score.correct, total: score.total };
+    void recordProductEvent(eventKind(quiz, "submitted"), {
       learnerId: request.learnerId,
-      detail: {
-        courseId: request.courseId, lessonId: request.lessonId, correct: score.correct, total: score.total,
-        passed: isPassingScore(score), feedbackTiming: quiz.draft.feedbackTiming,
-      },
+      detail: quiz.isGoalCheck
+        ? { ...scored, outcome: goalCheckOutcome(score), feedbackTiming: quiz.draft.feedbackTiming }
+        : { ...scored, passed: isPassingScore(score), feedbackTiming: quiz.draft.feedbackTiming },
     });
     if (outcome.ok) await recordCourseCompletion(store, request.learnerId, request.courseId);
 
@@ -310,11 +355,95 @@ export function retakeQuiz(store: StudyStore, request: QuizRequest): Promise<Qui
     if (!quiz.draft) {
       if (!quiz.latest) return { ok: false, status: 409, error: "Submit the Quiz before retaking it." };
       await store.insertQuizAttempt(request.learnerId, quiz.lesson.id, request.profile.feedbackTiming.value, {});
-      void recordProductEvent("quiz_retaken", {
+      void recordProductEvent(eventKind(quiz, "retaken"), {
         learnerId: request.learnerId,
         detail: { courseId: request.courseId, lessonId: request.lessonId, lastCorrect: quiz.latest.correct, lastTotal: quiz.latest.total },
       });
     }
     return reload(store, request);
   });
+}
+
+/** Result of sending Goal Check feedback. */
+export type GoalCheckFeedbackResult = { ok: true; feedback: GoalCheckFeedbackRow } | QuizError;
+
+/** Result of choosing a next step. `newCourseHref` is set for `new_course`: a Course Request prefilled from what was missing. */
+export type GoalCheckNextStepResult =
+  | { ok: true; nextStep: GoalCheckNextStep; newCourseHref: string | null }
+  | QuizError;
+
+/**
+ * The loaded Goal Check's current result, when it is "not met". Anything else is the error to send.
+ * @param quiz - Loaded Quiz
+ */
+function notMetResult(quiz: QuizContext): GoalCheckResult | QuizError {
+  if (!quiz.isGoalCheck) return { ok: false, status: 404, error: "Goal Check not found." };
+  const result = goalCheckResultOf(quiz.lesson, quiz.attempts);
+  if (!result) return { ok: false, status: 409, error: "Submit the Goal Check first." };
+  if (result.outcome !== "not_met") {
+    return { ok: false, status: 409, error: "Feedback is only asked for when the goal was not met." };
+  }
+  return result;
+}
+
+/**
+ * Stores what the Learner says was missing after a "not met" Goal Check (decision 2026-11-04). Sending again replaces
+ * the reasons and clears the next step, so it is chosen again.
+ * @param store - Study store
+ * @param request - Quiz request for the Goal Check
+ * @param raw - Request body: `{ reasons, otherText }`
+ */
+export function sendGoalCheckFeedback(store: StudyStore, request: QuizRequest, raw: unknown): Promise<GoalCheckFeedbackResult> {
+  return withQuiz("sendGoalCheckFeedback", store, request, async (quiz): Promise<GoalCheckFeedbackResult> => {
+    const result = notMetResult(quiz);
+    if ("ok" in result) return result;
+    const feedback = parseGoalCheckFeedback(raw);
+    if (!feedback) {
+      return { ok: false, status: 400, error: "Pick at least one reason. \"Something else\" needs a few words, up to 500 characters." };
+    }
+    await store.saveGoalCheckFeedback(request.learnerId, quiz.lesson.id, feedback);
+    void recordProductEvent("goal_check_feedback_given", {
+      learnerId: request.learnerId,
+      detail: {
+        courseId: request.courseId, lessonId: request.lessonId, reasons: feedback.reasons, hasOtherText: feedback.otherText != null,
+      },
+    });
+    return { ok: true, feedback: { ...feedback, nextStep: null } };
+  });
+}
+
+/**
+ * Stores what the Learner chose to do after a "not met" Goal Check and its feedback. `new_course` returns the New
+ * Course Request link prefilled with the Course's subject and what was missing.
+ * @param store - Study store
+ * @param request - Quiz request for the Goal Check
+ * @param raw - Request field `nextStep`
+ */
+export function chooseGoalCheckNextStep(store: StudyStore, request: QuizRequest, raw: unknown): Promise<GoalCheckNextStepResult> {
+  return withQuiz("chooseGoalCheckNextStep", store, request, async (quiz): Promise<GoalCheckNextStepResult> => {
+    const result = notMetResult(quiz);
+    if ("ok" in result) return result;
+    if (!quiz.feedback) return { ok: false, status: 409, error: "Say what was missing first." };
+    const nextStep = parseGoalCheckNextStep(raw);
+    if (!nextStep) return { ok: false, status: 400, error: "nextStep must be new_course or nothing." };
+    await store.setGoalCheckNextStep(request.learnerId, quiz.lesson.id, nextStep);
+    void recordProductEvent("goal_check_next_step_chosen", {
+      learnerId: request.learnerId,
+      detail: { courseId: request.courseId, lessonId: request.lessonId, nextStep },
+    });
+    const newCourseHref = nextStep === "new_course"
+      ? newCourseRequestHref(quiz.course.course.subject, goalCheckFollowUpTopic(result, quiz.feedback))
+      : null;
+    return { ok: true, nextStep, newCourseHref };
+  });
+}
+
+/**
+ * The New Course Request page, prefilled: it reads `subject` and `topic` from the query.
+ * @param subject - The Course's subject
+ * @param topic - What was missing; left out when empty
+ */
+export function newCourseRequestHref(subject: string, topic: string): string {
+  const query = new URLSearchParams({ subject, ...(topic ? { topic } : {}) });
+  return `/new-course-request?${query.toString()}`;
 }

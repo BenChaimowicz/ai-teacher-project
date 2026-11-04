@@ -16,7 +16,8 @@ import {
   type GenerationView,
   type SequenceMode,
 } from "@senoy/db";
-import { IRRELEVANT_REASONS, type BlueprintFeedback, type IrrelevantReason } from "@senoy/db/blueprint";
+import { IRRELEVANT_REASONS, type BlueprintFeedback, type CourseBlueprint, type IrrelevantReason } from "@senoy/db/blueprint";
+import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
 import { enqueueJob, jobOwner } from "../lib/generation-job.ts";
 import { studyLinksByCourseId } from "../lib/study.ts";
 import { recordProductEvent } from "../lib/usage-tracking.ts";
@@ -29,7 +30,17 @@ type RequestParams = { Params: { requestId: string } };
 type BlueprintRow = typeof courseBlueprints.$inferSelect;
 
 /**
- * What Learner review sees: titles and Lesson goals, the Sequence mode pick, and whether it is approved.
+ * The slot ids a Learner may mark as not relevant: every Lesson but the Goal Check (SEN-81), which checks the Learning
+ * Goal itself and is planned again with every redesign.
+ * @param blueprint - The draft under review
+ */
+function markableSlotIds(blueprint: CourseBlueprint): string[] {
+  return blueprintSlots(blueprint).filter((slot) => slot.method !== GOAL_CHECK_METHOD_ID).map((slot) => slot.id);
+}
+
+/**
+ * What Learner review sees: titles and Lesson goals, the Sequence mode pick, and whether it is approved. The Goal Check
+ * shows as the last slot, with method `goal_check`.
  * @param row - Stored Blueprint
  */
 function learnerView(row: BlueprintRow) {
@@ -53,10 +64,10 @@ function sequenceModeField(body: unknown): SequenceMode | null {
 }
 
 /**
- * Reads the Learner's marks from the body: slot ids of this draft, at least one marked and at least one kept, and an
- * optional reason. Null when invalid.
+ * Reads the Learner's marks from the body: markable slot ids of this draft, at least one marked and at least one kept,
+ * and an optional reason. Null when invalid, so marking the Goal Check is refused.
  * @param body - Request body
- * @param slotIds - The draft's slot ids
+ * @param slotIds - The draft's markable slot ids
  */
 function feedbackField(body: unknown, slotIds: string[]): BlueprintFeedback | null {
   const { irrelevantSlotIds, reason } = bodyFields(body);
@@ -240,8 +251,11 @@ export async function blueprintRoutes(app: FastifyInstance) {
       if (row.status !== "blueprint_review") return reply.code(409).send({ error: "This Blueprint is not awaiting review." });
       const current = await blueprintOf(row.id);
       if (!current || current.approved) return reply.code(409).send({ error: "This Blueprint is not awaiting review." });
-      const feedback = feedbackField(request.body, blueprintSlots(current.draft).map((slot) => slot.id));
-      if (!feedback) return reply.code(400).send({ error: "Mark at least one Lesson as not relevant, and keep at least one." });
+      const markable = markableSlotIds(current.draft);
+      const feedback = feedbackField(request.body, markable);
+      if (!feedback) {
+        return reply.code(400).send({ error: "Mark at least one Lesson as not relevant, and keep at least one. The Goal Check cannot be marked." });
+      }
       // The marks, the status, and the queued job land together; the worker redesigns from the marks (spec §4.4, §5.1).
       const preparing = await app.db.transaction(async (transaction) => {
         const [marked] = await transaction.update(courseBlueprints).set({ draft: { ...current.draft, learnerFeedback: feedback } })
@@ -261,7 +275,7 @@ export async function blueprintRoutes(app: FastifyInstance) {
       // Revise is the reject (decision 2026-11-04): the marked Lessons go, and the worker writes a new Blueprint.
       void recordProductEvent("blueprint_rejected", {
         learnerId, courseRequestId: row.id,
-        detail: { irrelevantLessons: feedback.irrelevantSlotIds.length, lessons: blueprintSlots(current.draft).length, reason: feedback.reason },
+        detail: { irrelevantLessons: feedback.irrelevantSlotIds.length, lessons: markable.length, reason: feedback.reason },
       });
       return reply.code(202).send({ courseRequest: preparing });
     } catch (error) {

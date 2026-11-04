@@ -3,8 +3,10 @@ import { parseTeachingProfileAnswers, resolveTeachingProfile } from "@senoy/db";
 import {
   answerQuizItem,
   checkQuizItem,
+  chooseGoalCheckNextStep,
   getQuiz,
   retakeQuiz,
+  sendGoalCheckFeedback,
   submitQuiz,
   type QuizRequest,
 } from "../lib/quiz-play.ts";
@@ -72,7 +74,8 @@ async function send<T extends { ok: boolean }>(
 }
 
 /**
- * Study payload, Lesson complete, Course summary, Sequence mode, and Quiz play for a published Course.
+ * Study payload, Lesson complete, Course summary, Sequence mode, Quiz play (a Goal Check plays on the same routes), and
+ * the Goal Check's feedback and next step for a published Course.
  * @param app - Fastify app
  * @param options - Optional store override
  */
@@ -151,5 +154,17 @@ export async function studyRoutes(app: FastifyInstance, options: StudyRoutesOpti
 
   app.post(`${quiz}/retake`, (request, reply) =>
     send(request, reply, "start retake", () => retakeQuiz(store, quizRequest(request))),
+  );
+
+  const goalCheck = "/api/courses/:courseId/lessons/:lessonId/goal-check";
+
+  app.put(`${goalCheck}/feedback`, (request, reply) =>
+    send(request, reply, "save Goal Check feedback", () => sendGoalCheckFeedback(store, quizRequest(request), request.body)),
+  );
+
+  app.put(`${goalCheck}/next-step`, (request, reply) =>
+    send(request, reply, "save Goal Check next step", () =>
+      chooseGoalCheckNextStep(store, quizRequest(request), bodyField(request, "nextStep")),
+    ),
   );
 }
