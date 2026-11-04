@@ -223,6 +223,9 @@ export async function blueprintRoutes(app: FastifyInstance) {
       const [saved] = await app.db.update(courseBlueprints).set({ sequenceMode })
         .where(and(eq(courseBlueprints.courseRequestId, row.id), isNull(courseBlueprints.approved))).returning();
       if (!saved) return reply.code(409).send({ error: "This Blueprint changed. Reload it before continuing." });
+      void recordProductEvent("blueprint_sequence_mode_chosen", {
+        learnerId: request.currentLearner.id, courseRequestId: row.id, detail: { sequenceMode },
+      });
       return { courseRequest: row, blueprint: learnerView(saved) };
     } catch (error) {
       return fail(reply, request.log, "sequence-mode", request.params.requestId, error, "Failed to save the Sequence mode.");
@@ -255,6 +258,11 @@ export async function blueprintRoutes(app: FastifyInstance) {
         throw error;
       });
       if (!preparing) return reply.code(409).send({ error: "This Request changed. Reload it before continuing." });
+      // Revise is the reject (decision 2026-11-04): the marked Lessons go, and the worker writes a new Blueprint.
+      void recordProductEvent("blueprint_rejected", {
+        learnerId, courseRequestId: row.id,
+        detail: { irrelevantLessons: feedback.irrelevantSlotIds.length, lessons: blueprintSlots(current.draft).length, reason: feedback.reason },
+      });
       return reply.code(202).send({ courseRequest: preparing });
     } catch (error) {
       return fail(reply, request.log, "revise", request.params.requestId, error, "Failed to revise the Course Blueprint.");

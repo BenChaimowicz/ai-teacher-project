@@ -5,7 +5,7 @@ import cookie from "@fastify/cookie";
 import Fastify, { type InjectOptions } from "fastify";
 import fp from "fastify-plugin";
 import { courseCompletions, learners, lessonCompletions } from "@senoy/db";
-import { AuthServiceError, type AuthService, type SessionTokens } from "../lib/supabase-auth.ts";
+import { AuthServiceError, type AuthService, type IssuedSession } from "../lib/supabase-auth.ts";
 import currentLearnerPlugin, { SIGN_IN_ERROR, type TokenVerifier } from "../plugins/current-learner.ts";
 import sameOriginPlugin, { CROSS_SITE_ERROR } from "../plugins/same-origin.ts";
 import {
@@ -19,6 +19,7 @@ import {
   WRONG_PASSWORD_ERROR,
 } from "./auth.ts";
 import { fakeDb } from "./fake-db.ts";
+import { recordProductEvents, settled } from "./recording-sink.ts";
 import { healthRoutes } from "./health.ts";
 import { meRoutes } from "./me.ts";
 
@@ -43,7 +44,9 @@ function standInAuth() {
   ]);
   const calls: { method: string; args: unknown[] }[] = [];
   /** The session the stand-in hands out for an account. */
-  const sessionFor = (account: Account): SessionTokens => ({ accessToken: `token-${account.userId}`, refreshToken: `rt-${account.userId}` });
+  const sessionFor = (account: Account): IssuedSession => ({
+    accessToken: `token-${account.userId}`, refreshToken: `rt-${account.userId}`, userId: account.userId,
+  });
   /** Supabase's answer for a wrong credential. */
   const refused = (code: string) => new AuthServiceError(`Refused: ${code}`, code, 400);
   const auth: AuthService = {
@@ -91,6 +94,7 @@ function standInAuth() {
     },
     async signOut(session, scope) {
       calls.push({ method: "signOut", args: [session, scope] });
+      return { userId: session.accessToken.match(/^token-(.+)$/)?.[1] ?? null };
     },
   };
   return { auth, accounts, calls };
@@ -301,6 +305,51 @@ test("Sign-out revokes the session at Supabase with its scope and clears both co
     assert.equal((await post("/api/auth/sign-out", {})).statusCode, 204, "Signing out with no session still clears.");
     assert.equal((await post("/api/auth/sign-out", { scope: "everyone" })).statusCode, 400);
   } finally {
+    await app.close();
+  }
+});
+
+test("Account events name the Learner only when the action worked for a known account, and never store the email (decision 2026-11-04)", async () => {
+  const { app, post, accounts } = await testApp();
+  const recorded = recordProductEvents();
+  try {
+    const ada = accounts.get("ada@example.com")!;
+    await post("/api/auth/sign-up", { email: "fresh@example.com", password: "secret123" });
+    await post("/api/auth/sign-up", { email: "ada@example.com", password: "secret123" });
+    await post("/api/auth/sign-in", { email: "ada@example.com", password: "wrong" });
+    await post("/api/auth/forgot", { email: "ada@example.com" });
+    const first = setCookies(await post("/api/auth/sign-in", { email: "ada@example.com", password: "secret123" }));
+    await settled();
+    // The first signed-in call makes the Learner, so a first sign-in has none to name yet.
+    const cookies = { kn_at: first.kn_at!.value, kn_rt: first.kn_rt!.value };
+    const me = (await app.inject({ method: "GET", url: "/api/me", cookies })).json();
+    await post("/api/auth/code/verify", { email: "ada@example.com", code: "123456" });
+    await post("/api/auth/password", { password: "newpass123" }, { cookies });
+    await app.inject({ method: "PATCH", url: "/api/me", payload: { displayName: "Ada Lovelace" }, cookies });
+    await post("/api/auth/sign-out", { scope: "local" }, { cookies });
+    await post("/api/auth/sign-out", {});
+    await settled();
+
+    const seen = recorded.events.map((event) => [event.kind, event.learnerId, event.detail]);
+    const learnerId = me.id;
+    assert.ok(typeof learnerId === "string", JSON.stringify(me));
+    assert.deepEqual(seen, [
+      ["account_signed_up", null, { outcome: "ok" }],
+      ["account_signed_up", null, { outcome: "user_already_exists" }],
+      ["account_signed_in", null, { method: "password", outcome: "invalid_credentials" }],
+      ["account_password_reset_requested", null, { outcome: "ok" }],
+      ["account_signed_in", null, { method: "password", outcome: "ok" }],
+      ["account_signed_in", learnerId, { method: "code", outcome: "ok" }],
+      ["account_password_set", learnerId, null],
+      ["account_renamed", learnerId, null],
+      ["account_signed_out", learnerId, { scope: "local" }],
+      ["account_signed_out", null, { scope: "local" }],
+    ]);
+    assert.ok(!JSON.stringify(recorded.events).includes("@"), "No email address in any event.");
+    assert.ok(!JSON.stringify(recorded.events).includes("Lovelace"), "No display name in any event.");
+    assert.ok(!JSON.stringify(recorded.events).includes(ada.password), "No password in any event.");
+  } finally {
+    recorded.uninstall();
     await app.close();
   }
 });

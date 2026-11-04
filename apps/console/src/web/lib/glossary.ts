@@ -63,22 +63,45 @@ export const KIND_HELP: Record<PipelineEventKind, string> = {
 
 /** What each Learner action means. */
 export const PRODUCT_EVENT_HELP: Partial<Record<ProductEventKind, string>> = {
+  account_signed_up:
+    "Someone asked for an account. No learner exists yet, so none is shown; the detail says whether the welcome email went out. No email address is stored.",
+  account_verification_resent: "Someone asked for the welcome email again. No learner is shown, and no email address is stored.",
+  account_signed_in:
+    "A sign-in attempt, by password, email code or email link. A learner is shown only when it worked; the detail says how and what happened.",
+  account_sign_in_code_requested: "Someone asked for a 6-digit sign-in code by email. No learner is shown, and no email address is stored.",
+  account_password_reset_requested: "Someone asked for a password-reset email. No learner is shown, and no email address is stored.",
+  account_password_set: "The learner set a new password (after a reset link, or from their account).",
+  account_signed_out: "The learner signed out, on this device or everywhere.",
+  account_renamed: "The learner changed their display name.",
   course_request_created: "A learner asked for a new course (subject and goal).",
+  course_request_edited: "The learner edited the subject or goal of a request they hadn't sent on yet.",
   course_request_subject_chosen: "The learner picked which subject they meant, or typed their own under None of these.",
   course_request_clarified: "The learner answered a clarifying question about their request.",
+  course_request_focus_answered: "The learner answered a round of questions that narrow their goal.",
+  course_request_focus_not_quite: "The learner said Not quite to the focused goal, so they get more questions.",
   course_request_focused: "The learner's goal was settled: precise as typed, focused and confirmed, or skipped for a broad overview.",
+  diagnostic_started: "The learner said they know some of it (or pressed Retry), so the placement questions are being prepared.",
   diagnostic_submitted: "The learner answered the placement questions.",
+  starting_level_too_easy: "The learner pressed Start a bit earlier, so the course takes in more of the basics.",
   starting_level_confirmed: "The learner confirmed their starting level.",
+  starting_level_self_reported_new: "The learner said they are brand new to the subject, so there are no placement questions.",
+  blueprint_sequence_mode_chosen: "The learner picked lesson order (in order, or jump freely) while reviewing the course plan.",
   blueprint_approved: "The learner approved the course plan, so writing starts.",
-  blueprint_rejected: "The learner rejected the course plan.",
+  blueprint_rejected: "The learner marked lessons in the course plan as not relevant (with or without a reason) and asked for a new plan.",
   generation_cancelled: "The learner stopped the course being written.",
-  generation_retried: "The learner pressed Retry after writing failed.",
+  generation_retried: "The learner pressed Retry after writing failed, or Resume after stopping it. The detail says which.",
+  library_item_opened: "The learner opened a course or a request from Home or the sidebar.",
+  library_item_hidden: "The learner removed a course or a request from Home. Nothing is deleted.",
   lesson_completed: "A lesson counted as done.",
   glossary_term_opened: "The learner opened a word's definition in a reading (hover, tap, or one of Jongi's word bubbles).",
   course_words_opened: "The learner opened the course's Words page: every word its readings defined, in one list.",
+  course_sequence_mode_changed: "The learner switched a finished course from lessons in order to jump freely.",
+  quiz_answer_checked: "The learner checked one quiz answer (when feedback comes after each question). The detail says if it was right.",
   quiz_submitted: "The learner handed in a quiz.",
+  quiz_retaken: "The learner started a quiz again. Their best score is kept.",
   course_completed: "Every lesson in the course is done.",
   teaching_profile_saved: "The learner saved their teaching preferences.",
+  teaching_profile_reset: "The learner cleared their teaching preferences.",
 };
 
 /** Tooltips for measures and columns. */

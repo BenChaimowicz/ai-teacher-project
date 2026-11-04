@@ -21,6 +21,7 @@ import { jobOwner, type GenerationControl } from "../lib/generation-job.ts";
 import { blueprintRoutes } from "./blueprint.ts";
 import { courseRequestRoutes } from "./course-requests.ts";
 import { fakeDb } from "./fake-db.ts";
+import { recordProductEvents, settled } from "./recording-sink.ts";
 
 /** A Learner with a saved Teaching Profile that asks for a Quiz after every reading. */
 function savedLearner(): typeof learners.$inferSelect {
@@ -209,17 +210,21 @@ test("A Blueprint run stopped by a provider error says so and offers Try again",
 });
 
 test("Closing and returning keeps the review and the Sequence mode pick", async () => {
-  const { app, url, designBlueprint } = await testApp();
+  const { app, url, requestRow, designBlueprint } = await testApp();
+  const recorded = recordProductEvents();
   try {
     await designBlueprint();
     const picked = await app.inject({ method: "PUT", url: `${url}/sequence-mode`, payload: { sequenceMode: "free_jump" } });
     assert.equal(picked.statusCode, 200);
+    await settled();
+    assert.deepEqual(recorded.of("blueprint_sequence_mode_chosen").map((event) => [event.courseRequestId, event.detail]), [[requestRow.id, { sequenceMode: "free_jump" }]]);
     const reopened = await app.inject({ method: "GET", url });
     assert.equal(reopened.json().courseRequest.status, "blueprint_review");
     assert.equal(reopened.json().blueprint.sequenceMode, "free_jump");
     assert.equal(reopened.json().blueprint.blueprint.modules[0].slots.length, 3);
     assert.equal((await app.inject({ method: "PUT", url: `${url}/sequence-mode`, payload: { sequenceMode: "random" } })).statusCode, 400);
   } finally {
+    recorded.uninstall();
     await app.close();
   }
 });
@@ -473,6 +478,7 @@ test("A redesign that fails after the structural return leaves the plan that cou
 
 test("Marking Lessons as not relevant queues a redesign from the marks; the new plan replaces the old and keeps the Sequence mode", async () => {
   const { app, rows, inputs, jobs, url, requestRow, designBlueprint, runBlueprintJob } = await testApp();
+  const recorded = recordProductEvents();
   try {
     await designBlueprint();
     await app.inject({ method: "PUT", url: `${url}/sequence-mode`, payload: { sequenceMode: "free_jump" } });
@@ -483,6 +489,11 @@ test("Marking Lessons as not relevant queues a redesign from the marks; the new 
     const queued = await app.inject({ method: "POST", url: `${url}/revise`, payload: { irrelevantSlotIds: ["slot1"], reason: "already_know" } });
     assert.equal(queued.statusCode, 202, queued.body);
     assert.equal(queued.json().courseRequest.status, "blueprint_preparing");
+    await settled();
+    // Revise is the reject (decision 2026-11-04); the refused attempts above record nothing.
+    assert.deepEqual(recorded.of("blueprint_rejected").map((event) => [event.courseRequestId, event.detail]), [
+      [requestRow.id, { irrelevantLessons: 1, lessons: 3, reason: "already_know" }],
+    ]);
     assert.deepEqual(jobs("blueprint").map((job) => job.status), ["queued"], "The same Blueprint job is queued again.");
     const during = await app.inject({ method: "GET", url });
     assert.equal(during.json().blueprint.blueprint.modules[0].slots[0].title, "Reading: Capability 4", "The reviewed plan shows while it is redone.");
@@ -498,6 +509,7 @@ test("Marking Lessons as not relevant queues a redesign from the marks; the new 
     assert.equal(rows.get(courseBlueprints)!.length, 1, "The redesign replaces the draft.");
     assert.equal((rows.get(courseBlueprints)![0] as typeof courseBlueprints.$inferSelect).draft.learnerFeedback, undefined);
   } finally {
+    recorded.uninstall();
     await app.close();
   }
 });

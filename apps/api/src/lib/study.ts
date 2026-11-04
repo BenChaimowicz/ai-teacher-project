@@ -467,6 +467,7 @@ export async function switchSequenceMode(
         return { ok: false, status: 409, error: "Linear order cannot be restored after switching to free jump." };
       }
       await store.setSequenceMode(learnerId, courseId, requested);
+      void recordProductEvent("course_sequence_mode_changed", { learnerId, detail: { courseId, from: current, to: requested } });
     }
 
     const payload = await loadStudyCourse(store, learnerId, courseId);

@@ -26,6 +26,7 @@ import {
   FIXTURE_FOCUS_PART_QUESTION,
 } from "../lib/goal-focus-fixture.ts";
 import { fakeDb } from "./fake-db.ts";
+import { recordProductEvents, settled } from "./recording-sink.ts";
 import { FOCUS_FAILED_MESSAGE, goalFocusRoutes, SCOPE_EDIT_MISMATCH_MESSAGE } from "./goal-focus.ts";
 import { startingLevelRoutes } from "./starting-level.ts";
 
@@ -271,10 +272,15 @@ test("Confirm refuses an edited scope that is not a re-partition of the proposal
 
 test("Not quite opens another round that records the proposal it answers, and is refused when no rounds are left", async () => {
   const { app, url } = await testApp();
+  const recorded = recordProductEvents();
   try {
     await app.inject({ method: "POST", url: `${url}/focus`, payload: {} });
     const proposed = (await app.inject({ method: "POST", url: `${url}/focus`, payload: { answers: tapped(1) } })).json().courseRequest;
     const reopened = await app.inject({ method: "POST", url: `${url}/focus/not-quite` });
+    await settled();
+    // Opening focusing is the app's step, so only the answered round and Not quite are the Learner's (SEN-127).
+    assert.deepEqual(recorded.of("course_request_focus_answered").map((event) => event.detail), [{ round: 1, next: "awaiting_focus_confirmation" }]);
+    assert.deepEqual(recorded.of("course_request_focus_not_quite").map((event) => event.detail), [{ rounds: 1 }]);
     assert.equal(reopened.statusCode, 200, reopened.body);
     const round = reopened.json().courseRequest;
     assert.equal(round.status, "awaiting_focus_answers");
@@ -284,7 +290,10 @@ test("Not quite opens another round that records the proposal it answers, and is
     assert.deepEqual(round.focus.rounds[1].questions.map((question: { id: string }) => question.id), ["r2q1", "r2q2"]);
     const again = await app.inject({ method: "POST", url: `${url}/focus`, payload: { answers: tapped(2, FIXTURE_FOCUS_PART_OPTIONS[1]) } });
     assert.equal(again.json().courseRequest.focus.proposal.learningGoal, "Explain where our knowledge comes from in Astronomy");
-  } finally { await app.close(); }
+  } finally {
+    recorded.uninstall();
+    await app.close();
+  }
 
   const exhausted = await testApp({ status: "awaiting_focus_confirmation", focus: proposedFocus(MAX_FOCUS_ROUNDS) });
   try {

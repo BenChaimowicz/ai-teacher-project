@@ -248,6 +248,11 @@ export function checkQuizItem(store: StudyStore, request: QuizRequest, itemId: u
     if (!answer.checked) {
       answer.checked = true;
       await store.updateQuizAttempt(request.learnerId, quiz.draft.id, { answers });
+      const item = quiz.body.items.find((row) => row.id === itemId);
+      void recordProductEvent("quiz_answer_checked", {
+        learnerId: request.learnerId,
+        detail: { courseId: request.courseId, lessonId: request.lessonId, itemId, correct: item ? isAnswerCorrect(item, answer) : null },
+      });
     }
     return reload(store, request);
   });
@@ -305,6 +310,10 @@ export function retakeQuiz(store: StudyStore, request: QuizRequest): Promise<Qui
     if (!quiz.draft) {
       if (!quiz.latest) return { ok: false, status: 409, error: "Submit the Quiz before retaking it." };
       await store.insertQuizAttempt(request.learnerId, quiz.lesson.id, request.profile.feedbackTiming.value, {});
+      void recordProductEvent("quiz_retaken", {
+        learnerId: request.learnerId,
+        detail: { courseId: request.courseId, lessonId: request.lessonId, lastCorrect: quiz.latest.correct, lastTotal: quiz.latest.total },
+      });
     }
     return reload(store, request);
   });

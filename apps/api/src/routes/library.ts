@@ -2,6 +2,7 @@ import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { courseRequests, publishedCourses } from "@senoy/db";
 import { studyLinksByCourseId } from "../lib/study.ts";
+import { recordProductEvent } from "../lib/usage-tracking.ts";
 
 /**
  * Library and Open items queries for the current Learner.
@@ -104,6 +105,9 @@ export async function libraryRoutes(app: FastifyInstance) {
         .where(and(eq(table.id, id), eq(table.learnerId, learnerId)))
         .returning({ id: table.id });
       if (!hidden.length) return reply.code(404).send({ error: "That course wasn't found." });
+      void recordProductEvent("library_item_hidden", {
+        learnerId, courseRequestId: kind === "course_request" ? id : null, detail: { kind, id },
+      });
       return reply.code(204).send();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -129,6 +133,10 @@ export async function libraryRoutes(app: FastifyInstance) {
         .where(and(eq(table.id, id), eq(table.learnerId, learnerId)))
         .returning({ id: table.id });
       if (!opened.length) return reply.code(404).send({ error: "That course wasn't found." });
+      // One event per open, like a glossary word (decision 2026-11-04).
+      void recordProductEvent("library_item_opened", {
+        learnerId, courseRequestId: kind === "course_request" ? id : null, detail: { kind, id },
+      });
       return reply.code(204).send();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
