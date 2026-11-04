@@ -61,16 +61,18 @@ const GOAL_CHECK_LESSON: LessonRow = {
     "Tie a square knot": [SEEDED_READING_LESSON_ID],
     "Pick the right job for a square knot": [SEEDED_FOLLOW_UP_LESSON_ID],
   },
+  assessedLessonIds: [],
 };
 
 /**
  * In-memory Study store holding the fixture Course.
  * @param quizBody - Body of the fixture's Quiz Lesson
  * @param goalCheck - A Goal Check Lesson to add after the fixture's Lessons; none by default, like a Course before SEN-81
+ * @param completed - Lessons this Learner has already completed
  */
-function memoryStore(quizBody: QuizBody, goalCheck: LessonRow | null = null): StudyStore {
+function memoryStore(quizBody: QuizBody, goalCheck: LessonRow | null = null, completed: readonly string[] = []): StudyStore {
   let sequenceMode: string = SEEDED_COURSE.sequenceMode;
-  const completions = new Set<string>();
+  const completions = new Set<string>(completed);
   let courseCompletedAt: Date | null = null;
   const attempts: (QuizAttemptRow & { lessonId: string })[] = [];
   const feedback = new Map<string, GoalCheckFeedbackRow>();
@@ -107,6 +109,9 @@ function memoryStore(quizBody: QuizBody, goalCheck: LessonRow | null = null): St
     },
     async listQuizAttempts(_learnerId, lessonId) {
       return attempts.filter((row) => row.lessonId === lessonId).map((row) => ({ ...row }));
+    },
+    async listSubmittedCourseAttempts() {
+      return attempts.filter((row) => row.status === "submitted").map((row) => ({ ...row }));
     },
     async insertQuizAttempt(_learnerId, lessonId, feedbackTiming, answers) {
       const row = {
@@ -156,15 +161,26 @@ function learnerWith(answers: Record<string, unknown> = {}): typeof learners.$in
   };
 }
 
-/** Real Study handlers over the in-memory store. `state.learner` can change between requests. */
-async function testApp(answers: Record<string, unknown> = {}, quizBody: QuizBody = SEEDED_QUIZ_BODY, goalCheck: LessonRow | null = null) {
+/**
+ * Real Study handlers over the in-memory store. `state.learner` can change between requests.
+ * @param answers - Teaching Profile answers
+ * @param quizBody - Body of the fixture's Quiz
+ * @param goalCheck - A Goal Check Lesson to end the Course with
+ * @param readFirst - Start with the Reading the Quiz covers already read, so the Quiz is open in linear order (SEN-133)
+ */
+async function testApp(
+  answers: Record<string, unknown> = {},
+  quizBody: QuizBody = SEEDED_QUIZ_BODY,
+  goalCheck: LessonRow | null = null,
+  readFirst = true,
+) {
   const state = { learner: learnerWith(answers) };
   const app = Fastify();
   app.decorate("db", {} as Database);
   app.addHook("onRequest", async (request) => {
     request.currentLearner = state.learner;
   });
-  await app.register(studyRoutes, { store: memoryStore(quizBody, goalCheck) });
+  await app.register(studyRoutes, { store: memoryStore(quizBody, goalCheck, readFirst ? [SEEDED_READING_LESSON_ID] : []) });
 
   const base = `/api/courses/${SEEDED_COURSE_ID}`;
   const quiz = `${base}/lessons/${SEEDED_QUIZ_LESSON_ID}/quiz`;
@@ -186,6 +202,8 @@ async function testApp(answers: Record<string, unknown> = {}, quizBody: QuizBody
     complete: (lessonId: string) => call("POST", `${base}/lessons/${lessonId}/complete`),
     summary: () => call("GET", `${base}/summary`),
     sequenceMode: (mode: string) => call("PUT", `${base}/sequence-mode`, { mode }),
+    openQuiz: (from: unknown) => call("POST", `${quiz}/opens`, { from }),
+    closeQuiz: (submitted: unknown) => call("POST", `${quiz}/closes`, { submitted }),
     goal: {
       get: () => call("GET", goalQuiz),
       answer: (itemId: string, optionId: string) => call("PUT", `${goalQuiz}/answers/${itemId}`, { optionId }),
@@ -223,18 +241,28 @@ function lessonIn(payload: { modules: { lessons: { id: string; locked: boolean; 
   return lesson;
 }
 
-test("Study never sends the Quiz answer key, and linear locks the Lesson after the unpassed Quiz", async () => {
-  const t = await testApp();
+test("Study never sends the Quiz answer key; linear opens Readings in order and the Quiz never gates (SEN-133)", async () => {
+  const t = await testApp({}, SEEDED_QUIZ_BODY, null, false);
   try {
     const { status, body } = await t.study();
     assert.equal(status, 200);
     const raw = JSON.stringify(body);
     assert.ok(!raw.includes("correctOptionId"));
     assert.ok(!raw.includes("explanations"));
-    assert.equal(lessonIn(body, SEEDED_QUIZ_LESSON_ID).locked, false);
     assert.equal(lessonIn(body, SEEDED_READING_LESSON_ID).locked, false);
-    assert.equal(lessonIn(body, SEEDED_FOLLOW_UP_LESSON_ID).locked, true);
-    assert.equal((await t.complete(SEEDED_FOLLOW_UP_LESSON_ID)).status, 403);
+    assert.equal(lessonIn(body, SEEDED_QUIZ_LESSON_ID).locked, true, "The Quiz opens once the Reading it covers is read.");
+    assert.equal(lessonIn(body, SEEDED_FOLLOW_UP_LESSON_ID).locked, true, "Readings open in order.");
+    assert.deepEqual((await t.complete(SEEDED_FOLLOW_UP_LESSON_ID)).body, { error: "This Lesson opens once you have read the Lessons before it." });
+    assert.equal((await t.quiz()).status, 403);
+    assert.deepEqual(body.progress, { completed: 0, total: 2 }, "Progress counts the Readings only.");
+
+    const read = await t.complete(SEEDED_READING_LESSON_ID);
+    const quizRow = lessonIn(read.body, SEEDED_QUIZ_LESSON_ID) as { locked: boolean; assessedLessonIds?: string[]; quizBest?: unknown };
+    assert.equal(quizRow.locked, false);
+    assert.equal(quizRow.quizBest, null, "Not taken yet.");
+    assert.deepEqual(quizRow.assessedLessonIds, [SEEDED_READING_LESSON_ID], "Study says which Readings the Quiz covers.");
+    assert.equal(lessonIn(read.body, SEEDED_FOLLOW_UP_LESSON_ID).locked, false, "An untaken Quiz does not hold back the next Reading.");
+    assert.equal(read.body.currentLessonId, SEEDED_FOLLOW_UP_LESSON_ID, "The Current Lesson skips the Quiz.");
     assert.deepEqual((await t.complete(SEEDED_QUIZ_LESSON_ID)).body, {
       error: "Pass the Quiz with at least 70% to complete it.",
     });
@@ -293,7 +321,7 @@ test("Per-item timing: an item's answer key arrives with its Check, never before
   }
 });
 
-test("Fail, retake, pass: best score is kept, Progress never drops, and the next Lesson unlocks", async () => {
+test("Fail, retake, pass: best score is kept, the next Reading stays open throughout, and Progress ignores the Quiz", async () => {
   const t = await testApp();
   try {
     await answerAll(t, 3, true);
@@ -301,7 +329,9 @@ test("Fail, retake, pass: best score is kept, Progress never drops, and the next
     assert.equal(failed.status, 200);
     assert.deepEqual(failed.body.quiz.attempt.score, { correct: 3, total: 5 });
     assert.equal(failed.body.quiz.passed, false);
-    assert.equal(lessonIn(failed.body.study, SEEDED_FOLLOW_UP_LESSON_ID).locked, true);
+    assert.equal(lessonIn(failed.body.study, SEEDED_FOLLOW_UP_LESSON_ID).locked, false, "A failed Quiz gates nothing.");
+    assert.deepEqual((lessonIn(failed.body.study, SEEDED_QUIZ_LESSON_ID) as { quizBest?: unknown }).quizBest, { correct: 3, total: 5 }, "Study shows it was taken, and the best score.");
+    assert.ok(!("quizBest" in lessonIn(failed.body.study, SEEDED_READING_LESSON_ID)), "Only a Quiz carries a score.");
     assert.equal((await t.answer("q1", "a")).status, 409, "After Submit the Learner must Retake.");
 
     const retake = await t.retake();
@@ -312,9 +342,8 @@ test("Fail, retake, pass: best score is kept, Progress never drops, and the next
     await answerAll(t, 4, true);
     const passed = await t.submit();
     assert.equal(passed.body.quiz.passed, true);
-    assert.deepEqual(passed.body.study.progress, { completed: 1, total: 3 });
+    assert.deepEqual(passed.body.study.progress, { completed: 1, total: 2 }, "Only the Reading counts.");
     assert.equal(lessonIn(passed.body.study, SEEDED_QUIZ_LESSON_ID).completed, true);
-    assert.equal(lessonIn(passed.body.study, SEEDED_FOLLOW_UP_LESSON_ID).locked, false);
 
     await t.retake();
     await answerAll(t, 1, true);
@@ -322,7 +351,8 @@ test("Fail, retake, pass: best score is kept, Progress never drops, and the next
     assert.deepEqual(worse.body.quiz.attempt.score, { correct: 1, total: 5 });
     assert.deepEqual(worse.body.quiz.best, { correct: 4, total: 5 });
     assert.equal(worse.body.quiz.passed, true);
-    assert.deepEqual(worse.body.study.progress, { completed: 1, total: 3 });
+    assert.deepEqual(worse.body.study.progress, { completed: 1, total: 2 });
+    assert.deepEqual((lessonIn(worse.body.study, SEEDED_QUIZ_LESSON_ID) as { quizBest?: unknown }).quizBest, { correct: 4, total: 5 }, "The best score is kept.");
   } finally {
     await t.app.close();
   }
@@ -365,6 +395,40 @@ test("Check, Retake and switching to free jump each record a product event; savi
   }
 });
 
+test("Opening and closing a Quiz from Take quiz each record a product event; the Goal Check is not opened this way (SEN-133)", async () => {
+  const t = await testApp();
+  const recorded = recordProductEvents();
+  try {
+    assert.equal((await t.openQuiz("sidebar")).status, 200);
+    assert.equal((await t.openQuiz("floating")).status, 400);
+    assert.equal((await t.closeQuiz("yes")).status, 400);
+    await answerAll(t, 5, true);
+    await t.submit();
+    assert.equal((await t.openQuiz("card")).status, 200);
+    assert.equal((await t.closeQuiz(true)).status, 200);
+    await settled();
+
+    const where = { courseId: SEEDED_COURSE_ID, lessonId: SEEDED_QUIZ_LESSON_ID, title: SEEDED_LESSONS[1]!.title };
+    assert.deepEqual(recorded.of("quiz_opened").map((event) => event.detail), [
+      { ...where, from: "sidebar", takenBefore: false },
+      { ...where, from: "card", takenBefore: true },
+    ]);
+    assert.deepEqual(recorded.of("quiz_closed").map((event) => event.detail), [{ ...where, submitted: true }]);
+  } finally {
+    recorded.uninstall();
+    await t.app.close();
+  }
+  const goal = await testApp({}, SEEDED_QUIZ_BODY, GOAL_CHECK_LESSON, false);
+  try {
+    const url = `/api/courses/${SEEDED_COURSE_ID}/lessons/${GOAL_CHECK_LESSON_ID}/quiz/opens`;
+    assert.equal((await goal.app.inject({ method: "POST", url, payload: { from: "sidebar" } })).statusCode, 403, "Locked first.");
+    await goal.sequenceMode("free_jump");
+    assert.equal((await goal.app.inject({ method: "POST", url, payload: { from: "sidebar" } })).statusCode, 404);
+  } finally {
+    await goal.app.close();
+  }
+});
+
 test("End-of-quiz timing: no Check; every item gets right/wrong after Submit", async () => {
   const t = await testApp({ feedbackTiming: { status: "selected", value: "end_of_quiz" } });
   try {
@@ -403,14 +467,15 @@ test("An attempt keeps the timing it started with; Feedback detail follows the c
   }
 });
 
-test("Free jump is one-way and opens later Lessons; Progress still waits on a Quiz pass", async () => {
-  const t = await testApp();
+test("Free jump is one-way and opens every Lesson; a Quiz still completes only on a pass", async () => {
+  const t = await testApp({}, SEEDED_QUIZ_BODY, null, false);
   try {
     assert.equal((await t.sequenceMode("sideways")).status, 400);
     const switched = await t.sequenceMode("free_jump");
     assert.equal(switched.status, 200);
     assert.equal(switched.body.course.sequenceMode, "free_jump");
     assert.equal(lessonIn(switched.body, SEEDED_FOLLOW_UP_LESSON_ID).locked, false);
+    assert.equal(lessonIn(switched.body, SEEDED_QUIZ_LESSON_ID).locked, false, "The Quiz opens before its Reading is read.");
     assert.equal(lessonIn(switched.body, SEEDED_QUIZ_LESSON_ID).completed, false);
     assert.equal((await t.sequenceMode("free_jump")).status, 200, "Asking again is a no-op.");
     assert.deepEqual((await t.sequenceMode("linear")).body, {
@@ -482,8 +547,8 @@ test("A generated Quiz plays through the Quiz plugin: attempts, best score, and 
   }
 });
 
-test("Completing the last Lesson stores Course completion once; the summary shows what was covered and Quiz results", async () => {
-  const t = await testApp();
+test("Completing the last Reading stores Course completion once; the summary shows what was covered and Quiz results", async () => {
+  const t = await testApp({}, SEEDED_QUIZ_BODY, null, false);
   try {
     assert.equal((await t.summary()).status, 409, "No summary before the Course is complete.");
 
@@ -495,11 +560,11 @@ test("Completing the last Lesson stores Course completion once; the summary show
     await t.retake();
     await answerAll(t, 5, true);
     const passed = await t.submit();
-    assert.equal(passed.body.study.course.completedAt, null, "One Lesson is still left.");
+    assert.equal(passed.body.study.course.completedAt, null, "One Reading is still left.");
 
     const last = await t.complete(SEEDED_FOLLOW_UP_LESSON_ID);
     assert.equal(last.status, 200);
-    assert.deepEqual(last.body.progress, { completed: 3, total: 3 });
+    assert.deepEqual(last.body.progress, { completed: 2, total: 2 });
     const completedAt = last.body.course.completedAt;
     assert.ok(completedAt, "Course completion is stored with the last Lesson.");
 
@@ -623,22 +688,22 @@ async function finishLessons(t: TestApp) {
 
 /** A test app whose Course ends with the Goal Check. */
 function goalApp(answers: Record<string, unknown> = {}) {
-  return testApp(answers, SEEDED_QUIZ_BODY, GOAL_CHECK_LESSON);
+  return testApp(answers, SEEDED_QUIZ_BODY, GOAL_CHECK_LESSON, false);
 }
 
-test("The Goal Check sits outside Progress, hides its key, and in linear order waits on every Quiz before it (SEN-81)", async () => {
+test("The Goal Check sits outside Progress, hides its key, and in linear order waits on every Reading before it (SEN-81, SEN-133)", async () => {
   const t = await goalApp();
   try {
     const fresh = await t.study();
-    assert.deepEqual(fresh.body.progress, { completed: 0, total: 3 }, "The Goal Check is not counted.");
+    assert.deepEqual(fresh.body.progress, { completed: 0, total: 2 }, "Neither the Goal Check nor the Quiz is counted.");
     const goal = lessonIn(fresh.body, GOAL_CHECK_LESSON_ID);
     assert.equal(goal.locked, true);
     assert.ok(!JSON.stringify(fresh.body).includes("correctOptionId"));
     assert.deepEqual((goal.body as { items: unknown[] }).items.length, 6);
-    assert.equal((await t.goal.get()).status, 403, "Locked in linear order until the Quiz is passed.");
+    assert.equal((await t.goal.get()).status, 403, "Locked in linear order until every Reading is read.");
 
     const last = await finishLessons(t);
-    assert.deepEqual(last.progress, { completed: 3, total: 3 });
+    assert.deepEqual(last.progress, { completed: 2, total: 2 });
     assert.equal(last.course.completedAt, null, "The Course waits on the Goal Check.");
     assert.equal(last.currentLessonId, GOAL_CHECK_LESSON_ID);
     assert.equal(lessonIn(last, GOAL_CHECK_LESSON_ID).locked, false);
@@ -664,7 +729,7 @@ test("The Goal Check completes the Course on its first scored attempt, whatever 
     assert.equal(first.body.quiz.passed, true, "Passed means it has a scored attempt.");
     assert.equal(first.body.quiz.goal.outcome, "not_met");
     assert.equal(lessonIn(first.body.study, GOAL_CHECK_LESSON_ID).completed, true);
-    assert.deepEqual(first.body.study.progress, { completed: 3, total: 3 }, "Progress still leaves it out.");
+    assert.deepEqual(first.body.study.progress, { completed: 2, total: 2 }, "Progress still leaves it out.");
     const completedAt = first.body.study.course.completedAt;
     assert.ok(completedAt, "The Course completes with the Goal Check's first Submit.");
 

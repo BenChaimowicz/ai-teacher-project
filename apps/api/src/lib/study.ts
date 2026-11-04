@@ -6,6 +6,7 @@ import {
   courseCompletePath,
   courseCompletions,
   currentLessonId,
+  flowLessonIds,
   GOAL_CHECK_METHOD_ID,
   goalCheckResult,
   isCourseComplete,
@@ -39,8 +40,12 @@ export type StudyLessonListItem = {
   position: number;
   lessonGoal: string;
   completed: boolean;
-  /** Linear Sequence mode: after a Quiz that is not passed yet. */
+  /** Linear Sequence mode: a flow Lesson after an unread Reading, or a Quiz whose Readings are not all read (SEN-133). */
   locked: boolean;
+  /** On a Quiz: the Readings it covers. Its "Take quiz" card sits after the last of them. Empty otherwise. */
+  assessedLessonIds: string[];
+  /** On a Quiz: this Learner's best submitted score, or null while it is not taken. Absent on other Lessons. */
+  quizBest?: QuizScore | null;
   /** What the method's plugin lets the browser see. A Quiz body has no answer key. */
   body: unknown;
   citations: NumberedSource[];
@@ -58,7 +63,7 @@ export type StudyModule = {
 export type StudyCoursePayload = {
   /** `completedAt` is set once every Lesson is complete. */
   course: { id: string; title: string; learningGoal: string; sequenceMode: SequenceMode; completedAt: string | null };
-  /** Every Lesson but the Goal Check, which sits outside Progress (decision 2026-11-04). */
+  /** Readings only: Quizzes are optional and the Goal Check sits outside Progress (decisions 2026-11-04). */
   progress: { completed: number; total: number };
   currentLessonId: string;
   modules: StudyModule[];
@@ -74,6 +79,8 @@ export type CourseContext = {
   lockedIds: Set<string>;
   /** When this Learner completed the Course, or null. */
   completedAt: Date | null;
+  /** Best submitted score per Quiz this Learner has taken; a Quiz missing here is not taken. */
+  quizBest: Map<string, QuizScore>;
 };
 
 /**
@@ -90,17 +97,23 @@ export async function loadCourseContext(
 ): Promise<CourseContext | null> {
   try {
     // Every read shares one round trip. Nothing read for a Course that isn't this Learner's is returned.
-    const [course, modules, lessons, completedIds, completedAt] = await Promise.all([
+    const [course, modules, lessons, completedIds, completedAt, submitted] = await Promise.all([
       store.findCourse(learnerId, courseId),
       store.listModules(courseId),
       store.listLessons(courseId),
       store.completedLessonIds(learnerId, courseId),
       store.courseCompletedAt(learnerId, courseId),
+      store.listSubmittedCourseAttempts(learnerId, courseId),
     ]);
     if (!course) return null;
     const sequenceMode = parseSequenceMode(course.sequenceMode);
     const lockedIds = lockedLessonIds(lessons, completedIds, sequenceMode);
-    return { course, sequenceMode, modules, lessons, completedIds, lockedIds, completedAt };
+    const quizBest = new Map<string, QuizScore>();
+    for (const lessonId of new Set(submitted.map((row) => row.lessonId))) {
+      const best = bestQuizScore(submittedScores(submitted.filter((row) => row.lessonId === lessonId)));
+      if (best) quizBest.set(lessonId, best);
+    }
+    return { course, sequenceMode, modules, lessons, completedIds, lockedIds, completedAt, quizBest };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
@@ -115,16 +128,14 @@ export async function loadCourseContext(
  * @returns Study payload, or null when the Course has no Lessons
  */
 export function studyPayload(context: CourseContext): StudyCoursePayload | null {
-  const { course, modules, lessons, completedIds, lockedIds, sequenceMode, completedAt } = context;
-  const current = currentLessonId(
-    lessons.map((row) => row.id),
-    completedIds,
-  );
+  const { course, modules, lessons, completedIds, lockedIds, sequenceMode, completedAt, quizBest } = context;
+  const current = currentLessonId(flowLessonIds(lessons), completedIds);
   if (!current) return null;
 
   const lessonsByModule = new Map<string, StudyLessonListItem[]>();
   for (const row of lessons) {
     const plugin = teachingMethodPlugin(row.teachingMethod);
+    const quiz = row.teachingMethod === QUIZ_METHOD_ID;
     const item: StudyLessonListItem = {
       id: row.id,
       title: row.title,
@@ -133,6 +144,8 @@ export function studyPayload(context: CourseContext): StudyCoursePayload | null 
       lessonGoal: row.lessonGoal,
       completed: completedIds.has(row.id),
       locked: lockedIds.has(row.id),
+      assessedLessonIds: quiz ? row.assessedLessonIds ?? [] : [],
+      ...(quiz ? { quizBest: quizBest.get(row.id) ?? null } : {}),
       body: plugin ? plugin.studyBody(row.body) : null,
       citations: parseNumberedSources(row.citations),
     };
@@ -155,7 +168,7 @@ export function studyPayload(context: CourseContext): StudyCoursePayload | null 
 }
 
 /**
- * Progress counts: completed and total over every Lesson but the Goal Check.
+ * Progress counts: completed and total over the Readings.
  * @param lessons - Lessons of the Course
  * @param completedIds - This Learner's completed Lessons
  */
@@ -203,7 +216,8 @@ export async function loadStudyCourse(
 }
 
 /**
- * Records Course completion once every Lesson is complete. Call after a Lesson completion lands.
+ * Records Course completion once every Lesson of the reading flow is complete: the Readings and the Goal Check, not the
+ * Quizzes, which are optional (SEN-133). Call after a Lesson completion lands.
  * @param store - Study store
  * @param learnerId - Current Learner
  * @param courseId - Published Course id
@@ -216,7 +230,7 @@ export async function recordCourseCompletion(store: StudyStore, learnerId: strin
       store.completedLessonIds(learnerId, courseId),
     ]);
     if (completedAt) return;
-    const lessonIds = lessons.map((row) => row.id);
+    const lessonIds = flowLessonIds(lessons);
     if (isCourseComplete(lessonIds, completedIds)) {
       await store.insertCourseCompletion(learnerId, courseId);
       void recordProductEvent("course_completed", { learnerId, detail: { courseId, lessons: lessonIds.length } });
@@ -366,7 +380,7 @@ export async function studyLinksByCourseId(
     for (const courseId of new Set([...lessonsByCourse.keys(), ...completedCourseIds])) {
       const ordered = lessonsByCourse.get(courseId) ?? [];
       const { completed, total } = progressCounts(ordered, completedIds);
-      const current = currentLessonId(ordered.map((row) => row.id), completedIds);
+      const current = currentLessonId(flowLessonIds(ordered), completedIds);
       const courseCompleted = completedCourseIds.has(courseId);
       links.set(courseId, {
         href: courseCompleted ? courseCompletePath(courseId) : current ? studyPath(courseId, current) : null,
@@ -389,7 +403,7 @@ export type StudyWriteResult =
   | { ok: false; status: 400 | 403 | 404 | 409; error: string };
 
 /** Copy when a linear Course blocks a Lesson. */
-export const LOCKED_LESSON_ERROR = "This Lesson is locked until you pass the Quiz before it.";
+export const LOCKED_LESSON_ERROR = "This Lesson opens once you have read the Lessons before it.";
 
 /**
  * Marks a Lesson complete through its Teaching-method plugin, and the Course once its last Lesson completes.

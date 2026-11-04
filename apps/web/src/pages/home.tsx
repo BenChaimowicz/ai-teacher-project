@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
 import { QUIZ_METHOD_ID } from "@senoy/db/reading-lesson";
 import { ArrowRight, BookOpen, Flame, Play, Plus, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { useCompanion, useCompanionLines } from "@/components/companion/companion-provider.tsx";
@@ -143,15 +144,17 @@ function ContinueHero({ row, study }: { row: Row; study: StudyPayload | null }) 
   const progress = row.item.progress ?? { completed: 0, total: 0 };
   const lessons = study ? study.modules.flatMap((module) => module.lessons) : [];
   const current = lessons.find((lesson) => lesson.id === study?.currentLessonId) ?? null;
-  const currentNumber = current ? lessons.indexOf(current) + 1 : 0;
+  // The Current Lesson walks the reading flow, so it is never a Quiz (SEN-133); number it among the Lessons Next visits.
+  const flow = lessons.filter((lesson) => lesson.teachingMethod !== QUIZ_METHOD_ID);
+  const currentNumber = current ? flow.indexOf(current) + 1 : 0;
   const quizzes = lessons.filter((lesson) => lesson.teachingMethod === QUIZ_METHOD_ID);
   const value = progress.total ? progress.completed / progress.total : 0;
-  const kind = current?.teachingMethod === QUIZ_METHOD_ID ? "quiz" : "reading";
+  const kind = current?.teachingMethod === GOAL_CHECK_METHOD_ID ? "goal check" : "reading";
   return (
     <div className="l-hero">
       <span className="l-bm" aria-hidden="true" />
       <div className="tx">
-        <span className="k-rib">{current ? `lesson ${currentNumber} of ${lessons.length} · ${kind}` : `${progress.completed}/${progress.total}`}</span>
+        <span className="k-rib">{current ? `lesson ${currentNumber} of ${flow.length} · ${kind}` : `${progress.completed}/${progress.total}`}</span>
         <h2>{row.item.title}</h2>
         {current ? (
           <p className="nx">
@@ -173,7 +176,7 @@ function ContinueHero({ row, study }: { row: Row; study: StudyPayload | null }) 
           <div className="cta">
             <Button asChild>
               <Link to={row.item.href}>
-                <Play /> {current ? `Continue ${kind === "quiz" ? "the quiz" : "reading"}` : "Continue"}
+                <Play /> {current ? `Continue ${kind === "goal check" ? "to the goal check" : "reading"}` : "Continue"}
               </Link>
             </Button>
           </div>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { currentLessonId, isCourseComplete, nextLessonId } from "./progress.ts";
+import { currentLessonId, flowLessonIds, isCourseComplete, nextLessonId, progressLessonIds } from "./progress.ts";
 
 test("Current Lesson is the first incomplete Lesson, or the last Lesson when every Lesson is complete", () => {
   const lessonIds = ["reading", "quiz"];
@@ -25,4 +25,18 @@ test("A Course is complete only when it has Lessons and every one is complete", 
   assert.equal(isCourseComplete([], new Set()), false);
   assert.equal(isCourseComplete(["a", "b"], new Set(["a"])), false);
   assert.equal(isCourseComplete(["a", "b"], new Set(["a", "b"])), true);
+});
+
+test("The reading flow skips Quizzes; Progress counts only Readings", () => {
+  const lessons = [
+    { id: "r1", teachingMethod: "reading" },
+    { id: "quiz", teachingMethod: "quiz" },
+    { id: "r2", teachingMethod: "reading" },
+    { id: "goal", teachingMethod: "goal_check" },
+  ];
+
+  assert.deepEqual(flowLessonIds(lessons), ["r1", "r2", "goal"]);
+  assert.deepEqual(progressLessonIds(lessons), ["r1", "r2"]);
+  assert.equal(nextLessonId(flowLessonIds(lessons), new Set(["r1"]), "r1"), "r2");
+  assert.equal(isCourseComplete(flowLessonIds(lessons), new Set(["r1", "r2", "goal"])), true);
 });

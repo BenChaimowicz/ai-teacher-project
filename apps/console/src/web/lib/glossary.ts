@@ -97,6 +97,9 @@ export const PRODUCT_EVENT_HELP: Partial<Record<ProductEventKind, string>> = {
   glossary_term_opened: "The learner opened a word's definition in a reading (hover, tap, or one of Jongi's word bubbles).",
   course_words_opened: "The learner opened the course's Words page: every word its readings defined, in one list.",
   course_sequence_mode_changed: "The learner switched a finished course from lessons in order to jump freely.",
+  quiz_opened:
+    "The learner opened a quiz from Take quiz. Quizzes are optional and never stop the reading. The detail says where they opened it (the sidebar or the card after a chapter's last reading) and whether they had taken it before.",
+  quiz_closed: "The learner closed a quiz and went back to reading. The detail says whether they handed it in during that visit.",
   quiz_answer_checked: "The learner checked one quiz answer (when feedback comes after each question). The detail says if it was right.",
   quiz_submitted: "The learner handed in a quiz.",
   quiz_retaken: "The learner started a quiz again. Their best score is kept.",

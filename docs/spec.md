@@ -77,7 +77,7 @@ Optional server-only model overrides: `GENERATOR_MODEL`, `GENERATOR_FALLBACK_MOD
 - **Generation job** — cursor, stage, remaining repair budget; one active job per Request.
 - **Unpublished Lesson** — envelope, method body, Sources, Citations, media files and Media descriptors. Not playable. Not reuse candidates.
 - **Published Course** — immutable snapshot of Modules and Lessons. A new Starting Level is a new Course Request, new Blueprint, new job, separate Course.
-- **Progress** — completed Lessons over total Lessons for that Course.
+- **Progress** — completed Readings over total Readings for that Course (Quizzes are optional and the Goal Check sits outside it; SEN-133).
 - **Quiz attempts** — drafts and scored attempts; best score kept.
 - **Media descriptor** — kind, caption, alt, Source, license, origin (`library` \| `generated`), storage key, Media category, Topic tags.
 - **Log Entry** — time, Component, level, message, redacted context, and the Request id, Generation job, Course Request, Learner and Pipeline Event it was logged for.
@@ -140,17 +140,19 @@ Only a published Course. Land on the current Lesson (no Course overview first). 
 
 - **Goal Check** (SEN-81, decisions 2026-11-04): the Course's last Lesson, played in the Quiz player with the same rules (drafts, Check, Submit, Retake, best score kept). After Submit, the result reads against the Learning Goal: **met** (best `correct / n ≥ 0.70`), **partly met** (≥ 0.50), or **not met**, with the goal objectives the best attempt missed and links back to the Lessons that teach them. Only **not met** then asks what was missing (pick one or more of: too advanced for me, too basic, missing a topic I needed, too theoretical, something else with free text) and offers two next steps: a new Course Request prefilled with the subject and what was missing, or nothing for now. The current Course is never extended.
 
-Progress is completed Lessons / total Lessons, not counting the Goal Check. Opening does not complete. Progress never drops.
+Progress is completed Readings / total Readings: Quizzes are optional and the Goal Check sits outside it. Quiz best scores show on their own (the sidebar row and the Course-complete screen). Opening does not complete. Progress never drops.
+
+**Quizzes are optional (SEN-133).** Next walks the reading flow (every Lesson but the Quizzes), so the last Reading of a Chapter leads to the next Reading, and after the last Reading to the Goal Check. A Quiz opens from **Take quiz**: its row in the sidebar (marked optional, or with its best score), or the end of the last Reading it covers, where the end prompt offers "I've read it, take the quiz" beside Next and the companion suggests it once while it is not taken. The Quiz opens as its own screen; **Back to reading** closes it and returns the Learner to where they came from. Opening and closing a Quiz each record a product event (`quiz_opened`, `quiz_closed`).
 
 ### Sequence mode and Lesson completion
 
 Sequence mode is Course-level. Default: linear unlock; completed Lessons revisitable. The Learner may choose free jump at Blueprint review or later via a menu. Switching to free jump is one-way; the disclaimer says linear cannot be restored. Sequence mode does not change the Blueprint or generation — only unlock rules.
 
-- Linear: a Quiz gates later Lessons until it is passed. Readings before the first unpassed Quiz stay open, completed or not.
-- Free jump: later Lessons stay open.
-- Progress waits on a Quiz pass in both modes (best score `correct / n ≥ 0.70`).
+- Linear: Readings in order. A Reading or the Goal Check opens once every Reading before it is read; in the sidebar the rest are disabled, and the way forward is the end of the current Reading. A Quiz never gates anything; it opens once the Readings it covers are read.
+- Free jump: every Lesson is open, Quizzes included.
+- A Quiz is passed at best score `correct / n ≥ 0.70` in both modes; Progress and Course completion do not wait on it.
 
-A reading Lesson completes when the Learner reaches the end and marks it complete. A Quiz completes when best score is at least 70%. The Goal Check completes on its first scored attempt, whatever the score, so a Course completes once every Lesson is complete and the Goal Check has been taken; the met / partly met / not met result, not completion, says whether the goal was reached. In linear mode the Goal Check opens once every Quiz before it is passed.
+A reading Lesson completes when the Learner reaches the end and marks it complete. A Quiz completes when best score is at least 70%. The Goal Check completes on its first scored attempt, whatever the score, so a Course completes once every Reading is read and the Goal Check has been taken, Quizzes taken or not; the met / partly met / not met result, not completion, says whether the goal was reached. In linear mode the Goal Check opens once every Reading is read.
 
 Provenance: [Redesign: inspiration and direction](https://linear.app/senoy/issue/SEN-52/redesign-inspiration-and-direction), [UI scope (screens)](https://linear.app/senoy/issue/SEN-10/ui-scope-screens), [Level-to-course mapping](https://linear.app/senoy/issue/SEN-12/level-to-course-mapping), [Quiz mechanics](https://linear.app/senoy/issue/SEN-13/quiz-mechanics), [Plugin contract](https://linear.app/senoy/issue/SEN-14/plugin-contract), [Runtime generation](https://linear.app/senoy/issue/SEN-15/runtime-generation), [Decide product name](https://linear.app/senoy/issue/SEN-51/decide-product-name).
 
@@ -579,7 +581,7 @@ If that Judge names a **Lesson**, targeted repair from that earliest Lesson and 
 
 Destination QA after publish. Not a Publish gate. Does not un-publish.
 
-After each Test course publishes, the team takes it as the Learner: complete every Lesson (readings marked complete, Quizzes at best ≥ 70%). Sign off that you would use it to reach that Learning Goal (no blocking factual error the gates missed; required Demonstrative media actually teaches the technique), plus the subject-specific rules in §7.
+After each Test course publishes, the team takes it as the Learner: complete every Lesson (readings marked complete, Quizzes at best ≥ 70%, although a Learner may skip them). Sign off that you would use it to reach that Learning Goal (no blocking factual error the gates missed; required Demonstrative media actually teaches the technique), plus the subject-specific rules in §7.
 
 A miss does not un-publish. The spec/prototype is not done until all three pass. Fix the gap and start a new Course Request (published Courses stay immutable). If the miss is a missing Publish gate, add that gate and regenerate.
 

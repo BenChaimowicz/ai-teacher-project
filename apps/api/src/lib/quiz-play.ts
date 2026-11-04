@@ -364,6 +364,60 @@ export function retakeQuiz(store: StudyStore, request: QuizRequest): Promise<Qui
   });
 }
 
+/** Where the Learner opened a Quiz from (SEN-133): its sidebar row, or the card after the last Reading it covers. */
+export const QUIZ_OPENED_FROM = ["sidebar", "card"] as const;
+export type QuizOpenedFrom = (typeof QUIZ_OPENED_FROM)[number];
+
+/** Result of recording a Quiz open or close: nothing on success, since it changes no Study state. */
+export type QuizVisitResult = { ok: true } | QuizError;
+
+/**
+ * Records that the Learner opened a Quiz from "Take quiz" (SEN-133). It writes no Study state, only the product event,
+ * with where they opened it and whether they had handed it in before. Only a Chapter Quiz counts; the Goal Check is a
+ * stop in the reading flow and is opened by Next.
+ * @param store - Study store
+ * @param request - Quiz request
+ * @param from - Where it was opened (unvalidated JSON)
+ */
+export function openQuiz(store: StudyStore, request: QuizRequest, from: unknown): Promise<QuizVisitResult> {
+  return withQuiz("openQuiz", store, request, async (quiz) => {
+    if (quiz.isGoalCheck) return { ok: false, status: 404, error: "Quiz not found." };
+    if (typeof from !== "string" || !(QUIZ_OPENED_FROM as readonly string[]).includes(from)) {
+      return { ok: false, status: 400, error: `from must be one of ${QUIZ_OPENED_FROM.join(", ")}.` };
+    }
+    void recordProductEvent("quiz_opened", {
+      learnerId: request.learnerId,
+      detail: {
+        courseId: request.courseId,
+        lessonId: request.lessonId,
+        title: quiz.lesson.title,
+        from,
+        takenBefore: quiz.attempts.some((row) => row.status === "submitted"),
+      },
+    });
+    return { ok: true };
+  });
+}
+
+/**
+ * Records that the Learner closed a Quiz and went back to reading (SEN-133). It writes no Study state, only the product
+ * event, with whether they handed it in during that visit.
+ * @param store - Study store
+ * @param request - Quiz request
+ * @param submitted - Whether the Learner handed it in during this visit (unvalidated JSON)
+ */
+export function closeQuiz(store: StudyStore, request: QuizRequest, submitted: unknown): Promise<QuizVisitResult> {
+  return withQuiz("closeQuiz", store, request, async (quiz) => {
+    if (quiz.isGoalCheck) return { ok: false, status: 404, error: "Quiz not found." };
+    if (typeof submitted !== "boolean") return { ok: false, status: 400, error: "submitted must be true or false." };
+    void recordProductEvent("quiz_closed", {
+      learnerId: request.learnerId,
+      detail: { courseId: request.courseId, lessonId: request.lessonId, title: quiz.lesson.title, submitted },
+    });
+    return { ok: true };
+  });
+}
+
 /** Result of sending Goal Check feedback. */
 export type GoalCheckFeedbackResult = { ok: true; feedback: GoalCheckFeedbackRow } | QuizError;
 

@@ -12,8 +12,12 @@ export type StudyLesson = {
   position: number;
   lessonGoal: string;
   completed: boolean;
-  /** Linear Sequence mode: after a Quiz that is not passed yet. */
+  /** Linear Sequence mode: a Lesson after an unread Reading, or a Quiz whose Readings are not all read (SEN-133). */
   locked: boolean;
+  /** On a Quiz: the Readings it covers. Its "Take quiz" offer sits after the last of them. Empty otherwise. */
+  assessedLessonIds?: string[];
+  /** On a Quiz: this Learner's best submitted score, or null while it is not taken. Absent on other Lessons. */
+  quizBest?: QuizScore | null;
   body: unknown;
   citations: NumberedSource[];
 };
@@ -28,8 +32,9 @@ export type StudyModule = {
 
 /** Published Course payload for Study chrome. */
 export type StudyPayload = {
-  /** `completedAt` is set once every Lesson is complete. */
+  /** `completedAt` is set once every Reading and the Goal Check are complete; Quizzes are optional. */
   course: { id: string; title: string; learningGoal: string; sequenceMode: SequenceMode; completedAt: string | null };
+  /** Readings only (SEN-133). */
   progress: { completed: number; total: number };
   currentLessonId: string;
   modules: StudyModule[];

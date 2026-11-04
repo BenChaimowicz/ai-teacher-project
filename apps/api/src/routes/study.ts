@@ -4,7 +4,9 @@ import {
   answerQuizItem,
   checkQuizItem,
   chooseGoalCheckNextStep,
+  closeQuiz,
   getQuiz,
+  openQuiz,
   retakeQuiz,
   sendGoalCheckFeedback,
   submitQuiz,
@@ -135,6 +137,16 @@ export async function studyRoutes(app: FastifyInstance, options: StudyRoutesOpti
   const quiz = "/api/courses/:courseId/lessons/:lessonId/quiz";
 
   app.get(quiz, (request, reply) => send(request, reply, "load Quiz", () => getQuiz(store, quizRequest(request))));
+
+  app.post(`${quiz}/opens`, (request, reply) =>
+    send(request, reply, "record a Quiz open", () => openQuiz(store, quizRequest(request), bodyField(request, "from"))),
+  );
+
+  app.post(`${quiz}/closes`, (request, reply) =>
+    send(request, reply, "record a Quiz close", () =>
+      closeQuiz(store, quizRequest(request), bodyField(request, "submitted")),
+    ),
+  );
 
   app.put(`${quiz}/answers/:itemId`, (request, reply) => {
     const { itemId } = request.params as { itemId: string };

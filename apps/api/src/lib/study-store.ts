@@ -36,6 +36,8 @@ export type LessonRow = {
   objectives: string[];
   /** On the Goal Check only: each goal objective's teaching Lessons. Empty otherwise. */
   objectiveLessonIds: Record<string, string[]>;
+  /** On a Quiz only: the Readings it covers, in Course order. Empty otherwise. */
+  assessedLessonIds: string[];
 };
 
 /** What a Learner said was missing after a "not met" Goal Check, and the next step they chose (null until chosen). */
@@ -78,6 +80,8 @@ export type StudyStore = {
   insertCourseCompletion(learnerId: string, courseId: string): Promise<void>;
   /** Attempts oldest first. */
   listQuizAttempts(learnerId: string, lessonId: string): Promise<QuizAttemptRow[]>;
+  /** This Learner's submitted attempts on every Lesson of one Course, with their Lesson, in one statement. */
+  listSubmittedCourseAttempts(learnerId: string, courseId: string): Promise<(QuizAttemptRow & { lessonId: string })[]>;
   insertQuizAttempt(
     learnerId: string,
     lessonId: string,
@@ -146,6 +150,7 @@ export function drizzleStudyStore(db: Database): StudyStore {
           citations: publishedLessons.citations,
           objectives: publishedLessons.objectives,
           objectiveLessonIds: publishedLessons.objectiveLessonIds,
+          assessedLessonIds: publishedLessons.assessedLessonIds,
         })
         .from(publishedLessons)
         .where(eq(publishedLessons.publishedCourseId, courseId))
@@ -188,6 +193,19 @@ export function drizzleStudyStore(db: Database): StudyStore {
         .select(attemptColumns)
         .from(quizAttempts)
         .where(and(eq(quizAttempts.learnerId, learnerId), eq(quizAttempts.lessonId, lessonId)))
+        .orderBy(asc(quizAttempts.startedAt));
+    },
+
+    async listSubmittedCourseAttempts(learnerId, courseId) {
+      return db
+        .select({ ...attemptColumns, lessonId: quizAttempts.lessonId })
+        .from(quizAttempts)
+        .innerJoin(publishedLessons, eq(publishedLessons.id, quizAttempts.lessonId))
+        .where(and(
+          eq(quizAttempts.learnerId, learnerId),
+          eq(publishedLessons.publishedCourseId, courseId),
+          eq(quizAttempts.status, "submitted"),
+        ))
         .orderBy(asc(quizAttempts.startedAt));
     },
 

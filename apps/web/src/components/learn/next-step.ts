@@ -1,16 +1,17 @@
 // Relative imports on purpose: the node:test run (`tsx --test` from packages/db) has no `@/` alias.
 import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
-import { courseCompletePath, isCourseComplete, nextLessonId, studyPath } from "@senoy/db/progress";
+import { courseCompletePath, flowLessonIds, isCourseComplete, nextLessonId, studyPath } from "@senoy/db/progress";
 import type { StudyLesson } from "../../lib/study-types.ts";
 
 /**
- * Where the Learner goes once a Lesson is complete: the next Lesson (a reading, a quiz or the Goal Check), or the Course-complete
- * screen once every Lesson counts. It is the finish line's first tile, and the destination of the Reading's
- * "I've read it" tile, which completes the Lesson and goes there in the same click (decision 2026-11-03).
+ * Where the Learner goes once a Lesson is complete: the next Lesson of the reading flow (a reading or the Goal Check),
+ * or the Course-complete screen once the flow is done. Quizzes are never a step (SEN-133): they open from "Take quiz".
+ * It is the finish line's first tile, and the destination of the Reading's "I've read it" tile, which completes the
+ * Lesson and goes there in the same click (decision 2026-11-03).
  */
 export type NextStep = {
   to: string;
-  kind: "reading" | "quiz" | "goal_check" | "finish";
+  kind: "reading" | "goal_check" | "finish";
   /** The next Lesson's title with its kind, or what the Course-complete screen offers. */
   description: string;
 };
@@ -30,12 +31,12 @@ export function nextStep(courseId: string, next: StudyLesson | null, courseCompl
   if (next.teachingMethod === GOAL_CHECK_METHOD_ID) {
     return { to: studyPath(courseId, next.id), kind: "goal_check", description: `${next.title} · goal check` };
   }
-  const kind = next.teachingMethod === "quiz" ? "quiz" : "reading";
-  return { to: studyPath(courseId, next.id), kind, description: `${next.title} · ${kind}` };
+  return { to: studyPath(courseId, next.id), kind: "reading", description: `${next.title} · reading` };
 }
 
 /**
- * The step after `lessonId` once it is complete, read from the Course as it will be then: `lessonId` counts as
+ * The step after `lessonId` once it is complete, along the reading flow (Quizzes skipped), read from the Course as it
+ * will be then: `lessonId` counts as
  * complete whatever the payload says now. Computed ahead of completion so the completion action can take the
  * Learner there in the same click; for a Lesson that is already complete it is the finish line's first tile.
  * @param courseId - Course
@@ -44,7 +45,7 @@ export function nextStep(courseId: string, next: StudyLesson | null, courseCompl
  * @returns The step, or null when `lessonId` is not in the Course or there is nowhere to go yet
  */
 export function stepAfter(courseId: string, lessons: StudyLesson[], lessonId: string): NextStep | null {
-  const ids = lessons.map((row) => row.id);
+  const ids = flowLessonIds(lessons);
   const done = new Set(lessons.filter((row) => row.completed || row.id === lessonId).map((row) => row.id));
   const nextId = nextLessonId(ids, done, lessonId);
   const next = lessons.find((row) => row.id === nextId) ?? null;

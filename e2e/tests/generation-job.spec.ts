@@ -32,7 +32,7 @@ test("Waiting shows the current lesson and ticks finished ones; Stop keeps them 
   await page.getByRole("button", { name: /^Resume/ }).click();
   await expect(page.getByText("Your course is ready.")).toBeVisible({ timeout: 25_000 });
   await page.getByRole("button", { name: /^Start lesson 1/ }).click();
-  await expect(page.getByText("Fixture Course · 0 / 3")).toBeVisible();
+  await expect(page.getByText("Fixture Course · 0 / 2")).toBeVisible();
 });
 
 test("A lesson that fails its checks says why; Retry writes it again and the Course publishes", async ({ page }) => {

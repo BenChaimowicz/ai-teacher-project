@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
 import { isPassingScore } from "@senoy/db/quiz";
-import { READING_METHOD_ID } from "@senoy/db/reading-lesson";
+import { QUIZ_METHOD_ID, READING_METHOD_ID } from "@senoy/db/reading-lesson";
 import { Check, Compass, Eye, Flag, Home, Layers } from "lucide-react";
 import { useCompanion, useCompanionLines } from "@/components/companion/companion-provider.tsx";
 import { CountUp } from "@/components/learn/count-up.tsx";
@@ -23,11 +23,14 @@ import { apiFetch } from "@/lib/api.ts";
 const LINES = ["You finished a whole course.", "That's real progress.", "Going deeper is a good next step."];
 
 /**
- * The Course's Lessons that count toward Progress: every Lesson but the Goal Check (decision 2026-11-04).
+ * The Course's Lessons that count toward Progress: the Readings, without the optional Quizzes (SEN-133) and the Goal
+ * Check (decisions 2026-11-04).
  * @param summary - Course summary
  */
 function progressLessons(summary: CourseSummary) {
-  return summary.modules.flatMap((module) => module.lessons).filter((lesson) => lesson.teachingMethod !== GOAL_CHECK_METHOD_ID);
+  return summary.modules
+    .flatMap((module) => module.lessons)
+    .filter((lesson) => lesson.teachingMethod !== GOAL_CHECK_METHOD_ID && lesson.teachingMethod !== QUIZ_METHOD_ID);
 }
 
 /**

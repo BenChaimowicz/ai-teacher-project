@@ -129,6 +129,8 @@ export const PRODUCT_EVENT_KINDS = [
   "glossary_term_opened",
   "course_words_opened",
   "course_sequence_mode_changed",
+  "quiz_opened",
+  "quiz_closed",
   "quiz_answer_checked",
   "quiz_submitted",
   "quiz_retaken",

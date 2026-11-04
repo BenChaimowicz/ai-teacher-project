@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
-import { nextLessonId } from "@senoy/db/progress";
-import { parseReadingBody, READING_METHOD_ID } from "@senoy/db/reading-lesson";
+import { flowLessonIds, nextLessonId, studyPath } from "@senoy/db/progress";
+import { parseReadingBody, QUIZ_METHOD_ID, READING_METHOD_ID } from "@senoy/db/reading-lesson";
 import { MoreHorizontal } from "lucide-react";
 import { useCompanionLines } from "@/components/companion/companion-provider.tsx";
 import { CourseOutline } from "@/components/learn/course-outline.tsx";
 import { FinishLine } from "@/components/learn/finish-line.tsx";
 import { stepAfter } from "@/components/learn/next-step.ts";
+import type { QuizReturnState } from "@/components/learn/take-quiz.ts";
 import { ReadingPanel } from "@/components/learn/reading-panel.tsx";
 import { StudyChromeProvider, useStudyChrome } from "@/components/learn/study-chrome.tsx";
 import { ShellActions, ShellOutline, ShellTitle, useShell } from "@/components/shell/app-shell.tsx";
@@ -22,12 +23,12 @@ import type { StudyLesson, StudyModule, StudyPayload } from "@/lib/study-types.t
 import { renderForTeachingMethod } from "@/teaching-methods/register.ts";
 
 const READING_LINES = [
-  "Take your time. There's a short check after the reading.",
+  "Take your time. Quizzes are optional; take one whenever you like.",
   "Hover a small number to see its source.",
   "Aa changes how the text looks.",
   "The sources are at the bottom, if you're curious.",
 ];
-const QUIZ_LINES = ["No timer. Think it through.", "Earlier lessons stay open while you work.", "A wrong answer is just something to look at again."];
+const QUIZ_LINES = ["No timer. Think it through.", "This quiz is optional. Back to reading is always there.", "A wrong answer is just something to look at again."];
 const GOAL_CHECK_LINES = ["This one is about your goal, not one lesson.", "No timer, and earlier lessons stay open.", "Whatever you score, the Course still finishes."];
 
 /**
@@ -151,6 +152,7 @@ export function StudyPage() {
  */
 function StudyScreen() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
+  const location = useLocation();
   const { record, loading: profileLoading } = useTeachingProfile();
   const { settings, applyMode, sectionsRead } = useStudyChrome();
   const [payload, setPayload] = useState<StudyPayload | null>(null);
@@ -192,6 +194,7 @@ function StudyScreen() {
   const visible = lessons.find((row) => row.id === lessonId) ?? null;
   const isReading = visible?.teachingMethod === READING_METHOD_ID;
   const isGoalCheck = visible?.teachingMethod === GOAL_CHECK_METHOD_ID;
+  const isQuiz = visible?.teachingMethod === QUIZ_METHOD_ID;
   useCompanionLines(isReading ? READING_LINES : isGoalCheck ? GOAL_CHECK_LINES : QUIZ_LINES);
   useFocusMode(Boolean(visible && !visible.locked && isReading && settings.layout === "focus"), () => applyMode("comfort"));
 
@@ -201,10 +204,11 @@ function StudyScreen() {
   }, [visible, isReading]);
 
   const Play = visible ? renderForTeachingMethod(visible.teachingMethod) : null;
+  // Next walks the reading flow: Quizzes are never a stop in it (SEN-133).
   const nextId =
     visible && payload
       ? nextLessonId(
-          lessons.map((row) => row.id),
+          flowLessonIds(lessons),
           new Set(lessons.filter((row) => row.completed).map((row) => row.id)),
           visible.id,
         )
@@ -242,9 +246,12 @@ function StudyScreen() {
   }
 
   const lessonNumber = lessons.indexOf(visible) + 1;
-  const finish = visible.completed ? (
+  // A Quiz sits outside the reading flow, so it has no finish line: "Back to reading" closes it instead.
+  const finish = visible.completed && !isQuiz ? (
     <FinishLine courseId={courseId} next={next} courseComplete={Boolean(payload.course.completedAt)} />
   ) : null;
+  const returnState = location.state as Partial<QuizReturnState> | null;
+  const returnTo = typeof returnState?.returnTo === "string" ? returnState.returnTo : studyPath(courseId, payload.currentLessonId);
   // Where the completion action leads, read from the Course as it will be once this Lesson is complete.
   const after = stepAfter(courseId, lessons, visible.id);
 
@@ -282,7 +289,7 @@ function StudyScreen() {
       <ConfirmDialog
         open={confirmFreeJump}
         title="Switch to free jump?"
-        body="Every Lesson in this Course opens, in any order. Progress still counts a Quiz only once you pass it. You can't switch back to linear order."
+        body="Every Lesson in this Course opens, in any order, quizzes included. You can't switch back to linear order."
         confirmLabel="Switch to free jump"
         busy={switching}
         onConfirm={() => void switchToFreeJump()}
@@ -301,6 +308,7 @@ function StudyScreen() {
           next={after}
           lessons={lessons}
           learningGoal={payload?.course.learningGoal}
+          returnTo={returnTo}
         />
       ) : (
         <div className="mx-auto max-w-[720px]">

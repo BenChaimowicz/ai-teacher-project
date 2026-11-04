@@ -13,13 +13,9 @@ import { answerAll, resetFixture } from "./fixture.ts";
 const lessonUrl = (lessonId: string) => `/study/${SEEDED_COURSE_ID}/lessons/${lessonId}`;
 
 test("A not-met Goal Check shows what was missed, asks why, and opens a new Course built from it (SEN-81)", async ({ page }) => {
-  await resetFixture();
-  await page.goto(lessonUrl(SEEDED_READING_LESSON_ID));
-  await page.getByRole("button", { name: "I've read it, start the quiz" }).click();
-  await expect(page).toHaveURL(lessonUrl(SEEDED_QUIZ_LESSON_ID));
-  await answerAll(page, 4, true);
-  await page.getByRole("button", { name: "Submit" }).click();
-  await expect(page.getByRole("status")).toContainText("Quiz passed.");
+  // In linear order the Goal Check opens once every Reading is read; the Quiz is optional and left untaken (SEN-133).
+  await resetFixture({}, [SEEDED_READING_LESSON_ID, SEEDED_FOLLOW_UP_LESSON_ID]);
+  await page.goto(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
 
   // The Goal Check has its own row in the outline, after the Lessons.
   const outline = page.getByRole("navigation", { name: "Lessons" });
@@ -30,8 +26,8 @@ test("A not-met Goal Check shows what was missed, asks why, and opens a new Cour
   await answerAll(page, 2, true, SEEDED_GOAL_CHECK_BODY);
   await page.getByRole("button", { name: "Submit" }).click();
   await expect(page.getByRole("status")).toContainText("Not met yet. Your best is 2 / 6.");
-  // Outside Progress: the Course still counts 2 of its 3 Lessons (the Reading and the Quiz).
-  await expect(page.getByText("The square knot · 2 / 3")).toBeVisible();
+  // Outside Progress: the Course counts its 2 Readings, both read.
+  await expect(page.getByText("The square knot · 2 / 2")).toBeVisible();
 
   // The missed objectives, in order, each linking back to the Reading that teaches it.
   const missed = page.getByRole("region", { name: "Worth another look" });
