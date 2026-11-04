@@ -1,10 +1,11 @@
+import { GOAL_CHECK_METHOD_ID, MAX_GOAL_OBJECTIVES, MIN_GOAL_OBJECTIVES } from "./goal-check.ts";
 import { MAX_SLOT_VISUALS, VISUAL_KINDS, type PlannedVisual } from "./media.ts";
 import { QUIZ_METHOD_ID, READING_METHOD_ID } from "./reading-lesson.ts";
 import type { SequenceMode } from "./sequence-mode.ts";
 import type { QuizCadence } from "./teaching-profile.ts";
 
 /** Teaching methods a Blueprint slot may name. */
-export const REGISTERED_METHODS = [READING_METHOD_ID, QUIZ_METHOD_ID] as const;
+export const REGISTERED_METHODS = [READING_METHOD_ID, QUIZ_METHOD_ID, GOAL_CHECK_METHOD_ID] as const;
 
 /** A registered Teaching method id. */
 export type BlueprintMethod = (typeof REGISTERED_METHODS)[number];
@@ -17,7 +18,7 @@ export const MAX_TOPIC_TAGS = 5;
 export const MAX_QUIZ_OBJECTIVES = 10;
 
 /**
- * Lessons a Course may hold. Each Reading is about one screen (decision 2026-11-03), so a Course needs more of them than when
+ * Lessons a Course may hold, not counting its Goal Check. Each Reading is about one screen (decision 2026-11-03), so a Course needs more of them than when
  * the cap was 6 to keep a run near half an hour (SEN-82); Lessons are still written one after another.
  */
 export const MIN_COURSE_LESSONS = 3;
@@ -48,6 +49,11 @@ export const CADENCE_READINGS: Record<QuizCadence, { min: number; max: number } 
  * nothing reads). `chapter` names the Chapter a Reading belongs to (decision 2026-11-03): consecutive Readings with the
  * same chapter are researched once and written in one author call. Absent on a Quiz, and on Blueprints written before
  * Chapters existed.
+ *
+ * On the Goal Check slot (SEN-81), `objectives` are the parts of the Learning Goal, planned from the Learning Goal and
+ * Starting Level rather than from the last Lessons. `objectiveSlotIds` names, for each of those objectives, the
+ * Reading slots that teach it; its keys are exactly `objectives`, and `assessesSlotIds` is every slot it names. Absent
+ * on every other slot.
  */
 export type BlueprintSlot = {
   id: string;
@@ -59,6 +65,7 @@ export type BlueprintSlot = {
   assessesSlotIds: string[];
   visuals?: PlannedVisual[];
   chapter?: string;
+  objectiveSlotIds?: Record<string, string[]>;
 };
 
 /** One Chapter: a run of consecutive Readings on one topic, researched once and written together (decision 2026-11-03). */
@@ -136,6 +143,14 @@ export function learnerBlueprint(blueprint: CourseBlueprint): LearnerBlueprint {
   };
 }
 
+/**
+ * The Blueprint's Goal Check slot, or null on a Blueprint planned before SEN-81.
+ * @param blueprint - Stored Blueprint
+ */
+export function goalCheckSlot(blueprint: CourseBlueprint): BlueprintSlot | null {
+  return blueprintSlots(blueprint).find((slot) => slot.method === GOAL_CHECK_METHOD_ID) ?? null;
+}
+
 /** Every slot in Course order. */
 export function blueprintSlots(blueprint: CourseBlueprint): BlueprintSlot[] {
   return blueprint.modules.flatMap((module) => module.slots);
@@ -211,10 +226,11 @@ function cadenceFailures(blueprint: CourseBlueprint, cadence: QuizCadence): stri
   const rule = CADENCE_READINGS[cadence];
   for (const [moduleIndex, module] of blueprint.modules.entries()) {
     const label = `Module ${moduleIndex + 1}`;
-    if (module.slots.at(-1)?.method !== QUIZ_METHOD_ID) failures.push(`${label} must end with a Quiz so every Reading is assessed.`);
+    const taught = module.slots.filter((slot) => slot.method !== GOAL_CHECK_METHOD_ID);
+    if (taught.at(-1)?.method !== QUIZ_METHOD_ID) failures.push(`${label} must end with a Quiz so every Reading is assessed.`);
     let readings: BlueprintSlot[] = [];
     let quizzes = 0;
-    for (const slot of module.slots) {
+    for (const slot of taught) {
       if (slot.method === READING_METHOD_ID) {
         readings.push(slot);
         continue;
@@ -236,6 +252,50 @@ function cadenceFailures(blueprint: CourseBlueprint, cadence: QuizCadence): stri
 }
 
 /**
+ * Goal Check problems (SEN-81): exactly one Goal Check, as the Course's very last slot, with
+ * {@link MIN_GOAL_OBJECTIVES}–{@link MAX_GOAL_OBJECTIVES} goal objectives, each taught by at least one earlier
+ * Reading, and assessing exactly the Readings its objectives name.
+ * @param blueprint - Blueprint to check
+ */
+function goalCheckFailures(blueprint: CourseBlueprint): string[] {
+  const failures: string[] = [];
+  const slots = blueprintSlots(blueprint);
+  const checks = slots.filter((slot) => slot.method === GOAL_CHECK_METHOD_ID);
+  if (checks.length !== 1) return [`A Course ends with exactly one Goal Check, not ${checks.length}.`];
+  const slot = checks[0]!;
+  if (slots.at(-1) !== slot) failures.push("The Goal Check must be the Course's last Lesson.");
+  if (slot.objectives.length < MIN_GOAL_OBJECTIVES || slot.objectives.length > MAX_GOAL_OBJECTIVES) {
+    failures.push(`The Goal Check lists ${MIN_GOAL_OBJECTIVES}–${MAX_GOAL_OBJECTIVES} goal objectives, not ${slot.objectives.length}.`);
+  }
+  if (new Set(slot.objectives.map((objective) => objective.trim().toLowerCase())).size !== slot.objectives.length) {
+    failures.push("The Goal Check repeats a goal objective.");
+  }
+  const map = slot.objectiveSlotIds ?? {};
+  const keys = Object.keys(map);
+  if (keys.length !== slot.objectives.length || slot.objectives.some((objective) => !(objective in map))) {
+    failures.push("The Goal Check must name the teaching Readings for each of its goal objectives, and nothing else.");
+  }
+  const position = slots.indexOf(slot);
+  const named = new Set<string>();
+  for (const objective of slot.objectives) {
+    const ids = map[objective] ?? [];
+    if (ids.length === 0) failures.push(`Goal objective “${objective}” is taught by no Reading.`);
+    for (const id of ids) {
+      const index = slots.findIndex((candidate) => candidate.id === id);
+      if (index === -1 || index > position || slots[index]!.method !== READING_METHOD_ID) {
+        failures.push(`Goal objective “${objective}” names ${id}, which is not an earlier Reading.`);
+      }
+      named.add(id);
+    }
+  }
+  const assessed = new Set(slot.assessesSlotIds);
+  if (assessed.size !== named.size || [...named].some((id) => !assessed.has(id))) {
+    failures.push("The Goal Check must assess exactly the Readings its goal objectives name.");
+  }
+  return failures;
+}
+
+/**
  * Deterministic Blueprint checks (spec §6.2 Code), plus this prototype's shape: 3–6 Lessons with Quizzes placed by the
  * Learner's Quiz cadence.
  * @param blueprint - Blueprint to check
@@ -245,13 +305,14 @@ function cadenceFailures(blueprint: CourseBlueprint, cadence: QuizCadence): stri
 export function blueprintCodeFailures(blueprint: CourseBlueprint, cadence: QuizCadence): string[] {
   const failures: string[] = [];
   const slots = blueprintSlots(blueprint);
+  const lessons = slots.filter((slot) => slot.method !== GOAL_CHECK_METHOD_ID);
   if (!blueprint.courseTitle.trim()) failures.push("The Course needs a title.");
   if (blueprint.modules.some((module) => !module.title.trim() || module.slots.length === 0)) {
     failures.push("Every Module needs a title and at least one slot.");
   }
   if (new Set(slots.map((slot) => slot.id)).size !== slots.length) failures.push("Slot ids must be unique.");
-  if (slots.length < MIN_COURSE_LESSONS || slots.length > MAX_COURSE_LESSONS) {
-    failures.push(`A Course has ${MIN_COURSE_LESSONS}–${MAX_COURSE_LESSONS} Lessons, not ${slots.length}.`);
+  if (lessons.length < MIN_COURSE_LESSONS || lessons.length > MAX_COURSE_LESSONS) {
+    failures.push(`A Course has ${MIN_COURSE_LESSONS}–${MAX_COURSE_LESSONS} Lessons before its Goal Check, not ${lessons.length}.`);
   }
 
   slots.forEach((slot, index) => {
@@ -277,9 +338,10 @@ export function blueprintCodeFailures(blueprint: CourseBlueprint, cadence: QuizC
         else if (assessedIndex >= index) failures.push(`${label} assesses a slot that does not precede it.`);
         else if (slots[assessedIndex]!.method !== READING_METHOD_ID) failures.push(`${label} assesses a slot that is not a Reading.`);
       }
-    } else if (slot.assessesSlotIds.length > 0) {
+    } else if (slot.method !== GOAL_CHECK_METHOD_ID && slot.assessesSlotIds.length > 0) {
       failures.push(`${label} is not a Quiz and must not assess other slots.`);
     }
+    if (slot.method !== GOAL_CHECK_METHOD_ID && slot.objectiveSlotIds) failures.push(`${label} is not the Goal Check and must not map goal objectives.`);
 
     const visuals = slot.visuals ?? [];
     if (visuals.length && slot.method !== READING_METHOD_ID) failures.push(`${label} is not a Reading and must not plan visuals.`);
@@ -296,6 +358,7 @@ export function blueprintCodeFailures(blueprint: CourseBlueprint, cadence: QuizC
     failures.push("The Blueprint needs at least one Reading and one Quiz.");
   }
   failures.push(...chapterFailures(blueprint));
+  failures.push(...goalCheckFailures(blueprint));
   failures.push(...cadenceFailures(blueprint, cadence));
   return failures;
 }

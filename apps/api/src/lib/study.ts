@@ -1,27 +1,34 @@
 import { and, asc, eq, inArray, type SQLWrapper } from "drizzle-orm";
 import {
+  bestGoalCheckAttempt,
   bestQuizScore,
   canSwitchSequenceMode,
   courseCompletePath,
   courseCompletions,
   currentLessonId,
+  GOAL_CHECK_METHOD_ID,
+  goalCheckResult,
   isCourseComplete,
   lessonCompletions,
   lockedLessonIds,
+  parseGoalCheckBody,
   parseNumberedSources,
+  parseQuizAnswers,
   parseReadingBody,
   parseSequenceMode,
+  progressLessonIds,
   publishedLessons,
   QUIZ_METHOD_ID,
   studyPath,
   type Database,
+  type GoalCheckResult,
   type NumberedSource,
   type QuizScore,
   type SequenceMode,
 } from "@senoy/db";
 import { teachingMethodPlugin } from "../teaching-methods/index.ts";
 import { submittedScores } from "../teaching-methods/quiz.ts";
-import type { CourseRow, LessonRow, ModuleRow, StudyStore } from "./study-store.ts";
+import type { CourseRow, LessonRow, ModuleRow, QuizAttemptRow, StudyStore } from "./study-store.ts";
 import { recordProductEvent } from "./usage-tracking.ts";
 
 /** One Lesson in the Study list. */
@@ -50,7 +57,8 @@ export type StudyModule = {
 /** Published Course payload for Study chrome. */
 export type StudyCoursePayload = {
   /** `completedAt` is set once every Lesson is complete. */
-  course: { id: string; title: string; sequenceMode: SequenceMode; completedAt: string | null };
+  course: { id: string; title: string; learningGoal: string; sequenceMode: SequenceMode; completedAt: string | null };
+  /** Every Lesson but the Goal Check, which sits outside Progress (decision 2026-11-04). */
   progress: { completed: number; total: number };
   currentLessonId: string;
   modules: StudyModule[];
@@ -134,8 +142,8 @@ export function studyPayload(context: CourseContext): StudyCoursePayload | null 
   }
 
   return {
-    course: { id: course.id, title: course.title, sequenceMode, completedAt: completedAt?.toISOString() ?? null },
-    progress: { completed: completedIds.size, total: lessons.length },
+    course: { id: course.id, title: course.title, learningGoal: course.learningGoal, sequenceMode, completedAt: completedAt?.toISOString() ?? null },
+    progress: progressCounts(lessons, completedIds),
     currentLessonId: current,
     modules: modules.map((row) => ({
       id: row.id,
@@ -144,6 +152,38 @@ export function studyPayload(context: CourseContext): StudyCoursePayload | null 
       lessons: lessonsByModule.get(row.id) ?? [],
     })),
   };
+}
+
+/**
+ * Progress counts: completed and total over every Lesson but the Goal Check.
+ * @param lessons - Lessons of the Course
+ * @param completedIds - This Learner's completed Lessons
+ */
+function progressCounts(
+  lessons: readonly { id: string; teachingMethod: string }[],
+  completedIds: ReadonlySet<string>,
+): { completed: number; total: number } {
+  const ids = progressLessonIds(lessons);
+  return { completed: ids.filter((id) => completedIds.has(id)).length, total: ids.length };
+}
+
+/**
+ * A Goal Check's result from this Learner's best scored attempt.
+ * @param lesson - The Goal Check Lesson
+ * @param attempts - Its stored attempts
+ * @returns The result, or null before the first Submit or when the body is not a valid Goal Check
+ */
+export function goalCheckResultOf(lesson: LessonRow, attempts: readonly QuizAttemptRow[]): GoalCheckResult | null {
+  const body = parseGoalCheckBody(lesson.body);
+  if (!body) return null;
+  const scored = attempts.flatMap((row) =>
+    row.status === "submitted" && row.correct != null && row.total != null
+      ? [{ row, score: { correct: row.correct, total: row.total } }]
+      : [],
+  );
+  const best = bestGoalCheckAttempt(scored);
+  if (!best) return null;
+  return goalCheckResult(body, parseQuizAnswers(best.row.answers, body), lesson.objectives ?? [], lesson.objectiveLessonIds ?? {});
 }
 
 /**
@@ -201,6 +241,8 @@ export type CourseSummary = {
     lessons: { id: string; title: string; lessonGoal: string; teachingMethod: string }[];
   }[];
   quizzes: CourseSummaryQuiz[];
+  /** The Course's Goal Check and its result on the best attempt; null on a Course without one (before SEN-81). */
+  goalCheck: { lessonId: string; result: GoalCheckResult | null } | null;
 };
 
 /** Result of loading the Course-complete screen. */
@@ -225,7 +267,14 @@ export async function loadCourseSummary(
     const { course, modules, lessons, completedAt } = context;
     if (!completedAt) return { ok: false, status: 409, error: "This Course is not complete yet." };
 
-    const quizzes: CourseSummaryQuiz[] = await Promise.all(
+    const goalLesson = lessons.find((row) => row.teachingMethod === GOAL_CHECK_METHOD_ID) ?? null;
+    const goalCheckPromise = goalLesson
+      ? store.listQuizAttempts(learnerId, goalLesson.id).then((attempts) => ({
+        lessonId: goalLesson.id,
+        result: goalCheckResultOf(goalLesson, attempts),
+      }))
+      : Promise.resolve(null);
+    const quizzesPromise: Promise<CourseSummaryQuiz[]> = Promise.all(
       lessons
         .filter((row) => row.teachingMethod === QUIZ_METHOD_ID)
         .map(async (row) => ({
@@ -234,6 +283,7 @@ export async function loadCourseSummary(
           best: bestQuizScore(submittedScores(await store.listQuizAttempts(learnerId, row.id))),
         })),
     );
+    const [quizzes, goalCheck] = await Promise.all([quizzesPromise, goalCheckPromise]);
 
     return {
       ok: true,
@@ -252,6 +302,7 @@ export async function loadCourseSummary(
             .map(({ id, title, lessonGoal, teachingMethod }) => ({ id, title, lessonGoal, teachingMethod })),
         })),
         quizzes,
+        goalCheck,
       },
     };
   } catch (error) {
@@ -289,6 +340,7 @@ export async function studyLinksByCourseId(
         .select({
           id: publishedLessons.id,
           publishedCourseId: publishedLessons.publishedCourseId,
+          teachingMethod: publishedLessons.teachingMethod,
           completedLessonId: lessonCompletions.lessonId,
         })
         .from(publishedLessons)
@@ -303,23 +355,23 @@ export async function studyLinksByCourseId(
     const completedIds = new Set(lessonRows.flatMap((row) => (row.completedLessonId ? [row.completedLessonId] : [])));
     const completedCourseIds = new Set(courseCompletionRows.map((row) => row.courseId));
 
-    const lessonsByCourse = new Map<string, string[]>();
+    const lessonsByCourse = new Map<string, { id: string; teachingMethod: string }[]>();
     for (const row of lessonRows) {
       const list = lessonsByCourse.get(row.publishedCourseId) ?? [];
-      list.push(row.id);
+      list.push({ id: row.id, teachingMethod: row.teachingMethod });
       lessonsByCourse.set(row.publishedCourseId, list);
     }
 
     const links = new Map<string, CourseStudyLink>();
     for (const courseId of new Set([...lessonsByCourse.keys(), ...completedCourseIds])) {
       const ordered = lessonsByCourse.get(courseId) ?? [];
-      const completed = ordered.filter((id) => completedIds.has(id)).length;
-      const current = currentLessonId(ordered, completedIds);
+      const { completed, total } = progressCounts(ordered, completedIds);
+      const current = currentLessonId(ordered.map((row) => row.id), completedIds);
       const courseCompleted = completedCourseIds.has(courseId);
       links.set(courseId, {
         href: courseCompleted ? courseCompletePath(courseId) : current ? studyPath(courseId, current) : null,
         completed,
-        total: ordered.length,
+        total,
         courseCompleted,
       });
     }

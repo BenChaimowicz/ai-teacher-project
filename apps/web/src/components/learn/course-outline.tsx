@@ -1,6 +1,7 @@
 import { useMemo } from "react";
+import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
 import { QUIZ_METHOD_ID } from "@senoy/db/reading-lesson";
-import { BookA, Check, Lock } from "lucide-react";
+import { BookA, Check, Flag, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { collectCourseWords } from "@/components/learn/words.ts";
 import { CourseIcon } from "@/components/ui/course-icon.tsx";
@@ -9,6 +10,7 @@ import { pickCourseIcon } from "@/lib/brand-marks.ts";
 import type { StudyLesson, StudyPayload } from "@/lib/study-types.ts";
 import { cn } from "@/lib/utils";
 import "@/components/learn/learn.css";
+import "@/components/learn/goal-check.css";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -35,22 +37,28 @@ type CourseOutlineProps = {
 };
 
 /**
- * The Course page in the Study sidebar: icon, title, progress, every Lesson with its state, and a last row to the
- * Course's Words page with how many words are open.
+ * The Course page in the Study sidebar: icon, title, progress, every Lesson with its state, then the Goal Check on a
+ * row of its own (outside Progress, so unnumbered and not a segment), and a last row to the Course's Words page with
+ * how many words are open.
  *
  * Rendered from the payload's modules and lessons, in order, with no assumptions about a fixed plan,
  * so a path that changes (a lesson added or removed by the Adaptive Course project) just re-renders.
  * Lessons the server marks as added can show a "new" tag once the payload carries that flag.
  */
 export function CourseOutline({ payload, activeLessonId, sections = [], sectionsRead = [], activeWords = false }: CourseOutlineProps) {
-  const lessons = payload.modules.flatMap((module) => module.lessons);
+  const all = payload.modules.flatMap((module) => module.lessons);
+  const lessons = all.filter((lesson) => lesson.teachingMethod !== GOAL_CHECK_METHOD_ID);
+  const goalChecks = all.filter((lesson) => lesson.teachingMethod === GOAL_CHECK_METHOD_ID);
+  const modules = payload.modules
+    .map((module) => ({ ...module, lessons: module.lessons.filter((lesson) => lesson.teachingMethod !== GOAL_CHECK_METHOD_ID) }))
+    .filter((module) => module.lessons.length > 0);
   const wordCount = useMemo(() => collectCourseWords(payload).count, [payload]);
   const quizzes = lessons.filter((lesson) => lesson.teachingMethod === QUIZ_METHOD_ID);
   const quizzesPassed = quizzes.filter((lesson) => lesson.completed).length;
   const segments: SegmentState[] = lessons.map((lesson) =>
     lesson.completed ? "done" : lesson.id === activeLessonId ? "now" : "todo",
   );
-  const showModules = payload.modules.length > 1;
+  const showModules = modules.length > 1;
   let number = 0;
 
   return (
@@ -83,7 +91,7 @@ export function CourseOutline({ payload, activeLessonId, sections = [], sections
         ) : null}
       </p>
       <SegmentedProgress segments={segments} label={`${payload.progress.completed} of ${payload.progress.total} lessons done`} />
-      {payload.modules.map((module) => (
+      {modules.map((module) => (
         <div key={module.id}>
           {showModules ? <p className="l-mod">{module.title}</p> : null}
           <ul className="l-ol">
@@ -140,6 +148,40 @@ export function CourseOutline({ payload, activeLessonId, sections = [], sections
           </ul>
         </div>
       ))}
+      {goalChecks.length > 0 ? (
+        <ul className="l-ol l-goal-row" aria-label="Goal Check">
+          {goalChecks.map((lesson) => {
+            const state = lessonState(lesson, activeLessonId);
+            const inner = (
+              <>
+                <span className="idx" aria-hidden="true" />
+                <span className="ic">{lesson.completed ? <Check /> : lesson.locked ? <Lock aria-label="Locked" /> : <Flag aria-hidden="true" />}</span>
+                <span className="t" title={lesson.title} aria-disabled={lesson.locked || undefined}>
+                  Goal Check
+                </span>
+                <span className="tag goal">goal</span>
+              </>
+            );
+            return (
+              <li key={lesson.id} className={state}>
+                {lesson.locked ? (
+                  <div className="row" title="Locked until you pass the Quiz before it">
+                    {inner}
+                  </div>
+                ) : (
+                  <Link
+                    to={`/study/${payload.course.id}/lessons/${lesson.id}`}
+                    className="row"
+                    aria-current={lesson.id === activeLessonId ? "page" : undefined}
+                  >
+                    {inner}
+                  </Link>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
       <ul className="l-ol l-words-row" aria-label="Course pages">
         <li className={cn(activeWords && "now")}>
           <Link to={`/study/${payload.course.id}/words`} className="row" aria-current={activeWords ? "page" : undefined}>

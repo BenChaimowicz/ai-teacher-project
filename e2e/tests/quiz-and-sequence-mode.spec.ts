@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   SEEDED_COURSE_ID,
   SEEDED_FOLLOW_UP_LESSON_ID,
+  SEEDED_GOAL_CHECK_LESSON_ID,
   SEEDED_QUIZ_BODY,
   SEEDED_QUIZ_LESSON_ID,
   SEEDED_READING_LESSON_ID,
@@ -143,10 +144,10 @@ test("Free jump: disclaimer, later Lessons open before a pass, no way back to li
   const lessons = await openLessons(page);
   await lessons.getByRole("link", { name: FOLLOW_UP_TITLE }).click();
   await expect(page).toHaveURL(lessonUrl(SEEDED_FOLLOW_UP_LESSON_ID));
-  // After the last Lesson, "I've read it" opens the first Lesson still open, in the same click.
-  await page.getByRole("button", { name: "I've read it, next lesson" }).click();
+  // After the last Reading, "I've read it" opens the Goal Check after it, in the same click; it is open in free jump.
+  await page.getByRole("button", { name: "I've read it, start the goal check" }).click();
   await expect(page.getByText("The square knot · 1 / 3")).toBeVisible();
-  await expect(page).toHaveURL(lessonUrl(SEEDED_READING_LESSON_ID));
+  await expect(page).toHaveURL(lessonUrl(SEEDED_GOAL_CHECK_LESSON_ID));
 
   await page.getByRole("button", { name: "Course menu" }).click();
   await expect(page.getByRole("menuitem", { name: "Switch to free jump" })).toHaveCount(0);

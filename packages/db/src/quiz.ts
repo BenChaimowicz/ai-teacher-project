@@ -27,13 +27,17 @@ export type QuizOption = {
  */
 export type QuizExplanations = Record<FeedbackDepth, string>;
 
-/** One single-correct, four-option Quiz item. */
+/**
+ * One single-correct, four-option Quiz item. `objective` is set only on a Goal Check item (SEN-81), naming the goal
+ * objective it checks; a Quiz item never carries it.
+ */
 export type QuizItem = {
   id: string;
   prompt: string;
   options: QuizOption[];
   correctOptionId: string;
   explanations: QuizExplanations;
+  objective?: string;
 };
 
 /** Method-private body of a Quiz Lesson. */
@@ -104,6 +108,7 @@ function parseItem(raw: unknown): QuizItem | null {
     options?: unknown;
     correctOptionId?: unknown;
     explanations?: unknown;
+    objective?: unknown;
   };
   if (!isNonEmptyString(row.id) || !isNonEmptyString(row.prompt)) return null;
   if (!Array.isArray(row.options) || row.options.length !== QUIZ_OPTION_COUNT) return null;
@@ -127,7 +132,31 @@ function parseItem(raw: unknown): QuizItem | null {
     options: valid,
     correctOptionId: row.correctOptionId,
     explanations,
+    ...(isNonEmptyString(row.objective) ? { objective: row.objective.trim() } : {}),
   };
+}
+
+/**
+ * Reads the items of a Quiz-shaped body. Any invalid item, a repeated item id, or an item count outside `min`–`max`
+ * makes the whole list null. Shared by the Quiz and the Goal Check (SEN-81).
+ * @param raw - `published_lessons.body`
+ * @param min - Fewest items allowed
+ * @param max - Most items allowed
+ */
+export function parseQuizItems(raw: unknown, min: number, max: number): QuizItem[] | null {
+  try {
+    if (!raw || typeof raw !== "object") return null;
+    const row = raw as { items?: unknown };
+    if (!Array.isArray(row.items)) return null;
+    if (row.items.length < min || row.items.length > max) return null;
+    const items = row.items.map((item) => parseItem(item));
+    if (items.some((item) => item == null)) return null;
+    const valid = items as QuizItem[];
+    if (new Set(valid.map((item) => item.id)).size !== valid.length) return null;
+    return valid;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -135,19 +164,8 @@ function parseItem(raw: unknown): QuizItem | null {
  * @param raw - `published_lessons.body`
  */
 export function parseQuizBody(raw: unknown): QuizBody | null {
-  try {
-    if (!raw || typeof raw !== "object") return null;
-    const row = raw as { items?: unknown };
-    if (!Array.isArray(row.items)) return null;
-    if (row.items.length < QUIZ_MIN_ITEMS || row.items.length > QUIZ_MAX_ITEMS) return null;
-    const items = row.items.map((item) => parseItem(item));
-    if (items.some((item) => item == null)) return null;
-    const valid = items as QuizItem[];
-    if (new Set(valid.map((item) => item.id)).size !== valid.length) return null;
-    return { items: valid };
-  } catch {
-    return null;
-  }
+  const items = parseQuizItems(raw, QUIZ_MIN_ITEMS, QUIZ_MAX_ITEMS);
+  return items ? { items } : null;
 }
 
 /**

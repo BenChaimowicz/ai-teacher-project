@@ -20,7 +20,7 @@ const lesson = (id: string, title: string, method: "reading" | "quiz", completed
 });
 
 const PAYLOAD: StudyPayload = {
-  course: { id: "demo", title: "Norse mythology", sequenceMode: "linear", completedAt: null },
+  course: { id: "demo", title: "Norse mythology", learningGoal: "Retell the main Norse myths", sequenceMode: "linear", completedAt: null },
   progress: { completed: 2, total: 5 },
   currentLessonId: "l3",
   modules: [

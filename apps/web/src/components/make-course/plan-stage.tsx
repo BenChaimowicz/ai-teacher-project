@@ -2,6 +2,7 @@ import { Check, Home, Lightbulb, Pencil, Play, RefreshCw, SkipForward, Sparkles,
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { IrrelevantReason } from "@senoy/db/blueprint";
+import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
 import type { SequenceMode } from "@senoy/db/sequence-mode";
 import { ThreadEnd, WorkingLine, useAutoStep } from "@/components/make-course/flow.tsx";
 import { MakingCard } from "@/components/make-course/making-card.tsx";
@@ -206,7 +207,8 @@ export function PlanStage({ record }: { record: CourseRequestRecord }) {
 
   // ---------- reviewing the plan ----------
   if (record.status === "blueprint_review" && !view.approved) {
-    const slotCount = view.blueprint.modules.reduce((sum, module) => sum + module.slots.length, 0);
+    // The Goal Check cannot be unticked (SEN-81), so "all out" counts only the Lessons that can.
+    const slotCount = view.blueprint.modules.reduce((sum, module) => sum + module.slots.filter((slot) => slot.method !== GOAL_CHECK_METHOD_ID).length, 0);
     const allOut = unticked.size >= slotCount;
     const reviewTiles: OptionTile[] = unticked.size === 0
       ? [{ id: "make", label: "Make my course", description: "Up to half an hour; you can leave while I write", icon: <Sparkles />, tone: "primary" }]

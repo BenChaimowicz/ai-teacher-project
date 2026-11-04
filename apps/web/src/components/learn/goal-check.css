@@ -1,0 +1,50 @@
+/* Goal Check (SEN-81): its row in the Course outline, the result card's extras, and the "not met" feedback form. */
+
+/* Outline: the Goal Check sits on its own row after the Lessons, before Words. Outside Progress, so no number. */
+.l-ol.l-goal-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.l-ol.l-goal-row .ic { color: var(--gold); }
+.l-ol.l-goal-row .ic svg { width: 12px; height: 12px; }
+.l-ol.l-goal-row li.done .ic { color: var(--a); }
+.l-ol.l-goal-row li.now .ic::after { display: none; }
+.l-ol .tag.goal { color: var(--on-a); background: var(--gold); font-weight: 600; }
+.l-ol.l-goal-row + .l-ol.l-words-row { margin-top: 2px; padding-top: 0; border-top: 0; }
+
+/* Result card: the score card, tinted by outcome. Met wears the passed gold (`.pass`). */
+.l-score.l-goal.partly_met { box-shadow: inset 0 0 0 1px rgba(var(--b-rgb), 0.4), var(--sheet); }
+.l-score.l-goal.partly_met .l-sc-num b { color: var(--b); }
+.l-score.l-goal.not_met .l-sc-label { color: var(--text); }
+.l-goal-aim { display: flex; gap: 10px; align-items: baseline; margin-top: 16px; padding: 10px 12px; border-radius: 10px; background: var(--well); box-shadow: var(--recess); }
+.l-goal-aim .k { flex: none; font-family: var(--font-label); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--a); }
+.l-goal-aim .g { min-width: 0; font-size: 0.92rem; line-height: 1.4; overflow-wrap: anywhere; }
+
+/* Missed objectives, each with links back to the Lessons that teach it. */
+.l-goal-miss { margin-top: 16px; }
+.l-goal-miss .h { font-family: var(--font-label); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+.l-goal-miss ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+.l-goal-miss li { padding: 10px 12px; border-radius: 10px; background: var(--panel-2); box-shadow: var(--hairline); animation: k-pop 0.4s var(--ease-pop) backwards; animation-delay: calc(var(--i, 0) * 70ms + 200ms); }
+.l-goal-miss .o { display: block; font-size: 0.9rem; font-weight: 600; line-height: 1.35; }
+.l-goal-miss .ls { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; }
+.l-goal-miss .lk { display: inline-flex; align-items: center; gap: 5px; font-size: 0.82rem; color: var(--a); text-decoration: none; }
+.l-goal-miss .lk:hover { text-decoration: underline; }
+.l-goal-miss .lk svg { width: 13px; height: 13px; flex: none; }
+.l-done .l-goal-miss { margin-top: 12px; }
+
+/* "Not met" feedback: toggles with a tick box, a text box for "Something else", then Send. */
+.l-gfb { margin: 10px 0 6px 46px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 640px) { .l-gfb { margin-left: 0; grid-template-columns: 1fr; } }
+.l-gfb .k-tile { box-shadow: var(--stack); }
+.l-gfb .k-tile .box { width: 20px; height: 20px; border-radius: 5px; flex: none; display: grid; place-items: center; color: var(--on-a); background: var(--well); box-shadow: var(--inset); transition: background var(--dur-fast); }
+.l-gfb .k-tile .box svg { width: 13px; height: 13px; opacity: 0; }
+.l-gfb .k-tile[aria-pressed="true"] { transform: translateY(-3px); background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--a-line), var(--stack); }
+.l-gfb .k-tile[aria-pressed="true"] .box { background: var(--a); box-shadow: none; }
+.l-gfb .k-tile[aria-pressed="true"] .box svg { opacity: 1; }
+.l-gfb .k-tile.send { grid-column: 1 / -1; box-shadow: 0 3px 0 var(--a-deep); }
+.l-gfb .k-tile.send:disabled { opacity: 0.55; box-shadow: none; transform: none; }
+.l-gfb.locked { pointer-events: none; opacity: 0.8; }
+.l-gfb-other { grid-column: 1 / -1; position: relative; }
+.l-gfb-other .cnt { position: absolute; right: 12px; bottom: 8px; font-family: var(--font-label); font-size: 0.62rem; color: var(--faint); }
+
+/* Course complete: the Goal Check ribbon in the hero, and the "your goal" section above what was covered. */
+.l-done-hero .k-rib.l-goal-rib { display: inline-flex; margin-top: 12px; }
+.l-goal-done-t { margin-top: 10px; font-size: 0.95rem; line-height: 1.5; color: var(--text-muted); }
+.l-goal-done-t b { font-family: var(--font-display); font-weight: var(--weight-display); font-size: 1.3rem; color: var(--text); margin-right: 6px; }

@@ -1,6 +1,9 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import type { SourcePack } from "@senoy/research";
+import { GOAL_CHECK_MIN_ITEMS } from "@senoy/db/goal-check";
+import { goalCheckCodeFailures } from "@senoy/db/lesson-checkpoint";
 import { createCourseGeneration, type CourseGeneration } from "./course-generation.ts";
+import { GoalCheckFailedError } from "./goal-check-generation.ts";
 import { allSupported } from "./objective-grounding.ts";
 import { ReadingFailedError } from "./reading-generation.ts";
 
@@ -12,6 +15,31 @@ const SOURCE_URL = "https://en.wikipedia.org/w/index.php?oldid=1";
 
 /** How many items the fixture Quiz asks. */
 export const FIXTURE_QUIZ_ITEMS = 5;
+
+/** How many items the fixture Goal Check asks: the fewest a Goal Check may hold (SEN-81). */
+export const FIXTURE_GOAL_CHECK_ITEMS = GOAL_CHECK_MIN_ITEMS;
+
+/**
+ * The fixture's four-option items: the correct option reads "Right answer n", the others "Wrong answer n…".
+ * @param count - How many items
+ */
+function fixtureItems(count: number) {
+  return Array.from({ length: count }, (_, index) => {
+    const n = index + 1;
+    return {
+      id: `item${n}`,
+      prompt: `Fixture question ${n}?`,
+      options: [
+        { id: "opt1", text: `Wrong answer ${n}a`, why: `Fixture why ${n}a.` },
+        { id: "opt2", text: `Right answer ${n}`, why: `Fixture why ${n}.` },
+        { id: "opt3", text: `Wrong answer ${n}b`, why: `Fixture why ${n}b.` },
+        { id: "opt4", text: `Wrong answer ${n}c`, why: `Fixture why ${n}c.` },
+      ],
+      correctOptionId: "opt2",
+      explanations: { brief: `Brief ${n}.`, standard: `Standard ${n}.`, detailed: `Detailed ${n}.` },
+    };
+  });
+}
 
 /** A Learning Goal containing this fails each Reading's first attempt, so browser tests can see a failure and Retry. */
 export const FAIL_ONCE_MARKER = "[fail-once]";
@@ -32,7 +60,7 @@ function fixturePacks(topic: string): SourcePack[] {
 /**
  * Deterministic Course generation for browser tests (`DIAGNOSTIC_FIXTURE=1`): no research, research-tier, or provider calls. The real
  * pipeline runs — checkpoints, whole-Course Code checks, and atomic publish — with fixed research, Generators, and Judge.
- * Each Quiz item's correct option reads "Right answer n"; the others read "Wrong answer n…".
+ * Each Quiz and Goal Check item's correct option reads "Right answer n"; the others read "Wrong answer n…".
  * @param lessonDelayMs - How long each Lesson takes, so browser tests can see a job mid-run
  */
 export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGeneration {
@@ -95,25 +123,26 @@ export function createFixtureCourseGeneration(lessonDelayMs = 0): CourseGenerati
           lesson: {
             slotId: slot.id, teachingMethod: "quiz", title: slot.title, lessonGoal: slot.lessonGoal,
             objectives: slot.objectives, topicTags: slot.topicTags, lineage: null, sources: [], citations: [],
-            body: {
-              items: Array.from({ length: FIXTURE_QUIZ_ITEMS }, (_, index) => {
-                const n = index + 1;
-                return {
-                  id: `item${n}`,
-                  prompt: `Fixture question ${n}?`,
-                  options: [
-                    { id: "opt1", text: `Wrong answer ${n}a`, why: `Fixture why ${n}a.` },
-                    { id: "opt2", text: `Right answer ${n}`, why: `Fixture why ${n}.` },
-                    { id: "opt3", text: `Wrong answer ${n}b`, why: `Fixture why ${n}b.` },
-                    { id: "opt4", text: `Wrong answer ${n}c`, why: `Fixture why ${n}c.` },
-                  ],
-                  correctOptionId: "opt2",
-                  explanations: { brief: `Brief ${n}.`, standard: `Standard ${n}.`, detailed: `Detailed ${n}.` },
-                };
-              }),
-            },
+            body: { items: fixtureItems(FIXTURE_QUIZ_ITEMS) },
           },
         };
+      },
+    },
+    // Each item checks the slot's goal objectives in turn, so every one is checked, whatever the fixture Blueprint lists.
+    goalCheckGenerator: {
+      async generate({ slot, slots, assessed }) {
+        await sleep(lessonDelayMs);
+        const lesson = {
+          slotId: slot.id, teachingMethod: "goal_check" as const, title: slot.title, lessonGoal: slot.lessonGoal,
+          objectives: slot.objectives, topicTags: slot.topicTags, lineage: null, sources: [], citations: [],
+          body: {
+            items: fixtureItems(Math.max(FIXTURE_GOAL_CHECK_ITEMS, slot.objectives.length))
+              .map((item, index) => ({ ...item, objective: slot.objectives[index % slot.objectives.length]! })),
+          },
+        };
+        const failures = goalCheckCodeFailures(lesson, slots, new Set(assessed.map((reading) => reading.slotId)));
+        if (failures.length) throw new GoalCheckFailedError(failures, null, lesson);
+        return { judge: PASS, repairs: 0, authorModelIds: ["fixture/author"], judgeModelId: "fixture/judge", rounds: [], lesson };
       },
     },
     courseJudge: { async judge() { return PASS; } },

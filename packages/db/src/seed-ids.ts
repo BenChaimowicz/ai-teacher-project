@@ -15,3 +15,6 @@ export const SEEDED_QUIZ_LESSON_ID = "c0a1e001-0000-4000-8000-000000000004";
 
 /** Stable id for the seeded reading Lesson after the Quiz. */
 export const SEEDED_FOLLOW_UP_LESSON_ID = "c0a1e001-0000-4000-8000-000000000005";
+
+/** Stable id for the seeded Goal Check, the fixture Course's last Lesson (SEN-81). */
+export const SEEDED_GOAL_CHECK_LESSON_ID = "c0a1e001-0000-4000-8000-000000000006";

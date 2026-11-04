@@ -138,7 +138,9 @@ Only a published Course. Land on the current Lesson (no Course overview first). 
 - **Reading:** reading sections, Demonstrative media, the Sources (opening with the one the Lesson cites most under a "start here" ribbon, decision 2026-11-03), then the companion's end-of-Lesson prompt, the completion action: **I've read it, next lesson** (or **start the quiz**, or **finish the course**) completes the Lesson and opens what comes next in the same click (decision 2026-11-03); **Not yet, stay here** keeps the Lesson. Opening or partial reading does not complete. With `sectionAdvance = manual`, pause after each section until Continue; with `continuous`, scroll. Never auto-advance to the next Lesson: moving on is always the Learner's click.
 - **Quiz:** shown one item at a time in the chat-like format; draft until Submit; every item must have an answer; untimed; open-book (completed Lessons stay revisitable). With `feedbackTiming = per_item`, each item has **Check**, which locks that answer and shows right/wrong together with the correct answer, its explanation, and one sentence under each option saying why it is right or wrong (decision 2026-11-03; a wrong pick shakes and the right one lights up; there is no separate Show answer step); Submit waits until every item is checked. With `end_of_quiz`, right/wrong, the correct answers, explanations, and the per-option sentences all arrive with Submit. Retake in place; seeing answers does not block retakes. An attempt keeps the timing it started with. The draft is saved on the server; grading is server-side, and an item's answer key reaches the browser only in the response that gives that item feedback (its Check, or Submit), never before the Learner has answered it. (Changed by SEN-88: previously the Learner opened answers with **Show answer**, only while the best score was under 100%.)
 
-Progress is completed Lessons / total Lessons. Opening does not complete. Progress never drops.
+- **Goal Check** (SEN-81, decisions 2026-11-04): the Course's last Lesson, played in the Quiz player with the same rules (drafts, Check, Submit, Retake, best score kept). After Submit, the result reads against the Learning Goal: **met** (best `correct / n ≥ 0.70`), **partly met** (≥ 0.50), or **not met**, with the goal objectives the best attempt missed and links back to the Lessons that teach them. Only **not met** then asks what was missing (pick one or more of: too advanced for me, too basic, missing a topic I needed, too theoretical, something else with free text) and offers two next steps: a new Course Request prefilled with the subject and what was missing, or nothing for now. The current Course is never extended.
+
+Progress is completed Lessons / total Lessons, not counting the Goal Check. Opening does not complete. Progress never drops.
 
 ### Sequence mode and Lesson completion
 
@@ -148,7 +150,7 @@ Sequence mode is Course-level. Default: linear unlock; completed Lessons revisit
 - Free jump: later Lessons stay open.
 - Progress waits on a Quiz pass in both modes (best score `correct / n ≥ 0.70`).
 
-A reading Lesson completes when the Learner reaches the end and marks it complete. A Quiz completes when best score is at least 70%.
+A reading Lesson completes when the Learner reaches the end and marks it complete. A Quiz completes when best score is at least 70%. The Goal Check completes on its first scored attempt, whatever the score, so a Course completes once every Lesson is complete and the Goal Check has been taken; the met / partly met / not met result, not completion, says whether the goal was reached. In linear mode the Goal Check opens once every Quiz before it is passed.
 
 Provenance: [Redesign: inspiration and direction](https://linear.app/senoy/issue/SEN-52/redesign-inspiration-and-direction), [UI scope (screens)](https://linear.app/senoy/issue/SEN-10/ui-scope-screens), [Level-to-course mapping](https://linear.app/senoy/issue/SEN-12/level-to-course-mapping), [Quiz mechanics](https://linear.app/senoy/issue/SEN-13/quiz-mechanics), [Plugin contract](https://linear.app/senoy/issue/SEN-14/plugin-contract), [Runtime generation](https://linear.app/senoy/issue/SEN-15/runtime-generation), [Decide product name](https://linear.app/senoy/issue/SEN-51/decide-product-name).
 
@@ -314,7 +316,9 @@ Scaffolding *dosage* (worked-example amount, tighter sequencing) follows Startin
 
 The generator is told subject, Learning Goal, Goal scope (when focused), Starting Level (its capabilities, not the Learner-facing remaining-gap statement, which reads as a Lesson order), and the write-time Teaching Profile fields the Blueprint consumes (including `quizCadence`). No slot, title, Lesson goal, or objective teaches an out-of-scope facet, and the sequence reaches the focused goal within its scope. It designs the Module and Lesson sequence for that remaining gap alone: what the whole Learning Goal needs that the Learner does not yet have. The diagnostic's probed capabilities sample the goal; they do not list it, so a Blueprint teaches the missed probes and whatever else the goal clearly needs, and skips only what the diagnostic evidenced. There is no canonical novice→goal outline and no unpublished prefix, but a subject with a natural internal order (a narrative corpus, a history, a process) is taught in that order unless a prerequisite requires otherwise. Remaining-gap scope lives on the Blueprint; Lessons have no difficulty score.
 
-Each slot: title, Lesson goal, non-empty objectives, registered teaching method (`reading` or `quiz`), 2–5 Topic tags (lowercase slugs from the slot’s objectives; no closed taxonomy). A Reading slot also names its Chapter: consecutive Readings with the same chapter (at most four, at most six Chapters in a Course) are one topic, researched once and drafted together, and no Quiz sits between them; each Reading is about one screen, one idea (decision 2026-11-03). A Reading slot also plans its **visuals** (SEN-121, decision 2026-11-03): at most two, each a kind (`depiction`, `diagram`, or `technique`) and one sentence of intent, planned the way a teacher plans what to draw on the board, so a picture is the norm, not the exception; a visual that cannot be made or found is left out and never fails the Lesson. Learner review never shows them. A Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it) and lists 1–10 objectives. No two slots share a Lesson goal. At least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal.
+Each slot: title, Lesson goal, non-empty objectives, registered teaching method (`reading` or `quiz`), 2–5 Topic tags (lowercase slugs from the slot’s objectives; no closed taxonomy). A Reading slot also names its Chapter: consecutive Readings with the same chapter (at most four, at most six Chapters in a Course) are one topic, researched once and drafted together, and no Quiz sits between them; each Reading is about one screen, one idea (decision 2026-11-03). A Reading slot also plans its **visuals** (SEN-121, decision 2026-11-03): at most two, each a kind (`depiction`, `diagram`, or `technique`) and one sentence of intent, planned the way a teacher plans what to draw on the board, so a picture is the norm, not the exception; a visual that cannot be made or found is left out and never fails the Lesson. Learner review never shows them. A Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it) and lists 1–10 objectives. No two slots share a Lesson goal.
+
+Every Blueprint ends with one **Goal Check** slot (method `goal_check`, SEN-81), the Course's very last Lesson. Its objectives are 2–6 **goal objectives**: the parts of the Learning Goal this Learner still has to reach, planned from the Learning Goal and Starting Level, not from the last chunk of Lessons. Each goal objective names the Reading slots that teach it, and the Goal Check assesses exactly those Readings. It is not counted in the 3–30 Lessons, sits outside the Quiz cadence, and plans no visuals. Learner review shows it, but it cannot be marked irrelevant. At least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal.
 
 For named-work goals, the Blueprint deconstructs the Learning Goal into generic skill Lessons that do not belong to the work. Lesson titles and Lesson goals may name the work as the destination so the Learner can judge relevance. Generation fills those slots; it does not invent a transcription and does not silently rewrite a slot mid-job.
 
@@ -349,7 +353,7 @@ Approved full-Course generation is a durable Postgres-backed job. One active job
 1. Research is scoped per Chapter (a run of one to four consecutive Readings on one topic; decision 2026-11-03), and the Readings of a Chapter are drafted in one author call. Each is then checked, judged, and repaired on its own, sequentially in Blueprint order, carrying forward summaries, established terminology, and prior commitments. Course coherence is prioritized over parallel generation.
 2. Each Lesson's objectives are grounded in its material before it is written: a Reading's against its vetted Sources' excerpts, a Quiz's against the Lessons it assesses. An objective asserting what the material does not support is softened to what it does, or dropped; what survives is what the Lesson is written and judged against, and what its checkpoint records. The approved Blueprint is not rewritten (ADR 0022).
 3. Whether a Reading slot reuses a published Lesson is decided before research, and a reused Lesson is fitted to its slot during sequential generation (§5.8). Quizzes are never reuse candidates.
-4. Each Quiz is generated only after the instructional Lessons it assesses are finalized, using both their content and its grounded Blueprint objectives.
+4. Each Quiz is generated only after the instructional Lessons it assesses are finalized, using both their content and its grounded Blueprint objectives. The Goal Check is generated last, from every Reading its goal objectives name, the Learning Goal, and the Starting Level.
 5. Validation runs during generation and again across the finished Course (§6).
 6. Non-structural defects use targeted repair: regenerate the earliest defective Lesson and affected downstream Lessons or Quizzes, then revalidate.
 7. Publication is atomic. Intermediate artifacts are not playable.
@@ -427,7 +431,7 @@ Domain operations: `generateCitedReading` then `generateStructured`. Generate th
 
 A teaching method is a developer-registered **Teaching-method plugin**, not a Learner marketplace and not a hot-loaded package. Adding a method is a code change that registers: a stable method id; **generate**, **validate**, **render**, and **complete**; and which Teaching Profile fields it uses **when writing** versus **when showing**.
 
-This prototype ships `reading` and `quiz`.
+This prototype ships `reading`, `quiz`, and `goal_check`.
 
 **Shared Lesson envelope:** Course, Blueprint slot, teaching method, title, Lesson goal, objectives, Topic tags, Lesson lineage, Sources, Citations. Generate also receives the Course Learning Goal, prior-Lesson Course context, only the write-time Teaching Profile fields this method declared, retrieved Sources or a reuse candidate, and — for a Quiz — the instructional Lessons it assesses. It returns one finished Lesson (envelope + method body). The Learner cannot open it until the Course publishes atomically.
 
@@ -436,6 +440,8 @@ The reading and Quiz authors write to one teaching style guide: a concrete openi
 **Reading body:** ordered reading sections, each with a heading and content blocks (prose and optional Demonstrative media). Numbered Citations live in the prose.
 
 **Quiz body:** 5–10 single-correct four-option items. Each item stores a `brief`, `standard`, and `detailed` explanation (Q8 is show-time). No reading sections. No Demonstrative media. Generator chooses `n` in 5–10. Equal weight per question. Pass is the raw ratio `correct / n ≥ 0.70`. Unlimited retakes, same question set, best score kept. Prototype does not generate new items per attempt.
+
+**Goal Check body:** the Quiz body with 6–12 items, each also naming the goal objective it checks; every goal objective has at least one item. Items check the goal across the whole Course: integrative and transfer items (apply, combine, choose in a scenario) over recall of one Reading, each still answerable from the Course's Readings. The Learner never sees the objective names until the result. Same write-time and show-time fields as a Quiz; completion is one scored attempt.
 
 ### 5.6 Demonstrative media
 
@@ -533,9 +539,9 @@ If Test-course protocol finds missed factual errors, bump the Judge SKU in confi
 
 ### 6.2 Blueprint (before Learner review)
 
-**Code:** every slot has title, Lesson goal, non-empty objectives, and a registered method (`reading` or `quiz`); a Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it); no two slots share a Lesson goal; at least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal; a Quiz slot lists 1–10 objectives.
+**Code:** every slot has title, Lesson goal, non-empty objectives, and a registered method (`reading` or `quiz`); a Quiz slot lists the instructional slots it assesses (those slots exist, are `reading`, and precede it); no two slots share a Lesson goal; at least one instructional Lesson and one Quiz sit on the path from Starting Level to Learning Goal; a Quiz slot lists 1–10 objectives; exactly one Goal Check, as the last slot, with 2–6 distinct goal objectives, each mapped to at least one earlier Reading, assessing exactly the Readings it maps.
 
-**Judge:** coverage (no remaining-gap capability is left untaught); the sequence reaches this Learning Goal from this Starting Level, which is the same check the whole-Course Judge makes (§6.5), so a sequence that cannot reach the goal fails here, before any Lesson is written; prerequisite order, including no Lesson relying on a figure, term, or event a later Lesson first introduces; when the subject has a clear natural internal order (a narrative corpus, a history, a process), the sequence follows it unless a prerequisite requires otherwise (`natural_order`); no redundant slot; each Quiz’s assessed Lessons are the right chunk; with a Goal scope, no slot or objective teaches an out-of-scope facet (`out_of_scope`), and reaching the goal is judged within the scope.
+**Judge:** coverage (no remaining-gap capability is left untaught); the sequence reaches this Learning Goal from this Starting Level, which is the same check the whole-Course Judge makes (§6.5), so a sequence that cannot reach the goal fails here, before any Lesson is written; prerequisite order, including no Lesson relying on a figure, term, or event a later Lesson first introduces; when the subject has a clear natural internal order (a narrative corpus, a history, a process), the sequence follows it unless a prerequisite requires otherwise (`natural_order`); no redundant slot; each Quiz’s assessed Lessons are the right chunk; with a Goal scope, no slot or objective teaches an out-of-scope facet (`out_of_scope`), and reaching the goal is judged within the scope; the Goal Check's goal objectives together cover the Learning Goal, and each is taught by the Readings it names.
 
 A Blueprint fail is a Blueprint revision, then Learner review again.
 
@@ -553,13 +559,19 @@ A Blueprint fail is a Blueprint revision, then Learner review again.
 
 If a Quiz slot lists more than 10 objectives, that is **structural**: discard unpublished Lessons and return to Blueprint review. Quizzes are always generated.
 
+### 6.4a Goal Check (before checkpoint)
+
+**Code:** the Quiz item checks, with `n` in 6–12; every item names one of the slot's goal objectives and every goal objective has an item; the slot is the Goal Check, and every Reading it assesses is checkpointed.
+
+**Judge** (one independent pass): a Learner who passes this has met the Learning Goal; every goal objective is really tested; items are integrative, not single-Reading recall; no item reaches outside Course content; exactly one option is correct; distractors are plausible; explanations support the key. A fail is repaired like a Quiz.
+
 ### 6.5 Whole-Course (before atomic publish)
 
 Do not re-judge every Lesson from scratch.
 
 **Code:** every Blueprint slot has a checkpointed unpublished Lesson whose Code and Judge both passed; no extra Lessons off the approved Blueprint. A Reading without the visual its slot planned still publishes.
 
-**Judge:** one pass over titles, Lesson goals, objectives, and short per-Lesson commitments — Course coherence across Modules, and the assembled sequence reaches this Learning Goal from this Starting Level (within its Goal scope, when focused; out-of-scope facets are not required).
+**Judge:** one pass over titles, Lesson goals, objectives, and short per-Lesson commitments (a Goal Check's are its goal objectives) — Course coherence across Modules, and the assembled sequence reaches this Learning Goal from this Starting Level (within its Goal scope, when focused; out-of-scope facets are not required).
 
 If that Judge names a **Lesson**, targeted repair from that earliest Lesson and affected downstream, then this pass again. If it names the **sequence**, structural return to Blueprint review. Retrying cannot fix the sequence, so it is never offered for one. Until the structural return is built (SEN-85), the Request fails with a reason that says so and points to a new Course Request.
 

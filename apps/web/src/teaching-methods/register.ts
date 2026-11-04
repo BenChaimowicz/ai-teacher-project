@@ -1,7 +1,9 @@
+import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
 import { QUIZ_METHOD_ID, READING_METHOD_ID } from "@senoy/db/reading-lesson";
 import type { ComponentType, ReactNode } from "react";
 import type { NextStep } from "@/components/learn/next-step.ts";
 import type { StudyLesson, StudyPayload } from "@/lib/study-types.ts";
+import { GoalCheckLessonPlay } from "@/teaching-methods/goal-check-lesson-play.tsx";
 import { QuizLessonPlay } from "@/teaching-methods/quiz-lesson-play.tsx";
 import { ReadingLessonPlay } from "@/teaching-methods/reading-lesson-play.tsx";
 
@@ -20,11 +22,16 @@ export type LessonPlayProps = {
    * completion action can take them there in the same click. Null when there is nowhere to go yet.
    */
   next?: NextStep | null;
+  /** Every Lesson of the Course, in Course order: the Goal Check links its missed objectives back to their Lessons. */
+  lessons?: StudyLesson[];
+  /** The Course's Learning Goal, which the Goal Check's result is set against. */
+  learningGoal?: string;
 };
 
 const renders: Record<string, ComponentType<LessonPlayProps>> = {
   [READING_METHOD_ID]: ReadingLessonPlay,
   [QUIZ_METHOD_ID]: QuizLessonPlay,
+  [GOAL_CHECK_METHOD_ID]: GoalCheckLessonPlay,
 };
 
 /**

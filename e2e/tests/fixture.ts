@@ -6,6 +6,7 @@ import {
   SEEDED_LEARNER_ID,
   SEEDED_QUIZ_BODY,
   startingLevelDiagnostics,
+  type QuizBody,
   TEACHING_PROFILE_VERSION,
   type StartingLevel,
 } from "@senoy/db";
@@ -22,7 +23,7 @@ const db = createDb(process.env.DATABASE_URL!, { max: 1 });
  */
 export async function resetFixture(answers: Record<string, unknown> = {}) {
   await db.execute(
-    sql`truncate generation_jobs, unpublished_lessons, course_blueprints, starting_level_diagnostics, quiz_attempts, lesson_completions, course_completions, published_lessons, published_modules, published_courses, course_requests, learners cascade`,
+    sql`truncate generation_jobs, unpublished_lessons, course_blueprints, starting_level_diagnostics, quiz_attempts, goal_check_feedback, lesson_completions, course_completions, published_lessons, published_modules, published_courses, course_requests, learners cascade`,
   );
   const learner = await seedLearner(db, testAccounts().a.id);
   await seedPublishedCourse(db);
@@ -81,9 +82,10 @@ export async function addWaitingRequests(count: number) {
  * The fieldset of the n-th Quiz item (0-based).
  * @param page - Playwright page
  * @param index - Item index
+ * @param body - The Quiz (or Goal Check) on screen; the fixture Quiz by default
  */
-export function quizItem(page: Page, index: number) {
-  const item = SEEDED_QUIZ_BODY.items[index]!;
+export function quizItem(page: Page, index: number, body: QuizBody = SEEDED_QUIZ_BODY) {
+  const item = body.items[index]!;
   return page.getByRole("group", { name: `${index + 1}. ${item.prompt}` });
 }
 
@@ -92,13 +94,14 @@ export function quizItem(page: Page, index: number) {
  * @param page - Playwright page
  * @param index - Item index
  * @param correct - Pick the right answer
+ * @param body - The Quiz (or Goal Check) on screen; the fixture Quiz by default
  */
-export async function pickOption(page: Page, index: number, correct: boolean) {
-  const item = SEEDED_QUIZ_BODY.items[index]!;
+export async function pickOption(page: Page, index: number, correct: boolean, body: QuizBody = SEEDED_QUIZ_BODY) {
+  const item = body.items[index]!;
   const option = correct
     ? item.options.find((row) => row.id === item.correctOptionId)!
     : item.options.find((row) => row.id !== item.correctOptionId)!;
-  await quizItem(page, index).getByRole("radio", { name: option.text }).check();
+  await quizItem(page, index, body).getByRole("radio", { name: option.text }).check();
   return option;
 }
 
@@ -107,12 +110,13 @@ export async function pickOption(page: Page, index: number, correct: boolean) {
  * @param page - Playwright page
  * @param correct - How many to get right
  * @param check - Per-item timing
+ * @param body - The Quiz (or Goal Check) on screen; the fixture Quiz by default
  */
-export async function answerAll(page: Page, correct: number, check: boolean) {
-  for (let index = 0; index < SEEDED_QUIZ_BODY.items.length; index += 1) {
-    await pickOption(page, index, index < correct);
+export async function answerAll(page: Page, correct: number, check: boolean, body: QuizBody = SEEDED_QUIZ_BODY) {
+  for (let index = 0; index < body.items.length; index += 1) {
+    await pickOption(page, index, index < correct, body);
     if (check) {
-      const item = quizItem(page, index);
+      const item = quizItem(page, index, body);
       await item.getByRole("button", { name: "Check" }).click();
       await item.getByText(index < correct ? "✓ Correct" : "✗ Not quite").waitFor();
     }

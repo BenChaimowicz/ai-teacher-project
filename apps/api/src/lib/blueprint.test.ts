@@ -30,8 +30,18 @@ const INPUT: BlueprintInput = {
   profile: { instructionLanguage: "en", quizCadence: "every_reading", explanationOrder: "topic_appropriate", contentScope: "standard" },
 };
 
-/** A clean authored Blueprint for the every-reading cadence: Reading, Quiz, Reading, Quiz. */
-function authored(overrides: { quiz?: Record<string, unknown> } = {}) {
+/** The Goal Check the author writes for {@link authored}: one goal objective per Reading (SEN-81). */
+const GOAL_CHECK = {
+  title: "Goal Check: play Iris", lessonGoal: "Play the Iris verse in 6/8 from start to end.",
+  objectives: [
+    { objective: "Count and feel 6/8 while playing", taughtByLessonNumbers: [1] },
+    { objective: "Play the Iris verse groove", taughtByLessonNumbers: [3, 1] },
+  ],
+  topicTags: ["Iris", "6-8-time"],
+};
+
+/** A clean authored Blueprint for the every-reading cadence: Reading, Quiz, Reading, Quiz, then the Goal Check. */
+function authored(overrides: { quiz?: Record<string, unknown>; goalCheck?: unknown } = {}) {
   return {
     courseTitle: "Toward Iris",
     moduleTitle: "Counting in six",
@@ -54,6 +64,7 @@ function authored(overrides: { quiz?: Record<string, unknown> } = {}) {
         objectives: ["Play the verse groove"], topicTags: ["groove", "counting"], assessesLessonNumbers: [3],
       },
     ],
+    goalCheck: "goalCheck" in overrides ? overrides.goalCheck : GOAL_CHECK,
   };
 }
 
@@ -88,7 +99,7 @@ test("A Blueprint passing Code checks and the Judge comes back with each Quiz as
   const { judge, calls: judgeCalls } = scriptedJudge();
   const { blueprint, judge: verdict } = await createBlueprintBuilder({ generator, judge }).build(INPUT);
   const slots = blueprint.modules[0]!.slots;
-  assert.deepEqual(slots.map((slot) => [slot.id, slot.method]), [["slot1", "reading"], ["slot2", "quiz"], ["slot3", "reading"], ["slot4", "quiz"]]);
+  assert.deepEqual(slots.map((slot) => [slot.id, slot.method]), [["slot1", "reading"], ["slot2", "quiz"], ["slot3", "reading"], ["slot4", "quiz"], ["slot5", "goal_check"]]);
   assert.deepEqual(slots[0]!.topicTags, ["compound-meter", "6-8-time"]);
   assert.deepEqual(slots[1]!.assessesSlotIds, ["slot1"]);
   assert.deepEqual(slots[3]!.assessesSlotIds, ["slot3"]);
@@ -207,6 +218,7 @@ test("A failing Blueprint is revised from its own draft and problems, then check
   const previous = codeRevision.input.previousBlueprint as ReturnType<typeof authored>;
   assert.deepEqual([previous.courseTitle, previous.moduleTitle, previous.lessons.map((lesson) => lesson.assessesLessonNumbers)],
     [broken.courseTitle, broken.moduleTitle, [[], [2], [], [3]]], "The revision sees the draft in the shape it wrote.");
+  assert.deepEqual(previous.goalCheck, { ...GOAL_CHECK, topicTags: ["iris", "6-8-time"] }, "Its Goal Check too, by Lesson number.");
   assert.ok((codeRevision.input.problems as string[]).some((problem) => problem.includes("precede")));
   assert.equal(codeRevision.input.learningGoal, INPUT.learningGoal);
   assert.deepEqual(calls[2]!.input.problems, ["Failed check: coverage", "Misses counting."]);
@@ -293,7 +305,7 @@ test("After Learner review, the first design is a redesign of the reviewed plan 
   const slot1 = reviewed.modules[0]!.slots[0]!;
   assert.deepEqual(calls[0]!.input.learnerMarkedIrrelevant, [{ title: slot1.title, lessonGoal: slot1.lessonGoal }]);
   assert.equal(calls[0]!.input.learnerReason, "already_know");
-  assert.equal((calls[0]!.input.previousBlueprint as ReturnType<typeof authored>).lessons.length, reviewed.modules[0]!.slots.length);
+  assert.equal((calls[0]!.input.previousBlueprint as ReturnType<typeof authored>).lessons.length, reviewed.modules[0]!.slots.length - 1, "Every slot but the Goal Check.");
   assert.deepEqual((verdicts.calls[0]!.input as { learnerMarkedIrrelevant: unknown }).learnerMarkedIrrelevant, calls[0]!.input.learnerMarkedIrrelevant);
 });
 
@@ -386,7 +398,7 @@ test("A brand-new Learner with a confirmed scope gets both rules", async () => {
 
 test("The fixture builder designs a Blueprint from an empty capability list", async () => {
   const { blueprint } = await createFixtureBlueprintBuilder().build({ ...INPUT, startingLevel: NEW_TO_SUBJECT });
-  assert.deepEqual(blueprint.modules[0]!.slots.map((slot) => slot.method), ["reading", "reading", "quiz"]);
+  assert.deepEqual(blueprint.modules[0]!.slots.map((slot) => slot.method), ["reading", "reading", "quiz", "goal_check"]);
   assert.deepEqual(blueprintCodeFailures(blueprint, "every_2_to_3_readings"), []);
 });
 
@@ -454,4 +466,70 @@ test("The Blueprint Judge may fail visual_plan, and the plan is revised like any
   assert.equal(verdicts.calls(), 2);
   assert.deepEqual(checked.blueprint.modules[0]!.slots[0]!.visuals, [{ kind: "depiction", intent: "The scene." }]);
   assert.ok((BLUEPRINT_JUDGE_CHECKS as readonly string[]).includes("visual_plan"));
+});
+
+test("The author plans the Goal Check from the Learning Goal, and it is parsed into the Course's last slot (SEN-81)", async () => {
+  const { generator, calls, schemas } = schemaRecordingGenerator(authored());
+  const verdicts = queuedJudge(PASS);
+  const { blueprint } = await createBlueprintBuilder({ generator, judge: verdicts.judge }).build(INPUT);
+  const check = blueprint.modules[0]!.slots.at(-1)!;
+  assert.deepEqual(check, {
+    id: "slot5", method: "goal_check", title: GOAL_CHECK.title, lessonGoal: GOAL_CHECK.lessonGoal,
+    objectives: ["Count and feel 6/8 while playing", "Play the Iris verse groove"], topicTags: ["iris", "6-8-time"],
+    assessesSlotIds: ["slot1", "slot3"],
+    objectiveSlotIds: { "Count and feel 6/8 while playing": ["slot1"], "Play the Iris verse groove": ["slot3", "slot1"] },
+  });
+  assert.deepEqual(blueprintCodeFailures(blueprint, "every_reading"), []);
+
+  assert.match(calls[0]!.systemPrompt, /Plan the Goal Check in "goalCheck"/);
+  assert.match(calls[0]!.systemPrompt, /2-6 goal objectives that together are the Learning Goal for this Learner/);
+  assert.match(calls[0]!.systemPrompt, /never from the last Lessons alone/);
+  assert.match(calls[0]!.systemPrompt, /The last Lesson is always a quiz; the Goal Check comes after it\./);
+  const schema = schemas[0] as { required: string[]; properties: { goalCheck: { properties: { objectives: { minItems: number; maxItems: number } } } } };
+  assert.ok(schema.required.includes("goalCheck"));
+  assert.deepEqual([schema.properties.goalCheck.properties.objectives.minItems, schema.properties.goalCheck.properties.objectives.maxItems], [2, 6]);
+  assert.match(verdicts.prompts[0]!, /- goal_check_covers_goal: /);
+  assert.ok((BLUEPRINT_JUDGE_CHECKS as readonly string[]).includes("goal_check_covers_goal"));
+});
+
+test("A Goal Check missing, or naming a quiz as a teaching Lesson, fails the Code checks and is revised (SEN-81)", async () => {
+  const toQuiz = { ...GOAL_CHECK, objectives: [GOAL_CHECK.objectives[0], { objective: "Play the Iris verse groove", taughtByLessonNumbers: [4] }] };
+  const { generator, calls } = queuedGenerator(authored({ goalCheck: undefined }), authored({ goalCheck: toQuiz }), authored());
+  const verdicts = queuedJudge(PASS);
+  const checked = await createBlueprintBuilder({ generator, judge: verdicts.judge }).build(INPUT);
+  assert.equal(verdicts.calls(), 1, "Neither broken draft reached the Judge.");
+  assert.ok((calls[1]!.input.problems as string[]).some((problem) => problem.includes("exactly one Goal Check, not 0")));
+  assert.ok(!("goalCheck" in (calls[1]!.input.previousBlueprint as object)), "A draft without a Goal Check shows none.");
+  assert.ok((calls[2]!.input.problems as string[]).some((problem) => problem.includes("names slot4, which is not an earlier Reading")));
+  assert.equal(checked.blueprint.modules[0]!.slots.at(-1)!.method, "goal_check");
+});
+
+test("Every redesign prompt keeps the Goal Check, and the Learner's review redesign does not show it as a Lesson (SEN-81)", async () => {
+  const reviewed = parseAuthoredBlueprint(authored());
+  const learner = queuedGenerator(authored());
+  await createBlueprintBuilder({ generator: learner.generator, judge: scriptedJudge().judge }).build({
+    ...INPUT, revision: { previousBlueprint: reviewed, feedback: { irrelevantSlotIds: ["slot1"], reason: null } },
+  });
+  assert.match(learner.calls[0]!.systemPrompt, /Plan the Goal Check again for the new Lessons/);
+  const previous = learner.calls[0]!.input.previousBlueprint as ReturnType<typeof authored>;
+  assert.equal(previous.lessons.length, 4, "The Goal Check is not one of the Lessons.");
+  assert.deepEqual(previous.goalCheck, { ...GOAL_CHECK, topicTags: ["iris", "6-8-time"] });
+
+  const sequence = queuedGenerator(authored());
+  await createBlueprintBuilder({ generator: sequence.generator, judge: scriptedJudge().judge }).build({
+    ...INPUT, sequenceRedesign: { previousBlueprint: reviewed, reasons: ["Stops short of the chorus."] },
+  });
+  assert.match(sequence.calls[0]!.systemPrompt, /Plan its Goal Check again too, from the Learning Goal/);
+
+  const { generator, calls } = queuedGenerator(authored({ quiz: { assessesLessonNumbers: [2] } }), authored());
+  await createBlueprintBuilder({ generator, judge: scriptedJudge().judge }).build(INPUT);
+  assert.match(calls[1]!.systemPrompt, /fixes every problem, with its Goal Check/);
+});
+
+test("The fixture Blueprint ends with a valid Goal Check over its Readings (SEN-81)", async () => {
+  const { blueprint } = await createFixtureBlueprintBuilder().build(INPUT);
+  const check = blueprint.modules[0]!.slots.at(-1)!;
+  assert.equal(check.method, "goal_check");
+  assert.deepEqual(check.assessesSlotIds, ["slot1", "slot2"]);
+  assert.deepEqual(blueprintCodeFailures(blueprint, "every_2_to_3_readings"), []);
 });

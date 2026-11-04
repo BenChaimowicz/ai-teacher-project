@@ -93,3 +93,55 @@ test("Publication copies the Blueprint's Modules and each checkpoint, and points
   assert.deepEqual(reading!.citations, checkpoints()[0]!.citations);
   assert.deepEqual(reading!.body, checkpoints()[0]!.body);
 });
+
+/** The approved Blueprint with a second Reading and a Goal Check at the end (SEN-81). */
+function withGoalCheck(): { approved: ApprovedBlueprint; checkpoints: LessonCheckpoint[] } {
+  const approved = structuredClone(APPROVED);
+  approved.blueprint.modules.push({
+    title: "Finding your way",
+    slots: [
+      {
+        id: "slot3", method: "reading", title: "The Roots", lessonGoal: "Trace the three roots.",
+        objectives: ["Trace the roots"], topicTags: ["yggdrasil"], assessesSlotIds: [],
+      },
+      {
+        id: "slot4", method: "goal_check", title: "Goal Check", lessonGoal: "Show you can explain the Norse picture of the world.",
+        objectives: ["Explain how the worlds connect", "Place a world by its root"], topicTags: ["yggdrasil"],
+        assessesSlotIds: ["slot1", "slot3"],
+        objectiveSlotIds: { "Explain how the worlds connect": ["slot1"], "Place a world by its root": ["slot1", "slot3"] },
+      },
+    ],
+  });
+  const [reading, quiz] = checkpoints();
+  return {
+    approved,
+    checkpoints: [
+      reading!, quiz!,
+      { ...reading!, id: "cp3", slotId: "slot3", position: 2, title: "The Roots", lessonGoal: "Trace the three roots.", objectives: ["Trace the roots"] },
+      {
+        ...quiz!, id: "cp4", slotId: "slot4", position: 3, teachingMethod: "goal_check", title: "Goal Check",
+        lessonGoal: "Show you can explain the Norse picture of the world.", objectives: ["Explain how the worlds connect", "Place a world by its root"],
+      },
+    ],
+  };
+}
+
+test("A Goal Check commits to its goal objectives (SEN-81)", () => {
+  const { checkpoints: rows } = withGoalCheck();
+  assert.deepEqual(lessonCommitments(rows[3]!), ["Explain how the worlds connect", "Place a world by its root"]);
+});
+
+test("Publication maps the Goal Check's teaching slots per goal objective to published Lesson ids; other Lessons map none (SEN-81)", () => {
+  const { approved, checkpoints: rows } = withGoalCheck();
+  let n = 0;
+  const published = publicationRows({
+    learnerId: "learner1", courseRequestId: "request1", subject: "Norse mythology", learningGoal: "Explain the Norse picture of the world",
+    approved, checkpoints: rows, newId: () => `id${++n}`,
+  });
+  const [first, quiz, roots, goalCheck] = published.lessons;
+  assert.deepEqual(goalCheck!.objectiveLessonIds, { "Explain how the worlds connect": [first!.id], "Place a world by its root": [first!.id, roots!.id] });
+  assert.deepEqual(goalCheck!.assessedLessonIds, [first!.id, roots!.id]);
+  assert.equal(goalCheck!.teachingMethod, "goal_check");
+  assert.deepEqual([first!.objectiveLessonIds, quiz!.objectiveLessonIds, roots!.objectiveLessonIds], [{}, {}, {}]);
+  assert.deepEqual(courseCodeFailures(approved, rows), []);
+});

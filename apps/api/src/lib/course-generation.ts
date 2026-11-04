@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { blueprintChapters, blueprintSlots, chapterKey, type ApprovedBlueprint, type BlueprintChapter, type BlueprintSlot, type JudgeResult } from "@senoy/db/blueprint";
 import type { GoalScope, ResearchTier } from "@senoy/db/course-request";
 import {
+  GOAL_CHECK_METHOD_ID,
   courseBlueprints,
   courseCodeFailures,
   courseRequests,
@@ -36,6 +37,7 @@ import { createReuseFit, findReuseCandidates, reuseSeed, type FindReuseCandidate
 import { createMediaLibrary } from "./media-library.ts";
 import { loadModelConfig } from "./model-config.ts";
 import { createModelPorts } from "./model-ports.ts";
+import { createGoalCheckGenerator, GoalCheckFailedError, type CheckedGoalCheck, type GoalCheckGenerator } from "./goal-check-generation.ts";
 import { createQuizGenerator, QuizFailedError, type CheckedQuiz, type QuizGenerator } from "./quiz-generation.ts";
 import {
   createReadingGenerator,
@@ -87,6 +89,7 @@ export type CourseGenerationOptions = {
   reuseFit?: ReuseFit;
   readingGenerator?: ReadingGenerator;
   quizGenerator?: QuizGenerator;
+  goalCheckGenerator?: GoalCheckGenerator;
   courseJudge?: CourseJudge;
 };
 
@@ -130,8 +133,8 @@ const RESUME_STEP = "Retry continues from the next unfinished Lesson.";
  * @param error - What stopped generation
  */
 export function failedCheck(error: unknown): boolean {
-  return error instanceof ReadingFailedError || error instanceof QuizFailedError || error instanceof CourseFailedError ||
-    error instanceof LessonUnresearchableError;
+  return error instanceof ReadingFailedError || error instanceof QuizFailedError || error instanceof GoalCheckFailedError ||
+    error instanceof CourseFailedError || error instanceof LessonUnresearchableError;
 }
 
 /**
@@ -361,7 +364,8 @@ function visualSources(db: Database, transport: StructuredTransport, env: NodeJS
  *
  * Researches every other Reading slot at once and stores each slot's Source packs as it finishes, so one slow research
  * call no longer delays every Reading in turn. Then writes each Lesson in Blueprint order, carrying earlier Readings forward:
- * a Reading from its stored packs, a Quiz from its checkpointed Readings (spec §5.2.4), saving each as an unpublished
+ * a Reading from its stored packs, a Quiz from its checkpointed Readings (spec §5.2.4), and the closing Goal Check from
+ * the Learning Goal and every checkpointed Reading its goal objectives name (SEN-81), saving each as an unpublished
  * checkpoint. A reused Reading is fitted to its slot, verbatim or adapted, and passes the same checks against the packs
  * it was written from; one that cannot be made to fit is researched there and then and written like any other.
  * Then the whole-Course Code checks and one Judge pass over the outline (spec §6.5), and atomic publish:
@@ -683,6 +687,7 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
       // Lessons are written one at a time in Blueprint order. A Quiz reads its Readings from their checkpoints, not
       // this run's memory, so it assesses exactly what was saved; every Reading it assesses precedes it.
       const quizGenerator = options.quizGenerator ?? createQuizGenerator({ transport });
+      const goalCheckGenerator = options.goalCheckGenerator ?? createGoalCheckGenerator({ transport });
       for (const [position, slot] of slots.entries()) {
         const saved = finished.find((row) => row.slotId === slot.id);
         if (slot.method === readingPlugin.id && saved) {
@@ -724,6 +729,43 @@ export function createCourseGeneration(options: CourseGenerationOptions = {}): C
           const checkpoint = readings.find((row) => row.slotId === slotId && row.teachingMethod === readingPlugin.id);
           return checkpoint ? [{ ...checkpoint, body: checkpoint.body as ReadingBody }] : [];
         });
+
+        if (slot.method === GOAL_CHECK_METHOD_ID) {
+          // The Goal Check checks the Learning Goal across the whole Course (SEN-81); it plays like a Quiz, so it is
+          // written with the quiz plugin's write-time fields.
+          const { lesson, judge, authorModelIds, judgeModelId } = await withPipelineEvent("goal_check", {
+            label: slot.title, detail: { slotId: slot.id, position, assessedSlotIds: slot.assessesSlotIds, objectives: slot.objectives },
+          }, async (step) => {
+            let checked: CheckedGoalCheck;
+            try {
+              checked = await goalCheckGenerator.generate({
+                courseTitle: approved.blueprint.courseTitle,
+                learningGoal: request.learningGoal,
+                scope,
+                startingLevel: diagnostic?.startingLevel?.remainingGapStatement ?? null,
+                slot,
+                slots,
+                assessed,
+                profile: writeTimeProfile(quizPlugin, resolved),
+              });
+            } catch (error) {
+              // A rejected Goal Check is saved nowhere else, so the event keeps every draft and verdict, pass or fail.
+              if (error instanceof GoalCheckFailedError) step.setDetail({ rounds: error.rounds });
+              throw error;
+            }
+            step.setDetail({
+              repairs: checked.repairs, judgePass: checked.judge.pass,
+              authorModelIds: checked.authorModelIds, judgeModelId: checked.judgeModelId, rounds: checked.rounds,
+            });
+            return checked;
+          });
+          await holding((transaction) => transaction.insert(unpublishedLessons).values({
+            ...lesson, courseRequestId, position, rejectedSources: [], judge, authorModelIds, judgeModelId,
+            writeTimeProfile: writeTimeProfile(quizPlugin, resolved),
+          }));
+          continue;
+        }
+
         const { lesson, judge, authorModelIds, judgeModelId } = await withPipelineEvent("quiz", {
           label: slot.title, detail: { slotId: slot.id, position, assessedSlotIds: slot.assessesSlotIds },
         }, async (step) => {

@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import {
   courseCompletions,
+  goalCheckFeedback,
   lessonCompletions,
   publishedCourses,
   publishedLessons,
@@ -8,13 +9,15 @@ import {
   quizAttempts,
   type Database,
   type FeedbackTiming,
+  type GoalCheckFeedback,
+  type GoalCheckNextStep,
   type QuizAnswers,
   type QuizAttemptStatus,
   type SequenceMode,
 } from "@senoy/db";
 
 /** Published Course fields Study needs. */
-export type CourseRow = { id: string; title: string; learningGoal: string; sequenceMode: string };
+export type CourseRow = { id: string; title: string; subject: string; learningGoal: string; sequenceMode: string };
 
 /** Published Module fields Study needs. */
 export type ModuleRow = { id: string; title: string; position: number };
@@ -29,7 +32,14 @@ export type LessonRow = {
   lessonGoal: string;
   body: unknown;
   citations: unknown;
+  /** The Lesson's objectives; on the Goal Check, the goal objectives in the order the slot listed them. */
+  objectives: string[];
+  /** On the Goal Check only: each goal objective's teaching Lessons. Empty otherwise. */
+  objectiveLessonIds: Record<string, string[]>;
 };
+
+/** What a Learner said was missing after a "not met" Goal Check, and the next step they chose (null until chosen). */
+export type GoalCheckFeedbackRow = GoalCheckFeedback & { nextStep: GoalCheckNextStep | null };
 
 /** One stored Quiz attempt. */
 export type QuizAttemptRow = {
@@ -76,6 +86,12 @@ export type StudyStore = {
   ): Promise<QuizAttemptRow>;
   /** Writes only an attempt this Learner owns. */
   updateQuizAttempt(learnerId: string, id: string, patch: QuizAttemptPatch): Promise<void>;
+  /** This Learner's feedback on one Goal Check, or null before they sent any. */
+  getGoalCheckFeedback(learnerId: string, lessonId: string): Promise<GoalCheckFeedbackRow | null>;
+  /** Stores feedback, replacing any earlier one; the next step is cleared so it is chosen again. */
+  saveGoalCheckFeedback(learnerId: string, lessonId: string, feedback: GoalCheckFeedback): Promise<void>;
+  /** Stores the next step on existing feedback. */
+  setGoalCheckNextStep(learnerId: string, lessonId: string, nextStep: GoalCheckNextStep): Promise<void>;
 };
 
 const attemptColumns = {
@@ -99,6 +115,7 @@ export function drizzleStudyStore(db: Database): StudyStore {
         .select({
           id: publishedCourses.id,
           title: publishedCourses.title,
+          subject: publishedCourses.subject,
           learningGoal: publishedCourses.learningGoal,
           sequenceMode: publishedCourses.sequenceMode,
         })
@@ -127,6 +144,8 @@ export function drizzleStudyStore(db: Database): StudyStore {
           lessonGoal: publishedLessons.lessonGoal,
           body: publishedLessons.body,
           citations: publishedLessons.citations,
+          objectives: publishedLessons.objectives,
+          objectiveLessonIds: publishedLessons.objectiveLessonIds,
         })
         .from(publishedLessons)
         .where(eq(publishedLessons.publishedCourseId, courseId))
@@ -183,6 +202,30 @@ export function drizzleStudyStore(db: Database): StudyStore {
 
     async updateQuizAttempt(learnerId, id, patch) {
       await db.update(quizAttempts).set(patch).where(and(eq(quizAttempts.id, id), eq(quizAttempts.learnerId, learnerId)));
+    },
+
+    async getGoalCheckFeedback(learnerId, lessonId) {
+      const [row] = await db
+        .select({ reasons: goalCheckFeedback.reasons, otherText: goalCheckFeedback.otherText, nextStep: goalCheckFeedback.nextStep })
+        .from(goalCheckFeedback)
+        .where(and(eq(goalCheckFeedback.learnerId, learnerId), eq(goalCheckFeedback.lessonId, lessonId)))
+        .limit(1);
+      return row ?? null;
+    },
+
+    async saveGoalCheckFeedback(learnerId, lessonId, feedback) {
+      const values = { reasons: feedback.reasons, otherText: feedback.otherText, nextStep: null, updatedAt: new Date() };
+      await db
+        .insert(goalCheckFeedback)
+        .values({ learnerId, lessonId, ...values })
+        .onConflictDoUpdate({ target: [goalCheckFeedback.learnerId, goalCheckFeedback.lessonId], set: values });
+    },
+
+    async setGoalCheckNextStep(learnerId, lessonId, nextStep) {
+      await db
+        .update(goalCheckFeedback)
+        .set({ nextStep, updatedAt: new Date() })
+        .where(and(eq(goalCheckFeedback.learnerId, learnerId), eq(goalCheckFeedback.lessonId, lessonId)));
     },
   };
 }

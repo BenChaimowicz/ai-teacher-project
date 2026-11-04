@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Navigate, useParams } from "react-router-dom";
+import { GOAL_CHECK_METHOD_ID } from "@senoy/db/goal-check";
 import { isPassingScore } from "@senoy/db/quiz";
-import { QUIZ_METHOD_ID } from "@senoy/db/reading-lesson";
-import { Check, Compass, Eye, Home, Layers } from "lucide-react";
+import { READING_METHOD_ID } from "@senoy/db/reading-lesson";
+import { Check, Compass, Eye, Flag, Home, Layers } from "lucide-react";
 import { useCompanion, useCompanionLines } from "@/components/companion/companion-provider.tsx";
 import { CountUp } from "@/components/learn/count-up.tsx";
+import { GOAL_OUTCOME_LABEL, GOAL_OUTCOME_SUB } from "@/components/learn/goal-check-copy.ts";
+import { MissedObjectives } from "@/components/learn/goal-check-result.tsx";
 import { LinkTiles, type LinkTile } from "@/components/learn/link-tiles.tsx";
 import { ShellTitle } from "@/components/shell/app-shell.tsx";
 import { ChatThread, CompanionLine } from "@/components/ui/chat-thread.tsx";
@@ -14,27 +17,46 @@ import { ErrorState } from "@/components/ui/states.tsx";
 import { cheer, confettiAt } from "@/lib/cheer.ts";
 import type { CourseSummary } from "@/lib/study-types.ts";
 import "@/components/learn/learn.css";
+import "@/components/learn/goal-check.css";
 import { apiFetch } from "@/lib/api.ts";
 
 const LINES = ["You finished a whole course.", "That's real progress.", "Going deeper is a good next step."];
+
+/**
+ * The Course's Lessons that count toward Progress: every Lesson but the Goal Check (decision 2026-11-04).
+ * @param summary - Course summary
+ */
+function progressLessons(summary: CourseSummary) {
+  return summary.modules.flatMap((module) => module.lessons).filter((lesson) => lesson.teachingMethod !== GOAL_CHECK_METHOD_ID);
+}
+
+/**
+ * The summary's Quizzes, without the Goal Check should the summary list it there.
+ * @param summary - Course summary
+ */
+function quizzesOf(summary: CourseSummary) {
+  const goalId = summary.goalCheck?.lessonId;
+  return summary.quizzes.filter((quiz) => quiz.lessonId !== goalId);
+}
 
 /**
  * Stat tiles: real numbers that count up. No points or levels.
  * @param summary - Course summary
  */
 function stats(summary: CourseSummary) {
-  const lessons = summary.modules.flatMap((module) => module.lessons);
-  const readings = lessons.filter((lesson) => lesson.teachingMethod !== QUIZ_METHOD_ID).length;
-  const taken = summary.quizzes.filter((quiz) => quiz.best);
+  const lessons = progressLessons(summary);
+  const quizzes = quizzesOf(summary);
+  const readings = lessons.filter((lesson) => lesson.teachingMethod === READING_METHOD_ID).length;
+  const taken = quizzes.filter((quiz) => quiz.best);
   const correct = taken.reduce((sum, quiz) => sum + (quiz.best?.correct ?? 0), 0);
   const total = taken.reduce((sum, quiz) => sum + (quiz.best?.total ?? 0), 0);
-  const passed = summary.quizzes.filter((quiz) => quiz.best && isPassingScore(quiz.best)).length;
+  const passed = quizzes.filter((quiz) => quiz.best && isPassingScore(quiz.best)).length;
   const rows: { to: number; label: string; format?: (n: number) => string; win?: boolean }[] = [
     { to: lessons.length, label: "lessons" },
     { to: readings, label: readings === 1 ? "reading" : "readings" },
   ];
-  if (summary.quizzes.length) {
-    rows.push({ to: passed, label: "quizzes passed", format: (n) => `${n}/${summary.quizzes.length}` });
+  if (quizzes.length) {
+    rows.push({ to: passed, label: "quizzes passed", format: (n) => `${n}/${quizzes.length}` });
     rows.push({ to: total ? Math.round((correct / total) * 100) : 0, label: "best quiz scores", format: (n) => `${n}%`, win: true });
   } else {
     rows.push({ to: summary.modules.length, label: summary.modules.length === 1 ? "module" : "modules" });
@@ -52,7 +74,8 @@ function finishedOn(iso: string) {
 }
 
 /**
- * Course complete: Jongi celebrates, the real stats count up, what was covered with Quiz results, and next steps.
+ * Course complete: Jongi celebrates, the real stats count up, the Goal Check result against the Learning Goal (with
+ * the missed objectives linking back to their Lessons), what was covered with Quiz results, and next steps.
  * A Course that is not complete yet sends the Learner back to Study.
  */
 export function CourseCompletePage() {
@@ -105,8 +128,11 @@ export function CourseCompletePage() {
   if (error) return <ErrorState title="The summary didn't load">{error}</ErrorState>;
   if (!summary) return <PageLoader />;
 
-  const lessons = summary.modules.flatMap((module) => module.lessons);
-  const quizByLesson = new Map(summary.quizzes.map((quiz) => [quiz.lessonId, quiz]));
+  const lessons = progressLessons(summary);
+  const quizByLesson = new Map(quizzesOf(summary).map((quiz) => [quiz.lessonId, quiz]));
+  const lessonTitles = new Map(summary.modules.flatMap((module) => module.lessons).map((lesson) => [lesson.id, lesson.title]));
+  const goalCheck = summary.goalCheck ?? null;
+  const goal = goalCheck?.result ?? null;
   const title = summary.course.title;
   const next: LinkTile[] = [
     {
@@ -118,6 +144,9 @@ export function CourseCompletePage() {
     },
     { to: "/new-course-request", label: "Something new", description: "Tell me another topic", icon: <Compass /> },
     { to: `/study/${summary.course.id}`, label: "Review Lessons", description: `Any of the ${lessons.length}, quizzes included`, icon: <Eye /> },
+    ...(goalCheck && goal && goal.outcome !== "met"
+      ? [{ to: `/study/${summary.course.id}/lessons/${goalCheck.lessonId}`, label: "Retake the Goal Check", description: "Your best score is kept", icon: <Flag /> }]
+      : []),
     { to: "/", label: "Back to Home", description: "Your other courses", icon: <Home />, tone: "quiet" },
   ];
 
@@ -136,6 +165,11 @@ export function CourseCompletePage() {
             You finished <span className="t">{title}</span>
           </h1>
           <p className="sub">You worked toward: {summary.course.learningGoal}</p>
+          {goal ? (
+            <span className={goal.outcome === "met" ? "k-rib l-rib-win l-goal-rib" : "k-rib l-goal-rib"}>
+              Goal Check · {GOAL_OUTCOME_LABEL[goal.outcome]} · {goal.best.correct} / {goal.best.total}
+            </span>
+          ) : null}
           <div className="l-stats">
             {stats(summary).map((stat, index) => (
               <div key={stat.label} className={stat.win ? "l-stat hl" : "l-stat"} style={{ "--i": index } as CSSProperties}>
@@ -149,6 +183,18 @@ export function CourseCompletePage() {
         </div>
       </div>
 
+      {goalCheck && goal ? (
+        <section className="l-covered l-goal-done" aria-labelledby="goal-h">
+          <h2 id="goal-h" className="k-sec-h">
+            your goal
+          </h2>
+          <p className="l-goal-done-t">
+            <b>{GOAL_OUTCOME_LABEL[goal.outcome]}</b> {GOAL_OUTCOME_SUB[goal.outcome]}
+          </p>
+          <MissedObjectives courseId={summary.course.id} missed={goal.missedObjectives} lessonTitles={lessonTitles} />
+        </section>
+      ) : null}
+
       <section className="l-covered" aria-labelledby="covered-h">
         <h2 id="covered-h" className="k-sec-h">
           what you covered
@@ -157,7 +203,7 @@ export function CourseCompletePage() {
           <div key={module.id}>
             {summary.modules.length > 1 ? <p className="l-mod">{module.title}</p> : null}
             <ul>
-              {module.lessons.map((lesson) => {
+              {module.lessons.filter((lesson) => lesson.teachingMethod !== GOAL_CHECK_METHOD_ID).map((lesson) => {
                 const quiz = quizByLesson.get(lesson.id);
                 const passed = quiz?.best ? isPassingScore(quiz.best) : false;
                 return (

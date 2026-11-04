@@ -55,6 +55,7 @@ export * from "./progress.ts";
 export * from "./fixture-course.ts";
 export * from "./reading-lesson.ts";
 export * from "./quiz.ts";
+export * from "./goal-check.ts";
 export * from "./sequence-mode.ts";
 export * from "./seed-ids.ts";
 export * from "./course-request.ts";

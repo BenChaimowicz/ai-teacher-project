@@ -50,8 +50,9 @@ export interface CourseJudge {
 
 // Prompts name no subject; Course specifics come only through the user JSON (ADR 0011).
 const JUDGE_PROMPT = `You independently review the outline of a finished online course before it is published. You did not write it.
-Every Lesson in it already passed its own review; do not re-check facts or wording inside a Lesson. Judge only how the Lessons fit together, from the outline: each Lesson's title, goal, objectives, and commitments (a Reading's section headings, or a Quiz's objectives).
+Every Lesson in it already passed its own review; do not re-check facts or wording inside a Lesson. Judge only how the Lessons fit together, from the outline: each Lesson's title, goal, objectives, and commitments (a Reading's section headings, or a Quiz's or the Goal Check's objectives).
 - lesson_coherence: a Lesson does not fit the sequence: it relies on something no earlier Lesson commits to, repeats an earlier Lesson, contradicts one, or a Quiz assesses something its preceding Lessons do not commit to.
+The last Lesson may be the Goal Check (method goal_check): it teaches nothing and checks the whole Learning Goal, so its objectives are the parts of that goal, worded from the goal rather than from any one Lesson. It fails lesson_coherence only when one of its objectives is something no earlier Lesson commits to; it neither helps nor hurts sequence_reaches_goal, which the teaching Lessons alone must reach.
 - ${SEQUENCE_REACHES_GOAL} The Starting Level is startingLevel; the Learning Goal is learningGoal.
 Fail a check only for a clear problem, not for style or for something a short outline cannot show.
 Write reasons first: one short reason per clear failure, naming the Lesson by number for lesson_coherence. Do not write reasons for anything you found acceptable. Then list each check with a reason in failedChecks, once. pass is true exactly when reasons is empty.

@@ -8,17 +8,20 @@ async function makeCourse(page: Page) {
 }
 
 test("Waiting shows the current lesson and ticks finished ones; Stop keeps them and never resumes by itself; Resume publishes", async ({ page }) => {
+  // Four fixture Lessons (the Goal Check is the fourth, SEN-81) plus the five-second stopped wait outgrow the default.
+  test.setTimeout(60_000);
   await page.goto(await confirmedRequest());
   await makeCourse(page);
 
   // The worker writes both Readings first, then the Quiz.
-  await expect(page.getByText(/^Writing lesson 3 of 3: “Quiz: /)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/^Writing lesson 3 of 4: “Quiz: /)).toBeVisible({ timeout: 15_000 });
   const lessons = page.getByRole("list", { name: "Lessons" });
   await expect(lessons.getByRole("listitem").filter({ hasText: "Reading: Fixture capability 4" })).toContainText("written");
   await expect(lessons.getByRole("listitem").filter({ hasText: "Quiz:" })).toContainText("writing now");
   await expect(page.getByText(/Fixture prose|Fixture question/)).toHaveCount(0);
   await page.getByRole("button", { name: /^Stop making this course/ }).click();
-  await expect(page.getByText("The 2 of 3 lessons already written are kept")).toBeVisible();
+  // Stop can land while the Quiz is in flight (2 kept) or just after it checkpointed, with the Goal Check in flight (3).
+  await expect(page.getByText(/The [23] of 4 lessons already written are kept/)).toBeVisible();
 
   // Longer than the Quiz in flight takes: a stopped job neither finishes nor picks itself up again.
   await page.waitForTimeout(5_000);
@@ -27,7 +30,7 @@ test("Waiting shows the current lesson and ticks finished ones; Stop keeps them 
   await expect(page.getByRole("button", { name: /^Resume/ })).toBeVisible();
 
   await page.getByRole("button", { name: /^Resume/ }).click();
-  await expect(page.getByText("Your course is ready.")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Your course is ready.")).toBeVisible({ timeout: 25_000 });
   await page.getByRole("button", { name: /^Start lesson 1/ }).click();
   await expect(page.getByText("Fixture Course · 0 / 3")).toBeVisible();
 });
@@ -46,7 +49,7 @@ test("A lesson that fails its checks says why; Retry writes it again and the Cou
     { timeout: 15_000 });
   await expect(page.getByRole("list", { name: "Lessons" }).getByText("stopped here")).toBeVisible();
   await page.getByRole("button", { name: /^Retry/ }).click();
-  await expect(page.getByText(/^Writing lesson \d of 3/)).toBeVisible();
+  await expect(page.getByText(/^Writing lesson \d of 4/)).toBeVisible();
 
   // The second Reading fails once too; the first stays written.
   await expect(reason).toHaveText(
