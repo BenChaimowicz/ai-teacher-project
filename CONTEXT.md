@@ -387,7 +387,7 @@ One step of the platform's own work (a validity check, diagnostic attempt, rewri
 _Avoid_: Job, task, trace (when meaning this record)
 
 **Product Event**:
-Something a Learner did, such as creating a Course Request, answering a Diagnostic item, completing a Lesson, or attempting a Quiz.
+Something a Learner did, such as creating a Course Request, answering a Diagnostic item, completing a Lesson, or attempting a Quiz. Signing up and a failed sign-in are Product Events too; they name no Learner, because none is known yet.
 _Avoid_: Analytics event, Pipeline Event (when the Learner, not the platform, acted)
 
 **API Request**:

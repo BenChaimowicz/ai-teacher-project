@@ -297,6 +297,10 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
       // The build runs on past this reply (SEN-131): a request silent for minutes is closed by the host, so the browser
       // polls GET while the Request is `assessment_preparing` and the lease (ADR 0023) says whether anyone is still building.
       void runPreparation(row, request.currentLearner.id, claim.token, from);
+      // The Learner's pick: "I know some of it", or Retry after the check failed to build.
+      void recordProductEvent("diagnostic_started", {
+        learnerId: request.currentLearner.id, courseRequestId: row.id, detail: { retry: from === "assessment_failed" },
+      });
       return { courseRequest: claim.claimed, diagnostic: null };
     } catch (error) {
       return fail(reply, request.log, "prepare", request.params.requestId, error, "Failed to prepare the Starting Level check.");
@@ -401,6 +405,9 @@ export async function startingLevelRoutes(app: FastifyInstance, options: Startin
         subject: row.subject, learningGoal: row.learningGoal, extremity, capabilities: probedCapabilities,
       }));
       const saved = await saveStartingLevel(attempt.id, { ...level, probedCapabilities, extremity, remainingGapStatement });
+      void recordProductEvent("starting_level_too_easy", {
+        learnerId: request.currentLearner.id, courseRequestId: row.id, detail: { extremity },
+      });
       return { courseRequest: row, diagnostic: learnerView(saved) };
     } catch (error) {
       return fail(reply, request.log, "too-easy", request.params.requestId, error, "Failed to widen the remaining gap.");

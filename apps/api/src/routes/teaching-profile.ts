@@ -108,6 +108,7 @@ export async function teachingProfileRoutes(app: FastifyInstance) {
       if (!row) {
         return reply.code(500).send({ error: "Failed to reset Teaching Profile." });
       }
+      void recordProductEvent("teaching_profile_reset", { learnerId: row.id });
 
       return {
         present: false,

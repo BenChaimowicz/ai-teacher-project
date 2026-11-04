@@ -13,8 +13,9 @@ import {
   type DiagnosticItem,
 } from "@senoy/db";
 import { DiagnosticFailedError, type DiagnosticBuilder, type DiagnosticDraft, type GapStatementInput } from "../lib/diagnostic.ts";
-import { installUsageTracking, type ProductEventRow, type UsageSink } from "../lib/usage-tracking.ts";
+import { installUsageTracking } from "../lib/usage-tracking.ts";
 import { fakeDb } from "./fake-db.ts";
+import { recordingSink, recordProductEvents, settled } from "./recording-sink.ts";
 import {
   ASSESSMENT_FAILED_REASON,
   NEW_TO_SUBJECT_GAP_STATEMENT,
@@ -177,11 +178,33 @@ test("A set failing its checks with both Generators is assessment-failed; Retry 
 
 test("Retry diagnostic prepares a fresh set and clears the reason", async () => {
   const { app, url, requestRow } = await testApp("assessment_failed");
+  const recorded = recordProductEvents();
   try {
     Object.assign(requestRow, { failureReason: ASSESSMENT_FAILED_REASON });
     const retried = await prepare(app, url);
     assert.deepEqual([retried.json().courseRequest.status, retried.json().courseRequest.failureReason], ["assessment_ready", null]);
+    await settled();
+    assert.deepEqual(recorded.of("diagnostic_started").map((event) => event.detail), [{ retry: true }]);
   } finally {
+    recorded.uninstall();
+    await app.close();
+  }
+});
+
+test("Starting the check and Start a bit earlier each record a product event on the Request (SEN-127)", async () => {
+  const { app, url, requestRow } = await testApp();
+  const recorded = recordProductEvents();
+  try {
+    await prepare(app, url);
+    await app.inject({ method: "POST", url: `${url}/answers`, payload: { answers: answers(1, 2, 3, 4, 5, 6, 7) } });
+    assert.equal((await app.inject({ method: "POST", url: `${url}/too-easy` })).statusCode, 200);
+    await settled();
+    const [started] = recorded.of("diagnostic_started");
+    assert.deepEqual([started?.courseRequestId, started?.detail], [requestRow.id, { retry: false }]);
+    assert.ok(started?.learnerId);
+    assert.deepEqual(recorded.of("starting_level_too_easy").map((event) => [event.courseRequestId, event.detail]), [[requestRow.id, { extremity: "mixed" }]]);
+  } finally {
+    recorded.uninstall();
     await app.close();
   }
 });
@@ -393,21 +416,6 @@ test("Another Learner's Request is not found", async () => {
     await app.close();
   }
 });
-
-/** Records Product Events and counts Pipeline Events while installed. */
-function recordingSink() {
-  const events: ProductEventRow[] = [];
-  let pipelineEvents = 0;
-  const sink: UsageSink = {
-    async startPipelineEvent() { pipelineEvents += 1; return randomUUID(); },
-    async finishPipelineEvent() {},
-    async insertUsageRecord() {},
-    async setUsageMeasurement() {},
-    async insertProductEvent(row) { events.push(row); },
-    async insertApiRequest() {},
-  };
-  return { sink, events, pipelineEvents: () => pipelineEvents };
-}
 
 test("Brand new to this confirms a from-the-beginning Starting Level with no items and no model call", async () => {
   for (const status of ["goal_focused", "assessment_failed"] as const) {

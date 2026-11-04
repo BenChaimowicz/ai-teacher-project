@@ -15,6 +15,7 @@ import {
 } from "@senoy/db";
 import { courseRequestRoutes } from "./course-requests.ts";
 import { libraryRoutes } from "./library.ts";
+import { recordProductEvents, settled } from "./recording-sink.ts";
 import type { SubjectChecker } from "../lib/subject-check.ts";
 import type { ValidityGate } from "../lib/validity.ts";
 
@@ -644,6 +645,32 @@ test("Revise request copies the settled subject into a draft whose subject is ch
     assert.equal(checked.json().courseRequest.subjectCheck.subjectAsTyped, "Mercury (element)");
     assert.equal(checks, 2);
   } finally { await app.close(); }
+});
+
+test("Editing a draft, opening a Request and hiding it each record a product event; a refused one records nothing (SEN-127)", async () => {
+  const { app, learner } = await testApp(savedLearner(), false, {
+    async evaluate() { return { policyVersion: 1, outcome: "reject", reason: "A hard rule applies.", safeReframe: "Study prevention.", question: null }; },
+  });
+  const recorded = recordProductEvents();
+  try {
+    const row = await composeRequest(app, "Norse mythology", "Explain the mythic corpus.");
+    await app.inject({ method: "POST", url: `/api/course-requests/${row.id}/subject-check`, payload: {} });
+    await app.inject({ method: "POST", url: `/api/course-requests/${row.id}/validity`, payload: {} });
+    const draft = (await app.inject({ method: "POST", url: `/api/course-requests/${row.id}/revise` })).json().courseRequest;
+    assert.equal((await app.inject({ method: "PATCH", url: `/api/course-requests/${draft.id}`, payload: { subject: "Sagas", learningGoal: "Read a saga." } })).statusCode, 200);
+    assert.equal((await app.inject({ method: "PATCH", url: `/api/course-requests/${draft.id}`, payload: { subject: "Again", learningGoal: "Again." } })).statusCode, 409);
+    assert.equal((await app.inject({ method: "POST", url: "/api/library/opened", payload: { kind: "course_request", id: draft.id } })).statusCode, 204);
+    assert.equal((await app.inject({ method: "POST", url: "/api/library/hide", payload: { kind: "course_request", id: row.id } })).statusCode, 204);
+    assert.equal((await app.inject({ method: "POST", url: "/api/library/hide", payload: { kind: "course", id: randomUUID() } })).statusCode, 404);
+    await settled();
+    const seen = (kind: Parameters<typeof recorded.of>[0]) => recorded.of(kind).map((event) => [event.learnerId, event.courseRequestId, event.detail]);
+    assert.deepEqual(seen("course_request_edited"), [[learner.id, draft.id, null]]);
+    assert.deepEqual(seen("library_item_opened"), [[learner.id, draft.id, { kind: "course_request", id: draft.id }]]);
+    assert.deepEqual(seen("library_item_hidden"), [[learner.id, row.id, { kind: "course_request", id: row.id }]]);
+  } finally {
+    recorded.uninstall();
+    await app.close();
+  }
 });
 
 test("The subject check and choice are private to their Learner", async () => {

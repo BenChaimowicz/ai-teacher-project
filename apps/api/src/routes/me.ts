@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { courseCompletions, learners, lessonCompletions, type Database } from "@senoy/db";
 import { cleanDisplayName } from "@senoy/db/learner-name";
+import { recordProductEvent } from "../lib/usage-tracking.ts";
 
 /** Sent when a display name is empty or too long. */
 export const DISPLAY_NAME_ERROR = "A name needs 1 to 40 characters.";
@@ -67,6 +68,8 @@ export async function meRoutes(app: FastifyInstance) {
         .where(eq(learners.id, request.currentLearner.id))
         .returning({ displayName: learners.displayName, ...finishedCounts(app.db, request.currentLearner.id) });
       if (!row) return reply.code(500).send({ error: "Couldn't save your name. Try again." });
+      // The name itself stays out of the feed: it is the Learner's to show, not ours to log.
+      void recordProductEvent("account_renamed", { learnerId: request.currentLearner.id });
       return meView(request, row.displayName, row);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

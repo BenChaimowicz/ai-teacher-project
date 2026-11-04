@@ -3,6 +3,9 @@ import { createClient, type AuthError, type EmailOtpType, type Session } from "@
 /** A Supabase session as the API keeps it: the access token (`kn_at`) and the refresh token (`kn_rt`). */
 export type SessionTokens = { accessToken: string; refreshToken: string };
 
+/** A session Supabase just issued, with the Supabase user it belongs to (`learners.auth_user_id`). */
+export type IssuedSession = SessionTokens & { userId: string };
+
 /** The kinds of email link `GET /api/auth/confirm` accepts; the templates send `email` (welcome) and `recovery` (reset). */
 export const LINK_TYPES = ["email", "recovery", "signup", "magiclink", "invite", "email_change"] as const;
 
@@ -42,21 +45,21 @@ export type AuthService = {
   /** Sends the welcome email again. */
   resendConfirmation(email: string, redirectTo: string): Promise<void>;
   /** Checks an email and password. */
-  signIn(email: string, password: string): Promise<SessionTokens>;
+  signIn(email: string, password: string): Promise<IssuedSession>;
   /** Emails a 6-digit sign-in code, never creating a user. */
   sendCode(email: string): Promise<void>;
   /** Checks a 6-digit code. */
-  verifyCode(email: string, code: string): Promise<SessionTokens>;
+  verifyCode(email: string, code: string): Promise<IssuedSession>;
   /** Sends the password-reset email linking to `redirectTo`. */
   sendPasswordReset(email: string, redirectTo: string): Promise<void>;
   /** Checks the token hash an email link carries. */
-  verifyLink(tokenHash: string, type: LinkType): Promise<SessionTokens>;
+  verifyLink(tokenHash: string, type: LinkType): Promise<IssuedSession>;
   /** Trades a refresh token for a new session. */
   refresh(refreshToken: string): Promise<SessionTokens>;
   /** Sets a signed-in user's password. */
   changePassword(session: SessionTokens, password: string): Promise<void>;
-  /** Revokes this session or all of the user's sessions. */
-  signOut(session: SessionTokens, scope: SignOutScope): Promise<void>;
+  /** Revokes this session or all of the user's sessions, and says whose they were (the Supabase user id). */
+  signOut(session: SessionTokens, scope: SignOutScope): Promise<{ userId: string | null }>;
 };
 
 /**
@@ -64,9 +67,9 @@ export type AuthService = {
  * @param session - The session Supabase returned
  * @param fn - The calling method, for the error
  */
-function tokensOf(session: Session | null, fn: string): SessionTokens {
+function tokensOf(session: Session | null, fn: string): IssuedSession {
   if (!session) throw new AuthServiceError(`[supabase-auth.ts: ${fn}] Supabase returned no session`, undefined, 0);
-  return { accessToken: session.access_token, refreshToken: session.refresh_token };
+  return { accessToken: session.access_token, refreshToken: session.refresh_token, userId: session.user.id };
 }
 
 /**
@@ -117,14 +120,15 @@ export function supabaseAuthService(supabaseUrl: string | undefined, publishable
   }
 
   /**
-   * A client with a Learner's session set on it, for a signed-in action.
+   * A client with a Learner's session set on it, for a signed-in action, and the Supabase user that session is for.
    * @param session - The Learner's tokens
    * @param fn - The calling method, for the error
    */
   async function signedIn(session: SessionTokens, fn: string) {
     const auth = client().auth;
-    await run(fn, "step=setSession", () => auth.setSession({ access_token: session.accessToken, refresh_token: session.refreshToken }));
-    return auth;
+    const { data } = await run(fn, "step=setSession", () =>
+      auth.setSession({ access_token: session.accessToken, refresh_token: session.refreshToken }));
+    return { auth, userId: data.user?.id ?? null };
   }
 
   return {
@@ -159,12 +163,13 @@ export function supabaseAuthService(supabaseUrl: string | undefined, publishable
       return tokensOf(data.session, "refresh");
     },
     async changePassword(session, password) {
-      const auth = await signedIn(session, "changePassword");
+      const { auth } = await signedIn(session, "changePassword");
       await run("changePassword", "step=updateUser", () => auth.updateUser({ password }));
     },
     async signOut(session, scope) {
-      const auth = await signedIn(session, "signOut");
+      const { auth, userId } = await signedIn(session, "signOut");
       await run("signOut", `scope=${scope}`, () => auth.signOut({ scope }));
+      return { userId };
     },
   };
 }
