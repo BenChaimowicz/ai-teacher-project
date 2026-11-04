@@ -17,6 +17,7 @@ import {
   type UsageRole,
   type UsageVendor,
 } from "@senoy/db";
+import type { LogCorrelation } from "@senoy/logging";
 import type { ResearchAdapter, ResearchAdapterId, ResearchCallObservation, ResearchOptions, SourcePackStatus } from "@senoy/research";
 import { createOpenRouterTransport, type ModelCallObservation, type OpenRouterOptions, type StructuredTransport } from "./openrouter.ts";
 import type { MeasuredCall, MeasuredVendor, Measurement, ResearchMeter } from "./research-measurement.ts";
@@ -73,8 +74,23 @@ export type UsageSink = {
   insertApiRequest(row: ApiRequestRow): Promise<void>;
 };
 
-/** The Course Request, Learner, innermost Pipeline Event, and job claim the current code runs for. */
-export type TrackingContext = { pipelineEventId: string | null; courseRequestId: string | null; learnerId: string | null; claimToken: string | null };
+/**
+ * The Course Request, Learner, innermost Pipeline Event, job claim, request id and Generation job the current code runs
+ * for. The one AsyncLocalStorage for correlation (ADR 0029): every Log Entry takes its ids from here.
+ */
+export type TrackingContext = {
+  pipelineEventId: string | null;
+  courseRequestId: string | null;
+  learnerId: string | null;
+  claimToken: string | null;
+  /** The API request being served, or, in a worker's run, the request that last queued its job. */
+  requestId: string | null;
+  /** The Generation job being run; null outside a worker's run. */
+  jobId: string | null;
+};
+
+/** What a worker's run is claimed under: the claim token, and the ids every Log Entry of the run carries. */
+export type RunClaim = { claimToken: string; jobId: string; requestId: string | null; courseRequestId: string; learnerId: string };
 
 /** Which model port and which of its attempts is calling the transport (ADR 0015). */
 export type ModelCallFrame = { role: Extract<UsageRole, "generator" | "fallback_generator" | "judge" | "triage">; attempt: number };
@@ -138,13 +154,56 @@ export function currentTrackingContext(): TrackingContext | undefined {
 }
 
 /**
- * Runs one claimed job's run so every Pipeline Event it starts keeps the claim's token. Once no running job holds that
- * token, the next claim closes whatever the run left open (SEN-93).
- * @param claimToken - The run's claim token
+ * The ids of the code running now, for the logger's `context` option (ADR 0029).
+ * @returns The ids, or undefined outside any request or run
+ */
+export function currentLogCorrelation(): LogCorrelation | undefined {
+  const context = contextStorage.getStore();
+  if (!context) return undefined;
+  return {
+    requestId: context.requestId,
+    jobId: context.jobId,
+    courseRequestId: context.courseRequestId,
+    learnerId: context.learnerId,
+    pipelineEventId: context.pipelineEventId,
+  };
+}
+
+/**
+ * Runs one API request with its request id in the tracking context, so its log lines, and the Generation job it
+ * queues, carry it. Fastify's first `onRequest` hook calls it with `done`, so every later hook and the handler run inside.
+ * @param requestId - The request's id (Fastify's `request.id`)
+ * @param fn - The rest of the request
+ */
+export function runInRequestContext<T>(requestId: string, fn: () => T): T {
+  return contextStorage.run({ pipelineEventId: null, courseRequestId: null, learnerId: null, claimToken: null, requestId, jobId: null }, fn);
+}
+
+/**
+ * Names the signed-in Learner in the current request's context, once the sign-in check has loaded them. Steps and log
+ * lines that start after this carry the Learner. Does nothing outside a request.
+ * @param learnerId - The Learner's id, or null when signed out
+ */
+export function setContextLearner(learnerId: string | null) {
+  const context = contextStorage.getStore();
+  if (context && learnerId) context.learnerId = learnerId;
+}
+
+/**
+ * Runs one claimed job's run so every Pipeline Event it starts keeps the claim's token, and every Log Entry the job's
+ * ids. Once no running job holds that token, the next claim closes whatever the run left open (SEN-93).
+ * @param claim - The run's claim token, job, request id, Course Request and Learner
  * @param fn - The run
  */
-export function withClaim<T>(claimToken: string, fn: () => Promise<T>): Promise<T> {
-  return contextStorage.run({ pipelineEventId: null, courseRequestId: null, learnerId: null, claimToken }, fn);
+export function withClaim<T>(claim: RunClaim, fn: () => Promise<T>): Promise<T> {
+  return contextStorage.run({
+    pipelineEventId: null,
+    courseRequestId: claim.courseRequestId,
+    learnerId: claim.learnerId,
+    claimToken: claim.claimToken,
+    requestId: claim.requestId,
+    jobId: claim.jobId,
+  }, fn);
 }
 
 /**
@@ -222,7 +281,10 @@ export async function withPipelineEvent<T>(
     parentId: parent?.pipelineEventId ?? null, kind, label: options.label ?? null, courseRequestId, learnerId, detail, claimToken,
   })) ?? null;
   // Without an id, records made inside still attach to the enclosing step.
-  const context = { pipelineEventId: id ?? parent?.pipelineEventId ?? null, courseRequestId, learnerId, claimToken };
+  const context: TrackingContext = {
+    pipelineEventId: id ?? parent?.pipelineEventId ?? null, courseRequestId, learnerId, claimToken,
+    requestId: parent?.requestId ?? null, jobId: parent?.jobId ?? null,
+  };
   const startedAt = performance.now();
   const finish = async (status: PipelineEventFinish["status"], error: string | null) => {
     if (!id) return;

@@ -1,16 +1,17 @@
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
-import { loadRootEnv } from "@senoy/db";
-import { createBatchedLogSink } from "@senoy/logging";
+import { createDb, loadRootEnv } from "@senoy/db";
+import { createBatchedLogSink, createLogger, drizzleLogWriter } from "@senoy/logging";
 import { supabaseAuthService } from "./lib/supabase-auth.ts";
 import sameOriginPlugin from "./plugins/same-origin.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { balanceProbeFromEnv, createResearchMeter } from "./lib/research-measurement.ts";
-import { installUsageTracking } from "./lib/usage-tracking.ts";
+import { currentLogCorrelation, installUsageTracking } from "./lib/usage-tracking.ts";
 import apiRequestsPlugin, { recordedUrl } from "./plugins/api-requests.ts";
 import corsPlugin from "./plugins/cors.ts";
 import currentLearnerPlugin, { supabaseTokenVerifier } from "./plugins/current-learner.ts";
 import dbPlugin from "./plugins/db.ts";
+import requestContextPlugin, { REQUEST_ID_OPTIONS } from "./plugins/request-context.ts";
 import spaPlugin from "./plugins/spa.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { clientLogRoutes } from "./routes/client-logs.ts";
@@ -36,16 +37,28 @@ async function start() {
   // The API's one Log Entry sink (ADR 0029): its logger and the client-log route both push to it.
   const logSink = createBatchedLogSink();
   const app = Fastify({
-    logger: {
+    // Every request gets a fresh uuid, logged as `requestId` and sent back as `x-request-id`.
+    ...REQUEST_ID_OPTIONS,
+    loggerInstance: createLogger({
+      component: "api",
+      sink: logSink,
+      // The request id, Learner and current Pipeline Event of the code logging, from the tracking context.
+      context: currentLogCorrelation,
       // Email-link landings carry a single-use sign-in token in their query; the log never shows it.
       serializers: {
         req: (req) => ({ method: req.method, url: recordedUrl(req.url ?? ""), host: req.host, remoteAddress: req.ip }),
       },
-    },
+    }),
   });
 
   try {
+    // First, so every later hook and every handler run inside the request's tracking context.
+    await app.register(requestContextPlugin);
     await app.register(dbPlugin);
+    // Log Entries go out on a connection of their own, so a log write never takes a slot from a request's queries.
+    const databaseUrl = process.env.DATABASE_URL;
+    if (databaseUrl) logSink.start(drizzleLogWriter(createDb(databaseUrl, { max: 1 })));
+    app.addHook("onClose", () => logSink.close());
     installUsageTracking({
       db: app.db,
       log: app.log,
@@ -90,6 +103,7 @@ async function start() {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     app.log.error(`[server.ts: start] Failed to start API || ${message}`);
+    await logSink.close();
     process.exit(1);
   }
 }

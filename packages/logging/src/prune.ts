@@ -1,4 +1,6 @@
-import type { Database } from "@senoy/db";
+import { sql, type SQL } from "drizzle-orm";
+import { logEntries, type Database } from "@senoy/db";
+import { LOG_RETENTION_DAYS } from "@senoy/db/logs";
 
 /**
  * Retention (ADR 0029): Log Entries are kept `LOG_RETENTION_DAYS` by level (`info` 7 days, `warn` and above 30 days).
@@ -37,8 +39,55 @@ export type PruneResult = { info: number; warnAndAbove: number };
  * @throws Error when a delete fails; the worker's timer logs it as a `warn` and tries again next hour
  */
 export async function pruneLogEntries(db: Database, options: PruneOptions = {}): Promise<PruneResult> {
-  // Stub (SEN-116): job 02.
-  void db;
-  void options;
-  return { info: 0, warnAndAbove: 0 };
+  const now = options.now ?? new Date();
+  const batchSize = options.batchSize ?? PRUNE_DEFAULTS.batchSize;
+  const maxBatches = options.maxBatches ?? PRUNE_DEFAULTS.maxBatches;
+  // `warn`, `error` and `fatal` share one retention, so they are one group, matched by the enum's order.
+  const info = await pruneGroup(db, "info", sql`${logEntries.level} = 'info'`, cutoff(now, LOG_RETENTION_DAYS.info), batchSize, maxBatches);
+  const warnAndAbove = await pruneGroup(db, "warnAndAbove", sql`${logEntries.level} >= 'warn'`, cutoff(now, LOG_RETENTION_DAYS.warn), batchSize, maxBatches);
+  return { info, warnAndAbove };
+}
+
+/**
+ * The instant before which rows of a retention are deleted.
+ * @param now - The clock
+ * @param days - The retention in days
+ */
+function cutoff(now: Date, days: number) {
+  return new Date(now.getTime() - days * 86_400_000);
+}
+
+/**
+ * Deletes one level group's expired rows in batches, until a batch comes back short or `maxBatches` ran.
+ * @param db - Drizzle client
+ * @param group - The group, for errors
+ * @param level - Which rows of the table belong to the group
+ * @param before - Rows logged before this are expired
+ * @param batchSize - Rows per statement
+ * @param maxBatches - Statements at most
+ * @returns How many rows were deleted
+ */
+async function pruneGroup(db: Database, group: keyof PruneResult, level: SQL, before: Date, batchSize: number, maxBatches: number) {
+  let deleted = 0;
+  for (let batch = 0; batch < maxBatches; batch += 1) {
+    let count: number;
+    try {
+      const rows = await db.execute<{ id: string }>(sql`
+        delete from ${logEntries} where ${logEntries.id} in (
+          select ${logEntries.id} from ${logEntries}
+          where ${level} and ${logEntries.loggedAt} < ${before.toISOString()}::timestamptz
+          limit ${batchSize}
+          for update skip locked
+        )
+        returning ${logEntries.id}
+      `);
+      count = rows.length;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`[prune.ts: pruneLogEntries] Failed to delete expired Log Entries || group=${group} || deleted=${deleted} || ${message}`);
+    }
+    deleted += count;
+    if (count < batchSize) break;
+  }
+  return deleted;
 }

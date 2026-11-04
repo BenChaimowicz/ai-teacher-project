@@ -125,7 +125,8 @@ export function createGenerationWorker({ db, blueprint, generation, log, pollMs 
         `owner=${owner} host=${worker.host} commit=${worker.commit}${worker.dirty ? " (uncommitted changes)" : ""}`);
       const input = { db, courseRequestId: claim.courseRequestId, learnerId: claim.learnerId, control: postgresControl(db, claim, lost.signal), worker };
       // Every Pipeline Event the run starts keeps this claim, so a later claim can close what it leaves open.
-      await withClaim(claim.claimToken, async () => {
+      // Every Log Entry of the run carries the job, the request that queued it, its Course Request and its Learner.
+      await withClaim(claim, async () => {
         if (claim.kind === "blueprint") {
           await blueprint.start(input);
           log.info(`job ${claim.jobId} saved its Course Blueprint for review`);

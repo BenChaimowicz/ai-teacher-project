@@ -6,11 +6,14 @@ import { createModelPorts } from "./model-ports.ts";
 import { ModelError, type StructuredRequest } from "./openrouter.ts";
 import {
   createTrackedTransport,
+  currentLogCorrelation,
   installUsageTracking,
   recordApiRequest,
   recordProductEvent,
   recordUsage,
   researchUsageRow,
+  runInRequestContext,
+  setContextLearner,
   withClaim,
   withPipelineEvent,
   type PipelineEventFinish,
@@ -156,9 +159,51 @@ test("Pipeline Events nest, inherit the Request and Learner, and own the Usage R
   });
 });
 
+/** A run's claim, as the worker passes it to `withClaim`. */
+const CLAIM = { claimToken: "claim1", jobId: "job1", requestId: "request1", courseRequestId: "req1", learnerId: "learner1" };
+
+test("A run's Log Entry ids come from its claim, and each nested step adds its Pipeline Event (ADR 0029)", async () => {
+  await withTracking(false, async ({ events }) => {
+    const seen: unknown[] = [];
+    await withClaim(CLAIM, async () => {
+      seen.push(currentLogCorrelation());
+      await withPipelineEvent("course_generation", {}, async () => {
+        seen.push(currentLogCorrelation());
+        await withPipelineEvent("reading", { label: "Slot A" }, async () => void seen.push(currentLogCorrelation()));
+      });
+    });
+    const ids = { requestId: "request1", jobId: "job1", courseRequestId: "req1", learnerId: "learner1" };
+    assert.deepEqual(seen, [
+      { ...ids, pipelineEventId: null },
+      { ...ids, pipelineEventId: events[0]!.id },
+      { ...ids, pipelineEventId: events[1]!.id },
+    ]);
+    assert.equal(events[0]!.courseRequestId, "req1", "A run's steps default to its claim's Course Request and Learner.");
+    assert.equal(events[0]!.learnerId, "learner1");
+  });
+  assert.equal(currentLogCorrelation(), undefined, "Outside a request or run there are no ids.");
+});
+
+test("An API request's context carries its request id, then its Learner once signed in, into the steps it starts", async () => {
+  await withTracking(false, async ({ events }) => {
+    const seen: unknown[] = [];
+    await runInRequestContext("request2", async () => {
+      seen.push(currentLogCorrelation());
+      setContextLearner("learner2");
+      await withPipelineEvent("validity", { courseRequestId: "req2" }, async () => void seen.push(currentLogCorrelation()));
+    });
+    assert.deepEqual(seen, [
+      { requestId: "request2", jobId: null, courseRequestId: null, learnerId: null, pipelineEventId: null },
+      { requestId: "request2", jobId: null, courseRequestId: "req2", learnerId: "learner2", pipelineEventId: events[0]!.id },
+    ]);
+    assert.equal(events[0]!.claimToken, null);
+  });
+  assert.doesNotThrow(() => setContextLearner("nobody"), "Outside a request it does nothing.");
+});
+
 test("Steps a worker runs under a claim keep its token, nested ones too; a step outside any claim has none (SEN-93)", async () => {
   await withTracking(false, async ({ events }) => {
-    await withClaim("claim1", () => withPipelineEvent("course_generation", { courseRequestId: "req1" }, () =>
+    await withClaim(CLAIM, () => withPipelineEvent("course_generation", { courseRequestId: "req1" }, () =>
       withPipelineEvent("reading", { label: "Slot A" }, async () => undefined)));
     await withPipelineEvent("validity", { courseRequestId: "req2" }, async () => undefined);
     assert.deepEqual(events.map((event) => [event.kind, event.claimToken]), [["course_generation", "claim1"], ["reading", "claim1"], ["validity", null]]);
