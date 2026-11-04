@@ -253,8 +253,6 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
   const [justSubmitted, setJustSubmitted] = useState(false);
   const { say } = useCompanion();
   const toast = useToast();
-  const thread = useRef<HTMLDivElement>(null);
-  const shownBefore = useRef<number | null>(null);
 
   const base = `/api/courses/${courseId}/lessons/${lessonId}/quiz`;
 
@@ -263,7 +261,6 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
     setView(null);
     setError(null);
     setJustSubmitted(false);
-    shownBefore.current = null;
     requestJson<{ quiz: QuizState }>(base, "GET", undefined, "Could not load Quiz")
       .then((json) => {
         if (!cancelled) setView(json.quiz);
@@ -350,7 +347,6 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
     write(async () => {
       const json = await requestJson<{ quiz: QuizState }>(`${base}/retake`, "POST", undefined, "Could not start a retake");
       setJustSubmitted(false);
-      shownBefore.current = null;
       setView(json.quiz);
     });
 
@@ -367,16 +363,6 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
   const canSubmit = Boolean(view) && !submitted && items.every((item) => done(item.id));
   const resultList = items.map((item) => results[item.id]);
   const current = !submitted && firstOpen >= 0 ? items[firstOpen] : undefined;
-
-  /* bring a newly shown question into view (not on first load) */
-  useEffect(() => {
-    if (!view) return;
-    const before = shownBefore.current;
-    shownBefore.current = shown;
-    if (before === null || shown <= before) return;
-    const cards = thread.current?.querySelectorAll(".l-qcard");
-    cards?.[shown - 1]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [shown, view]);
 
   /* number keys pick an answer on the current question */
   const keyRef = useRef<(n: number) => void>(() => undefined);
@@ -450,7 +436,7 @@ export function QuizView({ courseId, lessonId, title, lessonGoal, lessonNumber, 
           <p className="l-best">Loading…</p>
         )
       ) : (
-        <div ref={thread}>
+        <div>
           <ChatThread label="Quiz" replay>
             <CompanionLine>
               {perItem
