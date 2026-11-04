@@ -91,13 +91,17 @@ export function scrubEmails(text: string): string {
   return stripNul(text).replace(EMAIL, EMAIL_REPLACEMENT);
 }
 
+/** Half of a UTF-16 pair with no other half. */
+const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g;
+
 /**
- * Removes NUL characters. Postgres refuses `\u0000` in `text` and `jsonb`, and one such row would fail the whole
- * batch it is written in, so no stored string or key may carry one.
+ * Removes NUL characters and replaces lone UTF-16 surrogates with U+FFFD. Postgres refuses both in `text` and
+ * `jsonb`, and one such row would fail the whole batch it is written in, so no stored string or key may carry one.
  * @param text - Any text bound for a Log Entry
  */
 export function stripNul(text: string): string {
-  return text.includes("\u0000") ? text.replaceAll("\u0000", "") : text;
+  const withoutNul = text.includes("\u0000") ? text.replaceAll("\u0000", "") : text;
+  return withoutNul.replace(LONE_SURROGATE, "\ufffd");
 }
 
 /**
@@ -137,14 +141,16 @@ function redactValue(value: unknown, parentKey: string | null, depth: number, se
       ? { ...value, type: value.name, message: value.message, stack: value.stack }
       : (value as Record<string, unknown>);
     const copy: Record<string, unknown> = {};
-    for (const [key, inner] of Object.entries(source)) {
+    for (const [rawKey, inner] of Object.entries(source)) {
+      // Cleaned before the secret check, so `"pass\u0000word"` is still redacted.
+      const key = stripNul(rawKey);
       const lower = key.toLowerCase();
       if (REDACTED_KEY_SET.has(lower) || (parentKey === "body" && REDACTED_BODY_KEY_SET.has(lower))) {
         copy[key] = REDACTED;
         continue;
       }
       const redacted = redactValue(inner, lower, depth + 1, seen);
-      if (redacted !== undefined) copy[stripNul(key)] = redacted;
+      if (redacted !== undefined) copy[key] = redacted;
     }
     return copy;
   } finally {

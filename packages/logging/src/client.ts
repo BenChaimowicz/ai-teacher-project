@@ -66,11 +66,11 @@ export function capUtf8(text: string, maxBytes: number): string {
 /**
  * A path without its query string or hash, so no token or email in a URL reaches a Log Entry.
  * @param path - A path, possibly with `?…` or `#…`
- * @returns The path alone
+ * @returns The path alone, cut to `maxPathBytes`
  */
 export function pathOnly(path: string): string {
   const cut = path.search(/[?#]/);
-  return cut === -1 ? path : path.slice(0, cut);
+  return capUtf8(cut === -1 ? path : path.slice(0, cut), CLIENT_LOG_LIMITS.maxPathBytes);
 }
 
 /**
@@ -373,14 +373,12 @@ export type AcceptClientLogBatchOptions = {
   now: Date;
   /** The signed-in Learner, or null. */
   learnerId: string | null;
-  /** The request's `User-Agent`, when the route has it; cut to 256 characters. */
+  /** The request's `User-Agent`, when the route has it; cut to `maxUserAgentChars`. */
   userAgent?: string | null;
   /** The route's process-wide per-minute (and, for the API, daily) cap. */
   cap: ClientLogMinuteCap;
 };
 
-/** Longest `User-Agent` kept in a client Log Entry's context, in characters. */
-const USER_AGENT_MAX_CHARS = 256;
 
 /** HTTP method names: letters only. */
 const METHOD = /^[A-Z]{1,16}$/;
@@ -434,7 +432,7 @@ function readEvent(value: unknown, options: AcceptClientLogBatchOptions): LogEnt
   }
   if (api) context.api = { method: api.method, path: api.path, status: api.status };
   if (typeof event.count === "number" && Number.isInteger(event.count) && event.count >= 1) context.count = event.count;
-  if (typeof options.userAgent === "string") context.userAgent = options.userAgent.slice(0, USER_AGENT_MAX_CHARS);
+  if (typeof options.userAgent === "string") context.userAgent = options.userAgent.slice(0, CLIENT_LOG_LIMITS.maxUserAgentChars);
 
   return {
     loggedAt: options.now,

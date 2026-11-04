@@ -159,3 +159,20 @@ test("toStorableRow removes NUL characters from the message, context strings and
   assert.deepEqual(row.context, { key: "value", nested: ["a"] });
   assert.equal(JSON.stringify(row).includes("\\u0000"), false);
 });
+
+test("toStorableRow replaces lone surrogates and redacts a key a NUL split", () => {
+  const row = toStorableRow({
+    loggedAt: new Date(),
+    component: "web",
+    level: "error",
+    message: "half \ud800 pair",
+    context: { stack: "at x\udc00", "pass\u0000word": "hunter2", emoji: "\ud83d\ude00" },
+    requestId: null,
+    generationJobId: null,
+    courseRequestId: null,
+    learnerId: null,
+    pipelineEventId: null,
+  } as LogEntryRow);
+  assert.equal(row.message, "half \ufffd pair");
+  assert.deepEqual(row.context, { stack: "at x\ufffd", password: REDACTED, emoji: "\ud83d\ude00" });
+});

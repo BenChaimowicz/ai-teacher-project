@@ -115,7 +115,11 @@ export const CLIENT_LOG_LIMITS = {
    */
   maxStackBytes: 2_048,
   /** Longest React component stack kept, in UTF-8 bytes. */
-  maxComponentStackBytes: 1_536,
+  maxComponentStackBytes: 1_472,
+  /** Longest page path and failed-call path kept, in UTF-8 bytes. */
+  maxPathBytes: 128,
+  /** Longest `User-Agent` kept, in characters. */
+  maxUserAgentChars: 128,
   /** Events one page load sends at most; the browser drops the rest. */
   maxEventsPerPageLoad: 50,
   /** The browser waits this long after the first queued event before sending, so a burst goes as one batch. */

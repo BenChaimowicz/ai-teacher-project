@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, mock, test } from "node:test";
 import { CLIENT_LOG_LIMITS, TRUNCATION_MARKER, type ClientLogBatch } from "@senoy/db/logs";
 import {
+  acceptClientLogBatch,
   capUtf8,
   createClientLogMinuteCap,
   createClientLogShipper,
@@ -10,6 +11,7 @@ import {
   pathOnly,
   type ClientLogTarget,
 } from "./client.ts";
+import type { LogEntryRow } from "./types.ts";
 
 /** Every call the shipper made to its fetch, with the batch it sent. */
 function recordingFetch(behaviour: "ok" | "reject" | "throw" = "ok") {
@@ -185,4 +187,18 @@ test("The daily cap stops storing for the rest of the UTC day, and a new day sta
   assert.equal(cap.allow(at(23, 59)), false, "A new minute does not reset the day.");
   assert.equal(cap.dropsToReport(at(23, 59)), 2);
   assert.equal(cap.allow(new Date(Date.UTC(2026, 10, 5, 0, 1))), true, "A new UTC day stores again.");
+});
+
+test("A web event at every cap stores a context under 4 KB", () => {
+  const rows: LogEntryRow[] = [];
+  const long = "x".repeat(20_000);
+  acceptClientLogBatch(
+    { events: [{ kind: "api_failure", message: long, time: new Date().toISOString(), page: `/${long}`, stack: long,
+      componentStack: long, count: 9, api: { method: "GET", path: `/api/${long}`, status: 500 } }] },
+    { sink: { push: (row) => rows.push(row) }, component: "web", now: new Date(), learnerId: null, userAgent: long,
+      cap: createClientLogMinuteCap(60, 500) },
+  );
+  assert.equal(rows.length, 1);
+  assert.ok(new TextEncoder().encode(JSON.stringify(rows[0]!.context)).length < 4_096);
+  assert.ok(new TextEncoder().encode(String((rows[0]!.context as { page: string }).page)).length <= CLIENT_LOG_LIMITS.maxPathBytes);
 });

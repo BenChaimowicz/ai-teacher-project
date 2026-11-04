@@ -72,7 +72,7 @@ test("Each valid event becomes one web row: the server sets component, level and
       assert.equal(row.generationJobId, null);
       assert.equal(row.courseRequestId, null);
       assert.equal(row.pipelineEventId, null);
-      assert.equal((row.context!.userAgent as string).length, 256);
+      assert.equal((row.context!.userAgent as string).length, CLIENT_LOG_LIMITS.maxUserAgentChars);
     }
     assert.deepEqual(rows.map((row) => row.level), ["error", "error", "error", "warn", "error"]);
     assert.deepEqual({ ...rows[0]!.context, userAgent: undefined }, {
