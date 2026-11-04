@@ -25,7 +25,10 @@ const AUTHOR_TIMEOUT_MS = 5 * 60 * 1000;
  */
 const AUTHOR_REASONING_TOKENS = 1500;
 
-/** Rewrite rounds after the first review; anything still failing fails the diagnostic. */
+/**
+ * Rewrite rounds each author gets after the first review. The primary author uses its rounds first; the fallback
+ * author then rewrites whatever is still failing for as many rounds again (SEN-131). After that the diagnostic fails.
+ */
 export const MAX_REWRITE_ROUNDS = 2;
 
 /** A set needs at least this many application items; a shortfall is rewritten like any other failed check. */
@@ -59,15 +62,18 @@ export type DiagnosticDraft = {
 
 /**
  * The item set still had failing items after the last rewrite round. `build` throws it only once the fallback
- * Generator's set has failed too; the Request is then assessment-failed (spec §4.3).
+ * Generator's rewrite rounds have failed too; the Request is then assessment-failed (spec §4.3).
  */
 export class DiagnosticFailedError extends Error {
   public readonly failedItemIds: string[];
 
-  /** @param problems - Last round's reasons, per still-failing item id */
-  constructor(public readonly problems: Record<string, string[]>) {
+  /**
+   * @param problems - Last round's reasons, per still-failing item id
+   * @param rewriteRounds - How many rewrite rounds were spent, across every author
+   */
+  constructor(public readonly problems: Record<string, string[]>, rewriteRounds = MAX_REWRITE_ROUNDS) {
     const failedItemIds = Object.keys(problems);
-    super(`[diagnostic: build] Diagnostic items still failing after ${MAX_REWRITE_ROUNDS} rewrite rounds || ${
+    super(`[diagnostic: build] Diagnostic items still failing after ${rewriteRounds} rewrite rounds || ${
       failedItemIds.map((id) => `${id}: ${problems[id]!.join(" ")}`).join(" || ")}`);
     this.failedItemIds = failedItemIds;
     this.name = "DiagnosticFailedError";
@@ -87,7 +93,7 @@ export type DiagnosticInput = { subject: string; learningGoal: string; scope: Go
 
 /** Prepares Starting Level diagnostics and writes remaining-gap statements. */
 export interface DiagnosticBuilder {
-  /** Writes and checks a set, then once more with the fallback Generator if it still fails its checks. */
+  /** Writes and checks a set; items still failing after the author's rewrite rounds are rewritten by the fallback Generator. */
   build(input: DiagnosticInput): Promise<DiagnosticDraft>;
   writeGapStatement(input: GapStatementInput): Promise<string>;
 }
@@ -414,12 +420,16 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
   }
 
   /**
-   * Writes one set with `generator`, then reviews and rewrites failing items for the bounded rounds.
-   * @throws DiagnosticFailedError when items still fail after the last round
+   * Writes one set with the first author, then reviews and rewrites failing items for the bounded rounds. Each author
+   * in turn gets `MAX_REWRITE_ROUNDS` rewrite rounds over whatever is still failing; passing items are kept throughout,
+   * so the fallback author repairs the set rather than writing a new one (SEN-131).
+   * @param authorPorts - The primary author first, then the fallback, when there is one
+   * @throws DiagnosticFailedError when items still fail after the last author's last round
    */
-  async function buildWith(generator: Generator, judge: Judge, input: DiagnosticInput): Promise<DiagnosticDraft> {
-    if (generator.modelId.trim() === judge.modelId.trim()) {
-      throw new Error("[diagnostic: build] Judge must use a different model from the author");
+  async function buildWith(authorPorts: Generator[], judge: Judge, input: DiagnosticInput): Promise<DiagnosticDraft> {
+    const generator = authorPorts[0]!;
+    if (authorPorts.some((author) => author.modelId.trim() === judge.modelId.trim())) {
+      throw new Error("[diagnostic: build] Judge must use a different model from every author");
     }
     // Scope is left out entirely when null, so an unfocused goal is written exactly as before.
     const scope = input.scope ? { scope: input.scope } : {};
@@ -518,10 +528,12 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
       }
       if (problems.size === 0) break;
       pending = [...problems.keys()];
-      if (round >= MAX_REWRITE_ROUNDS) throw new DiagnosticFailedError(Object.fromEntries(problems));
+      // Round r is rewritten by the author whose budget it falls in: the primary for the first rounds, then the fallback.
+      const rewritingAuthor = authorPorts[Math.floor(round / MAX_REWRITE_ROUNDS)];
+      if (!rewritingAuthor) throw new DiagnosticFailedError(Object.fromEntries(problems), round);
 
       const capabilityIds = pending.map((id) => items.find((item) => item.id === id)!.capabilityId);
-      const { value: rewritten, modelId: rewriter } = await generator.generateStructured({
+      const { value: rewritten, modelId: rewriter } = await rewritingAuthor.generateStructured({
         systemPrompt: scoped(REWRITE_PROMPT, SCOPE_BLOCK, input.scope),
         input: {
           subject: input.subject,
@@ -560,12 +572,7 @@ export function createDiagnosticBuilder(options: DiagnosticBuilderOptions = {}):
   return {
     async build(input) {
       const { generator, fallbackGenerator, judge } = ports();
-      try {
-        return await buildWith(generator, judge, input);
-      } catch (error) {
-        if (!(error instanceof DiagnosticFailedError) || !fallbackGenerator) throw error;
-        return buildWith(fallbackGenerator, judge, input);
-      }
+      return buildWith(fallbackGenerator ? [generator, fallbackGenerator] : [generator], judge, input);
     },
 
     async writeGapStatement(input) {

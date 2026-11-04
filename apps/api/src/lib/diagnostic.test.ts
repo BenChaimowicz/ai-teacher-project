@@ -318,35 +318,36 @@ test("Re-reviewed items are judged alongside the kept items so duplicates can be
   assert.ok(!JSON.stringify(second.otherItems).includes("keyIndex"));
 });
 
-/** The clean set as a different author would write it, with stems the scripted Judge can tell apart. */
-const fallbackSet = { ...cleanSet, probes: cleanSet.probes.map((value, i) => ({ ...value, stem: `Fallback: which dye marks step ${i + 1} here?` })) };
-
-/** A Judge that finds no defensible answer to the primary author's item 8, in every round. */
+/** A Judge that finds no defensible answer to item 8 until it reads as the fallback author's rewrite, in every round. */
 function failsPrimaryItem8() {
   return scriptedJudge((itemId, stem) => itemId === "item8" && !stem.startsWith("Fallback") ? { defensibleOptions: [] } : {});
 }
 
-test("A set still failing after its rewrite rounds is written again once by the fallback Generator", async () => {
+test("Items still failing after the author's rewrite rounds are rewritten by the fallback Generator; the passing items are kept (SEN-131)", async () => {
   const primary = scriptedGenerator(cleanSet, [{ items: [rewrite("cap8", 8)] }, { items: [rewrite("cap8", 8)] }]);
-  const fallback = scriptedGenerator(fallbackSet, [], "fixture/fallback");
+  const fallback = scriptedGenerator(cleanSet, [{ items: [rewrite("cap8", 8, { stem: "Fallback: which dye marks step 8 here?" })] }], "fixture/fallback");
   const { judge, calls } = failsPrimaryItem8();
   const draft = await createDiagnosticBuilder({ generator: primary.generator, fallbackGenerator: fallback.generator, judge, ...scriptedFactChecker() }).build(INPUT);
   assert.equal(primary.calls.length, 3, "The primary author used its full rewrite budget first.");
-  assert.equal(fallback.calls.length, 1);
-  assert.equal(draft.authorModelId, "fixture/fallback");
-  assert.ok(draft.items.every((item) => item.stem.startsWith("Fallback")));
-  assert.deepEqual(calls.at(-1)!.authorModelIds, ["fixture/fallback"], "The Judge is told who wrote the set it reviews.");
+  assert.equal(fallback.calls.length, 1, "The fallback rewrites, it does not write a set.");
+  const handed = fallback.calls[0]!.input as { rewrite: { capabilityId: string }[]; keep: string[] };
+  assert.deepEqual(handed.rewrite.map((entry) => entry.capabilityId), ["cap8"], "Only the failing item is handed over.");
+  assert.equal(handed.keep.length, 7, "The seven passing items are kept.");
+  assert.equal(draft.items.filter((item) => item.stem.startsWith("Fallback")).length, 1);
+  assert.equal(draft.authorModelId, "fixture/author, fixture/fallback", "Both authors wrote part of the set.");
+  assert.deepEqual(calls.at(-1)!.authorModelIds, ["fixture/author", "fixture/fallback"], "The Judge is told who wrote the set it reviews.");
+  assert.equal(draft.reviews.filter((review) => review.itemId === "item8").length, 4, "Item 8 was reviewed in every round.");
 });
 
-test("When the fallback Generator's set fails too, the diagnostic fails", async () => {
+test("When the fallback Generator's rewrite rounds fail too, the diagnostic fails", async () => {
   const primary = scriptedGenerator(cleanSet, [{ items: [rewrite("cap8", 8)] }, { items: [rewrite("cap8", 8)] }]);
   const fallback = scriptedGenerator(cleanSet, [{ items: [rewrite("cap8", 8)] }, { items: [rewrite("cap8", 8)] }], "fixture/fallback");
   const { judge } = failsPrimaryItem8();
   await assert.rejects(
     createDiagnosticBuilder({ generator: primary.generator, fallbackGenerator: fallback.generator, judge, ...scriptedFactChecker() }).build(INPUT),
-    DiagnosticFailedError,
+    (error) => error instanceof DiagnosticFailedError && /after 4 rewrite rounds/.test(error.message),
   );
-  assert.deepEqual([primary.calls.length, fallback.calls.length], [3, 3]);
+  assert.deepEqual([primary.calls.length, fallback.calls.length], [3, 2], "Each author spends its rewrite rounds; no second set is written.");
 });
 
 test("A provider error does not switch to the fallback Generator", async () => {
