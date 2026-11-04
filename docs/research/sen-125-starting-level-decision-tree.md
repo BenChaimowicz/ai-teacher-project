@@ -102,7 +102,7 @@ Not recommended: Terra first (26 s and half the price per call, but two sets is 
 
 **Recommendation:** do not build the decision tree, and do not move the check onto one upfront pack. The cost case they were meant to answer was closed by SEN-120 and SEN-122, the tree conflicts with §4.3's map of eight capabilities, and the pack costs about what the searches it replaces cost, is no faster, and weakens the Judge's independence. Treat the 5-minute limit as its own ticket with step a, then b and c measured with the live check.
 
-**Decision:** pending. Briefed to the team on 2026-11-04; the decision-log entry follows the call.
+**Decision:** agreed on 2026-11-04 (Ben): the decision tree and the upfront pack are not built. The 5-minute limit is its own ticket, SEN-131, with steps a, b and c in that order. Logged in `docs/decisions/2026-11-04-the-starting-level-check-stays-eight-fixed-items-with-per-claim-search.md`.
 
 ## Appendix: the queries
 
