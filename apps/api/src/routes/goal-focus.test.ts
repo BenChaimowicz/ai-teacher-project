@@ -88,13 +88,16 @@ async function testApp(options: {
   app.decorate("db", db);
   app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
   await app.register(goalFocusRoutes, { goalFocuser: counting });
-  await app.register(startingLevelRoutes, { diagnosticBuilder: builder });
+  let ended!: () => void;
+  /** Resolves once the detached diagnostic preparation has written its last word (SEN-131). */
+  const prepared = new Promise<void>((resolve) => { ended = resolve; });
+  await app.register(startingLevelRoutes, { diagnosticBuilder: builder, onPreparationEnd: () => ended() });
   const [request] = await db.insert(courseRequests).values({
     learnerId: learner.id, subject: options.subject ?? BROAD_SUBJECT, learningGoal: ORIGINAL_GOAL,
     status: options.status ?? "validity_passed", focus: options.focus ?? null, clarification: options.clarification ?? null,
   }).returning();
   const url = `/api/course-requests/${request!.id}`;
-  return { app, url, learner, scopes, inputs, calls: () => calls, row: rows.get(courseRequests)![0]! };
+  return { app, prepared, url, learner, scopes, inputs, calls: () => calls, row: rows.get(courseRequests)![0]! };
 }
 
 /** Taps the first option of every fixture question. */
@@ -132,7 +135,7 @@ test("A precise goal passes straight to goal_focused with no questions", async (
 });
 
 test("A broad goal is questioned, answers are validated, and a confirmed proposal rewrites the goal and stores its scope", async () => {
-  const { app, url, row, calls, scopes } = await testApp();
+  const { app, prepared, url, row, calls, scopes } = await testApp();
   try {
     const asked = await app.inject({ method: "POST", url: `${url}/focus`, payload: {} });
     assert.equal(asked.statusCode, 200, asked.body);
@@ -194,9 +197,11 @@ test("A broad goal is questioned, answers are validated, and a confirmed proposa
     assert.deepEqual(focused.focus.scope, proposed.focus.proposal.scope);
     assert.deepEqual((await app.inject({ method: "GET", url: `${url}/diagnostic` })).json().courseRequest, focused);
 
-    const diagnostic = await app.inject({ method: "POST", url: `${url}/diagnostic` });
-    assert.equal(diagnostic.statusCode, 200, diagnostic.body);
-    assert.equal(diagnostic.json().courseRequest.status, "assessment_ready");
+    const started = await app.inject({ method: "POST", url: `${url}/diagnostic` });
+    assert.equal(started.statusCode, 200, started.body);
+    assert.equal(started.json().courseRequest.status, "assessment_preparing", "The prepare request answers before the set is built (SEN-131).");
+    await prepared;
+    assert.equal((await app.inject({ method: "GET", url: `${url}/diagnostic` })).json().courseRequest.status, "assessment_ready");
     assert.deepEqual(scopes, [proposed.focus.proposal.scope], "The diagnostic is written within the confirmed scope.");
   } finally { await app.close(); }
 });

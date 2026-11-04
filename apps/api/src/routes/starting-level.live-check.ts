@@ -50,8 +50,18 @@ async function checkStartingLevel() {
         const url = `/api/course-requests/${request.id}/diagnostic`;
         try {
           const started = Date.now();
-          const prepared = await app.inject({ method: "POST", url });
+          // The POST answers at once and the set is built after it (SEN-131); poll GET as the Level screen does, every 3 s.
+          const accepted = await app.inject({ method: "POST", url });
+          assert.equal(accepted.statusCode, 200, safe(accepted.body));
+          assert.equal(accepted.json().courseRequest.status, "assessment_preparing", "The prepare request answers before the set is built.");
+          process.stdout.write(`Prepare request answered in ${Date.now() - started} ms\n`);
+          let prepared = await app.inject({ method: "GET", url });
+          while (prepared.statusCode === 200 && prepared.json().courseRequest.status === "assessment_preparing") {
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            prepared = await app.inject({ method: "GET", url });
+          }
           assert.equal(prepared.statusCode, 200, safe(prepared.body));
+          assert.equal(prepared.json().courseRequest.status, "assessment_ready", safe(prepared.body));
           const { diagnostic } = prepared.json() as { diagnostic: { items: { id: string; stem: string; options: string[] }[] } };
           assert.equal(diagnostic.items.length, 8);
           assert.ok(!prepared.body.includes("keyIndex") && !prepared.body.includes("warrant"), "Keys never reach the browser.");

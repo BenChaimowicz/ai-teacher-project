@@ -89,16 +89,35 @@ async function testApp(status: CourseRequestStatus = "goal_focused", fail: Failu
   return { app, rows, inserts, gapInputs, counts, url, requestRow: rows.get(courseRequests)![0]! };
 }
 
+/**
+ * Starts the check and reads it back the way the browser does: the POST answers at once with `assessment_preparing`
+ * (SEN-131), then GET is polled until the Request has moved on.
+ * @param app - The API under test
+ * @param url - The Request's diagnostic URL
+ * @returns The first GET reply whose Request is no longer being prepared
+ */
+async function prepare(app: ReturnType<typeof Fastify>, url: string) {
+  const started = await app.inject({ method: "POST", url });
+  assert.equal(started.statusCode, 200, started.body);
+  assert.deepEqual([started.json().courseRequest.status, started.json().diagnostic], ["assessment_preparing", null], "The POST answers before the set is built.");
+  for (let poll = 0; poll < 50; poll += 1) {
+    const read = await app.inject({ method: "GET", url });
+    assert.equal(read.statusCode, 200, read.body);
+    if (read.json().courseRequest.status !== "assessment_preparing") return read;
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  throw new Error("The check was still being prepared after 50 polls.");
+}
+
 /** Answers keyed by item: the listed item numbers are correct, the rest are I don't know. */
 function answers(...correct: number[]) {
   return Object.fromEntries(draft.items.map((item, i) => [item.id, correct.includes(i + 1) ? 1 : "dont_know"]));
 }
 
-test("Starting the diagnostic prepares eight items and never sends keys, warrants, or capabilities", async () => {
+test("Starting the diagnostic answers at once, then prepares eight items and never sends keys, warrants, or capabilities", async () => {
   const { app, rows, url, requestRow } = await testApp();
   try {
-    const response = await app.inject({ method: "POST", url });
-    assert.equal(response.statusCode, 200);
+    const response = await prepare(app, url);
     const body = response.json();
     assert.equal(body.courseRequest.status, "assessment_ready");
     assert.equal(body.diagnostic.items.length, 8);
@@ -132,9 +151,8 @@ test("A diagnostic only starts once the Learning Goal is settled, once", async (
 test("A provider failure returns the Request to where it started, with a reason and Try again", async () => {
   const { app, url, requestRow } = await testApp("goal_focused", "provider");
   try {
-    const response = await app.inject({ method: "POST", url });
-    assert.equal(response.statusCode, 200, "The failure is a saved state, not a lost request.");
-    assert.deepEqual([response.json().courseRequest.status, response.json().courseRequest.failureReason], ["goal_focused", PREPARE_FAILED_REASON]);
+    const response = await prepare(app, url);
+    assert.deepEqual([response.json().courseRequest.status, response.json().courseRequest.failureReason], ["goal_focused", PREPARE_FAILED_REASON], "The failure is a saved state the next read finds.");
     assert.equal(requestRow.status, "goal_focused");
     assert.equal(requestRow.failureReason, PREPARE_FAILED_REASON);
   } finally {
@@ -145,7 +163,7 @@ test("A provider failure returns the Request to where it started, with a reason 
 test("A set failing its checks with both Generators is assessment-failed; Retry diagnostic is the one way on", async () => {
   const { app, url, requestRow } = await testApp("goal_focused", "checks");
   try {
-    const failed = await app.inject({ method: "POST", url });
+    const failed = await prepare(app, url);
     assert.deepEqual([failed.json().courseRequest.status, failed.json().courseRequest.failureReason], ["assessment_failed", ASSESSMENT_FAILED_REASON]);
     assert.equal(requestRow.status, "assessment_failed");
     assert.equal(failed.json().diagnostic, null, "No Starting Level is invented.");
@@ -161,7 +179,7 @@ test("Retry diagnostic prepares a fresh set and clears the reason", async () => 
   const { app, url, requestRow } = await testApp("assessment_failed");
   try {
     Object.assign(requestRow, { failureReason: ASSESSMENT_FAILED_REASON });
-    const retried = await app.inject({ method: "POST", url });
+    const retried = await prepare(app, url);
     assert.deepEqual([retried.json().courseRequest.status, retried.json().courseRequest.failureReason], ["assessment_ready", null]);
   } finally {
     await app.close();
@@ -176,7 +194,7 @@ test("A check whose preparing API stopped can be started again once its lease ha
     const reopened = await app.inject({ method: "GET", url });
     assert.deepEqual([reopened.json().courseRequest.status, reopened.json().courseRequest.failureReason], ["goal_focused", PREPARE_INTERRUPTED_REASON]);
     assert.deepEqual([requestRow.status, requestRow.preparingToken, requestRow.preparingUntil], ["goal_focused", null, null]);
-    const started = await app.inject({ method: "POST", url });
+    const started = await prepare(app, url);
     assert.deepEqual([started.json().courseRequest.status, started.json().courseRequest.failureReason], ["assessment_ready", null]);
   } finally {
     await app.close();
@@ -191,12 +209,15 @@ test("A check whose preparing API stopped can be started again once its lease ha
 async function twoApis(build: DiagnosticBuilder["build"]) {
   const learner = savedLearner();
   const { db, rows } = fakeDb([courseRequests, startingLevelDiagnostics]);
+  let ended!: () => void;
+  /** Resolves once the preparing API has written its last word, which no request waits for (SEN-131). */
+  const preparationEnded = new Promise<void>((resolve) => { ended = resolve; });
   /** One API process on the shared store. */
   async function api(builder: DiagnosticBuilder) {
     const app = Fastify();
     app.decorate("db", db);
     app.addHook("onRequest", async (request) => { request.currentLearner = learner; });
-    await app.register(startingLevelRoutes, { diagnosticBuilder: builder });
+    await app.register(startingLevelRoutes, { diagnosticBuilder: builder, onPreparationEnd: () => ended() });
     return app;
   }
   const writeGapStatement = async () => "Gap";
@@ -206,7 +227,7 @@ async function twoApis(build: DiagnosticBuilder["build"]) {
     learnerId: learner.id, subject: "Drums", learningGoal: "Play Iris by the Goo Goo Dolls", status: "goal_focused",
   }).returning();
   const url = `/api/course-requests/${request!.id}/diagnostic`;
-  return { preparer, reader, rows, requestRow: rows.get(courseRequests)![0]!, url };
+  return { preparer, reader, rows, requestRow: rows.get(courseRequests)![0]!, url, preparationEnded };
 }
 
 /** Lets a preparation reach its claim before the other API reads the Request. */
@@ -217,15 +238,17 @@ async function claimed() {
 test("A check one API is preparing is left alone by another API on the same database", async () => {
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
-  const { preparer, reader, rows, requestRow, url } = await twoApis(async () => { await gate; return structuredClone(draft); });
+  const { preparer, reader, rows, requestRow, url, preparationEnded } = await twoApis(async () => { await gate; return structuredClone(draft); });
   try {
-    const preparing = preparer.inject({ method: "POST", url });
+    const started = await preparer.inject({ method: "POST", url });
+    assert.equal(started.json().courseRequest.status, "assessment_preparing");
     await claimed();
     for (let poll = 0; poll < 3; poll += 1) {
       assert.equal((await reader.inject({ method: "GET", url })).json().courseRequest.status, "assessment_preparing", "The other API waits with the Learner.");
     }
     release();
-    assert.equal((await preparing).json().courseRequest.status, "assessment_ready");
+    await preparationEnded;
+    assert.equal((await reader.inject({ method: "GET", url })).json().courseRequest.status, "assessment_ready");
     assert.deepEqual([requestRow.status, requestRow.preparingToken, requestRow.preparingUntil], ["assessment_ready", null, null]);
     assert.equal(rows.get(startingLevelDiagnostics)!.length, 1);
   } finally {
@@ -237,17 +260,17 @@ test("A check one API is preparing is left alone by another API on the same data
 test("A preparation that lost its lease saves no attempt the Learner can never reach", async () => {
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
-  const { preparer, reader, rows, requestRow, url } = await twoApis(async () => { await gate; return structuredClone(draft); });
+  const { preparer, reader, rows, requestRow, url, preparationEnded } = await twoApis(async () => { await gate; return structuredClone(draft); });
   try {
-    const preparing = preparer.inject({ method: "POST", url });
+    await preparer.inject({ method: "POST", url });
     await claimed();
     // The preparing API stops pushing its lease out, as a killed process does, and the other API hands the check back.
     requestRow.preparingUntil = new Date(Date.now() - 1000);
     const handed = await reader.inject({ method: "GET", url });
     assert.deepEqual([handed.json().courseRequest.status, handed.json().courseRequest.failureReason], ["goal_focused", PREPARE_INTERRUPTED_REASON]);
     release();
-    assert.equal((await preparing).statusCode, 409, "The finished preparation says so rather than writing over the hand-back.");
-    assert.equal(requestRow.status, "goal_focused");
+    await preparationEnded;
+    assert.equal(requestRow.status, "goal_focused", "The finished preparation does not write over the hand-back.");
     assert.equal(rows.get(startingLevelDiagnostics)!.length, 0);
   } finally {
     await preparer.close();
@@ -258,7 +281,7 @@ test("A preparation that lost its lease saves no attempt the Learner can never r
 test("Submitting answers yields a remaining-gap statement without per-item correctness or a Progress write", async () => {
   const { app, rows, inserts, gapInputs, url, requestRow } = await testApp();
   try {
-    await app.inject({ method: "POST", url });
+    await prepare(app, url);
     const response = await app.inject({ method: "POST", url: `${url}/answers`, payload: { answers: answers(1, 3, 5) } });
     assert.equal(response.statusCode, 200);
     const { diagnostic, courseRequest } = response.json();
@@ -281,7 +304,7 @@ test("Submitting answers yields a remaining-gap statement without per-item corre
 test("Answers must cover exactly the attempt's items with an option or I don't know", async () => {
   const { app, url } = await testApp();
   try {
-    await app.inject({ method: "POST", url });
+    await prepare(app, url);
     for (const payload of [
       { answers: { ...answers(), item1: 3 } },
       { answers: { ...answers(), item9: 0 } },
@@ -298,7 +321,7 @@ test("Answers must cover exactly the attempt's items with an option or I don't k
 test("Too easy from ceiling widens the gap, shows the ordinary screen, and keeps the real answers", async () => {
   const { app, rows, gapInputs, url } = await testApp();
   try {
-    await app.inject({ method: "POST", url });
+    await prepare(app, url);
     const scored = await app.inject({ method: "POST", url: `${url}/answers`, payload: { answers: answers(1, 2, 3, 4, 5, 6, 7) } });
     assert.equal(scored.json().diagnostic.result.extremity, "ceiling");
     const widened = await app.inject({ method: "POST", url: `${url}/too-easy` });
@@ -318,7 +341,7 @@ test("Too easy from ceiling widens the gap, shows the ordinary screen, and keeps
 test("Too easy is refused once nothing is evidenced", async () => {
   const { app, url } = await testApp();
   try {
-    await app.inject({ method: "POST", url });
+    await prepare(app, url);
     await app.inject({ method: "POST", url: `${url}/answers`, payload: { answers: answers() } });
     assert.equal((await app.inject({ method: "POST", url: `${url}/too-easy` })).statusCode, 409);
   } finally {
@@ -329,7 +352,7 @@ test("Too easy is refused once nothing is evidenced", async () => {
 test("Looks right confirms an ordinary gap; Short Course is only for ceiling", async () => {
   const { app, rows, url, requestRow } = await testApp();
   try {
-    await app.inject({ method: "POST", url });
+    await prepare(app, url);
     await app.inject({ method: "POST", url: `${url}/answers`, payload: { answers: answers(1, 2, 3) } });
     assert.equal((await app.inject({ method: "POST", url: `${url}/confirm`, payload: { choice: "short_course" } })).statusCode, 409);
     const confirmed = await app.inject({ method: "POST", url: `${url}/confirm`, payload: { choice: "looks_right" } });
@@ -346,7 +369,7 @@ test("Looks right confirms an ordinary gap; Short Course is only for ceiling", a
 test("At ceiling the Learner chooses Short Course or Change my goal, never Looks right", async () => {
   const { app, rows, url } = await testApp();
   try {
-    await app.inject({ method: "POST", url });
+    await prepare(app, url);
     await app.inject({ method: "POST", url: `${url}/answers`, payload: { answers: answers(1, 2, 3, 4, 5, 6, 7, 8) } });
     assert.equal((await app.inject({ method: "POST", url: `${url}/confirm`, payload: { choice: "looks_right" } })).statusCode, 409);
     const changed = await app.inject({ method: "POST", url: `${url}/change-goal` });
@@ -478,7 +501,7 @@ test("Another Learner gets 404 from every Starting Level action on a Request, an
   const stranger = savedLearner();
   app.addHook("onRequest", async (request) => { if (asStranger) request.currentLearner = stranger; });
   try {
-    assert.equal((await app.inject({ method: "POST", url })).statusCode, 200);
+    await prepare(app, url);
     const before = JSON.stringify([...rows.values()]);
     asStranger = true;
     const calls: { method: "GET" | "POST"; url: string; payload?: object }[] = [
