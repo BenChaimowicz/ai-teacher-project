@@ -22,6 +22,7 @@ const VENDOR_HELP: Record<string, string> = {
   parallel: "Research vendor. It never reports what it charged, so its spend is estimated from the price list.",
   you: "Research vendor. It never reports what it charged, so its spend is estimated from the price list.",
   wikimedia: "Wikimedia Commons, searched for images the library lacks. It is free, so every call costs 0.",
+  openverse: "Openverse, a second image index searched to find Commons files the Commons search missed. It is free, so every call costs 0.",
 };
 
 /** Tooltip copy explaining vendor vs provider (also used by the Calls provider filter). */

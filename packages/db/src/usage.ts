@@ -6,8 +6,11 @@
 import type { ResearchTier, ResearchTierRating } from "./course-request.ts";
 import type { MediaReview } from "./media.ts";
 
-/** The external service a Usage Record called. Wikimedia Commons is free; its calls are recorded at a cost of 0 (SEN-129). */
-export const USAGE_VENDORS = ["openrouter", "parallel", "you", "wikimedia"] as const;
+/**
+ * The external service a Usage Record called. Wikimedia Commons (SEN-129) and Openverse (SEN-132) are free; their calls
+ * are recorded at a cost of 0.
+ */
+export const USAGE_VENDORS = ["openrouter", "parallel", "you", "wikimedia", "openverse"] as const;
 export type UsageVendor = (typeof USAGE_VENDORS)[number];
 
 /** Which vendor bills each research adapter. */

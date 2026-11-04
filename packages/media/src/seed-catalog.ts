@@ -98,10 +98,11 @@ export async function seedMediaCatalog(db: Database, storage: MediaStorage, entr
 
 /**
  * The catalog-owned fields of a stored row, for comparison. Its review state is not the catalog's: a seeded file starts
- * `reviewed` from the column default, and a removal made in the Usage Console survives the next seed.
+ * `reviewed` from the column default, and a removal made in the Usage Console survives the next seed. Nor is the search
+ * that found a Commons file (SEN-132).
  * @param row - A `media_descriptors` row
  */
 function stripTimestamps(row: typeof mediaDescriptors.$inferSelect): MediaDescriptorFields {
-  const { createdAt: _createdAt, updatedAt: _updatedAt, review: _review, ...fields } = row;
+  const { createdAt: _createdAt, updatedAt: _updatedAt, review: _review, foundBy: _foundBy, ...fields } = row;
   return fields;
 }

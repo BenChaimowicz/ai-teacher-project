@@ -15,8 +15,11 @@ export type StructuredRequest<T> = {
   images?: readonly ModelImage[];
 };
 
-/** One image a vision call looks at, sent inline as a data URL because the media bucket is private. */
-export type ModelImage = { mimeType: string; bytes: Uint8Array };
+/**
+ * One image a vision call looks at, sent inline as a data URL because the media bucket is private. `detail` is `high`
+ * unless set: `low` is a cheap small preview, for screening many images before a Judge looks at a few (SEN-132).
+ */
+export type ModelImage = { mimeType: string; bytes: Uint8Array; detail?: "low" | "high" };
 
 /** OpenRouter reasoning effort levels. */
 export type ReasoningEffort = "none" | "low" | "medium" | "high";
@@ -51,7 +54,7 @@ export type ModelCallRequest = {
   providerOrder?: string[];
   reasoning?: unknown;
   /** Each attached image's type and size; the bytes themselves are not recorded. */
-  images?: { mimeType: string; byteSize: number }[];
+  images?: { mimeType: string; byteSize: number; detail: "low" | "high" }[];
   timeoutMs: number;
 };
 
@@ -239,7 +242,8 @@ function responseContent(raw: unknown, reply: Pick<ModelErrorDetails, "provider"
 }
 
 /**
- * The user message: the input JSON alone, or for a vision call the JSON followed by each image at high detail.
+ * The user message: the input JSON alone, or for a vision call the JSON followed by each image at its detail (high
+ * unless the image asks for low).
  * @param request - The structured request
  */
 function userContent(request: StructuredRequest<unknown>) {
@@ -247,9 +251,9 @@ function userContent(request: StructuredRequest<unknown>) {
   if (!request.images?.length) return text;
   return [
     { type: "text", text },
-    ...request.images.map(({ mimeType, bytes }) => ({
+    ...request.images.map(({ mimeType, bytes, detail }) => ({
       type: "image_url",
-      image_url: { url: `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`, detail: "high" },
+      image_url: { url: `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`, detail: detail ?? "high" },
     })),
   ];
 }
@@ -363,7 +367,7 @@ export function createOpenRouterTransport(options: OpenRouterOptions = {}): Stru
               schemaName: request.schemaName,
               ...(providerOrder?.length ? { providerOrder } : {}),
               ...(reasoning ? { reasoning } : {}),
-              ...(request.images?.length ? { images: request.images.map(({ mimeType, bytes }) => ({ mimeType, byteSize: bytes.byteLength })) } : {}),
+              ...(request.images?.length ? { images: request.images.map(({ mimeType, bytes, detail }) => ({ mimeType, byteSize: bytes.byteLength, detail: detail ?? "high" })) } : {}),
               timeoutMs,
             },
             response: state.response,

@@ -890,7 +890,8 @@ test("A drawing the Judge failed twice falls back to the library, whose best fil
   const commons: CommonsFinder = async (brief, judge) => {
     commonsCalls.push({ brief });
     const verdict = await judge({ bytes: PLATE_BYTES, mimeType: "image/jpeg" }, brief);
-    return { descriptor: verdict.pass ? found : null, outcome: verdict.pass ? "ingested" : "miss", queries: ["yggdrasil"], searchErrors: [], tried: [], rejected: [] };
+    return { descriptor: verdict.pass ? found : null, outcome: verdict.pass ? "ingested" : "miss", foundBy: verdict.pass ? { index: "commons", query: "yggdrasil filetype:bitmap|drawing" } : null,
+      searches: [{ stage: "librarian", route: { index: "commons", query: "yggdrasil filetype:bitmap|drawing" }, found: 1, error: null }], searchErrors: [], librarianErrors: [], tried: [], rejected: [] };
   };
   const failing = visionJudge(VISION_FAIL, VISION_FAIL, PASS);
   const fromCommons = await createReadingGenerator({

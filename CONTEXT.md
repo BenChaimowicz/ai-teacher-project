@@ -346,6 +346,10 @@ _Avoid_: vision repair, moderation, caption check (when meaning the whole check)
 A coarse technique-family or subject-slice label on a library Media descriptor, used with Topic tags to retrieve library files. It is not a Topic tag and not a Lesson.
 _Avoid_: Topic tag, folder, album
 
+**Search route**:
+The search that first found a library file on Wikimedia Commons: the index (a Commons search, an Openverse search, or a Commons category) and its query. It is kept on the file, and the next search for the file's Media category starts from the routes of that category's files that were not removed. Library state, not part of the Media descriptor a Lesson copies.
+_Avoid_: query cache, search history
+
 **Media descriptor**:
 The kind, caption, alt text, Source, license, origin (library or generated), storage key, Media category, and Topic tags for one piece of Demonstrative media. Library lookup uses category and tags; which Lessons use the file is a join, not a tag. A published Lesson copies these fields so later descriptor edits do not change it.
 _Avoid_: metadata (unqualified), sidecar (when speaking to Learners)

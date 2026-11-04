@@ -333,7 +333,7 @@ test("Lessons are written by the Lesson pair, and no host is pinned in either ro
   assert.deepEqual(other.hosts, [undefined, undefined]);
 });
 
-test("A vision call sends its images after the JSON as high-detail data URLs, and the observer sees only their size", async () => {
+test("A vision call sends its images after the JSON as data URLs, high detail unless one asks for low, and the observer sees only their size", async () => {
   let sent: { messages: { role: string; content: unknown }[] } | null = null;
   let observed: unknown = null;
   const transport = createOpenRouterTransport({
@@ -346,13 +346,14 @@ test("A vision call sends its images after the JSON as high-detail data URLs, an
     observe: (call) => { observed = call.request; },
   });
   const bytes = new Uint8Array([0xff, 0xd8, 0xff]);
-  assert.equal(await transport.complete("fixture/model", { ...REQUEST, images: [{ mimeType: "image/jpeg", bytes }] }), 1);
+  assert.equal(await transport.complete("fixture/model", { ...REQUEST, images: [{ mimeType: "image/jpeg", bytes }, { mimeType: "image/jpeg", bytes, detail: "low" }] }), 1);
   const user = sent!.messages.find((message) => message.role === "user")!;
   assert.deepEqual(user.content, [
     { type: "text", text: JSON.stringify(REQUEST.input) },
     { type: "image_url", image_url: { url: "data:image/jpeg;base64,/9j/", detail: "high" } },
+    { type: "image_url", image_url: { url: "data:image/jpeg;base64,/9j/", detail: "low" } },
   ]);
-  assert.deepEqual((observed as { images?: unknown }).images, [{ mimeType: "image/jpeg", byteSize: 3 }]);
+  assert.deepEqual((observed as { images?: unknown }).images, [{ mimeType: "image/jpeg", byteSize: 3, detail: "high" }, { mimeType: "image/jpeg", byteSize: 3, detail: "low" }]);
 });
 
 test("A text-only call keeps its user message a plain JSON string", async () => {

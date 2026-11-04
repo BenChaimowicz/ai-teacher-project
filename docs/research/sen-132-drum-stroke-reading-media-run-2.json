@@ -1,0 +1,1941 @@
+{
+  "startedAt": "2026-11-04T08:16:41.861Z",
+  "latencyMs": 235655,
+  "sourcePacks": "docs\\research\\sen-115-drum-stroke-source-packs.json",
+  "slot": {
+    "id": "slot2",
+    "method": "reading",
+    "title": "Matched grip and the full stroke",
+    "lessonGoal": "Hold the sticks in matched grip and play a relaxed full stroke that rebounds to its starting height.",
+    "objectives": [
+      "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "Explain why letting the stick rebound keeps the hands relaxed"
+    ],
+    "topicTags": [
+      "matched-grip",
+      "full-stroke",
+      "rebound"
+    ],
+    "assessesSlotIds": [],
+    "visuals": [
+      {
+        "kind": "technique",
+        "intent": "A hand holding a drumstick in matched grip, seen so the fulcrum between the thumb and the index finger is plain, for the Learner to copy."
+      },
+      {
+        "kind": "diagram",
+        "intent": "The four moments of a full stroke in order, raised, striking, rebounding, and back at the starting height, so the Learner sees the stick come back up on its own."
+      }
+    ]
+  },
+  "profile": {
+    "instructionLanguage": "en",
+    "requiredReadingSupports": [],
+    "contentScope": "standard",
+    "explanationOrder": "topic_appropriate"
+  },
+  "status": "checkpoint",
+  "lesson": {
+    "slotId": "slot2",
+    "teachingMethod": "reading",
+    "title": "Matched grip and the full stroke",
+    "lessonGoal": "Hold the sticks in matched grip and play a relaxed full stroke that rebounds to its starting height.",
+    "objectives": [
+      "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "Explain why letting the stick rebound is compatible with keeping the hands relaxed"
+    ],
+    "topicTags": [
+      "matched-grip",
+      "full-stroke",
+      "rebound"
+    ],
+    "lineage": null,
+    "body": {
+      "sections": [
+        {
+          "heading": "A loose hold",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "Imagine a stick in each hand, both held the same way: matched grip. For your playing, the aim is a relaxed hold and a stick that bounces back naturally after a hit [1]. The fulcrum, the point the stick turns around, lies between your thumb and index finger [2]. In matched grip, your thumb runs along the stick opposite the index finger’s first knuckle at the fulcrum, and your other fingers wrap loosely around the stick [2]."
+            },
+            {
+              "kind": "media",
+              "caption": "A hand holds a drumstick with the palm down, the thumb along the stick, and the other fingers loosely curled.",
+              "alt": "A hand seen from above at a slight angle, with the palm facing down, the thumb running along the drumstick, and the other fingers loosely curled around it.",
+              "descriptor": {
+                "id": "d0a1e047-0000-4000-8000-000000000012",
+                "kind": "image",
+                "origin": "library",
+                "license": "public_domain",
+                "licenseUrl": null,
+                "caption": "Matched grip in both hands: each stick is pinched between the pad of the thumb and the first joint of the index finger, with the remaining fingers curled loosely around it.",
+                "alt": "Close-up of two hands side by side holding drumsticks from above, thumbs along the sticks and index fingers hooked under them.",
+                "source": {
+                  "url": "https://commons.wikimedia.org/wiki/File:Matchedgrip.jpg",
+                  "title": "File:Matchedgrip.jpg",
+                  "author": "BagpipingScotsman"
+                },
+                "storageKey": "library/drums/matched-grip-both-hands.jpg",
+                "mimeType": "image/jpeg",
+                "byteSize": 34105,
+                "sha256": "31811e5b2a2d061f4c28eb551e745a4763f4c1d9e67df4d4d71a7c9b6d8832fe",
+                "width": 400,
+                "height": 348,
+                "mediaCategory": "drum-grip",
+                "topicTags": [
+                  "matched-grip",
+                  "fulcrum",
+                  "both-hands"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "heading": "Up, down, and back up",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "A full stroke is a hit that starts with the stick high and finishes at the same height [2][3]. Your wrist raises the stick; the stick then drops to the drum, strikes its surface, and bounces back up [2][1]. The full stroke has no stopping point on its way down or back up [1]."
+            },
+            {
+              "kind": "media",
+              "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+              "alt": "Four panels labelled Start high, Strike, Bounce up, and Back at starting height show a raised stick, its tip touching the drum, an upward arrow beside the rising stick, and the stick back at its original height and angle.",
+              "descriptor": {
+                "id": "37ec997d-5193-8911-af95-b8c9e76ab341",
+                "kind": "image",
+                "origin": "generated",
+                "license": "product_owned",
+                "licenseUrl": null,
+                "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+                "alt": "Four panels labelled Start high, Strike, Bounce up, and Back at starting height show a raised stick, its tip touching the drum, an upward arrow beside the rising stick, and the stick back at its original height and angle.",
+                "source": null,
+                "storageKey": "generated/37ec997d5193a9112f95b8c9e76ab341f59ef3d7046ac54b3a3ed94d19bb9f5b.png",
+                "mimeType": "image/png",
+                "byteSize": 940310,
+                "sha256": "37ec997d5193a9112f95b8c9e76ab341f59ef3d7046ac54b3a3ed94d19bb9f5b",
+                "width": 1200,
+                "height": 800,
+                "mediaCategory": "drum-stroke",
+                "topicTags": [
+                  "full-stroke",
+                  "rebound",
+                  "stick-height"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "heading": "The bounce and the relaxed hand",
+          "blocks": [
+            {
+              "kind": "prose",
+              "text": "The drum supplies energy for the stick’s return, and your hand allows that bounce rather than stopping it [4]. Your thumb and index finger stay in contact with the stick while your wrist and fingers stay relaxed [1]. A full stroke combines a relaxed hold with a return to the stick’s starting height [2][1]."
+            }
+          ]
+        }
+      ],
+      "glossary": [
+        {
+          "term": "matched grip",
+          "definition": "A way of holding drumsticks with both hands using the same hand position."
+        },
+        {
+          "term": "fulcrum",
+          "definition": "The point around which an object turns."
+        },
+        {
+          "term": "full stroke",
+          "definition": "A drum hit in which the stick starts high and returns to the same height."
+        }
+      ]
+    },
+    "sources": [
+      {
+        "n": 1,
+        "sourceId": "src_a8e38c4812",
+        "url": "https://ae.vicfirth.com/wp-content/uploads/FA-Drumset-Lessons-1-2.pdf",
+        "title": "FA Drumset 2014 changes2",
+        "publisher": "ae.vicfirth.com",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 2,
+        "sourceId": "src_498b43255b",
+        "url": "https://pas.org/wp-content/uploads/2024/04/ECV0803-035.pdf",
+        "title": "Building A Strong Foundation Of The Snare Drum Fulcrum",
+        "publisher": "pas.org",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 3,
+        "sourceId": "src_aa45b3c3db",
+        "url": "https://pearldrum.com/sites/default/files/2019-10/basic-snare-drum-technique.pdf",
+        "title": "Basic Snare Drum Technique",
+        "publisher": "pearldrum.com",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      },
+      {
+        "n": 4,
+        "sourceId": "src_7eefe0ae9c",
+        "url": "https://www.midwestclinic.org/user_files_1/pdfs/clinicianmaterials/2007/bret_kuhn.pdf",
+        "title": "Microsoft Word - Stroke Fundamentals.doc",
+        "publisher": "midwestclinic.org",
+        "retrievedAt": "2026-11-01T10:17:54.382Z",
+        "usedAs": "paraphrase"
+      }
+    ],
+    "citations": [
+      {
+        "n": 1,
+        "title": "FA Drumset 2014 changes2",
+        "url": "https://ae.vicfirth.com/wp-content/uploads/FA-Drumset-Lessons-1-2.pdf"
+      },
+      {
+        "n": 2,
+        "title": "Building A Strong Foundation Of The Snare Drum Fulcrum",
+        "url": "https://pas.org/wp-content/uploads/2024/04/ECV0803-035.pdf"
+      },
+      {
+        "n": 3,
+        "title": "Basic Snare Drum Technique",
+        "url": "https://pearldrum.com/sites/default/files/2019-10/basic-snare-drum-technique.pdf"
+      },
+      {
+        "n": 4,
+        "title": "Microsoft Word - Stroke Fundamentals.doc",
+        "url": "https://www.midwestclinic.org/user_files_1/pdfs/clinicianmaterials/2007/bret_kuhn.pdf"
+      }
+    ]
+  },
+  "visuals": [
+    {
+      "placement": {
+        "section": "A loose hold",
+        "brief": {
+          "kind": "technique",
+          "subject": "A hand holding a drumstick in matched grip, viewed from above at a slight angle.",
+          "mustShow": [
+            "The palm faces down.",
+            "The thumb points along the length of the drumstick.",
+            "The other fingers curl loosely around the drumstick."
+          ],
+          "caption": "A hand holds a drumstick with the palm down, the thumb along the stick, and the other fingers loosely curled.",
+          "alt": "A hand seen from above at a slight angle, with the palm facing down, the thumb running along the drumstick, and the other fingers loosely curled around it.",
+          "mediaCategory": "drum-grip",
+          "topicTags": [
+            "matched-grip"
+          ]
+        }
+      },
+      "status": "commons",
+      "library": [
+        {
+          "descriptorId": "d0a1e047-0000-4000-8000-000000000011",
+          "storageKey": "library/drums/german-grip.jpg",
+          "judge": {
+            "pass": false,
+            "failedChecks": [
+              "must_show",
+              "caption_fit",
+              "alt_fit"
+            ],
+            "reasons": [
+              "“The thumb points along the length of the drumstick.” The thumb is largely hidden by the hand and stick, so its direction cannot be verified.",
+              "“the thumb along the stick” is claimed in the caption, but the thumb is not visibly identifiable or shown running along the stick.",
+              "“the thumb running along the drumstick” is claimed in the alt text, but the thumb is not visibly identifiable or shown running along the stick."
+            ]
+          },
+          "judgeModelId": "openai/gpt-5.6-luna"
+        },
+        {
+          "descriptorId": "d0a1e047-0000-4000-8000-000000000012",
+          "storageKey": "library/drums/matched-grip-both-hands.jpg",
+          "judge": {
+            "pass": false,
+            "failedChecks": [
+              "must_show"
+            ],
+            "reasons": [
+              "“The other fingers curl loosely around the drumstick.” The fingers are largely hidden behind the hands and sticks, so their curl and looseness cannot be seen clearly."
+            ]
+          },
+          "judgeModelId": "openai/gpt-5.6-luna"
+        }
+      ],
+      "commons": {
+        "descriptor": {
+          "id": "d0a1e047-0000-4000-8000-000000000012",
+          "kind": "image",
+          "origin": "library",
+          "license": "public_domain",
+          "licenseUrl": null,
+          "caption": "Matched grip in both hands: each stick is pinched between the pad of the thumb and the first joint of the index finger, with the remaining fingers curled loosely around it.",
+          "alt": "Close-up of two hands side by side holding drumsticks from above, thumbs along the sticks and index fingers hooked under them.",
+          "source": {
+            "url": "https://commons.wikimedia.org/wiki/File:Matchedgrip.jpg",
+            "title": "File:Matchedgrip.jpg",
+            "author": "BagpipingScotsman"
+          },
+          "storageKey": "library/drums/matched-grip-both-hands.jpg",
+          "mimeType": "image/jpeg",
+          "byteSize": 34105,
+          "sha256": "31811e5b2a2d061f4c28eb551e745a4763f4c1d9e67df4d4d71a7c9b6d8832fe",
+          "width": 400,
+          "height": 348,
+          "mediaCategory": "drum-grip",
+          "topicTags": [
+            "matched-grip",
+            "fulcrum",
+            "both-hands"
+          ]
+        },
+        "outcome": "reused",
+        "foundBy": {
+          "index": "commons",
+          "query": "drumstick grip filetype:bitmap"
+        },
+        "searches": [
+          {
+            "stage": "librarian",
+            "route": {
+              "index": "commons",
+              "query": "drumstick grip filetype:bitmap"
+            },
+            "found": 17,
+            "error": null
+          },
+          {
+            "stage": "librarian",
+            "route": {
+              "index": "commons",
+              "query": "matched grip filetype:bitmap"
+            },
+            "found": 14,
+            "error": null
+          },
+          {
+            "stage": "librarian",
+            "route": {
+              "index": "commons",
+              "query": "drumming grip filetype:bitmap"
+            },
+            "found": 20,
+            "error": null
+          },
+          {
+            "stage": "librarian",
+            "route": {
+              "index": "openverse",
+              "query": "drumstick grip"
+            },
+            "found": 4,
+            "error": null
+          },
+          {
+            "stage": "librarian",
+            "route": {
+              "index": "openverse",
+              "query": "matched grip"
+            },
+            "found": 3,
+            "error": null
+          },
+          {
+            "stage": "librarian",
+            "route": {
+              "index": "commons_category",
+              "query": "Category:Matched grip"
+            },
+            "found": 9,
+            "error": null
+          }
+        ],
+        "searchErrors": [],
+        "librarianErrors": [],
+        "tried": [
+          {
+            "title": "File:Drumstick regular grip.jpg",
+            "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Drumstick_regular_grip.jpg",
+            "stage": "librarian",
+            "route": {
+              "index": "commons",
+              "query": "drumstick grip filetype:bitmap"
+            },
+            "rank": 2,
+            "license": "cc_by",
+            "status": "screened_out",
+            "reasons": [
+              "The librarian's low-detail screen read it as not what the brief needs."
+            ]
+          },
+          {
+            "title": "File:German grip right hand 01.jpg",
+            "descriptionUrl": "https://commons.wikimedia.org/wiki/File:German_grip_right_hand_01.jpg",
+            "stage": "librarian",
+            "route": {
+              "index": "commons",
+              "query": "drumstick grip filetype:bitmap"
+            },
+            "rank": 8,
+            "license": "cc_by",
+            "status": "judge_failed",
+            "reasons": [
+              "“The other fingers curl loosely around the drumstick.” The fingers are largely hidden behind the hand and stick, so their curl around it is not clearly visible.",
+              "Caption phrase “the other fingers loosely curled” describes a position the photograph does not unambiguously show.",
+              "Alt phrase “the other fingers loosely curled around it” describes a position the photograph does not unambiguously show."
+            ]
+          },
+          {
+            "title": "File:German grip.jpg",
+            "descriptionUrl": "https://commons.wikimedia.org/wiki/File:German_grip.jpg",
+            "stage": "librarian",
+            "route": {
+              "index": "commons",
+              "query": "drumstick grip filetype:bitmap"
+            },
+            "rank": 15,
+            "license": "cc_by_sa",
+            "status": "judge_failed",
+            "reasons": [
+              "“The thumb points along the length of the drumstick”: the thumb is largely hidden at the grip, so its direction cannot be verified.",
+              "“The other fingers curl loosely around the drumstick”: the fingers’ relationship to the stick and whether they are loosely curled are obscured by the closed grip.",
+              "Caption phrase “the thumb along the stick”: the image does not clearly show the thumb in that position.",
+              "Alt phrase “the thumb running along the drumstick”: the thumb’s position is not visibly clear."
+            ]
+          },
+          {
+            "title": "File:Matchedgrip.jpg",
+            "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Matchedgrip.jpg",
+            "stage": "librarian",
+            "route": {
+              "index": "commons",
+              "query": "drumstick grip filetype:bitmap"
+            },
+            "rank": 13,
+            "license": "public_domain",
+            "status": "reused",
+            "reasons": []
+          }
+        ],
+        "rejected": [
+          {
+            "title": "File:TacomaCable(grip@curve)xsection1892.jpg",
+            "reason": "The licence \"No restrictions\" is not one the product may host."
+          },
+          {
+            "title": "File:K5 GPS GRIP DSC03811 smial wp.jpg",
+            "reason": "The licence \"FAL\" is not one the product may host."
+          },
+          {
+            "title": "File:Cricket Grip slower.png",
+            "reason": "The file is too small (116×160)."
+          },
+          {
+            "title": "File:Cricket Grip fast.png",
+            "reason": "The file is too small (116×160)."
+          },
+          {
+            "title": "File:Cricket Grip legcutter.png",
+            "reason": "The file is too small (135×170)."
+          },
+          {
+            "title": "File:Cricket Grip offcutter.png",
+            "reason": "The file is too small (135×170)."
+          },
+          {
+            "title": "Drumsticks on snare drum.",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "Sheksy new car! BMW 520d",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "Heh, lego ftw! xD",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "Porsche 911 GT3 RS",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "Nokia N95",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "Astray at Cerne Abbas",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "photo toolkit coming together ...",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "G9 Laser Mouse - LAUNCHED!!",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "Achielle 'Dutch', drive side, in front of Flying Pigeon LA",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "JMP_6209",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "Pardini GT9",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "JMP_6215",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "Proud Mary breakfast",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "bentley Continental GT Convertible",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "JMP_6218",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "1970 GTX",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "Kreidler Flory Transmission",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "JMP_6206",
+            "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+          },
+          {
+            "title": "File:Traditional grip detail.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Traditional Grip Example.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Regular grip left hand 02.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Regular grip left hand 01.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Traditional Grip.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:French grip right hand 01.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Traditionalsnaregrip.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Frensh grip.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:A White-Cheeked Barbet Snacking Moringa Seeds.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Mr Zogs Sex Wax.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Playing timpani.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Joo vib.JPG",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Timpanist 069 (20742047478).jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Glockenspiel. (24234749010).jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Vibrafono.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Timpani player 20150314- TS13939.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Gentle grip of a baby Toque macaque under its mother's care.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:2016 Grip Sony N50 1.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:2016 Grip Sony N50 2.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Grip 2010.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Joy-Con Grip and Joy-Con Charging Grip.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:105 Polish Air Force MiG-29A Fulcrum ILA Berlin 2016 10.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Container grip.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Snare Drum (IMSO pp53).jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Quick March along Pen Deitsh - Drum Major and Corps of Drums heading the Remembrance Day Parade - geograph.org.uk - 1573676.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Finland military band drums.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Drummer in The Old Guard Fife and Drum Corps 50th Anniversary Tattoo.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Fulcrum Richard Serra 03.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:LouisLSnareDrum.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Gesellen-Stechen 1561 detail06.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Fulcrum Richard Serra 01.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Raw Fulcrum - Flickr - exfordy.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Fulcrum Richard Serra 02.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Dual Fulcrum Vibrato.jpg",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          },
+          {
+            "title": "File:Nokia N95 back.png",
+            "reason": "The librarian read its title and description as not what the brief needs."
+          }
+        ]
+      },
+      "descriptorId": "d0a1e047-0000-4000-8000-000000000012"
+    },
+    {
+      "placement": {
+        "section": "Up, down, and back up",
+        "brief": {
+          "kind": "diagram",
+          "subject": "A four-panel schematic of a drumstick moving from a raised position to the drum and back to its starting height.",
+          "mustShow": [
+            "Exactly four panels run from left to right, labelled Start high, Strike, Bounce up, and Back at starting height.",
+            "The first panel shows the stick raised with its tip pointing upward.",
+            "The second panel shows the stick tip touching the drum surface.",
+            "The third panel shows the stick rising away from the drum, with an upward arrow.",
+            "The fourth panel shows the stick at the same height and angle as in the first panel."
+          ],
+          "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+          "alt": "Four panels labelled Start high, Strike, Bounce up, and Back at starting height show a raised stick, its tip touching the drum, an upward arrow beside the rising stick, and the stick back at its original height and angle.",
+          "mediaCategory": "drum-stroke",
+          "topicTags": [
+            "full-stroke",
+            "rebound",
+            "stick-height"
+          ]
+        }
+      },
+      "status": "illustrated",
+      "library": [],
+      "illustration": {
+        "outcome": "illustrated",
+        "attempts": [
+          {
+            "modelId": "openai/gpt-6.1-sol",
+            "judge": {
+              "pass": true,
+              "failedChecks": [],
+              "reasons": []
+            },
+            "judgeModelId": "openai/gpt-6-luna"
+          }
+        ]
+      },
+      "descriptorId": "37ec997d-5193-8911-af95-b8c9e76ab341"
+    }
+  ],
+  "judge": {
+    "pass": true,
+    "failedChecks": [],
+    "reasons": []
+  },
+  "repairs": 0,
+  "grounding": [
+    {
+      "objective": "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "verdict": "supported",
+      "text": "Hold a drumstick in matched grip, with the fulcrum between the thumb and the index finger",
+      "reason": ""
+    },
+    {
+      "objective": "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "verdict": "supported",
+      "text": "Describe a full stroke: the stick starts high, strikes the head, and rebounds to its starting height",
+      "reason": ""
+    },
+    {
+      "objective": "Explain why letting the stick rebound keeps the hands relaxed",
+      "verdict": "rewritten",
+      "text": "Explain why letting the stick rebound is compatible with keeping the hands relaxed",
+      "reason": "The material says relaxed hands let the stick bounce and instructs players to allow a natural rebound while keeping the hands relaxed; it does not say the rebound itself keeps the hands relaxed."
+    }
+  ],
+  "rejectedSources": [
+    {
+      "sourceId": "src_50ed1531b2",
+      "url": "https://hub.yamaha.com/music-educators/instruments/perc/a-guide-to-proper-stick-grips",
+      "reason": "Yamaha is an instrument manufacturer, and this is instructional content on its commercial blog."
+    },
+    {
+      "sourceId": "src_89a76645aa",
+      "url": "https://hub.yamaha.com/music-educators/instruments/perc/snare-drum-basics-pedagogy/",
+      "reason": "Yamaha is an instrument manufacturer, and this is instructional content on its commercial blog."
+    },
+    {
+      "sourceId": "src_3578a5990c",
+      "url": "https://www.drumbarossa.com/teaching-guide/basic-strokes",
+      "reason": "This appears to be an informal instructional page from a drum-teaching business, not a reliable reference source."
+    },
+    {
+      "sourceId": "src_73457824aa",
+      "url": "https://rhythmnotes.net/drum-techniques-and-rudiments/",
+      "reason": "This is an informal blog-style guide without clear evidence of editorial or subject-matter review."
+    },
+    {
+      "sourceId": "src_ca07de2348",
+      "url": "https://upbeat.studio/blog/essential-drumming-techniques-for-beginners/",
+      "reason": "Upbeat Studio appears to offer drumming instruction; this beginner guide is promotional business-blog content."
+    },
+    {
+      "sourceId": "src_e26d0d852e",
+      "url": "https://drumbeatsonline.com/blog/how-to-do-a-drum-roll-a-step-by-step-guide-for-beginners",
+      "reason": "Drum Beats Online is a drumming-instruction business, and this is a beginner guide on its commercial blog."
+    }
+  ],
+  "authorModelIds": [
+    "openai/gpt-6.1-sol"
+  ],
+  "judgeModelId": "openai/gpt-6-luna",
+  "rounds": [
+    {
+      "modelId": "openai/gpt-6.1-sol",
+      "draft": [
+        {
+          "heading": "A loose hold",
+          "paragraphs": [
+            "Imagine a stick in each hand, both held the same way: matched grip. For your playing, the aim is a relaxed hold and a stick that bounces back naturally after a hit [src_a8e38c4812]. The fulcrum, the point the stick turns around, lies between your thumb and index finger [src_498b43255b]. In matched grip, your thumb runs along the stick opposite the index finger’s first knuckle at the fulcrum, and your other fingers wrap loosely around the stick [src_498b43255b]."
+          ]
+        },
+        {
+          "heading": "Up, down, and back up",
+          "paragraphs": [
+            "A full stroke is a hit that starts with the stick high and finishes at the same height [src_498b43255b, src_aa45b3c3db]. Your wrist raises the stick; the stick then drops to the drum, strikes its surface, and bounces back up [src_498b43255b, src_a8e38c4812]. The full stroke has no stopping point on its way down or back up [src_a8e38c4812]."
+          ]
+        },
+        {
+          "heading": "The bounce and the relaxed hand",
+          "paragraphs": [
+            "The drum supplies energy for the stick’s return, and your hand allows that bounce rather than stopping it [src_7eefe0ae9c]. Your thumb and index finger stay in contact with the stick while your wrist and fingers stay relaxed [src_a8e38c4812]. A full stroke combines a relaxed hold with a return to the stick’s starting height [src_498b43255b, src_a8e38c4812]."
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "section": "A loose hold",
+          "brief": {
+            "kind": "technique",
+            "subject": "A hand holding a drumstick in matched grip, viewed from above at a slight angle.",
+            "mustShow": [
+              "The palm faces down.",
+              "The thumb points along the length of the drumstick.",
+              "The other fingers curl loosely around the drumstick."
+            ],
+            "caption": "A hand holds a drumstick with the palm down, the thumb along the stick, and the other fingers loosely curled.",
+            "alt": "A hand seen from above at a slight angle, with the palm facing down, the thumb running along the drumstick, and the other fingers loosely curled around it.",
+            "mediaCategory": "drum-grip",
+            "topicTags": [
+              "matched-grip"
+            ]
+          }
+        },
+        {
+          "section": "Up, down, and back up",
+          "brief": {
+            "kind": "diagram",
+            "subject": "A four-panel schematic of a drumstick moving from a raised position to the drum and back to its starting height.",
+            "mustShow": [
+              "Exactly four panels run from left to right, labelled Start high, Strike, Bounce up, and Back at starting height.",
+              "The first panel shows the stick raised with its tip pointing upward.",
+              "The second panel shows the stick tip touching the drum surface.",
+              "The third panel shows the stick rising away from the drum, with an upward arrow.",
+              "The fourth panel shows the stick at the same height and angle as in the first panel."
+            ],
+            "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+            "alt": "Four panels labelled Start high, Strike, Bounce up, and Back at starting height show a raised stick, its tip touching the drum, an upward arrow beside the rising stick, and the stick back at its original height and angle.",
+            "mediaCategory": "drum-stroke",
+            "topicTags": [
+              "full-stroke",
+              "rebound",
+              "stick-height"
+            ]
+          }
+        }
+      ],
+      "problems": [],
+      "attached": [
+        {
+          "placement": {
+            "section": "A loose hold",
+            "brief": {
+              "kind": "technique",
+              "subject": "A hand holding a drumstick in matched grip, viewed from above at a slight angle.",
+              "mustShow": [
+                "The palm faces down.",
+                "The thumb points along the length of the drumstick.",
+                "The other fingers curl loosely around the drumstick."
+              ],
+              "caption": "A hand holds a drumstick with the palm down, the thumb along the stick, and the other fingers loosely curled.",
+              "alt": "A hand seen from above at a slight angle, with the palm facing down, the thumb running along the drumstick, and the other fingers loosely curled around it.",
+              "mediaCategory": "drum-grip",
+              "topicTags": [
+                "matched-grip"
+              ]
+            }
+          },
+          "status": "commons",
+          "library": [
+            {
+              "descriptorId": "d0a1e047-0000-4000-8000-000000000011",
+              "storageKey": "library/drums/german-grip.jpg",
+              "judge": {
+                "pass": false,
+                "failedChecks": [
+                  "must_show",
+                  "caption_fit",
+                  "alt_fit"
+                ],
+                "reasons": [
+                  "“The thumb points along the length of the drumstick.” The thumb is largely hidden by the hand and stick, so its direction cannot be verified.",
+                  "“the thumb along the stick” is claimed in the caption, but the thumb is not visibly identifiable or shown running along the stick.",
+                  "“the thumb running along the drumstick” is claimed in the alt text, but the thumb is not visibly identifiable or shown running along the stick."
+                ]
+              },
+              "judgeModelId": "openai/gpt-5.6-luna"
+            },
+            {
+              "descriptorId": "d0a1e047-0000-4000-8000-000000000012",
+              "storageKey": "library/drums/matched-grip-both-hands.jpg",
+              "judge": {
+                "pass": false,
+                "failedChecks": [
+                  "must_show"
+                ],
+                "reasons": [
+                  "“The other fingers curl loosely around the drumstick.” The fingers are largely hidden behind the hands and sticks, so their curl and looseness cannot be seen clearly."
+                ]
+              },
+              "judgeModelId": "openai/gpt-5.6-luna"
+            }
+          ],
+          "commons": {
+            "descriptor": {
+              "id": "d0a1e047-0000-4000-8000-000000000012",
+              "kind": "image",
+              "origin": "library",
+              "license": "public_domain",
+              "licenseUrl": null,
+              "caption": "Matched grip in both hands: each stick is pinched between the pad of the thumb and the first joint of the index finger, with the remaining fingers curled loosely around it.",
+              "alt": "Close-up of two hands side by side holding drumsticks from above, thumbs along the sticks and index fingers hooked under them.",
+              "source": {
+                "url": "https://commons.wikimedia.org/wiki/File:Matchedgrip.jpg",
+                "title": "File:Matchedgrip.jpg",
+                "author": "BagpipingScotsman"
+              },
+              "storageKey": "library/drums/matched-grip-both-hands.jpg",
+              "mimeType": "image/jpeg",
+              "byteSize": 34105,
+              "sha256": "31811e5b2a2d061f4c28eb551e745a4763f4c1d9e67df4d4d71a7c9b6d8832fe",
+              "width": 400,
+              "height": 348,
+              "mediaCategory": "drum-grip",
+              "topicTags": [
+                "matched-grip",
+                "fulcrum",
+                "both-hands"
+              ]
+            },
+            "outcome": "reused",
+            "foundBy": {
+              "index": "commons",
+              "query": "drumstick grip filetype:bitmap"
+            },
+            "searches": [
+              {
+                "stage": "librarian",
+                "route": {
+                  "index": "commons",
+                  "query": "drumstick grip filetype:bitmap"
+                },
+                "found": 17,
+                "error": null
+              },
+              {
+                "stage": "librarian",
+                "route": {
+                  "index": "commons",
+                  "query": "matched grip filetype:bitmap"
+                },
+                "found": 14,
+                "error": null
+              },
+              {
+                "stage": "librarian",
+                "route": {
+                  "index": "commons",
+                  "query": "drumming grip filetype:bitmap"
+                },
+                "found": 20,
+                "error": null
+              },
+              {
+                "stage": "librarian",
+                "route": {
+                  "index": "openverse",
+                  "query": "drumstick grip"
+                },
+                "found": 4,
+                "error": null
+              },
+              {
+                "stage": "librarian",
+                "route": {
+                  "index": "openverse",
+                  "query": "matched grip"
+                },
+                "found": 3,
+                "error": null
+              },
+              {
+                "stage": "librarian",
+                "route": {
+                  "index": "commons_category",
+                  "query": "Category:Matched grip"
+                },
+                "found": 9,
+                "error": null
+              }
+            ],
+            "searchErrors": [],
+            "librarianErrors": [],
+            "tried": [
+              {
+                "title": "File:Drumstick regular grip.jpg",
+                "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Drumstick_regular_grip.jpg",
+                "stage": "librarian",
+                "route": {
+                  "index": "commons",
+                  "query": "drumstick grip filetype:bitmap"
+                },
+                "rank": 2,
+                "license": "cc_by",
+                "status": "screened_out",
+                "reasons": [
+                  "The librarian's low-detail screen read it as not what the brief needs."
+                ]
+              },
+              {
+                "title": "File:German grip right hand 01.jpg",
+                "descriptionUrl": "https://commons.wikimedia.org/wiki/File:German_grip_right_hand_01.jpg",
+                "stage": "librarian",
+                "route": {
+                  "index": "commons",
+                  "query": "drumstick grip filetype:bitmap"
+                },
+                "rank": 8,
+                "license": "cc_by",
+                "status": "judge_failed",
+                "reasons": [
+                  "“The other fingers curl loosely around the drumstick.” The fingers are largely hidden behind the hand and stick, so their curl around it is not clearly visible.",
+                  "Caption phrase “the other fingers loosely curled” describes a position the photograph does not unambiguously show.",
+                  "Alt phrase “the other fingers loosely curled around it” describes a position the photograph does not unambiguously show."
+                ]
+              },
+              {
+                "title": "File:German grip.jpg",
+                "descriptionUrl": "https://commons.wikimedia.org/wiki/File:German_grip.jpg",
+                "stage": "librarian",
+                "route": {
+                  "index": "commons",
+                  "query": "drumstick grip filetype:bitmap"
+                },
+                "rank": 15,
+                "license": "cc_by_sa",
+                "status": "judge_failed",
+                "reasons": [
+                  "“The thumb points along the length of the drumstick”: the thumb is largely hidden at the grip, so its direction cannot be verified.",
+                  "“The other fingers curl loosely around the drumstick”: the fingers’ relationship to the stick and whether they are loosely curled are obscured by the closed grip.",
+                  "Caption phrase “the thumb along the stick”: the image does not clearly show the thumb in that position.",
+                  "Alt phrase “the thumb running along the drumstick”: the thumb’s position is not visibly clear."
+                ]
+              },
+              {
+                "title": "File:Matchedgrip.jpg",
+                "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Matchedgrip.jpg",
+                "stage": "librarian",
+                "route": {
+                  "index": "commons",
+                  "query": "drumstick grip filetype:bitmap"
+                },
+                "rank": 13,
+                "license": "public_domain",
+                "status": "reused",
+                "reasons": []
+              }
+            ],
+            "rejected": [
+              {
+                "title": "File:TacomaCable(grip@curve)xsection1892.jpg",
+                "reason": "The licence \"No restrictions\" is not one the product may host."
+              },
+              {
+                "title": "File:K5 GPS GRIP DSC03811 smial wp.jpg",
+                "reason": "The licence \"FAL\" is not one the product may host."
+              },
+              {
+                "title": "File:Cricket Grip slower.png",
+                "reason": "The file is too small (116×160)."
+              },
+              {
+                "title": "File:Cricket Grip fast.png",
+                "reason": "The file is too small (116×160)."
+              },
+              {
+                "title": "File:Cricket Grip legcutter.png",
+                "reason": "The file is too small (135×170)."
+              },
+              {
+                "title": "File:Cricket Grip offcutter.png",
+                "reason": "The file is too small (135×170)."
+              },
+              {
+                "title": "Drumsticks on snare drum.",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "Sheksy new car! BMW 520d",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "Heh, lego ftw! xD",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "Porsche 911 GT3 RS",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "Nokia N95",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "Astray at Cerne Abbas",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "photo toolkit coming together ...",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "G9 Laser Mouse - LAUNCHED!!",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "Achielle 'Dutch', drive side, in front of Flying Pigeon LA",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "JMP_6209",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "Pardini GT9",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "JMP_6215",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "Proud Mary breakfast",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "bentley Continental GT Convertible",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "JMP_6218",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "1970 GTX",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "Kreidler Flory Transmission",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "JMP_6206",
+                "reason": "Openverse found it on flickr, where its licence cannot be checked on its own page yet."
+              },
+              {
+                "title": "File:Traditional grip detail.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Traditional Grip Example.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Regular grip left hand 02.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Regular grip left hand 01.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Traditional Grip.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:French grip right hand 01.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Traditionalsnaregrip.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Frensh grip.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:A White-Cheeked Barbet Snacking Moringa Seeds.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Mr Zogs Sex Wax.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Playing timpani.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Joo vib.JPG",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Timpanist 069 (20742047478).jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Glockenspiel. (24234749010).jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Vibrafono.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Timpani player 20150314- TS13939.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Gentle grip of a baby Toque macaque under its mother's care.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:2016 Grip Sony N50 1.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:2016 Grip Sony N50 2.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Grip 2010.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Joy-Con Grip and Joy-Con Charging Grip.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:105 Polish Air Force MiG-29A Fulcrum ILA Berlin 2016 10.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Container grip.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Snare Drum (IMSO pp53).jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Quick March along Pen Deitsh - Drum Major and Corps of Drums heading the Remembrance Day Parade - geograph.org.uk - 1573676.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Finland military band drums.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Drummer in The Old Guard Fife and Drum Corps 50th Anniversary Tattoo.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Fulcrum Richard Serra 03.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:LouisLSnareDrum.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Gesellen-Stechen 1561 detail06.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Fulcrum Richard Serra 01.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Raw Fulcrum - Flickr - exfordy.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Fulcrum Richard Serra 02.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Dual Fulcrum Vibrato.jpg",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              },
+              {
+                "title": "File:Nokia N95 back.png",
+                "reason": "The librarian read its title and description as not what the brief needs."
+              }
+            ]
+          },
+          "descriptorId": "d0a1e047-0000-4000-8000-000000000012"
+        },
+        {
+          "placement": {
+            "section": "Up, down, and back up",
+            "brief": {
+              "kind": "diagram",
+              "subject": "A four-panel schematic of a drumstick moving from a raised position to the drum and back to its starting height.",
+              "mustShow": [
+                "Exactly four panels run from left to right, labelled Start high, Strike, Bounce up, and Back at starting height.",
+                "The first panel shows the stick raised with its tip pointing upward.",
+                "The second panel shows the stick tip touching the drum surface.",
+                "The third panel shows the stick rising away from the drum, with an upward arrow.",
+                "The fourth panel shows the stick at the same height and angle as in the first panel."
+              ],
+              "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+              "alt": "Four panels labelled Start high, Strike, Bounce up, and Back at starting height show a raised stick, its tip touching the drum, an upward arrow beside the rising stick, and the stick back at its original height and angle.",
+              "mediaCategory": "drum-stroke",
+              "topicTags": [
+                "full-stroke",
+                "rebound",
+                "stick-height"
+              ]
+            }
+          },
+          "status": "illustrated",
+          "library": [],
+          "illustration": {
+            "outcome": "illustrated",
+            "attempts": [
+              {
+                "modelId": "openai/gpt-6.1-sol",
+                "judge": {
+                  "pass": true,
+                  "failedChecks": [],
+                  "reasons": []
+                },
+                "judgeModelId": "openai/gpt-6-luna"
+              }
+            ]
+          },
+          "descriptorId": "37ec997d-5193-8911-af95-b8c9e76ab341"
+        }
+      ]
+    }
+  ],
+  "glossary": {
+    "proposed": [
+      {
+        "term": "matched grip",
+        "definition": "A way of holding drumsticks with both hands using the same hand position."
+      },
+      {
+        "term": "fulcrum",
+        "definition": "The point around which an object turns."
+      },
+      {
+        "term": "full stroke",
+        "definition": "A drum hit in which the stick starts high and returns to the same height."
+      }
+    ],
+    "rejected": [],
+    "modelId": "openai/gpt-6.1-sol",
+    "judgeModelId": "openai/gpt-6-luna"
+  },
+  "illustrations": [
+    {
+      "subject": "A four-panel schematic of a drumstick moving from a raised position to the drum and back to its starting height.",
+      "attempts": [
+        {
+          "modelId": "openai/gpt-6.1-sol",
+          "pass": true,
+          "error": null,
+          "plan": {
+            "title": "A full drum stroke",
+            "items": [
+              {
+                "type": "panel",
+                "box": {
+                  "x": 44,
+                  "y": 140,
+                  "w": 250,
+                  "h": 588
+                },
+                "colour": "plum",
+                "title": null
+              },
+              {
+                "type": "panel",
+                "box": {
+                  "x": 332,
+                  "y": 140,
+                  "w": 250,
+                  "h": 588
+                },
+                "colour": "plum",
+                "title": null
+              },
+              {
+                "type": "panel",
+                "box": {
+                  "x": 620,
+                  "y": 140,
+                  "w": 250,
+                  "h": 588
+                },
+                "colour": "plum",
+                "title": null
+              },
+              {
+                "type": "panel",
+                "box": {
+                  "x": 908,
+                  "y": 140,
+                  "w": 248,
+                  "h": 588
+                },
+                "colour": "plum",
+                "title": null
+              },
+              {
+                "type": "disc",
+                "x": 72,
+                "y": 188,
+                "number": 1,
+                "colour": "red"
+              },
+              {
+                "type": "text",
+                "x": 101,
+                "y": 188,
+                "text": "Start high",
+                "size": "medium",
+                "colour": "cream",
+                "align": "start"
+              },
+              {
+                "type": "disc",
+                "x": 360,
+                "y": 188,
+                "number": 2,
+                "colour": "red"
+              },
+              {
+                "type": "text",
+                "x": 389,
+                "y": 188,
+                "text": "Strike",
+                "size": "medium",
+                "colour": "cream",
+                "align": "start"
+              },
+              {
+                "type": "disc",
+                "x": 648,
+                "y": 188,
+                "number": 3,
+                "colour": "red"
+              },
+              {
+                "type": "text",
+                "x": 677,
+                "y": 188,
+                "text": "Bounce up",
+                "size": "medium",
+                "colour": "cream",
+                "align": "start"
+              },
+              {
+                "type": "disc",
+                "x": 936,
+                "y": 188,
+                "number": 4,
+                "colour": "red"
+              },
+              {
+                "type": "text",
+                "x": 963,
+                "y": 188,
+                "text": "Back at starting height",
+                "size": "small",
+                "colour": "cream",
+                "align": "start"
+              },
+              {
+                "type": "arrow",
+                "from": {
+                  "x": 299,
+                  "y": 466
+                },
+                "to": {
+                  "x": 325,
+                  "y": 466
+                },
+                "colour": "gold"
+              },
+              {
+                "type": "arrow",
+                "from": {
+                  "x": 587,
+                  "y": 466
+                },
+                "to": {
+                  "x": 613,
+                  "y": 466
+                },
+                "colour": "gold"
+              },
+              {
+                "type": "arrow",
+                "from": {
+                  "x": 875,
+                  "y": 466
+                },
+                "to": {
+                  "x": 901,
+                  "y": 466
+                },
+                "colour": "gold"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 106,
+                  "y": 644,
+                  "w": 176,
+                  "h": 28
+                },
+                "colour": "stone",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "rect",
+                "box": {
+                  "x": 106,
+                  "y": 584,
+                  "w": 176,
+                  "h": 72
+                },
+                "colour": "red",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 106,
+                  "y": 564,
+                  "w": 176,
+                  "h": 40
+                },
+                "colour": "stone",
+                "depth": "raised"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 110,
+                  "y": 570,
+                  "w": 168,
+                  "h": 28
+                },
+                "colour": "cream",
+                "depth": "raised"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 394,
+                  "y": 644,
+                  "w": 176,
+                  "h": 28
+                },
+                "colour": "stone",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "rect",
+                "box": {
+                  "x": 394,
+                  "y": 584,
+                  "w": 176,
+                  "h": 72
+                },
+                "colour": "red",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 394,
+                  "y": 564,
+                  "w": 176,
+                  "h": 40
+                },
+                "colour": "stone",
+                "depth": "raised"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 398,
+                  "y": 570,
+                  "w": 168,
+                  "h": 28
+                },
+                "colour": "cream",
+                "depth": "raised"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 682,
+                  "y": 644,
+                  "w": 176,
+                  "h": 28
+                },
+                "colour": "stone",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "rect",
+                "box": {
+                  "x": 682,
+                  "y": 584,
+                  "w": 176,
+                  "h": 72
+                },
+                "colour": "red",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 682,
+                  "y": 564,
+                  "w": 176,
+                  "h": 40
+                },
+                "colour": "stone",
+                "depth": "raised"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 686,
+                  "y": 570,
+                  "w": 168,
+                  "h": 28
+                },
+                "colour": "cream",
+                "depth": "raised"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 970,
+                  "y": 644,
+                  "w": 176,
+                  "h": 28
+                },
+                "colour": "stone",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "rect",
+                "box": {
+                  "x": 970,
+                  "y": 584,
+                  "w": 176,
+                  "h": 72
+                },
+                "colour": "red",
+                "depth": "low"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 970,
+                  "y": 564,
+                  "w": 176,
+                  "h": 40
+                },
+                "colour": "stone",
+                "depth": "raised"
+              },
+              {
+                "type": "shape",
+                "shape": "ellipse",
+                "box": {
+                  "x": 974,
+                  "y": 570,
+                  "w": 168,
+                  "h": 28
+                },
+                "colour": "cream",
+                "depth": "raised"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 88,
+                    "y": 416
+                  },
+                  {
+                    "x": 186,
+                    "y": 279
+                  },
+                  {
+                    "x": 186,
+                    "y": 274
+                  },
+                  {
+                    "x": 189,
+                    "y": 270
+                  },
+                  {
+                    "x": 194,
+                    "y": 270
+                  },
+                  {
+                    "x": 199,
+                    "y": 274
+                  },
+                  {
+                    "x": 199,
+                    "y": 279
+                  },
+                  {
+                    "x": 195,
+                    "y": 284
+                  },
+                  {
+                    "x": 100,
+                    "y": 424
+                  },
+                  {
+                    "x": 95,
+                    "y": 427
+                  },
+                  {
+                    "x": 90,
+                    "y": 425
+                  }
+                ],
+                "colour": "wood-light",
+                "depth": "raised"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 376,
+                    "y": 424
+                  },
+                  {
+                    "x": 474,
+                    "y": 561
+                  },
+                  {
+                    "x": 474,
+                    "y": 566
+                  },
+                  {
+                    "x": 477,
+                    "y": 570
+                  },
+                  {
+                    "x": 482,
+                    "y": 570
+                  },
+                  {
+                    "x": 487,
+                    "y": 566
+                  },
+                  {
+                    "x": 487,
+                    "y": 561
+                  },
+                  {
+                    "x": 483,
+                    "y": 556
+                  },
+                  {
+                    "x": 388,
+                    "y": 416
+                  },
+                  {
+                    "x": 383,
+                    "y": 413
+                  },
+                  {
+                    "x": 378,
+                    "y": 415
+                  }
+                ],
+                "colour": "wood-light",
+                "depth": "raised"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 667,
+                    "y": 414
+                  },
+                  {
+                    "x": 815,
+                    "y": 331
+                  },
+                  {
+                    "x": 818,
+                    "y": 326
+                  },
+                  {
+                    "x": 823,
+                    "y": 324
+                  },
+                  {
+                    "x": 828,
+                    "y": 326
+                  },
+                  {
+                    "x": 831,
+                    "y": 331
+                  },
+                  {
+                    "x": 829,
+                    "y": 336
+                  },
+                  {
+                    "x": 823,
+                    "y": 339
+                  },
+                  {
+                    "x": 673,
+                    "y": 426
+                  },
+                  {
+                    "x": 668,
+                    "y": 427
+                  },
+                  {
+                    "x": 664,
+                    "y": 422
+                  }
+                ],
+                "colour": "wood-light",
+                "depth": "raised"
+              },
+              {
+                "type": "cutout",
+                "points": [
+                  {
+                    "x": 952,
+                    "y": 416
+                  },
+                  {
+                    "x": 1050,
+                    "y": 279
+                  },
+                  {
+                    "x": 1050,
+                    "y": 274
+                  },
+                  {
+                    "x": 1053,
+                    "y": 270
+                  },
+                  {
+                    "x": 1058,
+                    "y": 270
+                  },
+                  {
+                    "x": 1063,
+                    "y": 274
+                  },
+                  {
+                    "x": 1063,
+                    "y": 279
+                  },
+                  {
+                    "x": 1059,
+                    "y": 284
+                  },
+                  {
+                    "x": 964,
+                    "y": 424
+                  },
+                  {
+                    "x": 959,
+                    "y": 427
+                  },
+                  {
+                    "x": 954,
+                    "y": 425
+                  }
+                ],
+                "colour": "wood-light",
+                "depth": "raised"
+              },
+              {
+                "type": "arrow",
+                "from": {
+                  "x": 837,
+                  "y": 518
+                },
+                "to": {
+                  "x": 837,
+                  "y": 391
+                },
+                "colour": "gold"
+              }
+            ],
+            "labels": [
+              {
+                "text": "Drumstick",
+                "target": {
+                  "x": 150,
+                  "y": 346
+                },
+                "side": "right"
+              },
+              {
+                "text": "Drum",
+                "target": {
+                  "x": 194,
+                  "y": 635
+                },
+                "side": "below"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

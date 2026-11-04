@@ -1,0 +1,533 @@
+{
+  "ranAt": "2026-11-04T08:10:13.472Z",
+  "brief": {
+    "kind": "technique",
+    "subject": "A hand holds an inoculating loop by its handle with the wire loop in a Bunsen burner flame, sterilising it before use.",
+    "mustShow": [
+      "A hand holds the loop by its handle.",
+      "The wire loop is in the flame.",
+      "The flame comes from a laboratory burner."
+    ],
+    "caption": "Flaming the loop: the wire is held in the burner flame until it glows, which kills anything on it.",
+    "alt": "A hand holds the handle of an inoculating loop so that its thin wire end sits in the flame of a laboratory burner.",
+    "mediaCategory": "culture-technique",
+    "topicTags": [
+      "aseptic-technique",
+      "inoculating-loop",
+      "flaming"
+    ]
+  },
+  "runs": [
+    {
+      "descriptor": null,
+      "outcome": "miss",
+      "foundBy": null,
+      "searches": [
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "found": 20,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "flaming inoculating loop filetype:bitmap"
+          },
+          "found": 0,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "bunsen burner inoculating loop filetype:bitmap"
+          },
+          "found": 2,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "openverse",
+            "query": "inoculating loop"
+          },
+          "found": 20,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "openverse",
+            "query": "flaming inoculating loop"
+          },
+          "found": 2,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "commons_category",
+            "query": "Category:Inoculation loops"
+          },
+          "found": 15,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "loop in burner flame filetype:bitmap"
+          },
+          "found": 2,
+          "error": null
+        }
+      ],
+      "searchErrors": [],
+      "librarianErrors": [],
+      "tried": [
+        {
+          "title": "File:Estación de Trabajo para Siembra de Hongos (Fungal Inoculation Workstation).jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Estaci%C3%B3n_de_Trabajo_para_Siembra_de_Hongos_(Fungal_Inoculation_Workstation).jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 16,
+          "license": "cc_by_sa",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Wand; from a medical laboratory in Abuja, Nigeria.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Wand;_from_a_medical_laboratory_in_Abuja,_Nigeria.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 19,
+          "license": "cc0",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Nichrome Inoculation loop.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Nichrome_Inoculation_loop.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 1,
+          "license": "cc_by_sa",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Inoculating loop and wire used in Microbiology Laboratory.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Inoculating_loop_and_wire_used_in_Microbiology_Laboratory.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 2,
+          "license": "cc_by_sa",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Inoculation loop rot45.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Inoculation_loop_rot45.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 3,
+          "license": "cc_by_sa",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Basic inoculating tools.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Basic_inoculating_tools.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 4,
+          "license": "cc_by_sa",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Inoculation loop-metal wire.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Inoculation_loop-metal_wire.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 7,
+          "license": "cc_by_sa",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Inoculation loop.JPG",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Inoculation_loop.JPG",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 9,
+          "license": "cc_by",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Platinum loop.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Platinum_loop.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 14,
+          "license": "cc_by_sa",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Стерилизирање на еза на пламен во микробиолошка лабораторија.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:%D0%A1%D1%82%D0%B5%D1%80%D0%B8%D0%BB%D0%B8%D0%B7%D0%B8%D1%80%D0%B0%D1%9A%D0%B5_%D0%BD%D0%B0_%D0%B5%D0%B7%D0%B0_%D0%BD%D0%B0_%D0%BF%D0%BB%D0%B0%D0%BC%D0%B5%D0%BD_%D0%B2%D0%BE_%D0%BC%D0%B8%D0%BA%D1%80%D0%BE%D0%B1%D0%B8%D0%BE%D0%BB%D0%BE%D1%88%D0%BA%D0%B0_%D0%BB%D0%B0%D0%B1%D0%BE%D1%80%D0%B0%D1%82%D0%BE%D1%80%D0%B8%D1%98%D0%B0.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 15,
+          "license": "cc_by",
+          "status": "judge_failed",
+          "reasons": [
+            "“A hand holds the loop by its handle.” The visible hand is holding a test tube, while the loop handle extends out of the frame and is not held by a hand.",
+            "“which kills anything on it.” The image shows a glowing wire, but it cannot visibly establish that anything on it has been killed.",
+            "“A hand holds the handle of an inoculating loop...” The alt text describes the hand holding the loop handle, but the visible hand is holding a test tube instead."
+          ]
+        },
+        {
+          "title": "File:Прокаливание бактериологической петли.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:%D0%9F%D1%80%D0%BE%D0%BA%D0%B0%D0%BB%D0%B8%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5_%D0%B1%D0%B0%D0%BA%D1%82%D0%B5%D1%80%D0%B8%D0%BE%D0%BB%D0%BE%D0%B3%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B9_%D0%BF%D0%B5%D1%82%D0%BB%D0%B8.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 13,
+          "license": "cc_by",
+          "status": "judge_failed",
+          "reasons": [
+            "“A hand holds the loop by its handle.” No hand or handle is visible; only the wire loop and burner are shown.",
+            "The caption phrase “which kills anything on it” claims a sterilising effect that cannot be seen in the image.",
+            "The alt text says “A hand holds the handle,” but no hand or handle is visible."
+          ]
+        },
+        {
+          "title": "File:Siembra de Hongos en Laboratorio.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Siembra_de_Hongos_en_Laboratorio.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 20,
+          "license": "cc_by_sa",
+          "status": "judge_failed",
+          "reasons": [
+            "“The wire loop is in the flame.” No flame is visible, and the wire is not shown inside a flame.",
+            "“The flame comes from a laboratory burner.” The visible laboratory burners appear unlit.",
+            "Caption phrase “the wire is held in the burner flame until it glows” is not shown: there is no visible flame or glowing wire.",
+            "Alt text says the wire end “sits in the flame,” but no flame is visible in the image."
+          ]
+        }
+      ],
+      "rejected": [
+        {
+          "title": "File:Inoculation loop-plastic small.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loop-plastic big.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loop-plastic small 2.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loops-metal and plastic.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loops-plastic big and small.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation sticks.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:OSC Microbio 09 02 listumbrel.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:2D Nonhomogeneous heat equation .gif",
+          "reason": "The file type image/gif is not a still a Reading can attach."
+        }
+      ]
+    },
+    {
+      "descriptor": null,
+      "outcome": "miss",
+      "foundBy": null,
+      "searches": [
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "found": 20,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculation loop bunsen burner filetype:bitmap"
+          },
+          "found": 2,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "bacteriological loop flaming filetype:bitmap"
+          },
+          "found": 0,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "openverse",
+            "query": "inoculating loop"
+          },
+          "found": 20,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "openverse",
+            "query": "inoculation loop bunsen burner"
+          },
+          "found": 2,
+          "error": null
+        },
+        {
+          "stage": "librarian",
+          "route": {
+            "index": "commons_category",
+            "query": "Category:Inoculation loops"
+          },
+          "found": 15,
+          "error": null
+        }
+      ],
+      "searchErrors": [],
+      "librarianErrors": [],
+      "tried": [
+        {
+          "title": "File:Стерилизирање на еза на пламен во микробиолошка лабораторија.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:%D0%A1%D1%82%D0%B5%D1%80%D0%B8%D0%BB%D0%B8%D0%B7%D0%B8%D1%80%D0%B0%D1%9A%D0%B5_%D0%BD%D0%B0_%D0%B5%D0%B7%D0%B0_%D0%BD%D0%B0_%D0%BF%D0%BB%D0%B0%D0%BC%D0%B5%D0%BD_%D0%B2%D0%BE_%D0%BC%D0%B8%D0%BA%D1%80%D0%BE%D0%B1%D0%B8%D0%BE%D0%BB%D0%BE%D1%88%D0%BA%D0%B0_%D0%BB%D0%B0%D0%B1%D0%BE%D1%80%D0%B0%D1%82%D0%BE%D1%80%D0%B8%D1%98%D0%B0.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 15,
+          "license": "cc_by",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Estación de Trabajo para Siembra de Hongos (Fungal Inoculation Workstation).jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Estaci%C3%B3n_de_Trabajo_para_Siembra_de_Hongos_(Fungal_Inoculation_Workstation).jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 16,
+          "license": "cc_by_sa",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Wand; from a medical laboratory in Abuja, Nigeria.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Wand;_from_a_medical_laboratory_in_Abuja,_Nigeria.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 19,
+          "license": "cc0",
+          "status": "screened_out",
+          "reasons": [
+            "The librarian's low-detail screen read it as not what the brief needs."
+          ]
+        },
+        {
+          "title": "File:Siembra de Hongos en Laboratorio.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Siembra_de_Hongos_en_Laboratorio.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 20,
+          "license": "cc_by_sa",
+          "status": "judge_failed",
+          "reasons": [
+            "“A hand holds the loop by its handle.” The hand holds a rod, but no identifiable inoculating loop or wire loop is visible.",
+            "“The wire loop is in the flame.” No flame or wire loop is visible in the image.",
+            "“The flame comes from a laboratory burner.” The burners are visible, but none has a visible flame.",
+            "“the wire is held in the burner flame until it glows” is not shown: there is no visible flame, glowing wire, or identifiable loop.",
+            "The alt text says the wire end “sits in the flame,” but no wire loop or flame is visible."
+          ]
+        },
+        {
+          "title": "File:Прокаливание бактериологической петли.jpg",
+          "descriptionUrl": "https://commons.wikimedia.org/wiki/File:%D0%9F%D1%80%D0%BE%D0%BA%D0%B0%D0%BB%D0%B8%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5_%D0%B1%D0%B0%D0%BA%D1%82%D0%B5%D1%80%D0%B8%D0%BE%D0%BB%D0%BE%D0%B3%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B9_%D0%BF%D0%B5%D1%82%D0%BB%D0%B8.jpg",
+          "stage": "librarian",
+          "route": {
+            "index": "commons",
+            "query": "inoculating loop filetype:bitmap"
+          },
+          "rank": 13,
+          "license": "cc_by",
+          "status": "judge_failed",
+          "reasons": [
+            "“A hand holds the loop by its handle.” No hand or handle is visible; the loop appears to extend out of the frame.",
+            "The caption phrase “the wire is held in the burner flame” is not shown because no hand or holder is visible.",
+            "The alt text says “A hand holds the handle,” but the image contains no visible hand or handle."
+          ]
+        }
+      ],
+      "rejected": [
+        {
+          "title": "File:Nichrome Inoculation loop.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculating loop and wire used in Microbiology Laboratory.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loop rot45.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Basic inoculating tools.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loop-plastic small.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loop-plastic big.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loop-metal wire.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loop-plastic small 2.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loop.JPG",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loops-metal and plastic.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation loops-plastic big and small.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Inoculation sticks.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Platinum loop.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Wire loop.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:1963. One method of inoculating culture dishes with Bt spores, after dilution of material, to determine viable spore concentration. C.G. Thompson pictured. Corvallis, OR. (34581730892).jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:Workshops at the Days of Science 2019.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        },
+        {
+          "title": "File:OSC Microbio 09 02 listumbrel.jpg",
+          "reason": "The librarian read its title and description as not what the brief needs."
+        }
+      ]
+    }
+  ]
+}

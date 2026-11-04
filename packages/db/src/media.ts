@@ -117,6 +117,22 @@ export type MediaSource = {
   url: string;
 };
 
+/**
+ * Where a media search looks (SEN-132): a Commons search, an Openverse search (used only to find Commons files,
+ * decision 2026-11-04), or the files of one Commons category.
+ */
+export const MEDIA_SEARCH_INDEXES = ["commons", "openverse", "commons_category"] as const;
+
+/** One of {@link MEDIA_SEARCH_INDEXES}. */
+export type MediaSearchIndex = (typeof MEDIA_SEARCH_INDEXES)[number];
+
+/**
+ * One search a media search ran: the index, and the keywords or the Commons category title (`Category:Drumsticks`).
+ * Kept on the library file it found (`found_by`), so the next search for its Media category starts there (decision
+ * 2026-11-04).
+ */
+export type MediaSearchRoute = { index: MediaSearchIndex; query: string };
+
 /** The descriptor fields the catalog validates: everything a `media_descriptors` row holds except its timestamps. */
 export type MediaDescriptorFields = {
   id: string;
