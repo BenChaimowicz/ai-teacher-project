@@ -18,7 +18,8 @@
     "./learner-name": "./src/learner-name.ts",
     "./publication": "./src/publication.ts",
     "./generation-job": "./src/generation-job.ts",
-    "./usage": "./src/usage.ts"
+    "./usage": "./src/usage.ts",
+    "./logs": "./src/logs.ts"
   },
   "scripts": {
     "generate": "tsx scripts/generate.ts",

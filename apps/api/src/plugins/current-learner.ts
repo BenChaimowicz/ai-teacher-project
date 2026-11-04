@@ -38,7 +38,10 @@ export class TokenCheckUnavailableError extends Error {}
 
 declare module "fastify" {
   interface FastifyRequest {
-    /** The signed-in Learner; set on every `/api/*` request but `/api/health`. */
+    /**
+     * The signed-in Learner; set on every `/api/*` request but `/api/health`. On an `OPTIONAL_SIGN_IN_PATHS` route it is
+     * set only when the access token is good, so read it there as `Learner | undefined`.
+     */
     currentLearner: Learner;
     /** The Supabase user the access token names; set alongside `currentLearner`. */
     authUser: VerifiedToken;
@@ -97,17 +100,26 @@ export function supabaseTokenVerifier(supabaseUrl: string | undefined): TokenVer
 }
 
 /**
- * True when the request needs `currentLearner` (Learner-owned API routes). A CORS preflight never carries the session.
- * The sign-in routes are open (ADR 0027), except changing the password.
+ * Routes a signed-out browser may call too (ADR 0029): the Learner is loaded when the access token is good, but the
+ * request is never refused, its session is never refreshed, and its cookies are never cleared. A browser sends its
+ * client logs as the page closes, when new cookies from a refresh would be lost and the rotated refresh token with them.
+ */
+export const OPTIONAL_SIGN_IN_PATHS: ReadonlySet<string> = new Set(["/api/client-logs"]);
+
+/**
+ * How the request is signed in. `required`: Learner-owned API routes. `optional`: `OPTIONAL_SIGN_IN_PATHS`. `none`: a
+ * CORS preflight (it never carries the session), `/api/health`, anything outside `/api/`, and the sign-in routes
+ * (ADR 0027), except changing the password.
  * @param request - Incoming request
  */
-function needsLearner(request: FastifyRequest) {
-  if (request.method === "OPTIONS") return false;
+function signInFor(request: FastifyRequest): "required" | "optional" | "none" {
+  if (request.method === "OPTIONS") return "none";
   const path = request.url.split("?")[0] ?? "";
-  if (!path.startsWith("/api/")) return false;
-  if (path === "/api/health") return false;
-  if (path.startsWith("/api/auth/") && path !== "/api/auth/password") return false;
-  return true;
+  if (!path.startsWith("/api/")) return "none";
+  if (path === "/api/health") return "none";
+  if (path.startsWith("/api/auth/") && path !== "/api/auth/password") return "none";
+  if (OPTIONAL_SIGN_IN_PATHS.has(path)) return "optional";
+  return "required";
 }
 
 /** Sent when the sign-in check or the refresh could not reach Supabase; the session may still be good. */
@@ -149,8 +161,31 @@ async function currentLearnerPlugin(app: FastifyInstance, options: CurrentLearne
     return raced;
   }
 
+  /**
+   * Loads the Learner for an `OPTIONAL_SIGN_IN_PATHS` request when its access token is good. A missing, expired or
+   * refused token, a check that could not run, or a failed Learner read leaves the request without a Learner. Never
+   * refreshes, clears cookies, or answers.
+   * @param request - Incoming request
+   */
+  async function attachIfSignedIn(request: FastifyRequest) {
+    const { accessToken } = readSessionCookies(request);
+    if (!accessToken) return;
+    try {
+      const user = await check(accessToken);
+      const learner = await learnerFor(user.sub);
+      request.authUser = user;
+      request.authTokens = { accessToken, refreshToken: null };
+      request.currentLearner = learner;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      request.log.debug(`[current-learner.ts: attachIfSignedIn] Went on without a Learner || url=${request.url} || ${message}`);
+    }
+  }
+
   app.addHook("onRequest", async (request, reply) => {
-    if (!needsLearner(request)) return;
+    const mode = signInFor(request);
+    if (mode === "none") return;
+    if (mode === "optional") return attachIfSignedIn(request);
     const cookies = readSessionCookies(request);
     if (!cookies.accessToken && !cookies.refreshToken) return reply.code(401).send({ error: SIGN_IN_ERROR });
     let tokens = cookies;

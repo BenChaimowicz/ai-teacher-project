@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import { loadRootEnv } from "@senoy/db";
+import { createBatchedLogSink } from "@senoy/logging";
 import { supabaseAuthService } from "./lib/supabase-auth.ts";
 import sameOriginPlugin from "./plugins/same-origin.ts";
 import { authRoutes } from "./routes/auth.ts";
@@ -12,6 +13,7 @@ import currentLearnerPlugin, { supabaseTokenVerifier } from "./plugins/current-l
 import dbPlugin from "./plugins/db.ts";
 import spaPlugin from "./plugins/spa.ts";
 import { healthRoutes } from "./routes/health.ts";
+import { clientLogRoutes } from "./routes/client-logs.ts";
 import { courseRequestRoutes } from "./routes/course-requests.ts";
 import { goalFocusRoutes } from "./routes/goal-focus.ts";
 import { startingLevelRoutes } from "./routes/starting-level.ts";
@@ -31,6 +33,8 @@ import { teachingProfileRoutes } from "./routes/teaching-profile.ts";
  */
 async function start() {
   const root = loadRootEnv(import.meta.url, 3);
+  // The API's one Log Entry sink (ADR 0029): its logger and the client-log route both push to it.
+  const logSink = createBatchedLogSink();
   const app = Fastify({
     logger: {
       // Email-link landings carry a single-use sign-in token in their query; the log never shows it.
@@ -60,6 +64,7 @@ async function start() {
     });
     await app.register(corsPlugin);
     await app.register(healthRoutes);
+    await app.register(clientLogRoutes, { sink: logSink });
     await app.register(authRoutes, { auth });
     await app.register(meRoutes);
     await app.register(libraryRoutes);

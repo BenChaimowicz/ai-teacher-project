@@ -1,9 +1,12 @@
 import { createDb, loadRootEnv } from "@senoy/db";
+import { createBatchedLogSink, drizzleLogWriter } from "@senoy/logging";
 import { createParallelTokenKeeper, parallelAccountPath } from "@senoy/research";
 import { buildConsoleApp } from "./app.ts";
 import { createBillingService, vendorReadersFromEnv } from "./billing.ts";
+import { createConsoleClientLogIngest } from "./client-logs.ts";
 import { createMediaStorage, mediaStorageConfigFromEnv, type MediaStorage } from "@senoy/media";
 import { createDecisionsReader } from "./decisions.ts";
+import { createLogsStore } from "./logs-store.ts";
 import { createMediaReviewService } from "./media-review.ts";
 import { createOpsStore, runnerFor } from "./ops-store.ts";
 import { createOpenRouterHistoryReader } from "./openrouter-history.ts";
@@ -20,13 +23,19 @@ async function start() {
   const root = loadRootEnv(import.meta.url, 4);
   // The runner never puts more queries in flight than the pool has connections (see runnerFor).
   const POOL = 3;
-  const run = runnerFor(createDb(requireDatabaseUrl(), { max: POOL }), { concurrency: POOL });
+  const url = requireDatabaseUrl();
+  const run = runnerFor(createDb(url, { max: POOL }), { concurrency: POOL });
+  // The console screens' own browser errors (ADR 0029), written one insert at a time on a connection of their own, so
+  // they never take a slot from the runner's pool.
+  const logSink = createBatchedLogSink();
+  logSink.start(drizzleLogWriter(createDb(url, { max: 1 })));
   const keeper = createParallelTokenKeeper({ path: parallelAccountPath(root) });
   const billing = createBillingService({ run, readers: vendorReadersFromEnv({ env: process.env, keeper }), keeper });
   const app = buildConsoleApp(createOpsStore(run), { logger: true, setup: createSetupReader({ env: process.env }), billing,
     openrouterHistory: createOpenRouterHistoryReader(run), decisions: createDecisionsReader({ root }),
     setupChecklist: createSetupChecklistService({ root, operator: await readGitUserName(root) }),
-    mediaReview: createMediaReviewService({ run, storage: optionalMediaStorage() }) });
+    mediaReview: createMediaReviewService({ run, storage: optionalMediaStorage() }),
+    logs: createLogsStore(run), clientLogs: createConsoleClientLogIngest({ sink: logSink }) });
 
   try {
     const port = Number(process.env.CONSOLE_API_PORT ?? 3100);

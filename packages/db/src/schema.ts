@@ -13,6 +13,7 @@ import {
 import { GENERATION_JOB_KINDS, GENERATION_JOB_STATUSES, GENERATION_STAGES } from "./generation-job.ts";
 import type { LessonSource } from "./lesson-checkpoint.ts";
 import type { LessonLineage } from "./lesson-reuse.ts";
+import { LOG_COMPONENTS, LOG_LEVELS } from "./logs.ts";
 import { MEDIA_KINDS, MEDIA_LICENSES, MEDIA_ORIGINS, MEDIA_REVIEWS, type MediaCategory, type MediaSource } from "./media.ts";
 import type { QuizAnswers, QuizAttemptStatus, QuizBody } from "./quiz.ts";
 import type { NumberedSource, ReadingBody } from "./reading-lesson.ts";
@@ -164,6 +165,11 @@ export const generationJobs = pgTable(
      * it its own.
      */
     owner: text("owner"),
+    /**
+     * The API request that last queued the job (its request id, ADR 0029): set on every queue, as `owner` is, so a
+     * Retry's id leads to the run it started. Every Log Entry of a run carries it. Null on jobs queued before SEN-116.
+     */
+    requestId: uuid("request_id"),
     claimToken: uuid("claim_token"),
     leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
     /** How many times a worker has claimed the job. */
@@ -476,9 +482,61 @@ export const apiRequests = pgTable(
     durationMs: integer("duration_ms").notNull(),
     learnerId: uuid("learner_id").references(() => learners.id),
     error: text("error"),
+    /** The request id the API gave this request (ADR 0029), also sent back as `x-request-id`. Null before SEN-116. */
+    requestId: uuid("request_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("api_requests_created").on(table.createdAt), index("api_requests_route").on(table.route, table.createdAt)],
+  (table) => [
+    index("api_requests_created").on(table.createdAt),
+    index("api_requests_route").on(table.route, table.createdAt),
+    index("api_requests_request").on(table.requestId).where(sql`${table.requestId} is not null`),
+  ],
+);
+
+/** Which part of the platform wrote a Log Entry. */
+export const logComponent = pgEnum("log_component", LOG_COMPONENTS);
+
+/** How serious a Log Entry is. Ordered, so `level >= 'warn'` is warn, error and fatal. */
+export const logLevel = pgEnum("log_level", LOG_LEVELS);
+
+/**
+ * One line the api, the worker, the web app or the Usage Console's screens logged at `info` or above (ADR 0029). Kept
+ * 7 days at `info` and 30 days at `warn` and above; the worker deletes older rows every hour. Written in batches that
+ * never fail or slow the code that logged. The ids are plain columns, not foreign keys: a log write never fails on a
+ * missing row, and deleting a Learner or a Course Request never waits on its logs.
+ */
+export const logEntries = pgTable(
+  "log_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** When the line was logged: by the process for api and worker lines, on arrival for browser lines. */
+    loggedAt: timestamp("logged_at", { withTimezone: true }).notNull().defaultNow(),
+    component: logComponent("component").notNull(),
+    level: logLevel("level").notNull(),
+    /** At most 2 KB; a longer message is cut and marked. */
+    message: text("message").notNull(),
+    /** Everything else the line carried, redacted, at most 8 KB of JSON (a larger one keeps a marked preview). */
+    context: jsonb("context").$type<Record<string, unknown>>(),
+    /** The API request it was logged for, or that queued the Generation job whose run logged it. */
+    requestId: uuid("request_id"),
+    generationJobId: uuid("generation_job_id"),
+    courseRequestId: uuid("course_request_id"),
+    learnerId: uuid("learner_id"),
+    /** The innermost Pipeline Event running when it was logged. */
+    pipelineEventId: uuid("pipeline_event_id"),
+  },
+  (table) => [
+    // Every Logs view query is bounded by time and newest first; pruning deletes by level and age.
+    index("log_entries_logged").on(table.loggedAt),
+    index("log_entries_level").on(table.level, table.loggedAt),
+    index("log_entries_component").on(table.component, table.loggedAt),
+    // Most lines carry few of the ids, so each id's index holds only the rows that have it.
+    index("log_entries_request").on(table.requestId, table.loggedAt).where(sql`${table.requestId} is not null`),
+    index("log_entries_job").on(table.generationJobId, table.loggedAt).where(sql`${table.generationJobId} is not null`),
+    index("log_entries_course_request").on(table.courseRequestId, table.loggedAt).where(sql`${table.courseRequestId} is not null`),
+    index("log_entries_learner").on(table.learnerId, table.loggedAt).where(sql`${table.learnerId} is not null`),
+    index("log_entries_pipeline_event").on(table.pipelineEventId, table.loggedAt).where(sql`${table.pipelineEventId} is not null`),
+  ],
 );
 
 /**

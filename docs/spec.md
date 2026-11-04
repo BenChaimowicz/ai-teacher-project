@@ -39,6 +39,8 @@ TypeScript full-stack web app. Each Learner is an account in Supabase Auth: they
 
 **Storage.** Hosted Postgres via Supabase, accessed through Drizzle. No local database. No Redis. No second job system. Drizzle migrations run against that Postgres.
 
+**Logs.** Every Component (api, worker, web, console) keeps its Log Entries at `info` and above in the same Postgres, with a Request id that follows a request into the Generation job it queues. `info` is kept 7 days and `warn` and above 30 days; the worker prunes hourly. Operators filter and search them in the Usage Console (ADR 0029).
+
 **Run locally against hosted Supabase.** A public URL is not required. Two processes: the web app and a Node worker. The worker claims Course-generation jobs from Postgres (one active job per Course Request). The browser never talks to the worker.
 
 **Named later host.** Railway: one project, two services (web + worker), both on the same Supabase project. Vercel is not the named target. Deploy notes exist so a later push is configuration, not a redesign; this prototype does not have to be pushed.
@@ -78,6 +80,7 @@ Optional server-only model overrides: `GENERATOR_MODEL`, `GENERATOR_FALLBACK_MOD
 - **Progress** — completed Lessons over total Lessons for that Course.
 - **Quiz attempts** — drafts and scored attempts; best score kept.
 - **Media descriptor** — kind, caption, alt, Source, license, origin (`library` \| `generated`), storage key, Media category, Topic tags.
+- **Log Entry** — time, Component, level, message, redacted context, and the Request id, Generation job, Course Request, Learner and Pipeline Event it was logged for.
 
 Do not persist token streams or every mark-irrelevant Blueprint round.
 

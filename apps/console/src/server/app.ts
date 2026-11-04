@@ -1,6 +1,9 @@
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
+import { CLIENT_LOG_LIMITS } from "@senoy/db/logs";
 import type { BillingService } from "./billing.ts";
+import type { ClientLogIngest } from "./client-logs.ts";
 import type { DecisionsReader } from "./decisions.ts";
+import type { LogsStore } from "./logs-store.ts";
 import type { MediaReviewService } from "./media-review.ts";
 import type { OpsStore } from "./ops-store.ts";
 import type { OpenRouterHistoryReader } from "./openrouter-history.ts";
@@ -10,6 +13,7 @@ import {
   assertUuid,
   parseApiRequestQuery,
   parseCourseRequestQuery,
+  parseLogQuery,
   parsePipelineEventQuery,
   parseProductEventQuery,
   parseRange,
@@ -32,6 +36,10 @@ export type ConsoleAppOptions = {
   setupChecklist?: SetupChecklistService;
   /** Approving and removing files found on Wikimedia Commons; without it `/media-review` answers 404. */
   mediaReview?: MediaReviewService;
+  /** Log Entries for the Logs view; without it `/logs` answers 404. */
+  logs?: LogsStore;
+  /** The console screens' own browser errors; without it `/client-logs` answers 404. */
+  clientLogs?: ClientLogIngest;
   /** Whether Fastify logs (Pino); tests leave it off. */
   logger?: boolean;
   /** The current instant, injected for tests; defaults to the wall clock. */
@@ -231,6 +239,26 @@ export function buildConsoleApp(store: OpsStore, options: ConsoleAppOptions = {}
           request.log.error(`[app.ts: GET /media-review/:id/file] Failed to stream a Commons file || url=${request.url} || ${message}`);
           return reply.code(502).send({ error: "The file is unavailable right now." });
         }
+      });
+
+      ops.get("/logs", (request, reply) =>
+        answer(request, reply, "GET /logs", async () =>
+          (options.logs ? options.logs.list(parseLogQuery(query(request), now())) : null), "Logs are not available"));
+
+      // The console screens' own browser errors (ADR 0029). Answers 204 whatever the batch held, so the screen never
+      // waits on it or retries it.
+      ops.post("/client-logs", { bodyLimit: CLIENT_LOG_LIMITS.maxBodyBytes }, async (request, reply) => {
+        const ingest = options.clientLogs;
+        if (!ingest) return reply.code(404).send({ error: "Client logs are not available" });
+        const refused = refuseForeignWrite(request, reply, "Client logs");
+        if (refused) return refused;
+        try {
+          ingest.accept(request.body);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          request.log.error(`[app.ts: POST /client-logs] Client log ingest threw || ${message}`);
+        }
+        return reply.code(204).send();
       });
 
       ops.get("/openrouter-history", (request, reply) =>
