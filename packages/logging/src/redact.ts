@@ -1,4 +1,5 @@
 import { LOG_COMPONENTS, LOG_CONTEXT_MAX_BYTES, LOG_LEVELS, LOG_MESSAGE_MAX_BYTES, TRUNCATION_MARKER, type TruncatedContext } from "@senoy/db/logs";
+import { capUtf8 } from "./client.ts";
 import type { LogEntryRow } from "./types.ts";
 
 /**
@@ -143,23 +144,6 @@ function redactValue(value: unknown, parentKey: string | null, depth: number, se
   }
 }
 
-/**
- * The start of a text that fits in a number of UTF-8 bytes, cut between characters.
- * @param text - The text
- * @param maxBytes - Bytes it may take
- */
-function cutToBytes(text: string, maxBytes: number) {
-  let bytes = 0;
-  let end = 0;
-  for (const char of text) {
-    const size = Buffer.byteLength(char);
-    if (bytes + size > maxBytes) break;
-    bytes += size;
-    end += char.length;
-  }
-  return text.slice(0, end);
-}
-
 /** UTF-8 bytes of `TRUNCATION_MARKER`. */
 const MARKER_BYTES = Buffer.byteLength(TRUNCATION_MARKER);
 
@@ -169,8 +153,7 @@ const MARKER_BYTES = Buffer.byteLength(TRUNCATION_MARKER);
  * @returns The message, unchanged when it fits
  */
 export function truncateMessage(message: string): string {
-  if (Buffer.byteLength(message) <= LOG_MESSAGE_MAX_BYTES) return message;
-  return cutToBytes(message, LOG_MESSAGE_MAX_BYTES - MARKER_BYTES) + TRUNCATION_MARKER;
+  return capUtf8(message, LOG_MESSAGE_MAX_BYTES);
 }
 
 /**
@@ -193,7 +176,7 @@ export function truncateContext(context: Record<string, unknown> | null): Record
   // The preview is stored as a JSON string, where quotes and backslashes take two bytes, so it shrinks until it fits.
   let budget = LOG_CONTEXT_MAX_BYTES - 100;
   for (;;) {
-    const preview = cutToBytes(json, budget - MARKER_BYTES) + TRUNCATION_MARKER;
+    const preview = capUtf8(json, budget);
     const truncated: TruncatedContext = { truncated: true, originalBytes, preview };
     const over = Buffer.byteLength(JSON.stringify(truncated)) - LOG_CONTEXT_MAX_BYTES;
     if (over <= 0 || budget <= MARKER_BYTES) return truncated;

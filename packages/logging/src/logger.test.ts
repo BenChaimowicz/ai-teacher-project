@@ -39,6 +39,14 @@ test("info and above reach the sink; debug reaches stdout only when asked for", 
   assert.ok(sink.rows.every((row) => row.component === "worker"));
 });
 
+test("The Usage Console's server logs as component console, and its per-request lines are not stored", () => {
+  const sink = memorySink();
+  const log = createLogger({ component: "console", sink, stdoutLevel: "silent" });
+  log.info("incoming request");
+  log.warn("billing check failed");
+  assert.deepEqual(sink.rows.map((row) => [row.component, row.message]), [["console", "billing check failed"]]);
+});
+
 test("The sink takes info even when stdout is set to warn or silent", () => {
   const sink = memorySink();
   const stdout = memoryStdout();

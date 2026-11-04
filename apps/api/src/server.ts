@@ -29,6 +29,34 @@ import { mediaRoutes } from "./routes/media.ts";
 import { studyRoutes } from "./routes/study.ts";
 import { teachingProfileRoutes } from "./routes/teaching-profile.ts";
 
+/** How long a stop waits for `app.close()` before it exits anyway. */
+const STOP_GRACE_MS = 10_000;
+
+/**
+ * On SIGINT or SIGTERM (a deploy, or `tsx watch` restarting), closes the server, which runs `logSink.close()` and so
+ * writes the last Log Entries (ADR 0029), then exits. A close that has not finished after `STOP_GRACE_MS` exits anyway.
+ * @param app - The listening server
+ * @param logSink - The process's Log Entry sink, flushed by `app.close()`
+ */
+function stopOnSignal(app: ReturnType<typeof Fastify>, logSink: { close(): Promise<void> }) {
+  let stopping = false;
+  const stop = () => {
+    if (stopping) return;
+    stopping = true;
+    app.log.info("api stopping");
+    setTimeout(() => process.exit(1), STOP_GRACE_MS).unref();
+    app
+      .close()
+      .catch(async (error: unknown) => {
+        process.stderr.write(`[server.ts: stopOnSignal] Closing the API failed || ${error instanceof Error ? error.message : String(error)}\n`);
+        await logSink.close();
+      })
+      .finally(() => process.exit(0));
+  };
+  process.once("SIGTERM", stop);
+  process.once("SIGINT", stop);
+}
+
 /**
  * Starts the Fastify API (JSON, `/media/…`, and the built SPA when present).
  */
@@ -100,6 +128,7 @@ async function start() {
     const port = Number(process.env.PORT ?? 3000);
     const host = process.env.HOST ?? "127.0.0.1";
     await app.listen({ port, host });
+    stopOnSignal(app, logSink);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     app.log.error(`[server.ts: start] Failed to start API || ${message}`);

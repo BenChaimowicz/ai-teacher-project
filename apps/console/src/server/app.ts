@@ -1,4 +1,4 @@
-import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
+import Fastify, { type FastifyBaseLogger, type FastifyReply, type FastifyRequest } from "fastify";
 import { CLIENT_LOG_LIMITS } from "@senoy/db/logs";
 import type { BillingService } from "./billing.ts";
 import type { ClientLogIngest } from "./client-logs.ts";
@@ -40,8 +40,8 @@ export type ConsoleAppOptions = {
   logs?: LogsStore;
   /** The console screens' own browser errors; without it `/client-logs` answers 404. */
   clientLogs?: ClientLogIngest;
-  /** Whether Fastify logs (Pino); tests leave it off. */
-  logger?: boolean;
+  /** Whether Fastify logs (Pino), or the logger it uses (the real server passes one that stores its lines); tests leave it off. */
+  logger?: boolean | FastifyBaseLogger;
   /** The current instant, injected for tests; defaults to the wall clock. */
   now?: () => Date;
 };
@@ -136,7 +136,8 @@ function refuseChecklistWrite(request: FastifyRequest, reply: FastifyReply, oper
  * @returns The Fastify app, not yet listening
  */
 export function buildConsoleApp(store: OpsStore, options: ConsoleAppOptions = {}) {
-  const app = Fastify({ logger: options.logger ?? false });
+  const logger = options.logger ?? false;
+  const app = typeof logger === "object" ? Fastify({ loggerInstance: logger }) : Fastify({ logger });
   const now = options.now ?? (() => new Date());
   const query = (request: FastifyRequest) => (request.query ?? {}) as RawQuery;
 

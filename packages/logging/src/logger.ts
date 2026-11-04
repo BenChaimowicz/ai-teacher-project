@@ -17,8 +17,11 @@ export const UNSTORED_MESSAGES = ["incoming request", "request completed"] as co
 
 /** How one process's logger is set up. */
 export type CreateLoggerOptions = {
-  /** The process writing. Browser lines (`web`, `console`) never go through a logger; their routes push rows. */
-  component: Extract<LogComponent, "api" | "worker">;
+  /**
+   * The process writing: the api, the worker, or the Usage Console's server. Lines from the browsers (`web`, and the
+   * console's screens) never go through a logger; their routes push rows.
+   */
+  component: Extract<LogComponent, "api" | "worker" | "console">;
   /** Where Log Entries go; without one the logger writes stdout only (unit tests, scripts). */
   sink?: LogSink;
   /**

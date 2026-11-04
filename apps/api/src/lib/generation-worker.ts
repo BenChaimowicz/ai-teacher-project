@@ -105,6 +105,14 @@ export function createGenerationWorker({ db, blueprint, generation, log, pollMs 
    * within a third of the lease instead of when the stage ends (SEN-93).
    */
   async function runJob(claim: ClaimedJob) {
+    // Every Pipeline Event the run starts keeps this claim, so a later claim can close what it leaves open. Every Log
+    // Entry of the run, the claim, the heartbeat and a failure included, carries the job, the request that queued it,
+    // its Course Request and its Learner.
+    await withClaim(claim, () => runClaimed(claim));
+  }
+
+  /** The body of `runJob`, run inside the claim's tracking context. */
+  async function runClaimed(claim: ClaimedJob) {
     const lost = new AbortController();
     let renewing = false;
     const heartbeat = setInterval(() => {
@@ -124,20 +132,16 @@ export function createGenerationWorker({ db, blueprint, generation, log, pollMs 
       log.info(`${claim.kind} job ${claim.jobId} claimed for Request ${claim.courseRequestId} || ${came}, claim ${claim.claims} || ` +
         `owner=${owner} host=${worker.host} commit=${worker.commit}${worker.dirty ? " (uncommitted changes)" : ""}`);
       const input = { db, courseRequestId: claim.courseRequestId, learnerId: claim.learnerId, control: postgresControl(db, claim, lost.signal), worker };
-      // Every Pipeline Event the run starts keeps this claim, so a later claim can close what it leaves open.
-      // Every Log Entry of the run carries the job, the request that queued it, its Course Request and its Learner.
-      await withClaim(claim, async () => {
-        if (claim.kind === "blueprint") {
-          await blueprint.start(input);
-          log.info(`job ${claim.jobId} saved its Course Blueprint for review`);
-          return;
-        }
-        const [stored] = await db.select({ approved: courseBlueprints.approved }).from(courseBlueprints)
-          .where(eq(courseBlueprints.courseRequestId, claim.courseRequestId)).limit(1);
-        if (!stored?.approved) throw new Error(`[generation-worker: run] Request has no approved Blueprint || requestId=${claim.courseRequestId}`);
-        await generation.start({ ...input, approved: stored.approved });
-        log.info(`job ${claim.jobId} published its Course`);
-      });
+      if (claim.kind === "blueprint") {
+        await blueprint.start(input);
+        log.info(`job ${claim.jobId} saved its Course Blueprint for review`);
+        return;
+      }
+      const [stored] = await db.select({ approved: courseBlueprints.approved }).from(courseBlueprints)
+        .where(eq(courseBlueprints.courseRequestId, claim.courseRequestId)).limit(1);
+      if (!stored?.approved) throw new Error(`[generation-worker: run] Request has no approved Blueprint || requestId=${claim.courseRequestId}`);
+      await generation.start({ ...input, approved: stored.approved });
+      log.info(`job ${claim.jobId} published its Course`);
     } catch (error) {
       if (error instanceof LeaseLostError) log.info(`job ${claim.jobId} stopped: cancelled or claimed elsewhere`);
       else log.error(`[generation-worker: run] Generation stopped || jobId=${claim.jobId} || ${describe(error)}`);
