@@ -20,6 +20,7 @@ function probe(n: number, overrides: Record<string, unknown> = {}) {
     options: [`Crystal violet ${n}`, `Safranin dye ${n}`, `Iodine mordant ${n}`],
     keyIndex: 2,
     warrant: `Warrant ${n}`,
+    misconceptions: [`Mixes up step ${n} with the primary stain`, `Thinks step ${n} is the counterstain`],
     ...overrides,
   };
 }
@@ -32,7 +33,7 @@ function rewrite(capabilityId: string, n: number, overrides: Record<string, unkn
 
 /** A Judge verdict that finds exactly the key defensible. */
 function verdict(itemId: string, overrides: Record<string, unknown> = {}) {
-  return { itemId, defensibleOptions: [2], flaws: [], performanceDemand: false, externalFactualClaim: false, ...overrides };
+  return { itemId, defensibleOptions: [2], flaws: [], performanceDemand: false, externalFactualClaim: false, newDistractorsWouldFix: false, ...overrides };
 }
 
 /** Scripted author: first call returns the set, later calls return queued rewrites. Records inputs. */
@@ -316,6 +317,70 @@ test("Re-reviewed items are judged alongside the kept items so duplicates can be
   assert.deepEqual(second.items.map((item) => item.itemId), ["item2"]);
   assert.equal(second.otherItems.length, 7);
   assert.ok(!JSON.stringify(second.otherItems).includes("keyIndex"));
+});
+
+test("An item whose only flaw is its distractors keeps its stem and key through the rewrite (SEN-131)", async () => {
+  const { generator, calls } = scriptedGenerator(cleanSet, [{ items: [
+    // The author returns the kept key at a different index and a lightly edited stem; both are put back.
+    rewrite("cap8", 8, { stem: "Which reagent fixes step 8 in the procedure??", options: ["Iodine mordant 8", "Heat fixing 8", "Alcohol wash 8"], keyIndex: 0 }),
+  ] }]);
+  // The Judge flags the original item 8 once; the rewrite moves the key to index 0, which the Judge then finds defensible.
+  let flagged = false;
+  const { judge } = scriptedJudge((itemId) => {
+    if (itemId !== "item8") return {};
+    if (!flagged) { flagged = true; return { flaws: ["A distractor is absurd."], newDistractorsWouldFix: true }; }
+    return { defensibleOptions: [0] };
+  });
+  const draft = await createDiagnosticBuilder({ generator, judge, ...scriptedFactChecker() }).build(INPUT);
+  const handed = (calls[1]!.input as { rewrite: Record<string, unknown>[] }).rewrite[0]!;
+  assert.deepEqual([handed.keepStem, handed.stem, handed.key, handed.keyIndex], [true, "Which reagent fixes step 8 in the procedure?", "Iodine mordant 8", 2], "The rewrite is told what to keep.");
+  assert.equal(handed.previousStem, undefined);
+  const item8 = draft.items.find((item) => item.id === "item8")!;
+  assert.equal(item8.stem, "Which reagent fixes step 8 in the procedure?", "The kept stem replaces the author's edit.");
+  assert.deepEqual([item8.options[item8.keyIndex], item8.options], ["Iodine mordant 8", ["Iodine mordant 8", "Heat fixing 8", "Alcohol wash 8"]], "The key is the option that repeats the kept answer.");
+  assert.equal(draft.reviews.filter((review) => review.itemId === "item8" && review.passed).length, 1);
+});
+
+test("A stem-word repeat alone is fixed with new distractors; a wrong key or an unconfirmed fact is not (SEN-131)", async () => {
+  // Item 7's key repeats "procedure" from the stem while the distractors lack it: a code failure new distractors can absorb.
+  const set = { ...cleanSet, probes: cleanSet.probes.map((value, i) => i === 6
+    ? { ...value, options: ["Crystal violet 7", "Safranin dye 7", "The procedure's iodine mordant 7"] }
+    : value) };
+  const { generator, calls } = scriptedGenerator(set, [{ items: [
+    // New distractors of the key's length that share its stem word; the stem and key come back unchanged.
+    rewrite("cap7", 7, { options: ["The procedure's crystal violet 7", "The procedure's safranin dye 7", "The procedure's iodine mordant 7"] }),
+    rewrite("cap8", 8),
+    rewrite("cap1", 1),
+  ] }]);
+  // Item 8's key is disputed in the first round; item 1's keyed fact is unconfirmed the first time. Neither may keep its stem.
+  let first = true;
+  const { judge } = scriptedJudge((itemId) => {
+    if (itemId === "item8" && first) { first = false; return { defensibleOptions: [0], newDistractorsWouldFix: true }; }
+    return itemId === "item1" ? { externalFactualClaim: true } : {};
+  });
+  let checks = 0;
+  const factChecker: FactChecker = { vendor: "fixture-search", async check(claims) { checks += 1; return claims.map((claim) => ({ itemId: claim.itemId, confirmed: checks > 1, reason: "checked", sourceUrls: [] })); } };
+  await createDiagnosticBuilder({ generator, judge, factChecker }).build(INPUT);
+  const handed = (calls[1]!.input as { rewrite: { capabilityId: string; keepStem?: boolean }[] }).rewrite;
+  assert.deepEqual(handed.map((entry) => [entry.capabilityId, entry.keepStem ?? false]).sort(), [["cap1", false], ["cap7", true], ["cap8", false]]);
+});
+
+test("A distractors-only rewrite that drops the kept answer is used as returned and reviewed again (SEN-131)", async () => {
+  const { generator } = scriptedGenerator(cleanSet, [{ items: [rewrite("cap8", 8, { options: ["Heat 8", "Alcohol 8", "Water 8"], keyIndex: 1 })] }]);
+  let flagged = false;
+  const { judge } = scriptedJudge((itemId) => {
+    if (itemId === "item8" && !flagged) { flagged = true; return { flaws: ["A distractor is absurd."], newDistractorsWouldFix: true }; }
+    return itemId === "item8" ? { defensibleOptions: [1] } : {};
+  });
+  const draft = await createDiagnosticBuilder({ generator, judge, ...scriptedFactChecker() }).build(INPUT);
+  const item8 = draft.items.find((item) => item.id === "item8")!;
+  assert.deepEqual([item8.stem, item8.keyIndex], ["Rewritten: which reagent fixes step 8?", 1], "Without the kept answer among the options there is nothing to restore.");
+});
+
+test("An item without the misconception behind each distractor is invalid model output (SEN-131)", async () => {
+  const set = { ...cleanSet, probes: cleanSet.probes.map((value, i) => i === 3 ? { ...value, misconceptions: ["only one"] } : value) };
+  const { generator } = scriptedGenerator(set);
+  await assert.rejects(createDiagnosticBuilder({ generator, ...scriptedJudge(), ...scriptedFactChecker() }).build(INPUT), ModelError);
 });
 
 /** A Judge that finds no defensible answer to item 8 until it reads as the fallback author's rewrite, in every round. */

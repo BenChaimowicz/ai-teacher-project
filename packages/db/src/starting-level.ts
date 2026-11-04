@@ -120,7 +120,8 @@ export type ItemReview = {
   round: number;
   stem: string;
   codeFailures: string[];
-  judge: { defensibleOptions: number[]; flaws: string[]; externalFactualClaim: boolean } | null;
+  /** `newDistractorsWouldFix` is absent on reviews stored before SEN-131. */
+  judge: { defensibleOptions: number[]; flaws: string[]; externalFactualClaim: boolean; newDistractorsWouldFix?: boolean } | null;
   factCheck: { confirmed: boolean; reason: string; sourceUrls: string[] } | null;
   passed: boolean;
 };
