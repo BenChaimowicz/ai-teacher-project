@@ -285,9 +285,9 @@ test("The Vision Judge judges a technique on its own model with the harsh rule, 
   assert.equal(visualJudgePrompt("diagram"), visualJudgePrompt("depiction"));
 });
 
-test("The illustrator pair and the technique Judge are their own settings, defaulting to the Generator pair and the eval's pick", () => {
+test("The illustrator pair and the technique Judge are their own settings, defaulting to the evals' picks", () => {
   const defaults = loadModelConfig({});
-  assert.deepEqual([defaults.illustratorModel, defaults.illustratorFallbackModel], [defaults.generatorModel, defaults.generatorFallbackModel]);
+  assert.deepEqual([defaults.illustratorModel, defaults.illustratorFallbackModel], ["openai/gpt-6.1-terra", "openai/gpt-6.1-sol"]);
   assert.equal(defaults.techniqueJudgeModel, "openai/gpt-5.6-luna");
   const pinned = loadModelConfig({ ILLUSTRATOR_MODEL: " openai/x ", ILLUSTRATOR_FALLBACK_MODEL: "openai/y", TECHNIQUE_JUDGE_MODEL: "openai/z" });
   assert.deepEqual([pinned.illustratorModel, pinned.illustratorFallbackModel, pinned.techniqueJudgeModel], ["openai/x", "openai/y", "openai/z"]);

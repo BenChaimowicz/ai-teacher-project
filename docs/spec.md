@@ -423,7 +423,7 @@ Domain **Generator** port. Model IDs live in shared server configuration, not on
 | Lesson writer (Readings and Quizzes) | `openai/gpt-6.1-sol` | Same transport; its own setting, so Lessons can be pinned apart again (ADR 0018, ADR 0028) |
 | Lesson fallback writer | `openai/gpt-6.1-terra` | Writes a fresh draft once the Lesson writer's repairs run out (ADR 0017) |
 | Triage (subject check, research tier) | `openai/gpt-6-luna` | Same transport; its own setting, defaulting to the Judge's model. Two small structured calls per Request, no fallback: a failure takes the safe default (§4.2, §5.3) |
-| Illustrator (scene plans for depictions and diagrams) | `openai/gpt-6.1-sol` | Same transport, strict `json_schema` over the scene plan; its own pair (`ILLUSTRATOR_MODEL`, `ILLUSTRATOR_FALLBACK_MODEL`), defaulting to the writer pair (SEN-121) |
+| Illustrator (scene plans for depictions and diagrams) | `openai/gpt-6.1-terra` | Same transport, strict `json_schema` over the scene plan; its own pair (`ILLUSTRATOR_MODEL`, `ILLUSTRATOR_FALLBACK_MODEL`), defaulting to Terra with Sol as fallback, picked by the SEN-143 eval (decision 2026-11-05) |
 
 Claude is not a Generator fallback, and DeepSeek is no longer called anywhere (ADR 0028). No direct OpenAI text adapter is required. Structured calls use `response_format: json_schema`, strict mode, `provider.require_parameters: true` with no host pinned, application-side output validation, and no search tools or plugins. Invalid output, refusal, interruption, or timeout is a provider failure, never a passing validity decision.
 

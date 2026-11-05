@@ -15,7 +15,7 @@ export type ModelConfig = {
   triageModel: string;
   /**
    * Turns a Visual brief into a scene plan the illustration engine draws (SEN-121); its own pair so illustration can be
-   * pinned apart, defaulting to the Generator pair (ADR 0028).
+   * pinned apart. Terra, falling back to Sol, since the SEN-143 eval (decision 2026-11-05).
    */
   illustratorModel: string;
   illustratorFallbackModel: string;
@@ -42,9 +42,10 @@ export function loadModelConfig(env: NodeJS.ProcessEnv = process.env): ModelConf
     judgeFallbackModel: env.JUDGE_FALLBACK_MODEL?.trim() || "openai/gpt-5.6-luna",
     // Cheap model, its own setting; defaults to the Judge's Luna (decision 2026-11-02).
     triageModel: env.TRIAGE_MODEL?.trim() || judgeModel,
-    // The illustrator is an author like any other: the Generator pair unless pinned apart (SEN-121).
-    illustratorModel: env.ILLUSTRATOR_MODEL?.trim() || generatorModel,
-    illustratorFallbackModel: env.ILLUSTRATOR_FALLBACK_MODEL?.trim() || generatorFallbackModel,
+    // Picked by the SEN-143 eval on 2026-11-05: Sol's pass rate at under half Sol's cost. Still an author, so the
+    // Vision Judge stays on gpt-6-luna (ADR 0015).
+    illustratorModel: env.ILLUSTRATOR_MODEL?.trim() || "openai/gpt-6.1-terra",
+    illustratorFallbackModel: env.ILLUSTRATOR_FALLBACK_MODEL?.trim() || "openai/gpt-6.1-sol",
     // Picked by the technique-Judge eval on 2026-11-04: 12 of 13 right, no wrong grip let through (SEN-121).
     techniqueJudgeModel: env.TECHNIQUE_JUDGE_MODEL?.trim() || "openai/gpt-5.6-luna",
   };
