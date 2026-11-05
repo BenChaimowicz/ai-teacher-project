@@ -92,7 +92,7 @@ drum-full-stroke           P/—         P/P         P/P         —           P
 ## Recommendation (for discussion)
 
 **Run the illustrator on Terra at medium:**
-- Set `ILLUSTRATOR_MODEL=openai/gpt-6.1-terra` and `ILLUSTRATOR_FALLBACK_MODEL=openai/gpt-6.1-sol`. It is an env change and no code.
+- Set `ILLUSTRATOR_MODEL=openai/gpt-6.1-terra` and `ILLUSTRATOR_FALLBACK_MODEL=openai/gpt-6.1-sol`. It is an env change and no code. (As decided, it became the code default in `model-config.ts` instead, so it holds everywhere without an env edit.)
 - It keeps the strict Judge and Sol's pass rate, and halves the illustration bill again on top of SEN-142.
 - On the Norse Course that is about $0.23 instead of $0.51 at Sol medium (and $0.89 actually spent at Sol high), and roughly 10 s faster a picture.
 
@@ -114,6 +114,7 @@ drum-full-stroke           P/—         P/P         P/P         —           P
 ## Caveats
 
 - 14 briefs and one run per candidate (Luna medium twice), so a difference of one or two passes is noise.
+- Two candidates the ticket listed were not run: **Sol at low** and **Terra at high**. They are in the harness (`--candidates sol-low,terra-high`) but did not fit in the $3 cap alongside the models Ben asked for. Terra at high is the one worth running if Terra's plainer scenes turn out to matter.
 - The Judges are models, not people, and the "looks" calls above are mine from the contact sheets. Look at them yourself.
 - The Yggdrasil brief overlaps the Yggdrasil worked example in the prompt. The drum-stroke brief is the only technique-like one.
 - Costs are OpenRouter's reported `usage.cost` on 2026-11-05. Five GLM calls timed out with an unknown cost.
