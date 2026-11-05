@@ -1,0 +1,32 @@
+/* Design tokens. The paper palette mirrors packages/illustration/src/palette.ts (copied, not imported).
+   Integration: align these with .teamwork/design.md if it says otherwise. */
+:root {
+  --desk: #0b0e18;
+  --sheet: #141a2e;
+  --raised: #18203b;
+  --plum: #2a1f3c;
+  --cream: #f0e0c2;
+  --cream-deep: #d4bc95;
+  --apricot: #d8955c;
+  --red: #c8473b;
+  --gold: #e7b250;
+  --text: #ebe6dc;
+  --text-dim: #a9a499;
+  --ink: #3a2d4f;
+  --wood: #7a5236;
+  --leaf: #5d7a58;
+  --violet: #6a3d9a;
+
+  --radius: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-small: 12px;
+  --fs-body: 14px;
+  --fs-title: 20px;
+  --fs-h1: 16px;
+
+  --route-progress: var(--gold);
+  --route-edge: #5a3a1c;
+  --route-faint: var(--cream);
+  --phone-width: 390px;
+  --desktop-max: 820px;
+}
