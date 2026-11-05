@@ -6,7 +6,7 @@ import { QUIZ_MAX_ITEMS, QUIZ_MIN_ITEMS, QUIZ_OPTION_COUNT, type QuizItem } from
 import { proseBlocks, QUIZ_METHOD_ID, type ReadingBody } from "@senoy/db/reading-lesson";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
 import { groundObjectives, taughtObjectives, type GroundedObjective } from "./objective-grounding.ts";
-import { createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
+import { AUTHOR_REASONING_EFFORT, createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
 import { ENGLISH_ONLY } from "./english-only.ts";
 import { ModelError, type StructuredTransport } from "./openrouter.ts";
 import { QUIZ_STYLE } from "./teaching-style.ts";
@@ -17,11 +17,7 @@ export const AUTHOR_TIMEOUT_MS = 5 * 60 * 1000;
 /** The Judge reads every assessed Lesson and reasons over each item. */
 export const JUDGE_TIMEOUT_MS = 5 * 60 * 1000;
 
-/**
- * The author reasons at medium effort: at high, about $0.04 of each $0.07 Quiz was hidden reasoning and 14 of 15 Quizzes
- * passed their first draft anyway (SEN-119; decision 2026-11-01). The Judge keeps high effort (ADR 0010).
- */
-export const AUTHOR_REASONING_EFFORT = "medium" as const;
+/** The Quiz Judge keeps high effort (ADR 0010). The author runs at the shared author effort (model-ports.ts, SEN-142). */
 export const JUDGE_REASONING_EFFORT = "high" as const;
 
 /** Regenerations after a failed Code check or Judge, each told what failed: the full budget of spec §6.1. */

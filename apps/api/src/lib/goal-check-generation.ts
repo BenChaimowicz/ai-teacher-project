@@ -3,11 +3,10 @@ import type { GoalScope } from "@senoy/db/course-request";
 import { GOAL_CHECK_MAX_ITEMS, GOAL_CHECK_METHOD_ID, GOAL_CHECK_MIN_ITEMS, GOAL_MET_RATIO, type GoalCheckItem } from "@senoy/db/goal-check";
 import { goalCheckCodeFailures, type GoalCheckLessonDraft } from "@senoy/db/lesson-checkpoint";
 import { judgeParser, judgeSchema } from "./judge-result.ts";
-import { createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
+import { AUTHOR_REASONING_EFFORT, createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
 import { ENGLISH_ONLY } from "./english-only.ts";
 import type { StructuredTransport } from "./openrouter.ts";
 import {
-  AUTHOR_REASONING_EFFORT,
   AUTHOR_TIMEOUT_MS,
   authorSchema,
   ITEM_RULES,
