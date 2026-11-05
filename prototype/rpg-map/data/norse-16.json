@@ -1,0 +1,93 @@
+{
+  "id": "b58b5529-245e-447f-9b08-b53ef4e72a81",
+  "title": "Norse Gods and Their Fates",
+  "subject": "Norse mythology",
+  "learningGoal": "Retell the main myths about Odin, Thor, Loki, and the other Norse gods, identifying the key characters and their roles in each story.",
+  "stops": [
+    {
+      "kind": "reading",
+      "title": "Odin and Frigg at the Head of the Family",
+      "locationName": "Allfather's Hall"
+    },
+    {
+      "kind": "reading",
+      "title": "Thor Protects the Gods",
+      "locationName": "Mjölnir Heights"
+    },
+    {
+      "kind": "reading",
+      "title": "Freyr and Freyja Have Different Powers",
+      "locationName": "Harvest Vale"
+    },
+    {
+      "kind": "quiz",
+      "title": "Who Rules, Protects, and Provides?",
+      "bossName": "Skadi, the Winter Huntress"
+    },
+    {
+      "kind": "reading",
+      "title": "Loki and His Monstrous Children",
+      "locationName": "Ironwood Hollow"
+    },
+    {
+      "kind": "reading",
+      "title": "Heimdall Keeps Watch",
+      "locationName": "Bifrost Gate"
+    },
+    {
+      "kind": "reading",
+      "title": "Tyr Pledges His Hand",
+      "locationName": "Oath Barrow"
+    },
+    {
+      "kind": "quiz",
+      "title": "Family, Watchman, and the Bound Wolf",
+      "bossName": "Fenrir, the Chained Wolf"
+    },
+    {
+      "kind": "reading",
+      "title": "Fenrir Kills Odin",
+      "locationName": "Wolfmouth Marsh"
+    },
+    {
+      "kind": "reading",
+      "title": "Thor Defeats the Serpent but Cannot Survive",
+      "locationName": "Serpent Shore"
+    },
+    {
+      "kind": "reading",
+      "title": "Freyr Faces the Fire Giant",
+      "locationName": "Muspell Spire"
+    },
+    {
+      "kind": "reading",
+      "title": "Tyr and the Hound Kill Each Other",
+      "locationName": "Garm's Hollow"
+    },
+    {
+      "kind": "quiz",
+      "title": "Who Fights Whom at Ragnarök?",
+      "bossName": "Surtr, Lord of Muspell"
+    },
+    {
+      "kind": "reading",
+      "title": "Loki and Heimdall Meet Their End",
+      "locationName": "Vigrid Crossing"
+    },
+    {
+      "kind": "reading",
+      "title": "Surviving Is Not the Same as Returning",
+      "locationName": "Gimlé Heights"
+    },
+    {
+      "kind": "quiz",
+      "title": "Tell the Gods’ Final Stories",
+      "bossName": "Hel, Queen of the Dead"
+    },
+    {
+      "kind": "goal_check",
+      "title": "Goal Check: The Gods and Their Fates",
+      "bossName": "Ragnarök, the Twilight of the Gods"
+    }
+  ]
+}

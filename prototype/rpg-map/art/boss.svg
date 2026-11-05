@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" width="64" height="80">
+<defs>
+<filter id="p" filterUnits="userSpaceOnUse" x="-4" y="-4" width="72" height="88" color-interpolation-filters="sRGB">
+<feOffset dx="1.1" dy="1.5"/>
+<feColorMatrix values=".58 0 0 0 0 0 .56 0 0 0 0 0 .62 0 0 0 0 0 1 0" result="d"/>
+<feOffset in="SourceAlpha" dx=".9" dy=".9" result="s"/>
+<feComposite in="SourceAlpha" in2="s" operator="out"/>
+<feColorMatrix values="0 0 0 0 1 0 0 0 0 .96 0 0 0 0 .9 0 0 0 .34 0" result="l"/>
+<feMerge><feMergeNode in="d"/><feMergeNode in="SourceGraphic"/><feMergeNode in="l"/></feMerge>
+</filter>
+<filter id="b" x="-40%" y="-90%" width="180%" height="280%"><feGaussianBlur stdDeviation="1.8"/></filter>
+</defs>
+<ellipse cx="33" cy="74" rx="20" ry="4.6" fill="#1d1428" opacity=".45" filter="url(#b)"/>
+<path filter="url(#p)" fill="#c8473b" d="M33.7 5.3 L38.9 13.6 L49.5 9.8 L48.2 21.8 L57.9 23.1 L52.4 30.6 L61.9 39.2 L51.9 41.8 L56.2 54.5 L46.3 52.1 L47.0 64.0 L36.3 57.6 L30.4 63.9 L23.6 54.8 L14.7 58.5 L14.9 49.5 L4.7 49.1 L11.5 39.1 L0.8 32.1 L11.9 27.2 L6.9 17.9 L18.0 17.0 L20.1 8.1 L29.4 13.0 Z"/>
+<path filter="url(#p)" fill="#f0e0c2" d="M40.5 14.0 L42.4 21.3 L50.5 21.1 L47.0 29.2 L56.0 32.9 L48.3 37.2 L52.6 44.6 L46.8 45.4 L47.0 56.5 L39.0 52.0 L37.0 58.0 L31.2 53.2 L24.7 57.5 L22.6 49.2 L13.2 50.2 L16.2 42.8 L8.5 39.4 L15.0 34.8 L8.7 25.6 L17.7 25.2 L16.8 18.6 L24.3 21.2 L27.7 11.7 L33.5 18.2 Z"/>
+<path filter="url(#p)" fill="#7a5236" d="M45.4 56 L48.5 56.4 L54 26.5 L51 26 Z"/>
+<path filter="url(#p)" fill="#94694a" d="M48.3 30.8 L48.5 23.3 L50.6 18.4 L54.3 15.7 L57.9 18.9 L58.4 23.8 L56.9 29.1 L53.5 33.3 Z"/>
+<circle fill="#d4bc95" cx="52.5" cy="21.4" r="1.2"/>
+<circle fill="#d4bc95" cx="55.2" cy="25.8" r="1.2"/>
+<circle fill="#d4bc95" cx="51.3" cy="28" r="1.1"/>
+<path filter="url(#p)" fill="#6f7c5e" d="M19.1 68.6 L29 68 L30.7 73.8 L17.2 74.2 Z"/>
+<path filter="url(#p)" fill="#6f7c5e" d="M34.5 68 L44.4 68.6 L46.8 74.2 L33.3 73.8 Z"/>
+<path filter="url(#p)" fill="#8e9b7a" d="M21.9 40.1 L42.4 39.6 L48.1 50.1 L49 63.6 L44.1 70.6 L20.2 70.8 L15 62.6 L16 50.3 Z"/>
+<path filter="url(#p)" fill="#a8b18f" d="M23.9 50.1 L40.4 50 L42.9 60.1 L38.9 65.3 L25.4 65.4 L21.2 60.2 Z"/>
+<path filter="url(#p)" fill="#9b5f31" d="M16.4 60.2 L47.8 59.7 L48.3 64.6 L42.9 69.6 L37.4 66.1 L32 70.6 L26.8 66.1 L21.4 69.6 L15.9 64.9 Z"/>
+<path filter="url(#p)" fill="#553824" d="M16.2 59.4 L47.9 58.9 L48 61.7 L16.1 62.2 Z"/>
+<path filter="url(#p)" fill="#8e9b7a" d="M17.7 42.9 L23.3 45.1 L20.7 58.5 L16.5 62.1 L12.8 58.5 L14 48.3 Z"/>
+<circle filter="url(#p)" fill="#6f7c5e" cx="14.7" cy="60.2" r="3.5"/>
+<path filter="url(#p)" fill="#8e9b7a" d="M39.9 43.4 L45.3 41.4 L50.1 49.8 L49.1 55.2 L44.3 53.8 L42.1 48.5 Z"/>
+<circle filter="url(#p)" fill="#6f7c5e" cx="47.3" cy="54.3" r="3.7"/>
+<path filter="url(#p)" fill="#8e9b7a" d="M22.4 29.5 L27.6 24.4 L37.4 24.1 L42.4 29.5 L43.1 38.4 L39.1 43.3 L25.1 43.4 L20.9 38 Z"/>
+<path filter="url(#p)" fill="#8e9b7a" d="M22.6 31.5 L14.9 27.5 L21.8 37.4 Z"/>
+<path filter="url(#p)" fill="#8e9b7a" d="M41.9 31.3 L49.6 27.1 L42.8 37.2 Z"/>
+<path filter="url(#p)" fill="#44593f" d="M26.5 25.8 L29.6 19.1 L31.8 24.4 L34.7 18.7 L36.9 25.1 Z"/>
+<path fill="#6f7c5e" d="M23.4 32.3 L40.9 32 L40.1 35 L24.3 35.4 Z"/>
+<circle fill="#e7b250" cx="28.3" cy="36.9" r="1.8"/>
+<circle fill="#e7b250" cx="36" cy="36.7" r="1.8"/>
+<circle fill="#2a1f3c" cx="28.6" cy="37" r="0.8"/>
+<circle fill="#2a1f3c" cx="35.8" cy="36.9" r="0.8"/>
+<path fill="#3a2d4f" d="M26.5 42.9 L37.7 42.6 L36.4 45.9 L27.8 46.1 Z"/>
+<ellipse filter="url(#p)" fill="#7e8b69" cx="32.2" cy="39.9" rx="3.2" ry="2.7"/>
+<path filter="url(#p)" fill="#f0e0c2" d="M27.1 45.6 L29.3 45.6 L28.1 40.9 Z"/>
+<path filter="url(#p)" fill="#f0e0c2" d="M34.9 45.4 L37 45.4 L36 40.7 Z"/>
+</svg>
