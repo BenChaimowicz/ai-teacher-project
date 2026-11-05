@@ -45,6 +45,22 @@ export type ModelPortsOptions = {
 /** Every Judge call reasons at high effort unless the request sets its own (ADR 0010). */
 const JUDGE_REASONING_EFFORT = "high" as const;
 
+/**
+ * Every author call reasons at medium effort unless the request sets its own: one rule for every role Sol serves
+ * (decision 2026-11-05, SEN-142). Quizzes already ran at medium (decision 2026-11-01). Judges keep high (ADR 0010).
+ */
+export const AUTHOR_REASONING_EFFORT = "medium" as const;
+
+/**
+ * Gives an authoring request the author effort unless the request sets its own. An effort overrides any token cap on
+ * the same request (`openrouter.ts`), so a request that sets only `reasoningMaxTokens` sends effort instead.
+ * @param request - The authoring call as the caller built it
+ * @returns The same call, with `reasoningEffort` set
+ */
+function withAuthorEffort<T>(request: StructuredRequest<T>): StructuredRequest<T> {
+  return { ...request, reasoningEffort: request.reasoningEffort ?? AUTHOR_REASONING_EFFORT };
+}
+
 /** Failures one more call can fix: a malformed or cut-off reply. Timeouts and refusals are not retried (ADR 0015). */
 const RETRIED: readonly ModelErrorCode[] = ["invalid_output", "incomplete"];
 
@@ -139,16 +155,18 @@ export function createModelPorts(options: ModelPortsOptions = {}): { generator: 
       modelId: primaryModel,
       /** Sends structured authoring work through the shared transport. */
       generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
+        const authored = withAuthorEffort(request);
         return attempt("generator", attempts({ modelId: primaryModel }, { modelId: fallbackModel }),
-          (next) => transport.complete(next.modelId, request), log);
+          (next) => transport.complete(next.modelId, authored), log);
       },
     },
     fallbackGenerator: {
       modelId: fallbackModel,
       /** Makes the call twice at most on its own model: a second author is already the fallback. */
       generateStructured<T>(request: StructuredRequest<T>): Promise<ModelReply<T>> {
+        const authored = withAuthorEffort(request);
         return attempt("fallback_generator", attempts({ modelId: fallbackModel }, null),
-          (next) => transport.complete(next.modelId, request), log);
+          (next) => transport.complete(next.modelId, authored), log);
       },
     },
     judge: {

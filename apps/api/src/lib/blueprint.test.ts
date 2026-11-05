@@ -162,7 +162,7 @@ test("Author and Judge share one OpenRouter transport; the Judge runs at high ef
   const config = loadModelConfig({});
   await createBlueprintBuilder(createModelPorts({ config, transport })).build(INPUT);
   assert.deepEqual(sent, [
-    { modelId: config.generatorModel, schemaName: "course_blueprint", effort: undefined },
+    { modelId: config.generatorModel, schemaName: "course_blueprint", effort: "medium" },
     { modelId: config.judgeModel, schemaName: "course_blueprint_review", effort: "high" },
   ]);
 });

@@ -17,7 +17,7 @@ import type { Illustration, IllustrationAttempt, Illustrator } from "./illustrat
 import { judgeParser, judgeSchema } from "./judge-result.ts";
 import type { MediaLibrary, MediaVocabulary } from "./media-library.ts";
 import { groundObjectives, taughtObjectives, type GroundedObjective } from "./objective-grounding.ts";
-import { createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
+import { AUTHOR_REASONING_EFFORT, createModelPorts, type Generator, type Judge, type ModelReply } from "./model-ports.ts";
 import { ENGLISH_ONLY } from "./english-only.ts";
 import { ModelError, type ModelImage, type StructuredTransport } from "./openrouter.ts";
 import { EXPLAIN_NOT_INSTRUCT_RULE, GLOSS_RULE, ILLUSTRATION_RULE, KNOWN_GROUND_RULE, READING_STYLE, TEACHING_VOICE } from "./teaching-style.ts";
@@ -26,11 +26,6 @@ import { commonsJudge, createVisualJudge, type JudgeVisual } from "./visual-judg
 /** Writing a cited reading with reasoning can take the author model well past the transport's 60 s default. */
 const AUTHOR_TIMEOUT_MS = 5 * 60 * 1000;
 
-/**
- * Both roles reason at high effort. With a 2,000-token author cap and a no-reasoning Judge, Lessons overstated their
- * excerpts and verdicts contradicted their own reasons (ADR 0010).
- */
-const REASONING_EFFORT = "high" as const;
 
 /**
  * Repairs after a failed Code check or Judge, each told what failed: the full budget of spec §6.1. A repair edits only
@@ -467,8 +462,7 @@ function scoped(prompt: string, rule: string, scope: GoalScope | null): string {
   return scope ? `${prompt}\n${rule}` : prompt;
 }
 
-/** A word list is short work on a finished Lesson: medium effort, and two minutes per call. */
-const GLOSSARY_REASONING_EFFORT = "medium" as const;
+/** A word list is short work on a finished Lesson, and takes up to two minutes per call. */
 const GLOSSARY_TIMEOUT_MS = 2 * 60 * 1000;
 /**
  * Words the glossary author is asked for on a one-screen Reading, so Jongi's bubbles fit beside its notes; a stored list
@@ -1116,7 +1110,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
       input: { pages: vetted.map(({ source, excerpts }) => ({ sourceId: source.sourceId, url: source.url, host: source.host, title: source.title, openingExcerpt: excerpts[0]!.slice(0, 400) })) },
       schemaName: "source_vetting",
       timeoutMs: JUDGE_TIMEOUT_MS,
-      reasoningEffort: REASONING_EFFORT,
+      reasoningEffort: AUTHOR_REASONING_EFFORT,
       schema: vettingSchema(vettedIds),
       parse: vettingParser(vettedIds),
       authorModelIds: [generator.modelId],
@@ -1224,7 +1218,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
           input: { ...level, lesson: { sections: lessonView.sections }, ...(priorTerms.length ? { priorTerms } : {}) },
           schemaName: "reading_glossary",
           timeoutMs: GLOSSARY_TIMEOUT_MS,
-          reasoningEffort: GLOSSARY_REASONING_EFFORT,
+          reasoningEffort: AUTHOR_REASONING_EFFORT,
           schema: GLOSSARY_SCHEMA,
           parse: parseGlossaryReply,
         });
@@ -1244,7 +1238,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
           input: { lesson: lessonView, glossary: inProse },
           schemaName: "reading_glossary_review",
           timeoutMs: GLOSSARY_TIMEOUT_MS,
-          reasoningEffort: GLOSSARY_REASONING_EFFORT,
+          reasoningEffort: AUTHOR_REASONING_EFFORT,
           schema: glossaryReviewSchema(terms),
           parse: glossaryReviewParser(terms),
           authorModelIds: [...new Set([...checked.authorModelIds, modelId])],
@@ -1422,7 +1416,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
             input: withCatalog(brief(prior)),
             schemaName: "cited_reading",
             timeoutMs: AUTHOR_TIMEOUT_MS,
-            reasoningEffort: REASONING_EFFORT,
+            reasoningEffort: AUTHOR_REASONING_EFFORT,
             schema: authorSchema(planned),
             parse: (raw) => parseLessonDraft(raw, planned),
           });
@@ -1436,7 +1430,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
             input: { ...brief(prior), ...revision },
             schemaName: "cited_reading_repair",
             timeoutMs: AUTHOR_TIMEOUT_MS,
-            reasoningEffort: REASONING_EFFORT,
+            reasoningEffort: AUTHOR_REASONING_EFFORT,
             schema: REPAIR_SCHEMA,
             parse: parseRepairEdits,
           });
@@ -1497,7 +1491,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
           },
           schemaName: "reading_lesson_review",
           timeoutMs: JUDGE_TIMEOUT_MS,
-          reasoningEffort: REASONING_EFFORT,
+          reasoningEffort: AUTHOR_REASONING_EFFORT,
           schema: judgeSchema(READING_JUDGE_CHECKS),
           parse: judgeParser(READING_JUDGE_CHECKS),
           authorModelIds: [...authors],
@@ -1527,7 +1521,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
         }),
         schemaName: "reading_reuse_fit",
         timeoutMs: AUTHOR_TIMEOUT_MS,
-        reasoningEffort: REASONING_EFFORT,
+        reasoningEffort: AUTHOR_REASONING_EFFORT,
         schema: fitSchema(seed.verbatimAllowed, planned),
         parse: fitParser(seed.verbatimAllowed, planned),
       });
@@ -1615,7 +1609,7 @@ export function createReadingGenerator(options: ReadingGeneratorOptions = {}): R
         }),
         schemaName: "cited_chapter",
         timeoutMs: AUTHOR_TIMEOUT_MS,
-        reasoningEffort: REASONING_EFFORT,
+        reasoningEffort: AUTHOR_REASONING_EFFORT,
         schema: chapterSchema(shapes),
         parse: (raw) => parseChapterDraft(raw, shapes),
       });

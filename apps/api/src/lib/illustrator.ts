@@ -3,7 +3,7 @@ import type { JudgeResult } from "@senoy/db/blueprint";
 import { generatedDescriptor, PAPER_COLOURS, readFixture, renderScenePlan, SCENE_PLAN_SCHEMA, scenePlanFailures, SHEET, type ScenePlan } from "@senoy/illustration";
 import type { MediaStorage } from "@senoy/media";
 import { LeaseLostError } from "./generation-job.ts";
-import { createModelPorts, type Generator } from "./model-ports.ts";
+import { AUTHOR_REASONING_EFFORT, createModelPorts, type Generator } from "./model-ports.ts";
 import { ModelError, type StructuredTransport } from "./openrouter.ts";
 import { withPipelineEvent } from "./usage-tracking.ts";
 import type { JudgeVisual } from "./visual-judge.ts";
@@ -22,9 +22,6 @@ export const ILLUSTRATION_ATTEMPTS = 2;
 
 /** A scene plan is a few dozen blocks; reasoning over the brief takes a while, drawing it does not. */
 const ILLUSTRATOR_TIMEOUT_MS = 5 * 60 * 1000;
-
-/** The illustrator reasons at high effort: a plan is judged on counts, sides and relations, which it must get right first time. */
-const ILLUSTRATOR_REASONING_EFFORT = "high" as const;
 
 /**
  * The scene plan schema as the illustrator is offered it: every block but Jongi, who renders as a marked placeholder
@@ -165,7 +162,7 @@ export function createIllustrator(options: IllustratorOptions): Illustrator {
           input: { brief: { kind, subject, mustShow, caption, alt }, palette: PAPER_COLOURS, examples: await illustratorExamples(), ...(previousAttempt ? { previousAttempt } : {}) },
           schemaName: "scene_plan",
           timeoutMs: ILLUSTRATOR_TIMEOUT_MS,
-          reasoningEffort: ILLUSTRATOR_REASONING_EFFORT,
+          reasoningEffort: AUTHOR_REASONING_EFFORT,
           schema: ILLUSTRATOR_SCHEMA,
           parse: parseIllustratorPlan,
         });
