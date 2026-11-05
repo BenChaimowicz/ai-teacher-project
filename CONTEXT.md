@@ -283,7 +283,7 @@ A second research call on the same topic through a different engine and index, p
 _Avoid_: fact-check (unqualified), fallback research, web search (when meaning this call), Primary research
 
 **Research tier**:
-Which adapter pair researches every Reading of a Course: **deluxe** (Parallel Pro and You.com Research) or **regular** (Parallel core and You.com Research lite). It is picked once when generation starts and stored on the Course Request with the rating behind it: the triage model says whether the focused Learning Goal is niche, scholarly, or dense in facts, and code makes niche or scholarly deluxe. A failed rating is deluxe. `RESEARCH_TIER` can force either tier; the rating is still stored.
+Which adapter pair researches every Reading of a Course: **deluxe** (Parallel Pro and You.com Research) or **regular** (Parallel core and You.com Research lite). It is picked once when generation starts and stored on the Course Request with the rating behind it: the triage model says whether the focused Learning Goal is niche, scholarly, or dense in facts, and code makes niche or scholarly deluxe. A failed rating is deluxe. `RESEARCH_TIER=auto` applies the rating; `deluxe` or `regular` forces that tier for every Course, and the rating is still stored. Unset, the code falls back to deluxe.
 _Avoid_: research plan, research budget, deep research (when meaning the tier)
 
 **Preference list**:
