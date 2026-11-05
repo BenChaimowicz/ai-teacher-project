@@ -1,55 +1,35 @@
-import { PLACEHOLDER_ROUTE } from "./placeholder-route";
-import { makePlaceholderCourse } from "./placeholder-course";
+import bossUrl from "../art/boss.svg";
+import finalBossUrl from "../art/final-boss.svg";
+import heroUrl from "../art/hero.svg";
+import locationLockedUrl from "../art/location-locked.svg";
+import locationVisitedUrl from "../art/location-visited.svg";
+import locationUrl from "../art/location.svg";
+import routeFile from "../art/route-01.json";
+import { norse16, norse30 } from "../data";
+import type { ArtName } from "./design";
 import type { DemoCourse, RouteFile } from "./types";
 
-/** The six marker pieces of art, by file name without ".svg". */
-export type ArtName = "hero" | "location" | "location-visited" | "location-locked" | "boss" | "final-boss";
+/** The URL of each marker's SVG. */
+export const ART_URL: Record<ArtName, string> = {
+  hero: heroUrl,
+  location: locationUrl,
+  "location-visited": locationVisitedUrl,
+  "location-locked": locationLockedUrl,
+  boss: bossUrl,
+  "final-boss": finalBossUrl,
+};
 
-// These globs match nothing until the Designer's and Content creator's files land: no code change needed then.
-const artFiles = import.meta.glob("../art/*.svg", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
-const routeFiles = import.meta.glob("../art/route-01.json", { eager: true, import: "default" }) as Record<string, RouteFile>;
-const dataFiles = import.meta.glob("../data/index.ts", { eager: true }) as Record<
-  string,
-  { norse16?: DemoCourse; norse30?: DemoCourse }
->;
+/** The hand-drawn routes (`main` for the 16-Lesson Course, `long` for the 30-Lesson test) in map pixel coordinates. */
+export const ROUTES: RouteFile["routes"] = (routeFile as RouteFile).routes;
 
-/**
- * The URL of a marker's SVG, or null when the art has not landed yet.
- * @param name - Which marker
- * @returns The bundled URL or null
- */
-export function artUrl(name: ArtName): string | null {
-  return artFiles[`../art/${name}.svg`] ?? null;
-}
+/** The showcase Courses. */
+export const COURSES = { norse16, norse30 };
 
 /**
- * The route paths: from `art/route-01.json` when present, otherwise the placeholder path.
- * @returns The path data for the main route and, when the file has one, the long route
- */
-export function loadRoutes(): { main: string; long?: string; fromFile: boolean } {
-  const file = Object.values(routeFiles)[0];
-  if (file?.routes?.main) return { main: file.routes.main, long: file.routes.long, fromFile: true };
-  return { main: PLACEHOLDER_ROUTE, fromFile: false };
-}
-
-/**
- * The two showcase Courses: from `data/index.ts` when present, otherwise placeholder Courses.
- * @returns The 16-Lesson and 30-Lesson Courses and whether they came from the data file
- */
-export function loadCourses(): { norse16: DemoCourse; norse30: DemoCourse; fromFile: boolean } {
-  const mod = Object.values(dataFiles)[0];
-  if (mod?.norse16 && mod?.norse30) return { norse16: mod.norse16, norse30: mod.norse30, fromFile: true };
-  return {
-    norse16: makePlaceholderCourse("placeholder-16", 16, 4),
-    norse30: makePlaceholderCourse("placeholder-30", 30, 3),
-    fromFile: false,
-  };
-}
-
-/**
- * A 3-Lesson Course made by slicing the first three Lessons off a longer Course; the Goal Check stays last.
+ * A short Course made by slicing the first Lessons off a longer Course; the Goal Check stays last.
  * @param course - The Course to slice
- * @returns A Course with 3 Lessons plus the Goal Check
+ * @param lessons - How many Lessons to keep
+ * @returns A Course with `lessons` Lessons plus the Goal Check
  */
 export function sliceCourse(course: DemoCourse, lessons: number): DemoCourse {
   const goal = course.stops[course.stops.length - 1];

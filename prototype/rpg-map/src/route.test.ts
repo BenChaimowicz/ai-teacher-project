@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CLUSTER_GAP,
+  MIN_REGION_GAP_PX,
   MIN_TRAVEL_IN_GAPS,
   angleAt,
   lengthAt,
@@ -104,6 +105,19 @@ describe("clustered placement", () => {
       for (let i = 1; i < t.length; i++) {
         expect(t[i] - t[i - 1]).toBeGreaterThan(0.004);
       }
+    }
+  });
+
+  it("keeps at least 46 map px between Readings of a region when the route length is known", () => {
+    for (const [pattern, length] of [[NORSE16, 1885], [NORSE30, 1885], [NORSE30, 2700]] as const) {
+      const t = placeFractions(stopsFrom(pattern), "clustered", length);
+      const stops = stopsFrom(pattern);
+      for (const region of splitRegions(stops)) {
+        for (let i = region.first + 1; i <= region.last; i++) {
+          expect((t[i] - t[i - 1]) * length).toBeGreaterThanOrEqual(MIN_REGION_GAP_PX - 1e-6);
+        }
+      }
+      expect(t[t.length - 1]).toBe(1);
     }
   });
 

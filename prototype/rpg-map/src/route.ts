@@ -3,6 +3,9 @@ import type { Placement, PlacementMode, Stop } from "./types";
 /** In clustered mode: the gap between two neighbouring stops of one region, as a fraction of the route length. */
 export const CLUSTER_GAP = 0.022;
 
+/** In clustered mode: the in-region gap is never smaller than this many map pixels (design.md: Readings must not hide each other). */
+export const MIN_REGION_GAP_PX = 46;
+
 /** In clustered mode: the travel gap between regions is never smaller than this many in-region gaps. */
 export const MIN_TRAVEL_IN_GAPS = 2;
 
@@ -41,9 +44,10 @@ export function splitRegions(stops: Stop[]): Region[] {
  * gaps between regions, puts the Quiz at the end of its region and the Goal Check at the end of the route.
  * @param stops - The Course stops, Goal Check last
  * @param mode - "even" or "clustered"
+ * @param routeLength - Route length in map pixels; when given, the in-region gap is at least MIN_REGION_GAP_PX
  * @returns One fraction per stop, ascending, the first 0 and the last 1
  */
-export function placeFractions(stops: Stop[], mode: PlacementMode): number[] {
+export function placeFractions(stops: Stop[], mode: PlacementMode, routeLength?: number): number[] {
   const n = stops.length;
   if (n === 0) return [];
   if (n === 1) return [1];
@@ -57,10 +61,11 @@ export function placeFractions(stops: Stop[], mode: PlacementMode): number[] {
 
   const inRegionGaps = n - r;
   // Shrink the in-region gap if needed so a travel gap is never under MIN_TRAVEL_IN_GAPS in-region gaps.
+  const wanted = routeLength ? Math.max(CLUSTER_GAP, MIN_REGION_GAP_PX / routeLength) : CLUSTER_GAP;
   const gap =
     inRegionGaps === 0
       ? 0
-      : Math.min(CLUSTER_GAP, 1 / (inRegionGaps + MIN_TRAVEL_IN_GAPS * (r - 1)));
+      : Math.min(wanted, 1 / (inRegionGaps + MIN_TRAVEL_IN_GAPS * (r - 1)));
   const travel = (1 - inRegionGaps * gap) / (r - 1);
 
   const out: number[] = new Array(n);
@@ -99,13 +104,13 @@ export function angleAt(sampler: PathSampler, len: number): number {
 
 /**
  * Places every stop on a measured route.
- * @param sampler - The measured route
+ * @param sampler - The measured route (its length sets the minimum in-region gap in clustered mode)
  * @param stops - The Course stops, Goal Check last
  * @param mode - "even" or "clustered"
  * @returns One placement per stop: map x/y, route angle and arc-length fraction t
  */
 export function placeOnSampler(sampler: PathSampler, stops: Stop[], mode: PlacementMode): Placement[] {
-  return placeFractions(stops, mode).map((t) => {
+  return placeFractions(stops, mode, sampler.length).map((t) => {
     const len = lengthAt(sampler, t);
     const p = sampler.pointAt(len);
     return { x: p.x, y: p.y, angle: angleAt(sampler, len), t };
@@ -156,23 +161,4 @@ export function createDomSampler(d: string): PathSampler {
  */
 export function placeStops(d: string, stops: Stop[], mode: PlacementMode): Placement[] {
   return placeOnSampler(createDomSampler(d), stops, mode);
-}
-
-/**
- * Builds an SVG polyline path that follows the route between two fractions, for drawing a region halo.
- * @param sampler - The measured route
- * @param t0 - Start fraction
- * @param t1 - End fraction
- * @returns A path "d" string made of short straight pieces
- */
-export function subPath(sampler: PathSampler, t0: number, t1: number): string {
-  const l0 = lengthAt(sampler, t0);
-  const l1 = lengthAt(sampler, t1);
-  const steps = Math.max(2, Math.ceil((l1 - l0) / 12));
-  const pts: string[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const p = sampler.pointAt(l0 + ((l1 - l0) * i) / steps);
-    pts.push(`${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`);
-  }
-  return pts.join(" ");
 }

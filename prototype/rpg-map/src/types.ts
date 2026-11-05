@@ -1,11 +1,4 @@
-/** One stop on the Course route: a Reading, a Quiz (boss battle) or the Goal Check (final boss). */
-export type Stop =
-  | { kind: "reading"; title: string; locationName: string }
-  | { kind: "quiz"; title: string; bossName: string }
-  | { kind: "goal_check"; title: string; bossName: string };
-
-/** A Course as the demo shows it. */
-export type DemoCourse = { id: string; subject: string; learningGoal: string; stops: Stop[] };
+export type { DemoCourse, Stop } from "../data/types";
 
 /** How stops are spread along the route. */
 export type PlacementMode = "even" | "clustered";
@@ -18,5 +11,5 @@ export type RouteFile = {
   map: string;
   width: number;
   height: number;
-  routes: { main: string; long?: string };
+  routes: { main: string; long: string };
 };

@@ -1,19 +1,30 @@
 import { useMemo, useState } from "react";
 import mapUrl from "../art/map-01.png";
-import { loadCourses, loadRoutes, sliceCourse } from "./assets";
-import { MapView } from "./MapView";
+import { COURSES, ROUTES, sliceCourse } from "./assets";
+import { MapView, type Visual } from "./MapView";
 import { StopCard } from "./StopCard";
-import type { PlacementMode } from "./types";
-
-const routes = loadRoutes();
-const courses = loadCourses();
+import type { DemoCourse, PlacementMode } from "./types";
 
 /** The Lesson counts the picker offers. */
-const COURSE_CHOICES = [
-  { lessons: 3, label: "3 Lessons" },
-  { lessons: 16, label: "16 · real Course" },
-  { lessons: 30, label: "30 · long test" },
-] as const;
+type Lessons = 3 | 16 | 30;
+/** Which hand-drawn route the map uses. */
+type RouteName = "main" | "long";
+
+/**
+ * The Course for a Lesson count: 3 is a slice of the real Course, 16 the real Course, 30 the long crowding test.
+ * @param lessons - How many Lessons
+ */
+function courseFor(lessons: Lessons): DemoCourse {
+  return lessons === 16 ? COURSES.norse16 : lessons === 30 ? COURSES.norse30 : sliceCourse(COURSES.norse16, 3);
+}
+
+/**
+ * The route a Course starts on: `long` for the 30-Lesson test, `main` otherwise (design.md). The Route control can override.
+ * @param lessons - How many Lessons
+ */
+function defaultRoute(lessons: Lessons): RouteName {
+  return lessons === 30 ? "long" : "main";
+}
 
 /**
  * Where the current Lesson starts when a Course is picked: a little under halfway, so visited, current and locked all show.
@@ -24,38 +35,66 @@ function startIndex(stopCount: number): number {
   return Math.min(stopCount - 1, Math.max(0, Math.round(stopCount * 0.4)));
 }
 
+/** A segmented control: a raised track with one selected segment. */
+function Segmented<T extends string | number>(props: {
+  label: string;
+  value: T;
+  options: { value: T; label: string; title?: string }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="field">
+      <span className="field-label" id={`lbl-${props.label}`}>
+        {props.label}
+      </span>
+      <div className="segmented" role="group" aria-labelledby={`lbl-${props.label}`}>
+        {props.options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            className={o.value === props.value ? "on" : ""}
+            aria-pressed={o.value === props.value}
+            title={o.title}
+            onClick={() => props.onChange(o.value)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
- * The demo: controls above a map with a stop card beneath it.
+ * The demo: the Course title, the map, then the stop card and controls.
  */
 export function App() {
-  const [lessons, setLessons] = useState<3 | 16 | 30>(16);
+  const [lessons, setLessons] = useState<Lessons>(16);
   const [mode, setMode] = useState<PlacementMode>("clustered");
-  const [variant, setVariant] = useState<"main" | "long">("main");
+  const [route, setRoute] = useState<RouteName>(defaultRoute(16));
   const [phone, setPhone] = useState(false);
   const [replayKey, setReplayKey] = useState(0);
   const [current, setCurrent] = useState(() => startIndex(17));
   const [hover, setHover] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);
 
-  const course = useMemo(
-    () => (lessons === 16 ? courses.norse16 : lessons === 30 ? courses.norse30 : sliceCourse(courses.norse16, 3)),
-    [lessons],
-  );
+  const course = useMemo(() => courseFor(lessons), [lessons]);
   const stops = course.stops;
-  const routeD = variant === "long" && routes.long ? routes.long : routes.main;
+  const routeD = ROUTES[route];
+  const drawKey = `${replayKey}|${lessons}|${mode}|${route}`;
   // A stale index (a Course with fewer stops was just picked) is ignored.
   const inspectedRaw = hover ?? pinned;
   const inspected = inspectedRaw !== null && inspectedRaw < stops.length ? inspectedRaw : null;
-  const shownIndex = inspected ?? current;
+  const shownIndex = inspected ?? Math.min(current, stops.length - 1);
+  const shownVisual: Visual = shownIndex < current ? "visited" : shownIndex === current ? "current" : "locked";
 
-  /** Switches Course and puts the current Lesson back at a sensible start. */
-  const pickCourse = (n: 3 | 16 | 30) => {
-    const next = n === 16 ? courses.norse16 : n === 30 ? courses.norse30 : sliceCourse(courses.norse16, 3);
+  /** Switches Course, puts the current Lesson at a sensible start and picks the route that suits it. */
+  const pickCourse = (n: Lessons) => {
     setLessons(n);
-    setCurrent(startIndex(next.stops.length));
+    setRoute(defaultRoute(n));
+    setCurrent(startIndex(courseFor(n).stops.length));
     setPinned(null);
     setHover(null);
-    setReplayKey((k) => k + 1);
   };
 
   /** Moves the current Lesson by one step, staying inside the Course. */
@@ -64,81 +103,89 @@ export function App() {
     setPinned(null);
   };
 
-  const state = shownIndex < current ? "visited" : shownIndex === current ? "current" : "locked";
+  const where = current === stops.length - 1 ? "Goal Check" : `Lesson ${current + 1} of ${stops.length - 1}`;
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <h1>RPG Course map</h1>
-        <span className="note">PROTOTYPE · throwaway · {course.subject}</span>
+    <div className={`page${phone ? " is-phone" : ""}`}>
+      <header className="head">
+        <h1>{course.title}</h1>
+        <p className="note">Prototype · throwaway · SEN-144 RPG map demo</p>
       </header>
 
-      <section className="controls" aria-label="Controls">
-        <div className="group" role="group" aria-label="Course">
-          <span className="group-label">Course</span>
-          {COURSE_CHOICES.map((c) => (
-            <button key={c.lessons} className={lessons === c.lessons ? "on" : ""} onClick={() => pickCourse(c.lessons)}>
-              {c.label}
-            </button>
-          ))}
+      <div className="layout">
+        <div className="map-frame">
+          <MapView
+            routeD={routeD}
+            mapUrl={mapUrl}
+            stops={stops}
+            mode={mode}
+            current={current}
+            drawKey={drawKey}
+            inspected={inspected}
+            onHover={setHover}
+            onPin={(i) => setPinned((p) => (p === i ? null : i))}
+          />
         </div>
-        <div className="group" role="group" aria-label="Placement">
-          <span className="group-label">Placement</span>
-          {(["even", "clustered"] as const).map((m) => (
-            <button key={m} className={mode === m ? "on" : ""} onClick={() => setMode(m)}>
-              {m}
-            </button>
-          ))}
-        </div>
-        <div className="group" role="group" aria-label="Current Lesson">
-          <span className="group-label">Lesson</span>
-          <button onClick={() => step(-1)} disabled={current === 0}>
-            ← Back
-          </button>
-          <span className="count">
-            {current + 1} / {stops.length}
-          </span>
-          <button onClick={() => step(1)} disabled={current === stops.length - 1}>
-            Next →
-          </button>
-          <button onClick={() => setReplayKey((k) => k + 1)}>↻ Replay</button>
-        </div>
-        {routes.long && (
-          <div className="group" role="group" aria-label="Route">
-            <span className="group-label">Route</span>
-            {(["main", "long"] as const).map((v) => (
-              <button key={v} className={variant === v ? "on" : ""} onClick={() => setVariant(v)}>
-                {v}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="group" role="group" aria-label="Width">
-          <span className="group-label">Width</span>
-          <button className={phone ? "on" : ""} onClick={() => setPhone(true)}>
-            Phone 390
-          </button>
-          <button className={!phone ? "on" : ""} onClick={() => setPhone(false)}>
-            Desktop
-          </button>
-        </div>
-      </section>
 
-      <main className={`stage${phone ? " is-phone" : ""}`}>
-        <MapView
-          routeD={routeD}
-          mapUrl={mapUrl}
-          stops={stops}
-          mode={mode}
-          current={current}
-          replayKey={replayKey}
-          inspected={inspected}
-          onHover={setHover}
-          onPin={(i) => setPinned((p) => (p === i ? null : i))}
-        />
-        <StopCard stop={stops[shownIndex]} index={shownIndex} total={stops.length} state={state} />
-        <p className="hint">Hover or tap a marker to read its card. {!courses.fromFile && "Placeholder data in use."}</p>
-      </main>
+        <aside className="side">
+          <StopCard stop={stops[shownIndex]} index={shownIndex} total={stops.length} visual={shownVisual} />
+
+          <section className="controls" aria-label="Controls">
+            <Segmented
+              label="Course"
+              value={lessons}
+              options={[
+                { value: 3, label: "3", title: "3 Lessons (the first three of the real Course)" },
+                { value: 16, label: "16", title: "16 Lessons: the real Course" },
+                { value: 30, label: "30", title: "30 Lessons: long test for crowding" },
+              ]}
+              onChange={pickCourse}
+            />
+            <Segmented
+              label="Placement"
+              value={mode}
+              options={[
+                { value: "even", label: "Even" },
+                { value: "clustered", label: "Clustered" },
+              ]}
+              onChange={setMode}
+            />
+            <Segmented
+              label="Route"
+              value={route}
+              options={[
+                { value: "main", label: "Main" },
+                { value: "long", label: "Long" },
+              ]}
+              onChange={setRoute}
+            />
+            <Segmented
+              label="Width"
+              value={phone ? "phone" : "desktop"}
+              options={[
+                { value: "desktop", label: "Desktop" },
+                { value: "phone", label: "Phone" },
+              ]}
+              onChange={(v) => setPhone(v === "phone")}
+            />
+            <div className="button-row">
+              <button type="button" className="btn ghost" onClick={() => step(-1)} disabled={current === 0}>
+                Back
+              </button>
+              <button type="button" className="btn primary" onClick={() => step(1)} disabled={current === stops.length - 1}>
+                Next
+              </button>
+              <button type="button" className="btn ghost" onClick={() => setReplayKey((k) => k + 1)}>
+                Replay
+              </button>
+            </div>
+            <p className="where" aria-live="polite">
+              {where}
+            </p>
+          </section>
+          <p className="hint">Hover or tap a marker to read its card.</p>
+        </aside>
+      </div>
     </div>
   );
 }
