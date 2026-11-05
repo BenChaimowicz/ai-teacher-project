@@ -40,3 +40,4 @@ Thumbs.db
 
 # Jongi's rendered frames, before pnpm jongi:pack tiles them into frames/
 apps/web/src/components/companion/.jongi-frames/
+.teamwork/
