@@ -1,0 +1,162 @@
+{
+  "id": "norse-30-demo",
+  "subject": "Norse mythology",
+  "learningGoal": "Explain how the Norse sources picture the cosmos, from creation out of Ginnungagap through Yggdrasil and the Nine Worlds to Ragnarök.",
+  "stops": [
+    {
+      "kind": "reading",
+      "title": "The Void of Ginnungagap",
+      "locationName": "Ginnungagap Hollow"
+    },
+    {
+      "kind": "reading",
+      "title": "Ymir and the Making of the World",
+      "locationName": "Ymir's Vale"
+    },
+    {
+      "kind": "quiz",
+      "title": "Who Made the World?",
+      "bossName": "Ymir, Father of Giants"
+    },
+    {
+      "kind": "reading",
+      "title": "Odin, Vili, and Vé Shape the Sky",
+      "locationName": "Skyvault Heights"
+    },
+    {
+      "kind": "reading",
+      "title": "Yggdrasil, the World Tree",
+      "locationName": "Yggdrasil Heights"
+    },
+    {
+      "kind": "quiz",
+      "title": "Who Keeps the World Tree Alive?",
+      "bossName": "Nidhogg, Root-Gnawer"
+    },
+    {
+      "kind": "reading",
+      "title": "The Three Roots of Yggdrasil",
+      "locationName": "Mimir's Shore"
+    },
+    {
+      "kind": "reading",
+      "title": "Asgard, Home of the Æsir",
+      "locationName": "Asgard Gate"
+    },
+    {
+      "kind": "quiz",
+      "title": "Which Realm Is Which?",
+      "bossName": "Hrym, Helmsman of Rime"
+    },
+    {
+      "kind": "reading",
+      "title": "Midgard, the World of Humans",
+      "locationName": "Midgard Vale"
+    },
+    {
+      "kind": "reading",
+      "title": "Jotunheim, Land of the Giants",
+      "locationName": "Jotunheim Crossing"
+    },
+    {
+      "kind": "quiz",
+      "title": "Name the Nine Worlds",
+      "bossName": "Heimdall, Watcher of Bifrost"
+    },
+    {
+      "kind": "reading",
+      "title": "Niflheim, the Realm of Mist",
+      "locationName": "Mist Barrow"
+    },
+    {
+      "kind": "reading",
+      "title": "Muspelheim, Land of Fire",
+      "locationName": "Ember Spire"
+    },
+    {
+      "kind": "quiz",
+      "title": "What Wisdom Costs",
+      "bossName": "Mímir, the Speaking Head"
+    },
+    {
+      "kind": "reading",
+      "title": "The Dwarves Forge Mjölnir",
+      "locationName": "Brokk's Hollow"
+    },
+    {
+      "kind": "reading",
+      "title": "Odin Gives an Eye for Wisdom",
+      "locationName": "Odin's Vale"
+    },
+    {
+      "kind": "quiz",
+      "title": "Who Forged the Gods' Treasures?",
+      "bossName": "Sindri, Forge-Keeper"
+    },
+    {
+      "kind": "reading",
+      "title": "Odin Hangs on the Tree for Runes",
+      "locationName": "Runic Spire"
+    },
+    {
+      "kind": "reading",
+      "title": "Ragnarök Begins with Fimbulwinter",
+      "locationName": "Fimbul Marsh"
+    },
+    {
+      "kind": "quiz",
+      "title": "Who Brings the Three Winters?",
+      "bossName": "Frosthrimmer, Winter Giant"
+    },
+    {
+      "kind": "reading",
+      "title": "The Wolf Swallows the Sun",
+      "locationName": "Sun Shore"
+    },
+    {
+      "kind": "reading",
+      "title": "Odin Dies in the Wolf's Jaws",
+      "locationName": "Wolfmouth Gate"
+    },
+    {
+      "kind": "quiz",
+      "title": "Who Avenges the Father?",
+      "bossName": "Vidar, the Silent God"
+    },
+    {
+      "kind": "reading",
+      "title": "Thor Battles the Serpent at the End",
+      "locationName": "Serpent Shore"
+    },
+    {
+      "kind": "reading",
+      "title": "Heimdall and Loki Strike Each Other Down",
+      "locationName": "Vigrid Crossing"
+    },
+    {
+      "kind": "quiz",
+      "title": "Which Battle Ends Which God?",
+      "bossName": "Surtr, Lord of Muspell"
+    },
+    {
+      "kind": "reading",
+      "title": "The Earth Sinks into the Sea",
+      "locationName": "Drowned Hall"
+    },
+    {
+      "kind": "reading",
+      "title": "Lif and Lifthrasir Begin Again",
+      "locationName": "Lifthrasir Hall"
+    },
+    {
+      "kind": "quiz",
+      "title": "Who Lives Again After Ragnarök?",
+      "bossName": "Baldur, the Returning Light"
+    },
+    {
+      "kind": "goal_check",
+      "title": "Goal Check: The Nine Worlds and Their End",
+      "bossName": "Muspell's Host at the Last Dusk"
+    }
+  ]
+}
