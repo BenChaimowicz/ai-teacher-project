@@ -1,8 +1,26 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { ART_URL } from "./assets";
-import { ART_BOX, haloEllipse, markerPx, type ArtName, type MarkerPx } from "./design";
+import {
+  ART_BOX,
+  haloEllipse,
+  markerPx,
+  type ArtName,
+  type MarkerPx,
+} from "./design";
 import { prefersReducedMotion, useRouteDraw } from "./motion";
-import { angleAt, createDomSampler, lengthAt, placeOnSampler, splitRegions } from "./route";
+import {
+  angleAt,
+  createDomSampler,
+  lengthAt,
+  placeOnSampler,
+  splitRegions,
+} from "./route";
 import { stopBadge, stopSubtitle } from "./stopText";
 import type { PlacementMode, Stop } from "./types";
 
@@ -59,14 +77,24 @@ function layoutFor(stop: Stop, visual: Visual, sz: MarkerPx): Layout {
   let ring = { cx: -0.08 * wr, cy: -0.02 * wr, rx: 0.9 * wr, ry: 0.32 * wr };
 
   if (stop.kind === "reading") {
-    art = visual === "locked" ? "location-locked" : visual === "visited" ? "location-visited" : "location";
+    art =
+      visual === "locked"
+        ? "location-locked"
+        : visual === "visited"
+          ? "location-visited"
+          : "location";
     rect = artRect(art, wr, visual === "current" ? 0.22 : 0);
     tone = visual === "locked" ? "tone-locked-reading" : "";
   } else if (stop.kind === "quiz") {
     art = "boss";
     const wb = sz.boss;
     rect = artRect(art, wb, visual === "current" ? 0.2 : 0);
-    tone = visual === "locked" ? "tone-locked-boss" : visual === "visited" ? "tone-defeated" : "";
+    tone =
+      visual === "locked"
+        ? "tone-locked-boss"
+        : visual === "visited"
+          ? "tone-defeated"
+          : "";
     if (visual === "visited") {
       const fl = artRect("location-visited", sz.flag);
       flag = { ...fl, x: 0.12 * wb - sz.flag / 2 };
@@ -82,7 +110,16 @@ function layoutFor(stop: Stop, visual: Visual, sz: MarkerPx): Layout {
     ring = { cx: -0.1 * wf, cy: -0.02 * wr, rx: 0.8 * wf, ry: 0.28 * wf };
   }
   const heroTop = hero.y - heroH * ART_BOX.hero.anchorY;
-  return { art, rect, tone, flag, hero, top: Math.min(rect.y, heroTop), bottom: Math.max(hero.y, ring.cy + ring.ry), ring };
+  return {
+    art,
+    rect,
+    tone,
+    flag,
+    hero,
+    top: Math.min(rect.y, heroTop),
+    bottom: Math.max(hero.y, ring.cy + ring.ry),
+    ring,
+  };
 }
 
 /** The art of one marker: the main image plus, for a defeated boss, the planted flag. */
@@ -91,9 +128,23 @@ function MarkerBody({ layout }: { layout: Layout }) {
   return (
     <>
       <g className={`tone ${tone}`}>
-        <image href={ART_URL[art]} x={rect.x} y={rect.y} width={rect.w} height={rect.h} />
+        <image
+          href={ART_URL[art]}
+          x={rect.x}
+          y={rect.y}
+          width={rect.w}
+          height={rect.h}
+        />
       </g>
-      {flag && <image href={ART_URL["location-visited"]} x={flag.x} y={flag.y} width={flag.w} height={flag.h} />}
+      {flag && (
+        <image
+          href={ART_URL["location-visited"]}
+          x={flag.x}
+          y={flag.y}
+          width={flag.w}
+          height={flag.h}
+        />
+      )}
     </>
   );
 }
@@ -107,12 +158,20 @@ function MarkerBody({ layout }: { layout: Layout }) {
 function popIn(el: Element, boss: boolean): void {
   if (typeof el.animate !== "function") return;
   if (prefersReducedMotion()) {
-    el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 120, easing: "linear" });
+    el.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 120,
+      easing: "linear",
+    });
     return;
   }
   el.animate(
     [
-      { transform: "scale(0.4)", opacity: 0, offset: 0, easing: "cubic-bezier(.34,1.56,.64,1)" },
+      {
+        transform: "scale(0.4)",
+        opacity: 0,
+        offset: 0,
+        easing: "cubic-bezier(.34,1.56,.64,1)",
+      },
       { opacity: 1, offset: 0.375 },
       { transform: "scale(1.08)", opacity: 1, offset: 0.7, easing: "ease-out" },
       { transform: "scale(1)", opacity: 1, offset: 1 },
@@ -120,11 +179,18 @@ function popIn(el: Element, boss: boolean): void {
     { duration: 320 },
   );
   if (boss) {
-    el.animate([{ transform: "scale(1)" }, { transform: "scale(1.12)", offset: 0.5 }, { transform: "scale(1)" }], {
-      duration: 220,
-      delay: 320,
-      easing: "ease-in-out",
-    });
+    el.animate(
+      [
+        { transform: "scale(1)" },
+        { transform: "scale(1.12)", offset: 0.5 },
+        { transform: "scale(1)" },
+      ],
+      {
+        duration: 220,
+        delay: 320,
+        easing: "ease-in-out",
+      },
+    );
   }
 }
 
@@ -145,13 +211,26 @@ type MarkerProps = {
 };
 
 /** One interactive marker: a focusable button with the art for its stop kind and state. */
-function Marker({ stop, index, x, y, visual, reached, sz, hit, raised, onHover, onPin }: MarkerProps) {
+function Marker({
+  stop,
+  index,
+  x,
+  y,
+  visual,
+  reached,
+  sz,
+  hit,
+  raised,
+  onHover,
+  onPin,
+}: MarkerProps) {
   const shown: Visual = reached ? visual : "locked";
   const layout = layoutFor(stop, shown, sz);
   const popRef = useRef<SVGGElement>(null);
   const wasReached = useRef(false);
   useEffect(() => {
-    if (reached && !wasReached.current && popRef.current) popIn(popRef.current, stop.kind !== "reading");
+    if (reached && !wasReached.current && popRef.current)
+      popIn(popRef.current, stop.kind !== "reading");
     wasReached.current = reached;
   }, [reached, stop.kind]);
 
@@ -208,7 +287,17 @@ export type MapViewProps = {
  * @param props - See {@link MapViewProps}
  */
 export function MapView(props: MapViewProps) {
-  const { routeD, mapUrl, stops, mode, current, drawKey, inspected, onHover, onPin } = props;
+  const {
+    routeD,
+    mapUrl,
+    stops,
+    mode,
+    current,
+    drawKey,
+    inspected,
+    onHover,
+    onPin,
+  } = props;
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(390);
 
@@ -222,14 +311,23 @@ export function MapView(props: MapViewProps) {
   }, []);
 
   const sampler = useMemo(() => createDomSampler(routeD), [routeD]);
-  const placements = useMemo(() => placeOnSampler(sampler, stops, mode), [sampler, stops, mode]);
-  const stopLengths = useMemo(() => placements.map((p) => lengthAt(sampler, p.t)), [placements, sampler]);
+  const placements = useMemo(
+    () => placeOnSampler(sampler, stops, mode),
+    [sampler, stops, mode],
+  );
+  const stopLengths = useMemo(
+    () => placements.map((p) => lengthAt(sampler, p.t)),
+    [placements, sampler],
+  );
   const halos = useMemo(() => {
     if (mode !== "clustered") return [];
     const regions = splitRegions(stops);
     if (regions.length < 2) return [];
     return regions
-      .map((r) => ({ first: r.first, last: stops[r.last].kind === "goal_check" ? r.last - 1 : r.last }))
+      .map((r) => ({
+        first: r.first,
+        last: stops[r.last].kind === "goal_check" ? r.last - 1 : r.last,
+      }))
       .filter((r) => r.last > r.first)
       .map((r) => haloEllipse(placements.slice(r.first, r.last + 1)));
   }, [mode, stops, placements]);
@@ -250,13 +348,21 @@ export function MapView(props: MapViewProps) {
   const hit = (Math.max(px.reading, 22) / 2) * unit;
   const total = sampler.length;
 
-  const visualOf = (i: number): Visual => (i < safeCurrent ? "visited" : i === safeCurrent ? "current" : "locked");
+  const visualOf = (i: number): Visual =>
+    i < safeCurrent ? "visited" : i === safeCurrent ? "current" : "locked";
   const reachedOf = (i: number) => stopLengths[i] <= drawn + 0.5;
 
   // Painter's order: lower stops cover the ones behind them; the current stop is drawn last, on top.
-  const order = stops.map((_, i) => i).filter((i) => i !== safeCurrent).sort((a, b) => placements[a].y - placements[b].y);
+  const order = stops
+    .map((_, i) => i)
+    .filter((i) => i !== safeCurrent)
+    .sort((a, b) => placements[a].y - placements[b].y);
 
-  const currentLayout = layoutFor(stops[safeCurrent], reachedOf(safeCurrent) ? "current" : "locked", sz);
+  const currentLayout = layoutFor(
+    stops[safeCurrent],
+    reachedOf(safeCurrent) ? "current" : "locked",
+    sz,
+  );
   const cp = placements[safeCurrent];
   const settled = !moving && reachedOf(safeCurrent);
 
@@ -271,7 +377,8 @@ export function MapView(props: MapViewProps) {
   const heroRef = useRef<SVGGElement>(null);
   const wasSettled = useRef(false);
   useEffect(() => {
-    if (settled && !wasSettled.current && heroRef.current) popIn(heroRef.current, false);
+    if (settled && !wasSettled.current && heroRef.current)
+      popIn(heroRef.current, false);
     wasSettled.current = settled;
   }, [settled]);
 
@@ -310,13 +417,23 @@ export function MapView(props: MapViewProps) {
 
   const tagged = new Set<number>([safeCurrent]);
   if (inspected !== null) tagged.add(inspected);
-  const raisedIndex = inspected !== null && inspected !== safeCurrent ? inspected : null;
+  const raisedIndex =
+    inspected !== null && inspected !== safeCurrent ? inspected : null;
 
-  const style = { "--lift": `${2 * unit}px`, "--ring-w": `${2.5 * unit}px` } as CSSProperties;
+  const style = {
+    "--lift": `${2 * unit}px`,
+    "--ring-w": `${2.5 * unit}px`,
+  } as CSSProperties;
 
   return (
     <div className="map-box" ref={boxRef}>
-      <svg viewBox="0 0 1024 1024" className="map-svg" role="img" aria-label="Course map" style={style}>
+      <svg
+        viewBox="0 0 1024 1024"
+        className="map-svg"
+        role="img"
+        aria-label="Course map"
+        style={style}
+      >
         <image href={mapUrl} x={0} y={0} width={1024} height={1024} />
 
         {halos.map((h, i) => (
@@ -335,28 +452,41 @@ export function MapView(props: MapViewProps) {
         <path d={routeD} className="route-ahead" />
         {drawn > 0.5 && (
           <>
-            <path d={routeD} className="route-rim" strokeDasharray={`${total} ${total}`} strokeDashoffset={total - drawn} />
-            <path d={routeD} className="route-ribbon" strokeDasharray={`${total} ${total}`} strokeDashoffset={total - drawn} />
+            <path
+              d={routeD}
+              className="route-rim"
+              strokeDasharray={`${total} ${total}`}
+              strokeDashoffset={total - drawn}
+            />
+            <path
+              d={routeD}
+              className="route-ribbon"
+              strokeDasharray={`${total} ${total}`}
+              strokeDashoffset={total - drawn}
+            />
           </>
         )}
 
         {layers}
 
-        {drawn > 0.5 && (
-          <g className={`hero${settled ? " is-settled" : ""}`} pointerEvents="none" style={{ transform: `translate(${heroX}px, ${heroY}px)` }}>
-            <g ref={heroRef}>
-              <g transform={faceLeft ? "scale(-1 1)" : undefined}>
-                <image
-                  href={ART_URL.hero}
-                  x={-heroW / 2}
-                  y={-heroH * ART_BOX.hero.anchorY}
-                  width={heroW}
-                  height={heroH}
-                />
-              </g>
+        {/* The hero is always drawn: at Lesson 1 the path has length 0 and the hero stands at the route start. */}
+        <g
+          className={`hero${settled ? " is-settled" : ""}`}
+          pointerEvents="none"
+          style={{ transform: `translate(${heroX}px, ${heroY}px)` }}
+        >
+          <g ref={heroRef}>
+            <g transform={faceLeft ? "scale(-1 1)" : undefined}>
+              <image
+                href={ART_URL.hero}
+                x={-heroW / 2}
+                y={-heroH * ART_BOX.hero.anchorY}
+                width={heroW}
+                height={heroH}
+              />
             </g>
           </g>
-        )}
+        </g>
 
         {raisedIndex !== null && (
           <g
@@ -364,7 +494,13 @@ export function MapView(props: MapViewProps) {
             pointerEvents="none"
             className="raised-copy"
           >
-            <MarkerBody layout={layoutFor(stops[raisedIndex], reachedOf(raisedIndex) ? visualOf(raisedIndex) : "locked", sz)} />
+            <MarkerBody
+              layout={layoutFor(
+                stops[raisedIndex],
+                reachedOf(raisedIndex) ? visualOf(raisedIndex) : "locked",
+                sz,
+              )}
+            />
           </g>
         )}
       </svg>
@@ -372,16 +508,23 @@ export function MapView(props: MapViewProps) {
       {[...tagged].map((i) => {
         const stop = stops[i];
         const p = placements[i];
-        const layout = i === safeCurrent ? currentLayout : layoutFor(stop, reachedOf(i) ? visualOf(i) : "locked", sz);
+        const layout =
+          i === safeCurrent
+            ? currentLayout
+            : layoutFor(stop, reachedOf(i) ? visualOf(i) : "locked", sz);
         const topPx = ((p.y + layout.top) / 1024) * width;
         const below = topPx < 28;
         const xPct = ((p.x + layout.rect.x + layout.rect.w / 2) / 1024) * 100;
-        const yPct = ((p.y + (below ? layout.bottom : layout.top)) / 1024) * 100;
+        const yPct =
+          ((p.y + (below ? layout.bottom : layout.top)) / 1024) * 100;
         return (
           <div
             key={i}
             className={`map-tag tag-${stop.kind}${below ? " is-below" : ""}`}
-            style={{ left: `clamp(80px, ${xPct}%, calc(100% - 80px))`, top: `calc(${yPct}% ${below ? "+" : "-"} 4px)` }}
+            style={{
+              left: `clamp(80px, ${xPct}%, calc(100% - 80px))`,
+              top: `calc(${yPct}% ${below ? "+" : "-"} 4px)`,
+            }}
           >
             {stopSubtitle(stop)}
           </div>
