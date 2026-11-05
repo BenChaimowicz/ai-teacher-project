@@ -1,0 +1,361 @@
+{
+  "about": "SEN-143: the fixed brief set every illustrator candidate answers. The 12 Visual briefs of the Norse Course of 2026-11-04 (request 2b5f4e9d-911e-4000-ab4c-659dabd21c23), plus one Yggdrasil depiction and one drum-stroke diagram from the reading-media live checks of 2026-11-03. Copied verbatim from pipeline_events.detail.brief on illustration events. No Gram stain brief has ever reached the illustrator, so none is included.",
+  "cases": [
+    {
+      "name": "freyr-freyja-roles",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "b64d3095-e626-44ef-a6f1-9a16fd85802f",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Freyr stands on the left beside grain plants and the labels fertility, harvests, and prosperity. Freyja stands on the right beside a heart labelled love and the label fertility. An inset contains equal groups of fallen-warrior symbols labelled Freyja's half and Odin's half.",
+        "kind": "diagram",
+        "caption": "The Course's own schematic places harvest symbols beside Freyr and love and fallen-warrior symbols beside Freyja.",
+        "subject": "Freyr stands beside harvest symbols, while Freyja stands beside symbols of love and fallen heroes.",
+        "mustShow": [
+          "Freyr appears on the left and is labelled 'Freyr'.",
+          "Crop plants with full grain heads appear beside Freyr, with the labels 'fertility', 'harvests', and 'prosperity'.",
+          "Freyja appears on the right and is labelled 'Freyja'.",
+          "A heart symbol beside Freyja is labelled 'love'.",
+          "The label 'fertility' also appears beside Freyja to show the shared association.",
+          "An inset near Freyja shows two equal groups of fallen-warrior symbols, labelled 'Freyja's half' and 'Odin's half'."
+        ],
+        "topicTags": [
+          "freyr",
+          "freyja",
+          "harvest",
+          "fallen-warriors"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "odin-frigg-marriage",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "f0cd9325-07ad-4b41-ba26-636b1c9da0ef",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Odin and Frigg stand side by side, joined by a line labelled marriage. Odin is labelled ruler of the gods. Frigg is labelled protector of marriage and motherhood.",
+        "kind": "diagram",
+        "caption": "The Course's own schematic connects Odin and Frigg by marriage and labels their roles.",
+        "subject": "Odin and Frigg are connected by a marriage line, with separate labels for their roles.",
+        "mustShow": [
+          "Odin is labelled 'Odin' and 'ruler of the gods'.",
+          "Frigg is labelled 'Frigg' and 'protector of marriage and motherhood'.",
+          "A line connects Odin and Frigg and is labelled 'marriage'.",
+          "The ruler label is attached to Odin rather than to the marriage line."
+        ],
+        "topicTags": [
+          "odin",
+          "frigg",
+          "marriage"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "thor-hammer-storm",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "603ddbcf-d042-4ab2-b8a9-afbb3952216f",
+      "productionOutcome": "judge_failed",
+      "brief": {
+        "alt": "Red-bearded Thor stands facing forward with his feet apart, holding a hammer in front of him. Labels name Thor and Mjölnir. Storm clouds and lightning fill the sky behind him.",
+        "kind": "depiction",
+        "caption": "The Course's own illustration shows Thor standing ready with Mjölnir beneath storm clouds.",
+        "subject": "Thor stands ready with his hammer beneath a stormy sky.",
+        "mustShow": [
+          "Thor has a red beard and is labelled 'Thor'.",
+          "Thor holds a hammer labelled 'Mjölnir'.",
+          "Storm clouds and lightning appear in the sky.",
+          "Thor faces forward with his feet apart and his hammer held ready in front of him."
+        ],
+        "topicTags": [
+          "thor",
+          "mjolnir",
+          "thunder"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "heimdall-bridge",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "fb4bac31-d9be-4a89-b220-29e602976071",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Heimdall stands watch at the end of a bridge leading toward the gods’ home. He faces the approach, with a horn resting at his side.",
+        "kind": "depiction",
+        "caption": "The Course’s own illustration shows Heimdall guarding a bridge with his horn at his side.",
+        "subject": "Heimdall keeps watch at a bridge leading toward the gods’ home, with a horn ready at his side.",
+        "mustShow": [
+          "Heimdall stands at one end of a bridge.",
+          "The bridge leads toward the gods’ home.",
+          "Heimdall faces along the approach he guards.",
+          "A horn rests ready at Heimdall’s side.",
+          "Heimdall is labelled by name."
+        ],
+        "topicTags": [
+          "heimdall",
+          "watchman",
+          "horn"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "loki-children",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "add0c6b8-59f6-4cc6-b186-1454fcce1d14",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Loki appears above a wolf labelled Fenrir and a snake labelled Jörmungandr, with a line to each child. A note says that only the children relevant to these lessons are shown.",
+        "kind": "diagram",
+        "caption": "The Course’s own schematic connects Loki with Fenrir and Jörmungandr.",
+        "subject": "A partial family tree connects Loki to his children Fenrir the wolf and Jörmungandr the world serpent.",
+        "mustShow": [
+          "Loki appears above Fenrir and Jörmungandr.",
+          "Two parent-to-child lines connect Loki to Fenrir and Jörmungandr.",
+          "Fenrir has a clearly recognizable wolf form.",
+          "Jörmungandr has a clearly recognizable snake form.",
+          "The three figures are labelled Loki, Fenrir, and Jörmungandr.",
+          "A note reads: Only the children relevant to these lessons are shown."
+        ],
+        "topicTags": [
+          "loki",
+          "fenrir",
+          "jormungandr"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "tyr-pledge-panels",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "901a4fc1-cf81-468b-8b72-a2269d30f768",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Three panels run from left to right. Fenrir first demands a hand as a pledge beside a thin band. Tyr then places his right hand in Fenrir’s mouth. Finally, Fenrir remains bound while Tyr draws back his right arm without its hand; no blood or exposed injury is shown.",
+        "kind": "diagram",
+        "caption": "The Course’s own schematic shows Fenrir’s demand, Tyr’s pledge, and the loss of Tyr’s hand.",
+        "subject": "Three non-graphic panels show Fenrir demanding a pledge, Tyr offering his right hand, and Fenrir remaining bound after Tyr loses that hand.",
+        "mustShow": [
+          "Exactly three panels run in order from left to right.",
+          "The first panel shows Fenrir facing the gods beside a thin band, with the label A hand as a pledge.",
+          "The second panel shows Tyr placing his right hand inside Fenrir’s open mouth.",
+          "The third panel shows Fenrir still held by the band.",
+          "The third panel shows Tyr drawing back his right arm with the hand missing, without blood or exposed injury.",
+          "Fenrir and Tyr have consistent appearances and clear name labels."
+        ],
+        "topicTags": [
+          "fenrir",
+          "tyr",
+          "binding-of-fenrir"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "thor-serpent-nine-steps",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "91884f0d-6724-45ed-9709-02eb6db7755c",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "A labelled sequence shows venom passing from Jörmungandr toward Thor during their fight. After the serpent is marked dead, nine numbered footprints lead away from its body. Thor lies at the end of the path, with a label stating that the venom kills him.",
+        "kind": "diagram",
+        "caption": "The Course’s own schematic shows Thor’s victory followed by nine steps and his death.",
+        "subject": "A sequence shows Jörmungandr poisoning Thor, Thor killing the serpent, and Thor taking nine steps before falling dead.",
+        "mustShow": [
+          "Arrows connect the fight, the serpent’s death, Thor’s steps, and Thor’s death in that order.",
+          "Thor and Jörmungandr are named.",
+          "During the fight, an arrow labelled 'Venom' runs from Jörmungandr toward Thor.",
+          "Jörmungandr is marked dead before Thor begins walking away.",
+          "Exactly nine footprints, numbered one through nine, lead away from the serpent’s body.",
+          "Thor falls after the ninth footprint, beside the label 'Thor dies from the venom'."
+        ],
+        "topicTags": [
+          "thor",
+          "jormungandr",
+          "ragnarok",
+          "venom"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "fenrir-odin-vidar",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "c0a84c17-d8a4-47cc-817b-162a7bf5f948",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Four numbered panels run from Fenrir beside broken bonds to Odin facing the wolf, then a symbolic marker of Odin’s death. In the final panel, Vidar, labelled Odin’s son, holds Fenrir’s jaws apart. The final label says that Vidar kills Fenrir.",
+        "kind": "diagram",
+        "caption": "The Course’s own schematic follows Fenrir’s escape, Odin’s death, and Vidar’s response.",
+        "subject": "Four connected panels show Fenrir breaking free, facing Odin, killing Odin, and being killed by Vidar.",
+        "mustShow": [
+          "Four numbered panels connected by arrows establish the story order.",
+          "The first panel shows Fenrir beside broken bonds.",
+          "The second panel shows Odin facing Fenrir, with both named.",
+          "The third panel uses a non-graphic symbol and the label 'Fenrir kills Odin' to mark Odin’s death.",
+          "The fourth panel names Vidar as Odin’s son and shows his foot on Fenrir’s lower jaw and one hand holding the upper jaw.",
+          "The final panel states 'Vidar kills Fenrir', distinguishing Vidar from Odin."
+        ],
+        "topicTags": [
+          "fenrir",
+          "odin",
+          "vidar",
+          "ragnarok"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "tyr-pledge-vs-garm",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "c0c2798c-9d51-4b32-9b6c-bc6fd569b526",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Two panels distinguish the encounters. The earlier pledge panel shows Tyr’s right hand in the mouth of Fenrir, labelled wolf. The final battle panel shows one-handed Tyr facing Garm, labelled hound, with separate labels stating that Tyr and Garm both die.",
+        "kind": "diagram",
+        "caption": "The Course’s own schematic separates Tyr’s pledge to Fenrir from his final fight with Garm.",
+        "subject": "Two labelled panels contrast Tyr’s earlier pledge to Fenrir with his final fight against Garm.",
+        "mustShow": [
+          "Two separate panels are headed 'Earlier pledge' and 'Final battle at Ragnarök'.",
+          "The earlier panel names Fenrir as the wolf.",
+          "The earlier panel shows Tyr placing his right hand in Fenrir’s mouth, without graphic injury.",
+          "The final panel shows one-handed Tyr facing Garm, with Garm labelled as the hound.",
+          "The final panel includes separate labels stating 'Tyr dies' and 'Garm dies'.",
+          "Fenrir appears only in the earlier panel, and Garm appears only in the final panel."
+        ],
+        "topicTags": [
+          "tyr",
+          "garm",
+          "fenrir",
+          "ragnarok"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "freyr-surt",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "e7eccadb-8452-471d-b0de-ec01bc641af8",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Freyr stands facing Surt, with no sword in his hands or at his side. A label identifies Freyr as being without his former sword. Surt holds a blazing sword, with flames around him.",
+        "kind": "depiction",
+        "caption": "The Course’s own illustration places swordless Freyr opposite Surt and his blazing sword.",
+        "subject": "Freyr confronts Surt, who carries a blazing sword amid flames, while Freyr has no sword.",
+        "mustShow": [
+          "Freyr and Surt face each other in a restrained, non-graphic confrontation.",
+          "Freyr is named and labelled 'Without his former sword'.",
+          "No sword appears in Freyr’s hands or at his side.",
+          "Surt is named and carries a blazing sword.",
+          "Flames surround Surt."
+        ],
+        "topicTags": [
+          "freyr",
+          "surt",
+          "ragnarok"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "loki-heimdall-both-die",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "f7a492e7-e497-4e93-acf5-71b9b18b9efe",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Loki and Heimdall face each other. A double-headed arrow between them is labelled Each kills the other; both die.",
+        "kind": "diagram",
+        "caption": "The Course’s own schematic connects Loki and Heimdall with an arrow pointing both ways.",
+        "subject": "Loki and Heimdall face each other across a two-way connection showing that both die.",
+        "mustShow": [
+          "Two facing figures are labelled Loki and Heimdall.",
+          "A double-headed arrow connects Loki and Heimdall.",
+          "The connection is labelled Each kills the other; both die."
+        ],
+        "topicTags": [
+          "loki",
+          "heimdall",
+          "ragnarok"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "renewed-world-routes",
+      "set": "norse-2026-11-04",
+      "sourceEventId": "ebc19399-8f4d-4ede-b33c-1bfa9746a1a9",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Two arrows lead to Renewed world. One is labelled Surviving and names Vidar. The other starts at Realm of the dead, is labelled Returning from death, and names Baldr and Höðr.",
+        "kind": "diagram",
+        "caption": "The Course’s own schematic shows two routes into the renewed world.",
+        "subject": "Two labelled routes lead into the renewed world, with Vidar surviving and Baldr and Höðr returning from death.",
+        "mustShow": [
+          "Both routes lead to one destination labelled Renewed world.",
+          "One route is labelled Surviving and names Vidar.",
+          "The other route starts at Realm of the dead, is labelled Returning from death, and names Baldr and Höðr.",
+          "Neither route depicts the causes of Baldr’s or Höðr’s earlier deaths."
+        ],
+        "topicTags": [
+          "ragnarok",
+          "vidar",
+          "baldr",
+          "hodr"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "yggdrasil-nine-worlds",
+      "set": "live-check",
+      "sourceEventId": "dc4e0aa9-d314-4a60-9de6-c90c97877344",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "A spreading ash tree labelled Yggdrasil stands among nine softly outlined areas labelled collectively Nine Worlds. Three main roots extend below it. An eagle sits above a squirrel on the trunk, and a dragon gnaws a root beneath the tree.",
+        "kind": "depiction",
+        "caption": "The Course’s own illustration shows Yggdrasil with nine surrounding worlds and creatures above and below.",
+        "subject": "The Course’s own illustration shows the world ash Yggdrasil surrounded by nine symbolic worlds, with three roots and creatures above and below.",
+        "mustShow": [
+          "A central ash tree labelled Yggdrasil.",
+          "Exactly three main roots spreading beneath the tree.",
+          "Nine symbolic areas surrounding the tree, labelled collectively Nine Worlds without assigning individual realm locations.",
+          "An eagle above a squirrel positioned along the tree’s trunk.",
+          "A dragon beneath the tree gnawing a root."
+        ],
+        "topicTags": [
+          "yggdrasil",
+          "world-tree",
+          "cosmology"
+        ],
+        "mediaCategory": "norse-mythic-depiction"
+      }
+    },
+    {
+      "name": "drum-full-stroke",
+      "set": "live-check",
+      "sourceEventId": "43f196f2-5309-497d-afc9-69fbf54c9f12",
+      "productionOutcome": "illustrated",
+      "brief": {
+        "alt": "Four panels show a stick raised above a drum, striking its surface, bouncing upward, and ending at its original height. Arrows show the downward and upward movement.",
+        "kind": "diagram",
+        "caption": "The Course’s own schematic shows a full stroke returning to its starting height.",
+        "subject": "The Course’s own schematic shows four moments of a full stroke above a drum.",
+        "mustShow": [
+          "Four panels run left to right in this order: raised, striking, bouncing back up, back at starting height.",
+          "The first panel shows the stick tip raised above the drum surface.",
+          "The second panel shows the stick tip touching the drum surface, with an arrow pointing down.",
+          "The third panel shows the stick moving away from the drum surface, with an arrow pointing up.",
+          "The first and fourth panels show the stick tip at the same height above the drum surface."
+        ],
+        "topicTags": [
+          "full-stroke",
+          "rebound",
+          "stick-height"
+        ],
+        "mediaCategory": "drum-stroke"
+      }
+    }
+  ]
+}
